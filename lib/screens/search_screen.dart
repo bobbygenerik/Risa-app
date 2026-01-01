@@ -10,6 +10,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/voice_search_button.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -376,64 +377,65 @@ class _SearchScreenState extends State<SearchScreen>
               return InkWell(
                 onTap: () => context.push('/player', extra: channel),
                 borderRadius: BorderRadius.circular(12),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: isFocused
-                        ? Border.all(
-                            color: AppTheme.primaryBlue,
-                            width: 3,
-                          )
-                        : null,
-                    boxShadow: isFocused
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryBlue
-                                  .withAlpha((0.4 * 255).round()),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (channel.logoUrl != null &&
-                          channel.logoUrl!.isNotEmpty)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Image.network(
-                              channel.logoUrl!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.tv,
-                                size: 32,
-                                color: AppTheme.textSecondary,
+                child: AnimatedScale(
+                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  child: AnimatedContainer(
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.08 * 255).round()),
+                      borderRadius: BorderRadius.circular(12),
+                      border: isFocused
+                          ? Border.all(
+                              color: TVFocusStyle.focusRingColor,
+                              width: 3,
+                            )
+                          : null,
+                      boxShadow: isFocused
+                          ? TVFocusStyle.focusedShadow
+                          : TVFocusStyle.defaultShadow,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (channel.logoUrl != null &&
+                            channel.logoUrl!.isNotEmpty)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Image.network(
+                                channel.logoUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.tv,
+                                  size: 32,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ),
+                          )
+                        else
+                          const Expanded(
+                            child: Icon(Icons.tv,
+                                size: 32, color: AppTheme.textSecondary),
                           ),
-                        )
-                      else
-                        const Expanded(
-                          child: Icon(Icons.tv,
-                              size: 32, color: AppTheme.textSecondary),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          child: Text(
+                            channel.name,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          channel.name,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppTheme.textPrimary),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -476,60 +478,62 @@ class _SearchScreenState extends State<SearchScreen>
                     '/content/${Uri.encodeComponent(item.id)}',
                     extra: item),
                 borderRadius: BorderRadius.circular(12),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color:
-                          isFocused ? AppTheme.primaryBlue : Colors.transparent,
-                      width: 3,
+                child: AnimatedScale(
+                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  child: AnimatedContainer(
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: isFocused
+                          ? Border.all(
+                              color: TVFocusStyle.focusRingColor,
+                              width: 3,
+                            )
+                          : null,
+                      boxShadow: isFocused
+                          ? TVFocusStyle.focusedShadow
+                          : TVFocusStyle.defaultShadow,
                     ),
-                    boxShadow: isFocused
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primaryBlue
-                                  .withAlpha((0.4 * 255).round()),
-                              blurRadius: 16,
-                              spreadRadius: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBackground,
+                              borderRadius: BorderRadius.circular(12),
+                              image: item.imageUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(item.imageUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
-                            image: item.imageUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(item.imageUrl!),
-                                    fit: BoxFit.cover,
+                            child: item.imageUrl == null
+                                ? const Center(
+                                    child: Icon(Icons.movie,
+                                        color: AppTheme.textSecondary),
                                   )
                                 : null,
                           ),
-                          child: item.imageUrl == null
-                              ? const Center(
-                                  child: Icon(Icons.movie,
-                                      color: AppTheme.textSecondary),
-                                )
-                              : null,
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          item.title,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppTheme.textPrimary),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            item.title,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

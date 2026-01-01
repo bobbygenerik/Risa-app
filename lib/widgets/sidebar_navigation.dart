@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 // app_theme not used here after recent refactors
 // import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// Represents a navigation tab in the sidebar
 class NavTab {
@@ -285,22 +288,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 widget.onSearch?.call();
               }
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.easeOut,
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              transform: Matrix4.translationValues(0, lift, 0),
-              transformAlignment: Alignment.center,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.transparent,
-              ),
-              child: AnimatedScale(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOut,
-                scale: isFocused ? 1.06 : 1.0,
+            child: AnimatedScale(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              scale: isFocused && _isExpanded ? 1.1 : 1.0,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.transparent,
+                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
+                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                ),
                 child: _isExpanded
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
@@ -415,22 +417,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 context.go(tab.route);
               }
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.easeOut,
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              transform: Matrix4.translationValues(0, lift, 0),
-              transformAlignment: Alignment.center,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.transparent,
-              ),
-              child: AnimatedScale(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOut,
-                scale: isFocused ? 1.06 : 1.0,
+            child: AnimatedScale(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              scale: isFocused && _isExpanded ? 1.1 : 1.0,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.transparent,
+                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
+                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                ),
                 child: _isExpanded
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
@@ -483,10 +484,19 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
+        duration: AppDurations.fast,
+        width:
+            _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
         decoration: BoxDecoration(
-          color: Colors.black.withAlpha((0.7 * 255).round()),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.black.withAlpha((0.95 * 255).round()),
+              Colors.black.withAlpha((0.0 * 255).round()),
+            ],
+            stops: const [0.0, 1.0],
+          ),
         ),
         child: _buildSidebarContent(),
       ),
@@ -593,21 +603,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 context.go(route);
               }
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              transform: Matrix4.translationValues(0, lift, 0),
-              transformAlignment: Alignment.center,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.transparent,
-              ),
-              child: AnimatedScale(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOut,
-                scale: isFocused ? 1.06 : 1.0,
+            child: AnimatedScale(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              scale: isFocused && _isExpanded ? 1.1 : 1.0,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.transparent,
+                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
+                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                ),
                 child: _isExpanded
                     ? Row(
                         mainAxisSize: MainAxisSize.min,

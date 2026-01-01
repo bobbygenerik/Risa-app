@@ -1,16 +1,16 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
-// Note: fullscreen native ExoPlayer view is provided elsewhere; this widget
-// focuses solely on rendering video for use with external overlays.
+import 'package:iptv_player/controllers/universal_player_controller.dart';
+import 'package:iptv_player/widgets/exoplayer_video_view.dart';
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
   final bool isLive;
   final IntegratedTranscriptionService? transcriptionService;
-  final ValueNotifier<VideoPlayerController?>? controllerNotifier;
-  final bool showInternalControls;
+  final ValueNotifier<UniversalPlayerController?>? controllerNotifier;
   final BoxFit fit;
 
   const ExoPlayerWidget({
@@ -19,7 +19,6 @@ class ExoPlayerWidget extends StatefulWidget {
     this.isLive = false,
     this.transcriptionService,
     this.controllerNotifier,
-    this.showInternalControls = false,
     this.fit = BoxFit.cover,
   });
 
@@ -28,94 +27,102 @@ class ExoPlayerWidget extends StatefulWidget {
 }
 
 class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
-  late VideoPlayerController _controller;
+  late UniversalPlayerController _controller;
   Future<void>? _initializeFuture;
-  Timer? _positionTimer;
-
-  /// Notifies listeners of current playback position (updated ~500ms).
-  final ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
-
-  /// Notifies listeners when playback state changes.
-  final ValueNotifier<bool> isPlayingNotifier = ValueNotifier(false);
-
-  void _onControllerChanged() {
-    setState(() {});
-  }
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _initializeController();
+  }
+  
+  @override
+  void didUpdateWidget(ExoPlayerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.url != oldWidget.url) {
+      _controller.dispose();
+      _initializeController();
+    }
+  }
+
+  void _initializeController() {
+    _controller = UniversalPlayerController.create(
+      url: widget.url,
+      autoPlay: true,
+    );
+    
+    // Pass controller up to parent if requested
+    if (widget.controllerNotifier != null) {
+      // Defer to next frame to avoid build-phase modifications if value notifier is listened to
+      Future.microtask(() {
+         widget.controllerNotifier!.value = _controller;
+      });
+    }
+
     _initializeFuture = _controller.initialize().then((_) {
-      // Autoplay when ready
-      _controller.play();
-      // expose controller to external listeners if requested
-      try {
-        widget.controllerNotifier?.value = _controller;
-      } catch (_) {}
-      setState(() {});
-    }).catchError((e) {
-      // Let parent handle errors if needed
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     });
-    _controller.addListener(_onControllerChanged);
-    // Start periodic position updates for transcription sync and external listeners
-    _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      try {
-        final pos = _controller.value.position;
-        positionNotifier.value = pos;
-        isPlayingNotifier.value = _controller.value.isPlaying;
-        widget.transcriptionService?.updatePlaybackPosition(pos);
-      } catch (_) {}
-    });
+
+    _controller.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    // Sync with transcription service
+    if (widget.transcriptionService != null) {
+       widget.transcriptionService!.updatePlaybackPosition(_controller.value.position);
+    }
   }
 
   @override
   void dispose() {
-    _positionTimer?.cancel();
-    _controller.removeListener(_onControllerChanged);
-    try {
-      widget.controllerNotifier?.value = null;
-    } catch (_) {}
+    _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
-    positionNotifier.dispose();
-    isPlayingNotifier.dispose();
     super.dispose();
   }
 
-  // Removed unused internal helpers; formatting and hide-timers
-  // are handled by external overlays when needed.
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initializeFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // If native Android, render the Custom Platform View
+    if (_controller is NativeExoPlayerController) {
+      return ExoPlayerVideoView(
+        controller: _controller as NativeExoPlayerController,
+        fit: widget.fit,
+      );
+    }
 
-        final value = _controller.value;
+    // Otherwise render standard Texture VideoPlayer
+    if (!_isInitialized) {
+       return const Center(child: CircularProgressIndicator());
+    }
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Fill available area while preserving aspect via FittedBox
-            SizedBox.expand(
-              child: FittedBox(
-                fit: widget.fit,
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: value.size.width > 0 ? value.size.width : 16,
-                  height: value.size.height > 0 ? value.size.height : 9,
-                  child: VideoPlayer(_controller),
-                ),
-              ),
+    final stockCtrl = _controller as StockPlayerController;
+    if (!stockCtrl.rawController.value.isInitialized) {
+       return const Center(child: CircularProgressIndicator());
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        SizedBox.expand(
+          child: FittedBox(
+            fit: widget.fit,
+            alignment: Alignment.center,
+            child: SizedBox(
+               width: stockCtrl.rawController.value.size.width,
+               height: stockCtrl.rawController.value.size.height,
+               child: VideoPlayer(stockCtrl.rawController),
             ),
-            if (value.isBuffering)
-              const Center(child: CircularProgressIndicator()),
-          ],
-        );
-      },
+          ),
+        ),
+        if (stockCtrl.value.isBuffering)
+          const Center(child: CircularProgressIndicator()),
+      ],
     );
   }
 }
+

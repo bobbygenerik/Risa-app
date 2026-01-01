@@ -47,7 +47,6 @@ import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/multi_view_screen.dart';
-import 'package:iptv_player/screens/playlist_login_screen.dart';
 
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
@@ -791,13 +790,6 @@ final _router = GoRouter(
   initialLocation: '/home',
   debugLogDiagnostics: true,
   routes: [
-    GoRoute(
-      path: '/playlist-login',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const PlaylistLoginScreen(),
-      ),
-    ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
     // Main shell containing fixed navbar with home, movies, series screens
     ShellRoute(

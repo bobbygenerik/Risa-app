@@ -24,6 +24,7 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/hero_panel.dart';
 
 List<Map<String, dynamic>> _buildMovieGenreBucketsIsolate(
     List<Map<String, dynamic>> items) {
@@ -92,6 +93,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsFocus = FocusNode();
   final FocusNode _firstRowFocus = FocusNode();
+  final FocusNode _skeletonFocus = FocusNode(debugLabel: 'Movies Skeleton');
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
   final Set<String> _heroDetailsRequests = {};
@@ -130,6 +132,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     _heroFocus.dispose();
     _settingsFocus.dispose();
     _firstRowFocus.dispose();
+    _skeletonFocus.dispose();
     super.dispose();
   }
 
@@ -147,7 +150,11 @@ class _MoviesScreenState extends State<MoviesScreen>
     final contentProvider =
         Provider.of<ContentProvider>(context, listen: false);
     if (contentProvider.movies.isEmpty) {
-      _settingsFocus.requestFocus();
+      if (_settingsFocus.canRequestFocus) {
+        _settingsFocus.requestFocus();
+      } else {
+        _skeletonFocus.requestFocus();
+      }
     } else {
       _heroFocus.requestFocus();
     }
@@ -626,7 +633,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   }) {
     if (movies.isEmpty) return const SizedBox.shrink();
 
-    const cardFocusScale = 1.02;
+    const cardFocusScale = 1.1;
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
@@ -724,7 +731,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
-            const cardFocusScale = 1.02;
+            const cardFocusScale = 1.1;
             return GestureDetector(
               onTap: () {
                 final encodedId = Uri.encodeComponent(movie.id);
@@ -1313,27 +1320,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     double width,
     Widget child,
   ) {
-    final borderRadius = BorderRadius.circular(AppSpacing.radiusXl);
-    return SizedBox(
-      width: width,
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              color: AppTheme.darkBackground.withAlpha((0.65 * 255).round()),
-              border: Border.all(
-                color: Colors.white.withAlpha((0.1 * 255).round()),
-                width: 1,
-              ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
-    );
+    return HeroInfoPanel(width: width, child: child);
   }
 
   Widget _buildHeroInfoSkeleton(
@@ -1341,61 +1328,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     double width,
     Size screenSize,
   ) {
-    return SizedBox(
-      width: width,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        child: Container(
-          color: AppTheme.darkBackground.withAlpha((0.55 * 255).round()),
-          padding: EdgeInsets.all(context.spacingSm()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 28,
-                width: screenSize.width * 0.24,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.15 * 255).round()),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              SizedBox(height: context.spacingSm()),
-              Container(
-                height: 42,
-                width: screenSize.width * 0.28,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              SizedBox(height: context.spacingSm()),
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.15 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  SizedBox(width: context.spacingXs()),
-                  Container(
-                    width: 28,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return HeroInfoSkeleton(width: width);
   }
 
   Widget _buildBannerPlaceholder() {
@@ -1414,20 +1347,26 @@ class _MoviesScreenState extends State<MoviesScreen>
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
-    const cardFocusScale = 1.02;
+    const cardFocusScale = 1.1;
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
-    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final inset = contentInset;
     final available = screenSize.width - inset - context.spacingLg();
     final perRow = (available / (cardWidth + context.cardGap())).floor();
     final skeletonItemCount = (perRow + _rowVisibleBuffer).clamp(6, 12);
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
-      ),
-      child: Shimmer(
+    return Focus(
+      focusNode: _skeletonFocus,
+      onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          debugLog('Movies: Skeleton focused');
+        }
+      },
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.darkBackground,
+        ),
         child: Stack(
           children: [
             // Hero skeleton
@@ -1436,8 +1375,10 @@ class _MoviesScreenState extends State<MoviesScreen>
               left: 0,
               right: 0,
               height: heroHeight,
-              child: Container(
-                color: AppTheme.cardBackground,
+              child: Shimmer(
+                child: Container(
+                  color: AppTheme.cardBackground,
+                ),
               ),
             ),
             // Featured info skeleton
@@ -1446,71 +1387,101 @@ class _MoviesScreenState extends State<MoviesScreen>
               left: contentInset,
               right: context.spacingLg(),
               height: heroHeight,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child:
-                    _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
+              child: Shimmer(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildHeroInfoSkeleton(
+                      context, heroInfoWidth, screenSize),
+                ),
               ),
             ),
             // Content skeleton
             Positioned(
-              top: heroHeight,
+              top: heroHeight - 140.0, // Match cardPeek
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
-                color: AppTheme.darkBackground,
-                padding: EdgeInsets.only(
-                  left: contentInset,
-                  right: context.spacingXxl(),
-                  top: context.spacingXxl(),
-                  bottom: context.spacingXxl(),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: context.sectionSpacing()),
-                    ...List.generate(
-                        3,
-                        (rowIndex) => Padding(
-                              padding: EdgeInsets.only(
-                                  bottom: context.sectionSpacing()),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    height: 20,
-                                    width: 180.0,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white
-                                          .withAlpha((0.15 * 255).round()),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    height: rowHeight,
-                                    child: ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: skeletonItemCount,
-                                      itemBuilder: (context, cardIndex) =>
-                                          Container(
-                                        width: cardWidth,
-                                        height: cardHeight,
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.cardBackground,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: 140.0, // content offset
+                    bottom: context.spacingXxl(),
+                  ),
+                  child: Shimmer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ...List.generate(
+                            3,
+                            (rowIndex) => Padding(
+                                  padding: EdgeInsets.only(
+                                      bottom: context.sectionSpacing()),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Section Header
+                                      Padding(
+                                        padding: EdgeInsets.only(left: inset),
+                                        child: Container(
+                                          height: 16,
+                                          width: 140.0,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withAlpha(
+                                                (0.15 * 255).round()),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
                                         ),
                                       ),
-                                      separatorBuilder: (context, index) =>
-                                          SizedBox(width: context.cardGap()),
-                                    ),
+                                      const SizedBox(height: AppSizes.sm),
+                                      SizedBox(
+                                        height: rowHeight,
+                                        child: ListView.separated(
+                                          scrollDirection: Axis.horizontal,
+                                          padding: EdgeInsets.only(left: inset),
+                                          itemCount: skeletonItemCount,
+                                          itemBuilder: (context, cardIndex) =>
+                                              Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                width: cardWidth,
+                                                height: cardHeight,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      AppTheme.cardBackground,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              // Movie Title skeleton
+                                              Container(
+                                                width: cardWidth * 0.8,
+                                                height: 12,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withAlpha(
+                                                      (0.1 * 255).round()),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          separatorBuilder: (context, index) =>
+                                              SizedBox(
+                                                  width: context.cardGap()),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            )),
-                  ],
+                                )),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

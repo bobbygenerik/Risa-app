@@ -31,6 +31,7 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/hero_panel.dart';
 
 class _HeroCandidate {
   final Channel channel;
@@ -66,6 +67,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final FocusNode _watchButtonFocus;
   late final FocusNode _settingsButtonFocus;
   late final FocusNode _firstChannelFocus;
+  late final FocusNode _skeletonFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
   final List<Program> _artworkQueue = [];
@@ -130,6 +132,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'live_tv_first_card',
       debugLabel: 'Live TV First Card',
     );
+    _skeletonFocus =
+        _focusPool.getFocusNode('live_tv_skeleton', debugLabel: 'Live TV Skeleton');
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
@@ -154,6 +158,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _firstChannelFocus.requestFocus();
       } else if (_watchButtonFocus.canRequestFocus) {
         _watchButtonFocus.requestFocus();
+      } else if (_skeletonFocus.canRequestFocus) {
+        _skeletonFocus.requestFocus();
       }
     });
   }
@@ -267,7 +273,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     _rowScrollControllers.clear();
     _focusPool.returnFocusNodes(
-      ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card'],
+      ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card', 'live_tv_skeleton'],
     );
     super.dispose();
   }
@@ -1060,27 +1066,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     double width,
     Widget child,
   ) {
-    final borderRadius = BorderRadius.circular(AppSpacing.radiusXl);
-    return SizedBox(
-      width: width,
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              color: AppTheme.darkBackground.withAlpha((0.65 * 255).round()),
-              border: Border.all(
-                color: Colors.white.withAlpha((0.1 * 255).round()),
-                width: 1,
-              ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
-    );
+    return HeroInfoPanel(width: width, child: child);
   }
 
   Widget _buildHeroInfoSkeleton(
@@ -1088,66 +1074,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     double width,
     Size screenSize,
   ) {
-    final logoSlotHeight = context.tvSpacing(36);
-    return SizedBox(
-      width: width,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        child: Container(
-          color: AppTheme.darkBackground.withAlpha((0.55 * 255).round()),
-          padding: EdgeInsets.all(context.spacingSm()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: width * 0.6,
-                height: logoSlotHeight,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              Container(
-                width: width * 0.8,
-                height: context.tvTextSize(18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              Container(
-                width: double.infinity,
-                height: context.tvTextSize(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-              ),
-              SizedBox(height: context.spacingXs()),
-              Container(
-                width: double.infinity,
-                height: context.tvTextSize(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              Container(
-                width: width * 0.35,
-                height: context.tvSpacing(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return HeroInfoSkeleton(width: width);
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
@@ -1162,8 +1089,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       width: 96,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
+        color: Colors.black.withAlpha((0.7 * 255).round()),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.white.withAlpha((0.1 * 255).round()),
+          width: 1,
+        ),
       ),
       child: Center(
         child: Builder(builder: (context) {
@@ -1209,12 +1140,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return cached;
       }
 
-      // Fetch TMDB image if enabled and not already cached.
+      // Side-effect free artwork fetching check
       if (_tmdbEnabled &&
           allowPrefetch &&
           (!_programArtwork.containsKey(program.id) ||
               _shouldRetryArtwork(program.id))) {
-        _fetchProgramArtwork(program);
+        // Schedule fetch for after build to avoid side effects during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _fetchProgramArtwork(program);
+        });
       }
 
       // Fall back to EPG-provided art while TMDB is resolving.
@@ -1241,7 +1175,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           allowPrefetch &&
           (!_programArtwork.containsKey(channelKey) ||
               _shouldRetryArtwork(channelKey))) {
-        _fetchChannelArtwork(channel);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _fetchChannelArtwork(channel);
+        });
       }
     }
 
@@ -1459,7 +1395,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       BuildContext context, String title, List<Channel> channels,
       {bool isFirstRow = false, bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
     final seenProgramKeys = <String>{};
     for (var i = 0; i < channels.length; i++) {
@@ -1499,7 +1435,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final maxCardWidth =
         screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
-    const cardFocusScale = 1.02;
+    const cardFocusScale = 1.1;
     final cardHeight = cardWidth * 0.6;
     final focusExtra = cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
@@ -1606,6 +1542,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         index,
                         filteredChannels.length,
                         allowPrefetch,
+                        isFirstRow: isFirstRow,
                         focusNode: focusNode,
                         onItemFocus: () => _bumpRowVisibleCount(
                           sectionKey,
@@ -1660,7 +1597,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final maxCardWidth =
         screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
-    const cardFocusScale = 1.02;
+    const cardFocusScale = 1.1;
     final cardHeight = cardWidth * 0.6;
     final focusExtra = cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
@@ -1704,7 +1641,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       int index,
       int totalCount,
       bool allowPrefetch,
-      {FocusNode? focusNode,
+      {required bool isFirstRow,
+      FocusNode? focusNode,
       VoidCallback? onItemFocus}) {
     return SizedBox(
       width: cardWidth,
@@ -1713,11 +1651,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         canRequestFocus: true,
         onFocusChange: (hasFocus) {
           if (hasFocus) {
-            if (_focusedIndexBySection[sectionKey] != index) {
-              setState(() {
-                _focusedIndexBySection[sectionKey] = index;
+            // Update focused index without triggering full screen rebuild if possible
+            final changed = _focusedIndexBySection[sectionKey] != index;
+            _focusedIndexBySection[sectionKey] = index;
+            
+            if (changed) {
+              // Only call setState if we really need to update something that depends on this globally
+              // For now, many things like _shouldPrefetchArt still use this map
+              // We'll use a minor delay or microtask to avoid frame drops during navigation
+              Future.microtask(() {
+                if (mounted) setState(() {});
               });
             }
+            
             _scrollToHeroPeekOnFocus();
             onItemFocus?.call();
           }
@@ -1731,8 +1677,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              _watchButtonFocus.requestFocus();
-              return KeyEventResult.handled;
+              if (isFirstRow) {
+                _watchButtonFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              // Return ignored to allow default Focus traversal to the row above
+              return KeyEventResult.ignored;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
@@ -1765,7 +1715,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final logoCacheWidth = (56 * dpr).round();
             final logoCacheHeight = (32 * dpr).round();
 
-            const cardFocusScale = 1.02;
+            const cardFocusScale = 1.1;
             final infoSpacing = context.spacingXs();
 
             // ENHANCEMENT: Ensure we have sufficient data to display a quality card
@@ -1795,6 +1745,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
+                        border: isFocused
+                            ? Border.all(color: AppTheme.focusBorder, width: 3)
+                            : null,
                         boxShadow: isFocused
                             ? TVFocusStyle.focusedShadow
                             : TVFocusStyle.defaultShadow,
@@ -1884,20 +1837,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 height: 32,
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: Colors.black
-                                      .withAlpha((0.6 * 255).round()),
+                                  color: Colors.black.withAlpha((0.7 * 255).round()),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: Colors.white
-                                        .withAlpha((0.2 * 255).round()),
+                                    color: Colors.white.withAlpha((0.1 * 255).round()),
                                     width: 0.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black
-                                          .withAlpha((0.3 * 255).round()),
-                                      blurRadius: 2,
-                                      offset: const Offset(0, 1),
+                                      color: Colors.black.withAlpha((0.5 * 255).round()),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
@@ -2155,95 +2105,161 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final perRow =
         _initialRowVisibleCount(context, skeletonCardWidth, rowInset);
     final heroInfoWidth = context.heroInfoWidth();
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Container(
-            color: AppColors.background,
+
+    return Focus(
+      focusNode: _skeletonFocus,
+      onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          debugLog('LiveTV: Skeleton focused');
+        }
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              color: AppColors.background,
+            ),
           ),
-        ),
-        Positioned(
-          top: 0,
-          right: rightInset,
-          child: SafeArea(
-            bottom: false,
-            child: Shimmer(
-              child: Container(
-                height: context.tvSpacing(24),
-                width: context.tvSpacing(64),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+          Positioned(
+            top: 0,
+            right: rightInset,
+            child: SafeArea(
+              bottom: false,
+              child: Shimmer(
+                child: Container(
+                  height: context.tvSpacing(24),
+                  width: context.tvSpacing(64),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          top: 0,
-          left: contentInset,
-          right: rightInset,
-          height: heroHeight,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
+          Positioned(
+            top: 0,
+            left: contentInset,
+            right: rightInset,
+            height: heroHeight,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
+            ),
           ),
-        ),
-        Positioned.fill(
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                contentInset,
-                contentTop + context.spacingLg(),
-                rightInset,
-                context.spacingLg(),
-              ),
-              child: Shimmer(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
-                      Container(
-                        width: 180,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
-                        ),
-                      ),
-                      SizedBox(height: context.spacingSm()),
-                      SizedBox(
-                        height: skeletonCardHeight,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: perRow,
-                          separatorBuilder: (context, index) =>
-                              SizedBox(width: context.cardGap()),
-                          itemBuilder: (context, index) {
-                            return Container(
-                              width: skeletonCardWidth,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(
-                                  AppSpacing.radiusMd,
+          Positioned.fill(
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  SliverToBoxAdapter(child: SizedBox(height: contentTop))
+                      .child!, // Hacky way to reuse spacing logic
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 0,
+                      right: rightInset,
+                      bottom: context.spacingLg(),
+                    ),
+                    child: Shimmer(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
+                            // Category Title Skeleton
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  left: rowInset, bottom: context.spacingXs()),
+                              child: Container(
+                                width: 140,
+                                height: context.tvTextSize(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusSm),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                            // Underline Skeleton
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  left: rowInset, bottom: context.spacingSm()),
+                              child: Container(
+                                height: 3,
+                                width: context.spacingXl(),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: skeletonCardHeight +
+                                  context.spacingXs() +
+                                  context.tvTextSize(30), // info area space
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: EdgeInsets.only(left: rowInset),
+                                itemCount: perRow,
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(width: context.cardGap()),
+                                itemBuilder: (context, index) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: skeletonCardWidth,
+                                        height: skeletonCardHeight,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(
+                                            AppSpacing.radiusMd,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: context.spacingXs()),
+                                      // Title Line 1
+                                      Container(
+                                        width: skeletonCardWidth * 0.8,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.06),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      // Title Line 2 (Time)
+                                      Container(
+                                        width: skeletonCardWidth * 0.4,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.04),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            SizedBox(height: context.spacingLg()),
+                          ],
+                        ],
                       ),
-                      SizedBox(height: context.spacingLg()),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

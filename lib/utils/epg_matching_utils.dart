@@ -4,6 +4,19 @@ class EPGMatchingUtils {
   /// Cache for channel ID mapping (tvgId -> epgKey)
   static final Map<String, String?> _channelIdCache = {};
 
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _digitsRe = RegExp(r'\d+');
+  static final RegExp _qualitySufRe =
+      RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false);
+  static final RegExp _regionSufRe = RegExp(
+      r'(london|scotland|wales|ireland|ni|channelislands|manchester|birmingham|leeds|yorkshire|north|south|east|west|northeast|northwest|southeast|southwest|midlands)$',
+      caseSensitive: false);
+  static final RegExp _countryCodeSufRe =
+      RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$', caseSensitive: false);
+  static final RegExp _suffixSufRe =
+      RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$', caseSensitive: false);
+  static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
+
   /// Convert number words to digits for better matching
   static String convertNumberWords(String text) {
     final conversions = {
@@ -33,18 +46,12 @@ class EPGMatchingUtils {
 
   /// Strip numbers from channel names for fuzzy matching
   static String stripNumbers(String text) {
-    return text.replaceAll(RegExp(r'\d+'), '');
+    return text.replaceAll(_digitsRe, '');
   }
 
   /// Strip common suffixes like HD, UHD, FHD, regional variants
   static String stripSuffixes(String text) {
-    return text
-        .replaceAll(
-            RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false), '')
-        .replaceAll(
-            RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$',
-                caseSensitive: false),
-            '');
+    return text.replaceAll(_qualitySufRe, '').replaceAll(_regionSufRe, '');
   }
 
   /// Calculate similarity score between two strings (0.0 to 1.0)
@@ -52,8 +59,8 @@ class EPGMatchingUtils {
     if (a.isEmpty || b.isEmpty) return 0.0;
     if (a == b) return 1.0;
 
-    final aNorm = a.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    final bNorm = b.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final aNorm = a.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+    final bNorm = b.toLowerCase().replaceAll(_nonAlphaNumRe, '');
 
     if (aNorm == bNorm) return 0.95;
     if (aNorm.contains(bNorm) || bNorm.contains(aNorm)) {
@@ -81,14 +88,13 @@ class EPGMatchingUtils {
 
     // Remove domain suffix and normalize
     final withoutDomain = epgKey.split('.').first.toLowerCase();
-    final normalized = withoutDomain.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final normalized = withoutDomain.replaceAll(_nonAlphaNumRe, '');
 
     // Add the full normalized name
     if (normalized.length >= 3) parts.add(normalized);
 
     // Remove common suffixes
-    final withoutSuffix = normalized.replaceAll(
-        RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$'), '');
+    final withoutSuffix = normalized.replaceAll(_suffixSufRe, '');
     if (withoutSuffix.length >= 3 && withoutSuffix != normalized) {
       parts.add(withoutSuffix);
     }
@@ -103,7 +109,7 @@ class EPGMatchingUtils {
 
     for (final key in allEpgKeys) {
       // Normalize: lowercase, remove spaces/dots/hyphens, keep alphanumeric
-      final normalized = key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final normalized = key.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       normalizedEpgKeys[normalized] = key;
 
       // Also add without domain suffix
@@ -111,7 +117,7 @@ class EPGMatchingUtils {
           .split('.')
           .first
           .toLowerCase()
-          .replaceAll(RegExp(r'[^a-z0-9]'), '');
+          .replaceAll(_nonAlphaNumRe, '');
       if (!normalizedEpgKeys.containsKey(withoutDomain)) {
         normalizedEpgKeys[withoutDomain] = key;
       }
@@ -183,7 +189,7 @@ class EPGMatchingUtils {
 
     // Try normalized matching
     final normalizedId =
-        channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
       return normalizedKeys[normalizedId];
@@ -199,14 +205,13 @@ class EPGMatchingUtils {
 
     // Try prefix/contains matching with normalized ID
     final normalizedIdWithoutCountry =
-        normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-    final normalizedIdWithNumbersNoCountry = normalizedWithNumbers.replaceAll(
-        RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+        normalizedId.replaceAll(_countryCodeSufRe, '');
+    final normalizedIdWithNumbersNoCountry =
+        normalizedWithNumbers.replaceAll(_countryCodeSufRe, '');
     final List<MapEntry<String, String>> prefixMatches = [];
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry =
-          epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      final epgWithoutCountry = epgNormalized.replaceAll(_countryCodeSufRe, '');
       final epgWithNumbers = convertNumberWords(epgWithoutCountry);
       final epgStripped = stripSuffixes(epgWithNumbers);
       if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) &&
@@ -244,7 +249,7 @@ class EPGMatchingUtils {
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
         final epgWithoutCountry =
-            epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+            epgNormalized.replaceAll(_countryCodeSufRe, '');
         final epgStrippedNumbers = stripNumbers(epgWithoutCountry);
         if (epgStrippedNumbers == channelStrippedNumbers) {
           _channelIdCache[cacheKey] = entry.value;
@@ -272,8 +277,7 @@ class EPGMatchingUtils {
     // Try contains matching
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry =
-          epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      final epgWithoutCountry = epgNormalized.replaceAll(_countryCodeSufRe, '');
       if (normalizedIdWithoutCountry.contains(epgWithoutCountry) &&
           epgWithoutCountry.length >= 4) {
         _channelIdCache[cacheKey] = entry.value;
@@ -284,17 +288,16 @@ class EPGMatchingUtils {
     // Try matching by channel NAME if provided
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName =
-          channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       if (normalizedKeys.containsKey(normalizedName)) {
         _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
         return normalizedKeys[normalizedName];
       }
-      final cleanedName = normalizedName.replaceAll(
-          RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
+      final cleanedName = normalizedName.replaceAll(_qualitySufRe, '');
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
         final epgWithoutCountry =
-            epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+            epgNormalized.replaceAll(_countryCodeSufRe, '');
         if (cleanedName.contains(epgWithoutCountry) &&
             epgWithoutCountry.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
@@ -333,24 +336,21 @@ class EPGMatchingUtils {
     final searchTerms = <String>[];
 
     // Add channel ID variations
-    final idNorm = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final idNorm = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
     searchTerms.add(idNorm);
-    searchTerms
-        .add(idNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
+    searchTerms.add(idNorm.replaceAll(_suffixSufRe, ''));
 
     // Add channel name variations
     if (channelName != null && channelName.isNotEmpty) {
-      final nameNorm =
-          channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final nameNorm = channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       searchTerms.add(nameNorm);
-      searchTerms
-          .add(nameNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
+      searchTerms.add(nameNorm.replaceAll(_suffixSufRe, ''));
 
       // Also add individual words from the name
-      final words = channelName.toLowerCase().split(RegExp(r'[\s\-_\.]+'));
+      final words = channelName.toLowerCase().split(_wordSepRe);
       for (final word in words) {
         if (word.length >= 3) {
-          searchTerms.add(word.replaceAll(RegExp(r'[^a-z0-9]'), ''));
+          searchTerms.add(word.replaceAll(_nonAlphaNumRe, ''));
         }
       }
     }

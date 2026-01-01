@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// Standard text field widget for consistent styling across the app
 class BrandTextField extends StatelessWidget {
@@ -48,15 +49,14 @@ class BrandTextField extends StatelessWidget {
         return Container(
           decoration: isFocused
               ? BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: borderRadius,
+                  border: Border.all(color: AppTheme.focusBorder, width: 3),
+                  boxShadow: TVFocusStyle.focusedShadow,
                 )
-              : null,
+              : BoxDecoration(
+                  borderRadius: borderRadius,
+                  boxShadow: TVFocusStyle.defaultShadow,
+                ),
           child: Theme(
             data: theme.copyWith(textSelectionTheme: selectionTheme),
             child: TextField(
@@ -83,7 +83,7 @@ class BrandTextField extends StatelessWidget {
                 filled: true,
                 fillColor: isFocused
                     ? AppTheme.highlight
-                    : AppTheme.highlight.withValues(alpha: 0.75),
+                    : AppTheme.highlight.withAlpha((0.75 * 255).round()),
                 hintStyle: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: context.tvTextSize(14),
@@ -102,13 +102,13 @@ class BrandTextField extends StatelessWidget {
                 border: OutlineInputBorder(
                   borderRadius: borderRadius,
                   borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: borderRadius,
                   borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 // Remove the TextField's own focused border so only the outer box highlights

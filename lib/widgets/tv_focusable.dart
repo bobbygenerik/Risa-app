@@ -11,29 +11,25 @@ class TVFocusStyle {
 
   static List<BoxShadow> get focusedShadow => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.5),
-          blurRadius: 25,
+          color: Colors.black.withValues(alpha: 0.6),
+          blurRadius: 30,
           spreadRadius: 2,
-          offset: const Offset(0, 10),
+          offset: const Offset(0, 12),
         ),
         BoxShadow(
-          color: focusRingColor.withValues(alpha: 0.5),
-          blurRadius: 20,
-          spreadRadius: 1,
-        ),
-        BoxShadow(
-          color: focusRingColor.withValues(alpha: 0.3),
-          blurRadius: 35,
-          spreadRadius: 3,
+          color: Colors.black.withValues(alpha: 0.4),
+          blurRadius: 15,
+          spreadRadius: 0,
+          offset: const Offset(0, 4),
         ),
       ];
 
   static List<BoxShadow> get defaultShadow => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.25),
-          blurRadius: 10,
+          color: Colors.black.withValues(alpha: 0.3),
+          blurRadius: 12,
           spreadRadius: 0,
-          offset: const Offset(0, 2),
+          offset: const Offset(0, 4),
         ),
       ];
 }

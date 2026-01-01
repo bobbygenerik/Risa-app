@@ -72,6 +72,56 @@ class IncrementalEpgService extends ChangeNotifier {
     'canalplus': ['canal+', 'canal plus', 'canal plus hd'],
   };
 
+  static final RegExp _httpSchemeRe =
+      RegExp(r'https?://', caseSensitive: false);
+  static final RegExp _schemeValidRe = RegExp(r'^[A-Za-z]');
+  static final RegExp _invalidXmlCharRe =
+      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
+  static final RegExp _unbrokenEntityRe =
+      RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
+  static final RegExp _timeParseRe = RegExp(
+      r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp _trailingSlashRe = RegExp(r'/+$');
+  static final RegExp _bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
+  static final RegExp _commonPrefixRe =
+      RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false);
+  static final RegExp _leadingNumberRe = RegExp(r'^([0-9]+)[\s\-_.]+(.*)$');
+  static final RegExp _noiseTokensRe = RegExp(
+      r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
+      caseSensitive: false);
+  static final RegExp _techLabelsRe = RegExp(
+      r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\bhb\b|\blb\b)',
+      caseSensitive: false);
+  static final RegExp _langSufRe = RegExp(
+      r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
+      caseSensitive: false);
+  static final RegExp _catchupMarkersRe = RegExp(
+      r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
+      caseSensitive: false);
+  static final RegExp _sepRe = RegExp(r'[|._]+');
+  static final RegExp _multiSpaceRe = RegExp(r'\s+');
+  static final RegExp _qualitySufRe = RegExp(
+      r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)',
+      caseSensitive: false);
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _techChPrefixRe =
+      RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
+  static final RegExp _countryCodeSufRe =
+      RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$');
+  static final RegExp _regionSufRe = RegExp(
+      r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$');
+  static final RegExp _plusOneSufRe = RegExp(r'(plus1|plusone|\+1|\+2)$');
+  static final RegExp _programmeStartRe =
+      RegExp(r'<(?:\w+:)?programme\b', caseSensitive: false);
+  static final RegExp _programmeEndRe =
+      RegExp(r'</(?:\w+:)?programme\s*>', caseSensitive: false);
+  static final RegExp _channelStartRe =
+      RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
+  static final RegExp _channelEndRe =
+      RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
+  static final RegExp _latin1FallbackRe =
+      RegExp(r'charset\s*=\s*(?:latin1|iso-8859-1)', caseSensitive: false);
+
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
   static const String _epgCacheUrlKey = 'epg_cache_url';
@@ -155,7 +205,7 @@ class IncrementalEpgService extends ChangeNotifier {
     while (url.endsWith('"') || url.endsWith("'")) {
       url = url.substring(0, url.length - 1);
     }
-    final httpIndex = url.indexOf(RegExp(r'https?://', caseSensitive: false));
+    final httpIndex = url.indexOf(_httpSchemeRe);
     if (httpIndex > 0) {
       url = url.substring(httpIndex);
     }
@@ -280,7 +330,7 @@ class IncrementalEpgService extends ChangeNotifier {
         final uri = Uri.tryParse(_epgUrl!);
         final scheme = uri?.scheme ?? '';
         final schemeValid =
-            scheme.isNotEmpty && RegExp(r'^[A-Za-z]').hasMatch(scheme);
+            scheme.isNotEmpty && _schemeValidRe.hasMatch(scheme);
         if (uri == null || !schemeValid) {
           _error = 'Invalid EPG URL';
           debugLog('EPG: Invalid URL configured: $_epgUrl');
@@ -1096,9 +1146,8 @@ class IncrementalEpgService extends ChangeNotifier {
 
     String sanitizeXmlChunk(String input) {
       // Remove invalid control characters and escape broken entities.
-      var out = input.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '');
-      out = out.replaceAll(
-          RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)'), '&amp;');
+      var out = input.replaceAll(_invalidXmlCharRe, '');
+      out = out.replaceAll(_unbrokenEntityRe, '&amp;');
       return out;
     }
 
@@ -1164,24 +1213,33 @@ class IncrementalEpgService extends ChangeNotifier {
       RegExp endRe,
       void Function(String block) onBlock,
     ) {
+      int cursor = 0;
       while (true) {
-        final startMatch = startRe.firstMatch(buffer);
-        if (startMatch == null) break;
-        final startIdx = startMatch.start;
-        final endMatch = endRe.firstMatch(buffer.substring(startIdx));
-        if (endMatch == null) {
+        // Find start match at or after cursor without substring allocation
+        final startMatches = startRe.allMatches(buffer, cursor);
+        if (startMatches.isEmpty) break;
+        final startMatch = startMatches.first;
+        final absoluteStart = startMatch.start;
+
+        // Find end match after start
+        final endMatches = endRe.allMatches(buffer, absoluteStart);
+        if (endMatches.isEmpty) {
           // Keep from start to allow block to complete in next chunk.
-          return buffer.substring(startIdx);
+          return buffer.substring(absoluteStart);
         }
-        final endIdx = startIdx + endMatch.end;
-        final block = buffer.substring(startIdx, endIdx);
+        final endMatch = endMatches.first;
+        final absoluteEnd = endMatch.end;
+        
+        final block = buffer.substring(absoluteStart, absoluteEnd);
         onBlock(block);
-        buffer = buffer.substring(endIdx);
+        cursor = absoluteEnd;
       }
-      if (buffer.length > 65536) {
-        buffer = buffer.substring(buffer.length - 65536);
+      
+      var tail = buffer.substring(cursor);
+      if (tail.length > 65536) {
+        tail = tail.substring(tail.length - 65536);
       }
-      return buffer;
+      return tail;
     }
 
     Future<void> runParseWithDecoder(
@@ -1228,13 +1286,10 @@ class IncrementalEpgService extends ChangeNotifier {
       final stream = rawStreamProvider()
           .transform(const Utf8Decoder(allowMalformed: true));
       var buffer = '';
-      final programmeStart =
-          RegExp(r'<(?:\w+:)?programme\b', caseSensitive: false);
-      final programmeEnd =
-          RegExp(r'</(?:\w+:)?programme\s*>', caseSensitive: false);
-      final channelStart = RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
-      final channelEnd =
-          RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
+      final programmeStart = _programmeStartRe;
+      final programmeEnd = _programmeEndRe;
+      final channelStart = _channelStartRe;
+      final channelEnd = _channelEndRe;
 
       await for (final chunk in stream) {
         buffer += sanitizeXmlChunk(chunk);
@@ -1416,7 +1471,7 @@ class IncrementalEpgService extends ChangeNotifier {
         if (displayName != null && displayName.isNotEmpty) {
           final stripped = _stripSuffixes(displayName);
           String normalizedDisplay =
-              stripped.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+              stripped.toLowerCase().replaceAll(_nonAlphaNumRe, '');
           normalizedDisplay = _convertNumberWords(normalizedDisplay);
           if (normalizedDisplay.isNotEmpty) {
             normalizedIds.add(normalizedDisplay);
@@ -1605,9 +1660,7 @@ class IncrementalEpgService extends ChangeNotifier {
     try {
       final trimmed = timeStr.trim();
       // Match base datetime and optional offset like +0100 or -0500
-      final re = RegExp(
-          r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
-      final m = re.firstMatch(trimmed);
+      final m = _timeParseRe.firstMatch(trimmed);
       if (m == null) return DateTime.now();
 
       final year = int.parse(m.group(1)!);
@@ -1663,7 +1716,7 @@ class IncrementalEpgService extends ChangeNotifier {
     final startUtc =
         DateTime.fromMillisecondsSinceEpoch(startTs, isUtc: false).toUtc();
     final startStr = _formatCatchupTime(startUtc);
-    final base = server.replaceAll(RegExp(r'/+$'), '');
+    final base = server.replaceAll(_trailingSlashRe, '');
     return '$base/timeshift.php?username=$username&password=$password&stream=${info.streamId}&start=$startStr&duration=$durationMinutes';
   }
 
@@ -1760,7 +1813,8 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   static String _translateCommonWords(String input) {
-    final replacements = <String, String>{
+    if (input.isEmpty) return input;
+    const replacements = <String, String>{
       'noticias': 'news',
       'newses': 'news',
       'cine': 'movies',
@@ -1772,7 +1826,6 @@ class IncrementalEpgService extends ChangeNotifier {
       'deportes': 'sports',
       'futbol': 'football',
       'fútbol': 'football',
-      'football': 'football',
       'musica': 'music',
       'musik': 'music',
       'kids': 'kids',
@@ -1780,11 +1833,9 @@ class IncrementalEpgService extends ChangeNotifier {
       'infantil': 'kids',
     };
 
-    var output = input.toLowerCase();
-    replacements.forEach((k, v) {
-      output = output.replaceAll(RegExp('\\b$k\\b'), v);
-    });
-    return output;
+    return input.toLowerCase().replaceAllMapped(
+        RegExp(r'\b(' + replacements.keys.join('|') + r')\b'),
+        (match) => replacements[match.group(0)!] ?? match.group(0)!);
   }
 
   /// Resolve normalized aliases to a canonical normalized key (if present).
@@ -1850,15 +1901,8 @@ class IncrementalEpgService extends ChangeNotifier {
 
   static String _stripSuffixes(String text) {
     return text
-        .replaceAll(
-            RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p|plus1|plusone)$',
-                caseSensitive: false),
-            '')
-        .replaceAll(
-            RegExp(
-                r'(london|scotland|wales|ireland|ni|channelislands|manchester|birmingham|leeds|yorkshire|north|south|east|west|northeast|northwest|southeast|southwest|midlands)$',
-                caseSensitive: false),
-            '')
+        .replaceAll(_qualitySufRe, '')
+        .replaceAll(_regionSufRe, '')
         .trim();
   }
 
@@ -1888,73 +1932,56 @@ class IncrementalEpgService extends ChangeNotifier {
 
     // Remove diacritics (España -> espana) and bracketed clutter tags.
     var clean = _removeDiacritics(text);
-    clean = clean.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
+    clean = clean.replaceAll(_bracketsRe, ' ');
 
     // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
-    clean = clean.replaceAll(
-        RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false), '');
-    clean = clean.replaceAll(RegExp(r'^[0-9]+[\s\-_.]*'), '');
+    clean = clean.replaceAll(_commonPrefixRe, '');
+    // Strip leading channel numbers "001-", but only if not purely numeric.
+    final numMatch = _leadingNumberRe.firstMatch(clean);
+    if (numMatch != null) {
+      final remainder = numMatch.group(2) ?? '';
+      if (remainder.trim().isNotEmpty) {
+        clean = remainder;
+      }
+    }
 
     // Strip promo/noise tokens and tech labels.
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
-            caseSensitive: false),
-        ' ');
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\bhb\b|\blb\b)',
-            caseSensitive: false),
-        ' ');
+    clean = clean.replaceAll(_noiseTokensRe, ' ');
+    clean = clean.replaceAll(_techLabelsRe, ' ');
 
     // Drop language/region suffix tokens (but keep the base).
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
-            caseSensitive: false),
-        '');
+    clean = clean.replaceAll(_langSufRe, '');
 
     // Remove common catchup/time-shift markers.
-    clean = clean.replaceAll(
-        RegExp(r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
-            caseSensitive: false),
-        '');
+    clean = clean.replaceAll(_catchupMarkersRe, '');
 
     // Translate common non-English labels to English keywords.
     clean = _translateCommonWords(clean);
 
     // Normalize separators and trim.
-    clean = clean.replaceAll(RegExp(r'[|._]+'), ' ');
-    clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
+    clean = clean.replaceAll(_sepRe, ' ');
+    clean = clean.replaceAll(_multiSpaceRe, ' ').trim();
 
     // Strip quality suffixes after normalization.
-    clean = clean.replaceAll(
-        RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false),
-        '');
+    clean = clean.replaceAll(_qualitySufRe, '');
 
-    String normalized =
-        clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    String normalized = clean.toLowerCase().replaceAll(_nonAlphaNumRe, '');
 
     // Strip technical channel prefixes like "ch_" or "channel" when followed
     // by a long numeric/hex identifier (common in XMLTV ids).
-    final techPrefix = RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
-    final match = techPrefix.firstMatch(normalized);
+    final match = _techChPrefixRe.firstMatch(normalized);
     if (match != null) {
       normalized = match.group(2) ?? normalized;
     }
 
     // Strip common country code suffixes.
-    normalized = normalized.replaceAll(
-        RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
+    normalized = normalized.replaceAll(_countryCodeSufRe, '');
 
     // Remove regional/location tokens to collapse variants (e.g., bbc1manchester -> bbc1).
-    normalized = normalized.replaceAll(
-        RegExp(
-            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$'),
-        '');
+    normalized = normalized.replaceAll(_regionSufRe, '');
 
     // Collapse "plus1"/"plusone" and "+1/+2" variants.
-    normalized = normalized.replaceAll(RegExp(r'(plus1|plusone|\+1|\+2)$'), '');
+    normalized = normalized.replaceAll(_plusOneSufRe, '');
 
     return _convertNumberWords(normalized);
   }
@@ -2440,7 +2467,7 @@ class IncrementalEpgService extends ChangeNotifier {
       return;
     }
 
-    const int batchSize = 40;
+    const int batchSize = 500;
     final Map<String, List<Map<String, dynamic>>> buffer = {};
     final Map<String, bool> cleared = {};
 
@@ -2510,7 +2537,7 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         processed++;
-        if (yieldClock.elapsedMilliseconds >= 8 || processed % 200 == 0) {
+        if (yieldClock.elapsedMilliseconds >= 50 || processed % 1000 == 0) {
           // Yield frequently to keep input responsive during large EPG ingests.
           await Future.delayed(const Duration(milliseconds: 1));
           yieldClock.reset();

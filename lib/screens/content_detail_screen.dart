@@ -109,24 +109,48 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               padding: EdgeInsets.all(context.spacingLg()),
               child: Row(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha((0.3 * 255).round()),
-                      shape: BoxShape.circle,
-                    ),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
                     child: Focus(
                       focusNode: _backButtonFocus,
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: AppTheme.textPrimary,
-                          size: context.tvIconSize(24),
-                        ),
-                        onPressed: () => Navigator.pop(context),
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.enter ||
+                                event.logicalKey == LogicalKeyboardKey.select)) {
+                          Navigator.pop(context);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(999),
+                            child: AnimatedContainer(
+                              duration: AppDurations.fast,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isFocused
+                                    ? Colors.white.withAlpha((0.2 * 255).round())
+                                    : Colors.black.withAlpha((0.3 * 255).round()),
+                                shape: BoxShape.circle,
+                                border: isFocused
+                                    ? Border.all(color: Colors.white, width: 2)
+                                    : null,
+                              ),
+                              child: Icon(
+                                Icons.arrow_back,
+                                color: AppTheme.textPrimary,
+                                size: context.tvIconSize(24),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  const Spacer(),
                 ],
               ),
             ),
@@ -230,6 +254,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   Widget _buildHeroScrims() {
     return Stack(
       children: [
+        // Main bottom-up gradient for readability and cinematic fade
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -238,14 +263,16 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  AppTheme.darkBackground.withAlpha((0.7 * 255).round()),
+                  AppTheme.darkBackground.withAlpha((0.4 * 255).round()),
+                  AppTheme.darkBackground.withAlpha((0.9 * 255).round()),
                   AppTheme.darkBackground,
                 ],
-                stops: const [0.0, 0.65, 1.0],
+                stops: const [0.0, 0.4, 0.8, 1.0],
               ),
             ),
           ),
         ),
+        // Subtle left-to-right scrim to anchor the text content
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -253,10 +280,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  AppTheme.darkBackground.withAlpha((0.75 * 255).round()),
+                  Colors.black.withAlpha((0.5 * 255).round()),
                   Colors.transparent,
                 ],
-                stops: const [0.0, 0.55],
+                stops: const [0.0, 0.6],
               ),
             ),
           ),

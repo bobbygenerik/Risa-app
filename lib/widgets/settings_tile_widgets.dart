@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 // -----------------------------------------------------------------------------
 // SECTIONS & HEADERS
@@ -161,62 +162,75 @@ class SettingsActionTile extends StatelessWidget {
           child: Builder(
             builder: (context) {
               final isFocused = Focus.of(context).hasFocus;
-              return Material(
-                color: isFocused
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : Colors.transparent,
-                child: InkWell(
-                  onTap: onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    child: Row(
-                      children: [
-                        if (icon != null) ...[
-                          Icon(
-                            icon,
-                            size: 24,
-                            color: iconColor ?? Colors.white70,
-                          ),
-                          const SizedBox(width: 16),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      color: titleColor ?? AppTheme.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 4),
+              return AnimatedScale(
+                scale: isFocused ? 1.05 : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  decoration: BoxDecoration(
+                    color: isFocused
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isFocused
+                        ? Border.all(color: AppTheme.focusBorder, width: 3)
+                        : null,
+                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                  ),
+                  child: InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      child: Row(
+                        children: [
+                          if (icon != null) ...[
+                            Icon(
+                              icon,
+                              size: 24,
+                              color: iconColor ?? Colors.white70,
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  subtitle!,
+                                  title,
                                   style: Theme.of(context)
                                       .textTheme
-                                      .bodyMedium
+                                      .titleLarge
                                       ?.copyWith(
-                                        color: AppTheme.textSecondary,
+                                        color: titleColor ?? AppTheme.textPrimary,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                 ),
+                                if (subtitle != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    subtitle!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                        if (trailing != null)
-                          trailing!
-                        else if (onTap != null)
-                          Icon(
-                            Icons.chevron_right,
-                            color: Colors.white24,
-                          ),
-                      ],
+                          if (trailing != null)
+                            trailing!
+                          else if (onTap != null)
+                            Icon(
+                              Icons.chevron_right,
+                              color: Colors.white24,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -271,65 +285,78 @@ class SettingsSwitchTile extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return Material(
-            color: isFocused
-                ? Colors.white.withValues(alpha: 0.18)
-                : Colors.transparent,
-            child: InkWell(
-              onTap: () => onChanged(!value),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color: AppTheme.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 4),
+          return AnimatedScale(
+            scale: isFocused ? 1.05 : 1.0,
+            duration: TVFocusStyle.animationDuration,
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: isFocused
+                    ? Border.all(color: AppTheme.focusBorder, width: 3)
+                    : null,
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+              ),
+              child: InkWell(
+                onTap: () => onChanged(!value),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              subtitle!,
+                              title,
                               style: Theme.of(context)
                                   .textTheme
-                                  .bodyMedium
+                                  .titleLarge
                                   ?.copyWith(
-                                    color: AppTheme.textSecondary,
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w600,
                                   ),
                             ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Transform.scale(
-                      scale: 0.9,
-                      child: Switch(
-                        value: value,
-                        onChanged: onChanged,
-                        activeThumbColor: isFocused
-                            ? AppTheme.primaryBlue
-                            : AppTheme.primaryBlue,
-                        activeTrackColor: isFocused
-                            ? AppTheme.primaryBlue.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.2),
-                        inactiveThumbColor:
-                            isFocused ? Colors.grey : Colors.grey[400],
-                        inactiveTrackColor:
-                            isFocused ? Colors.grey[300] : Colors.grey[800],
+                      const SizedBox(width: 16),
+                      Transform.scale(
+                        scale: 0.9,
+                        child: Switch(
+                          value: value,
+                          onChanged: onChanged,
+                          activeThumbColor: isFocused
+                              ? AppTheme.primaryBlue
+                              : AppTheme.primaryBlue,
+                          activeTrackColor: isFocused
+                              ? AppTheme.primaryBlue.withValues(alpha: 0.3)
+                              : Colors.white.withValues(alpha: 0.2),
+                          inactiveThumbColor:
+                              isFocused ? Colors.grey : Colors.grey[400],
+                          inactiveTrackColor:
+                              isFocused ? Colors.grey[300] : Colors.grey[800],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -496,18 +523,22 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
         onTap: () {
           _textFocusNode.requestFocus();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.highlight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _isActive ? AppTheme.primaryBlue : Colors.white10,
-              width: _isActive ? 2 : 1,
+        child: AnimatedScale(
+          scale: _isActive ? 1.05 : 1.0,
+          duration: TVFocusStyle.animationDuration,
+          child: AnimatedContainer(
+            duration: TVFocusStyle.animationDuration,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.highlight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isActive ? AppTheme.focusBorder : Colors.white10,
+                width: _isActive ? 3 : 1,
+              ),
+              boxShadow: _isActive ? TVFocusStyle.focusedShadow : null,
             ),
-          ),
-          child: Row(
+            child: Row(
             children: [
               if (widget.icon != null) ...[
                 Icon(
@@ -581,6 +612,7 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
               if (_isActive && !_isEditing)
                 const Icon(Icons.edit, size: 18, color: Colors.white70),
             ],
+            ),
           ),
         ),
       ),

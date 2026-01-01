@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 
 class BrandPrimaryButton extends StatefulWidget {
@@ -81,7 +82,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           if (widget.icon != null) ...[
             AnimatedScale(
               scale: _focused ? 1.15 : 1.0,
-              duration: const Duration(milliseconds: 150),
+              duration: TVFocusStyle.animationDuration,
               child: context.iconSm(widget.icon!, color: labelColor),
             ),
             SizedBox(width: context.tvSpacing(8)),
@@ -111,20 +112,8 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       duration: AppDurations.fast,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        boxShadow: _focused
-            ? [
-                BoxShadow(
-                  color: AppTheme.tvFocusHighlight.withValues(alpha: 0.4),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        border: _focused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
+        boxShadow: _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
       ),
       child: innerButton,
     );
@@ -150,15 +139,20 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
           onFocusChange: (v) => setState(() => _focused = v),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: InkWell(
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOutCubic,
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(widget.borderRadius),
-              splashColor: Colors.white.withValues(alpha: 0.15),
-              highlightColor: Colors.white.withValues(alpha: 0.08),
-              onTap: widget.onPressed,
-              child: content,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                splashColor: Colors.white.withValues(alpha: 0.15),
+                highlightColor: Colors.white.withValues(alpha: 0.08),
+                onTap: widget.onPressed,
+                child: content,
+              ),
             ),
           ),
         ),
@@ -249,7 +243,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ),
           constraints: BoxConstraints(
             minHeight:
-                context.tvSpacing(widget.minHeight ?? 32).clamp(24.0, 64.0),
+                context.tvSpacing(widget.minHeight ?? 32).clamp(24.0, 80.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -260,7 +254,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
               if (widget.icon != null) ...[
                 AnimatedScale(
                   scale: _focused ? 1.15 : 1.0,
-                  duration: const Duration(milliseconds: 150),
+                  duration: TVFocusStyle.animationDuration,
                   child: context.iconSm(
                     widget.icon!,
                     color: _focused ? AppTheme.darkBackground : Colors.white,
@@ -314,7 +308,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           onFocusChange: (v) => setState(() => _focused = v),
           child: AnimatedScale(
             scale: _focused ? 1.05 : 1.0,
-            duration: const Duration(milliseconds: 150),
+            duration: AppDurations.fast,
             curve: Curves.easeOutCubic,
             child: Material(
               color: Colors.transparent,

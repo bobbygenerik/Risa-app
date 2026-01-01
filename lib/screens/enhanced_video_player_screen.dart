@@ -14,7 +14,8 @@ import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:video_player/video_player.dart';
+import 'package:video_player/video_player.dart'; // Keep for type if needed, but prefer Universal
+import '../controllers/universal_player_controller.dart';
 import '../widgets/exo_player_widget.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
@@ -44,7 +45,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isLoading = true;
-  final ValueNotifier<VideoPlayerController?> _playerControllerNotifier =
+  final ValueNotifier<UniversalPlayerController?> _playerControllerNotifier =
       ValueNotifier(null);
   bool _showControls = true;
   bool _isPlaying = false;
@@ -53,7 +54,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   BoxFit _videoFit = BoxFit.contain;
-  VideoPlayerController? _playerController;
+  UniversalPlayerController? _playerController;
   VoidCallback? _playerListener;
   Timer? _controlsHideTimer;
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
@@ -777,7 +778,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildRegularSubtitleOverlay() {
-    final captionText = _playerController?.value.caption.text ?? '';
+    String captionText = '';
+    final controller = _playerController;
+    if (controller is StockPlayerController) {
+       captionText = controller.rawController.value.caption.text;
+    }
+    // Universal doesn't support subtitles for Native yet, handled by Native view?
+    // Actually NativeExoPlayer has its own subtitle tracks, but we haven't bridged text rendering to Flutter
+    // apart from 'listSubtitleTracks'.
+    // Use ClosedCaption only for stock for now.
+
     if (captionText.isEmpty) {
       return const SizedBox.shrink();
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class AppDialog extends StatelessWidget {
   final String? title;
@@ -102,36 +103,39 @@ class AppDialogButton extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            decoration: BoxDecoration(
-              color: isPrimary
-                  ? (isFocused
-                      ? AppTheme.primaryBlue
-                      : AppTheme.primaryBlue.withValues(alpha: 0.8))
-                  : (isFocused
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.transparent),
-              borderRadius: BorderRadius.circular(6),
-              border: isFocused && !isPrimary
-                  ? Border.all(color: Colors.white.withValues(alpha: 0.3))
-                  : null,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: onPressed,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight:
-                          isPrimary ? FontWeight.w600 : FontWeight.normal,
+          return AnimatedScale(
+            scale: isFocused ? 1.1 : 1.0,
+            duration: TVFocusStyle.animationDuration,
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              decoration: BoxDecoration(
+                color: isPrimary
+                    ? AppTheme.primaryBlue
+                    : (isFocused
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.transparent),
+                borderRadius: BorderRadius.circular(8),
+                border: isFocused
+                    ? Border.all(color: AppTheme.focusBorder, width: 3)
+                    : null,
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: onPressed,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight:
+                            isPrimary ? FontWeight.w600 : FontWeight.normal,
+                      ),
                     ),
                   ),
                 ),
