@@ -48,6 +48,7 @@ import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/multi_view_screen.dart';
+import 'package:iptv_player/widgets/safe_pop_scope.dart';
 
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
@@ -893,50 +894,55 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/recordings',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const RecordingsScreen()),
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: RecordingsScreen())),
     ),
 
     GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const PlaylistEditorScreen(),
+        child: const SafePopScope(child: PlaylistEditorScreen()),
       ),
     ),
     GoRoute(
       path: '/playlist-manager',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const PlaylistManagerScreen(),
+        child: const SafePopScope(child: PlaylistManagerScreen()),
       ),
     ),
     GoRoute(
       path: '/ssl-settings',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const SSLSettingsScreen(),
+        child: const SafePopScope(child: SSLSettingsScreen()),
       ),
     ),
     GoRoute(
       path: '/ai-models',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: AIModelsScreen())),
     ),
     GoRoute(
       path: '/epg-diagnostic',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey, child: const EpgDiagnosticScreen()),
+          key: state.pageKey,
+          child: const SafePopScope(child: EpgDiagnosticScreen())),
     ),
     GoRoute(
       path: '/epg-manager',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const EpgManagerScreen()),
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: EpgManagerScreen())),
     ),
     GoRoute(
       path: '/debug',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const DebugScreen()),
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: DebugScreen())),
     ),
     GoRoute(
       path: '/exit',
@@ -988,7 +994,7 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: ContentDetailScreen(content: content),
+          child: SafePopScope(child: ContentDetailScreen(content: content)),
         );
       },
     ),
@@ -1021,11 +1027,13 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: EnhancedVideoPlayerScreen(
-            videoUrl: videoUrl,
-            title: title,
-            isLive: isLive,
-            channel: channel,
+          child: SafePopScope(
+            child: EnhancedVideoPlayerScreen(
+              videoUrl: videoUrl,
+              title: title,
+              isLive: isLive,
+              channel: channel,
+            ),
           ),
         );
       },
@@ -1045,9 +1053,11 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: MultiViewScreen(
-            channels: channels,
-            initialChannel: initialChannel,
+          child: SafePopScope(
+            child: MultiViewScreen(
+              channels: channels,
+              initialChannel: initialChannel,
+            ),
           ),
         );
       },
