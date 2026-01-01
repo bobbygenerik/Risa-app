@@ -21,7 +21,11 @@ class HeroInfoPanel extends StatelessWidget {
     return SizedBox(
       width: width,
       child: Padding(
-        padding: padding ?? EdgeInsets.symmetric(vertical: context.spacingLg()),
+        padding: padding ??
+            EdgeInsets.only(
+              top: context.spacingLg(),
+              bottom: context.spacingXs(),
+            ),
         child: child,
       ),
     );

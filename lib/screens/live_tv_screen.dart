@@ -860,7 +860,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 48.0),
+                    padding: const EdgeInsets.only(bottom: 16.0),
                     child: _buildHeroInfoPanel(
                       context,
                       heroInfoWidth,
@@ -973,10 +973,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         maxHeight: safeMaxHeight,
       ),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: 0,
-          vertical: context.spacingMd(), // Reduced from Lg
-        ),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -1004,15 +1001,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               SizedBox(height: context.tvSpacing(6)),
             ],
             if (description.isNotEmpty) ...[
-              Flexible(
-                child: Text(
-                  description,
-                  style: descriptionStyle,
-                  maxLines: 2, // Reduced from 3 for better stability
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Text(
+                description,
+                style: descriptionStyle,
+                maxLines: 4, // Increased from 3
+                overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: context.tvSpacing(8)),
+              SizedBox(height: context.tvSpacing(12)),
             ],
             // Progress Bar
             SizedBox(
