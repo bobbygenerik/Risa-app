@@ -21,7 +21,7 @@ class HeroInfoPanel extends StatelessWidget {
     return SizedBox(
       width: width,
       child: Padding(
-        padding: padding ?? EdgeInsets.symmetric(vertical: context.spacingLg()),
+        padding: padding ?? EdgeInsets.zero,
         child: child,
       ),
     );
@@ -45,7 +45,7 @@ class HeroInfoSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: EdgeInsets.all(context.spacingSm()),
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -53,7 +53,7 @@ class HeroInfoSkeleton extends StatelessWidget {
           // Logo/Label slot (only when the real UI shows it)
           if (showLogo)
             Container(
-              height: context.tvSpacing(36),
+              height: context.tvSpacing(30),
               width: width * 0.4,
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha((0.15 * 255).round()),
@@ -64,7 +64,7 @@ class HeroInfoSkeleton extends StatelessWidget {
           
           // Title slot
           Container(
-            height: context.tvSpacing(48),
+            height: context.tvSpacing(32),
             width: width * 0.8,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
@@ -99,28 +99,28 @@ class HeroInfoSkeleton extends StatelessWidget {
           
           // Description lines
           Container(
-            height: 14,
+            height: 12,
             width: width * 0.9,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.05 * 255).round()),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Container(
-            height: 14,
+            height: 12,
             width: width * 0.7,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.05 * 255).round()),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          SizedBox(height: context.spacingLg()),
+          SizedBox(height: context.spacingMd()),
           
           // Button slot
           Container(
-            height: 36,
-            width: 120,
+            height: 28,
+            width: 100,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(8),

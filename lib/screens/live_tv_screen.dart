@@ -112,6 +112,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Featured content rotation
   Timer? _featuredRotationTimer;
   static const Duration _featuredRotationInterval = Duration(minutes: 5);
+  List<Channel> _stableFeaturedChannels = [];
+  bool _featuredChannelsInitialized = false;
 
   @override
   void initState() {
@@ -599,10 +601,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildFeaturedRow(
       BuildContext context, List<Channel> fallbackChannels) {
+    if (fallbackChannels.isEmpty) return const SizedBox.shrink();
+
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
     final epgService = context.watch<IncrementalEpgService>();
     final mostWatched = channelProvider.mostWatchedChannels;
+
+    // Use stabilized channels if already initialized and fallback haven't changed much
+    if (_featuredChannelsInitialized && _stableFeaturedChannels.isNotEmpty) {
+      return _buildChannelSection(
+        context,
+        'Featured',
+        _stableFeaturedChannels,
+        isFirstRow: true,
+        allowCategoryPaging: false,
+      );
+    }
 
     // Mix most-watched with random selection for balanced featured content
     final List<Channel> featuredChannels = [];
@@ -679,6 +694,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (featuredChannels.length >= targetFeaturedCount) break;
     }
 
+    if (featuredChannels.isNotEmpty) {
+      _stableFeaturedChannels = List.from(featuredChannels);
+      _featuredChannelsInitialized = true;
+    }
+
     if (featuredChannels.isEmpty) return const SizedBox.shrink();
 
     return _buildChannelSection(
@@ -689,6 +709,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       allowCategoryPaging: false,
     );
   }
+
+
 
   Widget _buildFullScreenHero(
     BuildContext context,
@@ -937,68 +959,76 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
     final titleStyle = AppTypography.heroTitle(context);
     final descriptionStyle = AppTypography.heroDescription(context);
-    final logoSlotHeight = context.tvSpacing(36);
+    final logoSlotHeight = context.tvSpacing(30);
 
-    // Cap info box to 30% of screen height to prevent overlap with channel list
-    final maxBoxHeight = MediaQuery.of(context).size.height * 0.30;
+    // Safe max height: visible area above the row with buffer
+    final heroHeight = context.heroHeight();
+    final cardPeek = 80.0;
+    final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
+    final safeMaxHeight = contentTop - 40; // Tighter buffer since we are shrinking it
+
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
-        maxHeight: maxBoxHeight,
+        maxHeight: safeMaxHeight,
       ),
-      child: ClipRect(
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 0,
-            vertical: context.spacingLg(),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            // Lock text block heights so the info box doesn't resize on updates.
-            SizedBox(
-              height: logoSlotHeight,
-              child: titleLogoUrl == null
-                  ? const SizedBox.shrink()
-                  : CachedImage(
-                      imageUrl: titleLogoUrl,
-                      height: logoSlotHeight,
-                      fit: BoxFit.contain,
-                      placeholder: const SizedBox.shrink(),
-                      errorWidget: const SizedBox.shrink(),
-                    ),
-            ),
-            SizedBox(height: context.tvSpacing(8)),
-            // Only show text title if no logo is available
-            if (titleLogoUrl == null)
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 0,
+          vertical: context.spacingMd(), // Reduced from Lg
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (titleLogoUrl != null) ...[
+              SizedBox(
+                height: logoSlotHeight,
+                child: CachedImage(
+                  imageUrl: titleLogoUrl,
+                  height: logoSlotHeight,
+                  fit: BoxFit.contain,
+                  placeholder: const SizedBox.shrink(),
+                  errorWidget: const SizedBox.shrink(),
+                ),
+              ),
+              SizedBox(height: context.tvSpacing(6)),
+            ],
+            if (titleLogoUrl == null && title.isNotEmpty) ...[
               Text(
                 title,
                 style: titleStyle,
-                maxLines: 3,
+                maxLines: 1, // Stricter lines for stability
                 overflow: TextOverflow.ellipsis,
               ),
-            SizedBox(height: context.tvSpacing(8)),
-            Text(
-              description,
-              style: descriptionStyle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: context.tvSpacing(8)),
+              SizedBox(height: context.tvSpacing(6)),
+            ],
+            if (description.isNotEmpty) ...[
+              Flexible(
+                child: Text(
+                  description,
+                  style: descriptionStyle,
+                  maxLines: 2, // Reduced from 3 for better stability
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(height: context.tvSpacing(8)),
+            ],
+            // Progress Bar
             SizedBox(
-              height: 6,
+              height: 4, // Slimmer progress bar
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: AppColors.progressBackground,
                   color: AppColors.progressForeground,
-                  minHeight: 6,
+                  minHeight: 4,
                 ),
               ),
             ),
-            SizedBox(height: context.tvSpacing(4)),
+            SizedBox(height: context.tvSpacing(6)),
+            // Badge & Time
             Row(
               children: [
                 const BrandBadge.live(),
@@ -1006,29 +1036,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 Expanded(
                   child: Text(
                     timeRange,
-                    style: AppTypography.smallText(context),
+                    style: AppTypography.smallText(context).copyWith(
+                      fontSize: context.tvTextSize(12), // Slightly smaller
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), // Reduced from 20
+            // Watch Button
             SizedBox(
-              width: context.cardWidth() * 0.5,
+              width: context.cardWidth() * 0.5, // Slimmer button
               child: BrandPrimaryButton(
                 onPressed: () => context.push('/player', extra: channel),
-                label: 'Watch',
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                fontSize: 12,
-                minHeight: 24,
+                label: 'Watch Now',
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                fontSize: 13,
+                minHeight: 28,
                 focusNode: _watchButtonFocus,
               ),
             ),
           ],
         ),
-      ),
       ),
     );
   }
@@ -1426,7 +1457,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       BuildContext context, String title, List<Channel> channels,
       {bool isFirstRow = false, bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
-    final epgService = context.read<IncrementalEpgService>();
+    final epgService = context.watch<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
     final seenProgramKeys = <String>{};
     for (var i = 0; i < channels.length; i++) {
@@ -1786,7 +1817,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               Positioned.fill(
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
-                                  fit: BoxFit.contain,
+                                  fit: BoxFit.cover,
                                   memCacheWidth: cacheWidth,
                                   memCacheHeight: cacheHeight,
                                   placeholder: (_, __) => Container(

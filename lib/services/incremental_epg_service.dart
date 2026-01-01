@@ -1841,6 +1841,10 @@ class IncrementalEpgService extends ChangeNotifier {
     // but we can ensure they are available in _programsByChannel
     if (!_hasParsed) {
       await initialize();
+    } else {
+      // Small delay to allow batching if caller expects it
+      await Future.delayed(Duration.zero);
+      notifyListeners();
     }
   }
 
@@ -2426,7 +2430,8 @@ class IncrementalEpgService extends ChangeNotifier {
     _ensureNormalizedMap();
     if (_normalizedAvailableChannels == null ||
         _normalizedAvailableChannels!.isEmpty) {
-      return 0;
+      // Return established mapping count as fallback
+      return _internalToEpgIdMapping.length;
     }
     int matched = 0;
     for (final map in channelMaps) {
@@ -2678,14 +2683,17 @@ class IncrementalEpgService extends ChangeNotifier {
         return;
       }
       final now = DateTime.now();
-      if (_lastMappingsLoad != null &&
+      if (_internalToEpgIdMapping.isNotEmpty &&
+          _lastMappingsLoad != null &&
           now.difference(_lastMappingsLoad!).inSeconds < 30) {
         return;
       }
       final mappings = await _db.getAllMappings();
       _internalToEpgIdMapping.addAll(mappings);
+      _availableChannels.addAll(mappings.values);
       _lastMappingsLoad = now;
       debugLog('EPG: Loaded ${mappings.length} mappings from DB');
+      notifyListeners();
     } catch (e) {
       debugLog('EPG: Failed to load mappings from DB: $e');
       _handleDbError(e);
@@ -2843,7 +2851,10 @@ class IncrementalEpgService extends ChangeNotifier {
       }).toList();
       _programsByChannel[epgId] = programs;
       debugLog('EPG: Loaded ${programs.length} programs for $epgId from DB');
-      notifyListeners();
+      if (programs.isNotEmpty) {
+        _availableChannels.add(epgId);
+        notifyListeners();
+      }
     } catch (e) {
       debugLog('EPG: Failed to load programs from DB for $epgId: $e');
       _handleDbError(e);

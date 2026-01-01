@@ -80,10 +80,10 @@ class AppTypography {
 
   /// Hero title (34px, w700) - Compact for streaming-style hero layouts
   static TextStyle heroTitle(BuildContext context) => TextStyle(
-        fontSize: context.tvTextSize(34),
+        fontSize: context.tvTextSize(28),
         fontWeight: FontWeight.w700,
         color: AppTheme.textPrimary,
-        height: 1.2,
+        height: 1.1,
       );
 
   /// Hero description (14px, secondary, line height) - Compact for hero overlays
