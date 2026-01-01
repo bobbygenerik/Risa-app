@@ -72,8 +72,7 @@ class _VodCardImageState extends State<VodCardImage> {
         debugLog(
             'VodCardImage: No artwork found for "${widget.content.title}"');
         _fetchedTmdb = true;
-        _retryAfter[cacheKey] =
-            DateTime.now().add(const Duration(minutes: 10));
+        _retryAfter[cacheKey] = DateTime.now().add(const Duration(minutes: 10));
       }
     } catch (e) {
       debugLog(

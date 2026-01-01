@@ -55,7 +55,8 @@ class CrashLogger {
       // Try to also write to external Downloads/RisaLogs via platform channel
       try {
         const channel = MethodChannel('com.streamhub.iptv/debug_io');
-        final filename = 'crash_${DateTime.now().toIso8601String().replaceAll(':', '-')}.txt';
+        final filename =
+            'crash_${DateTime.now().toIso8601String().replaceAll(':', '-')}.txt';
         await channel.invokeMethod('writeFile', {
           'name': filename,
           'content': buffer.toString(),

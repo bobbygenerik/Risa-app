@@ -53,10 +53,9 @@ class Content {
   String get displayTitle {
     String stripYearSuffix(String input) {
       var output = input.trim();
-      output = output.replaceAll(
-          RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
       output =
-          output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
+          output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+      output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
       return output.trim();
     }
 

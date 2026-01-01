@@ -45,7 +45,8 @@ class VideoPlayerRouter extends StatelessWidget {
     // issues in Flutter's video_player, otherwise use EnhancedVideoPlayerScreen
     // so app overlays remain authoritative.
     final bool explicitExo = backend == 'ExoPlayer';
-    final bool preferNativeOnTv = backend == 'Auto' && TVFocusHelper.isAndroidTV;
+    final bool preferNativeOnTv =
+        backend == 'Auto' && TVFocusHelper.isAndroidTV;
     final bool useNativeExo = explicitExo || preferNativeOnTv;
 
     if (useNativeExo && defaultTargetPlatform == TargetPlatform.android) {

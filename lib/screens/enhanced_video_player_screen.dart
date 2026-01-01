@@ -623,27 +623,27 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildMenuOption(
-                'Off',
-                Icons.subtitles_off_outlined,
-                _subtitleMode == EnhancedSubtitleMode.off,
-                () => _setSubtitleMode(EnhancedSubtitleMode.off),
-                autofocus: true,
-              ),
-              _buildMenuOption(
-                'Regular Subtitles',
-                Icons.closed_caption_outlined,
-                _subtitleMode == EnhancedSubtitleMode.regular,
-                _showRegularSubtitlePicker,
-              ),
-              _buildMenuOption(
-                'Live Translation',
-                Icons.translate,
-                _subtitleMode == EnhancedSubtitleMode.liveTranslation,
-                () => _setSubtitleMode(EnhancedSubtitleMode.liveTranslation),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildMenuOption(
+              'Off',
+              Icons.subtitles_off_outlined,
+              _subtitleMode == EnhancedSubtitleMode.off,
+              () => _setSubtitleMode(EnhancedSubtitleMode.off),
+              autofocus: true,
+            ),
+            _buildMenuOption(
+              'Regular Subtitles',
+              Icons.closed_caption_outlined,
+              _subtitleMode == EnhancedSubtitleMode.regular,
+              _showRegularSubtitlePicker,
+            ),
+            _buildMenuOption(
+              'Live Translation',
+              Icons.translate,
+              _subtitleMode == EnhancedSubtitleMode.liveTranslation,
+              () => _setSubtitleMode(EnhancedSubtitleMode.liveTranslation),
             ),
           ],
         ),
@@ -676,7 +676,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 onTap();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   color: isFocused
                       ? Colors.white.withValues(alpha: 0.08)

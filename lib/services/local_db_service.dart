@@ -255,10 +255,8 @@ class LocalDbService {
     return rows.map(_hydrateAttrs).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getChannelsForCategoryPage(
-      String category,
-      {int offset = 0,
-      int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getChannelsForCategoryPage(String category,
+      {int offset = 0, int limit = 50}) async {
     final safeLimit = limit.clamp(0, 500);
     final rows = await _withDbRead((db) {
       return db.query(
@@ -313,7 +311,8 @@ class LocalDbService {
   Future<int> channelCountForCategory(String category) async {
     final result = await _withDbRead((db) {
       return db.rawQuery(
-          'SELECT COUNT(*) as c FROM channels WHERE groupTitle = ?', [category]);
+          'SELECT COUNT(*) as c FROM channels WHERE groupTitle = ?',
+          [category]);
     });
     return Sqflite.firstIntValue(result) ?? 0;
   }
@@ -334,7 +333,10 @@ class LocalDbService {
   }
 
   Future<List<Map<String, dynamic>>> getProgramsForEpgId(String epgId,
-      {required int startMs, required int endMs, int limit = 200, int offset = 0}) async {
+      {required int startMs,
+      required int endMs,
+      int limit = 200,
+      int offset = 0}) async {
     final rows = await _withDbRead((db) {
       return db.query(
         'epg_programs',

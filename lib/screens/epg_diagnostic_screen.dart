@@ -103,9 +103,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     var iterations = 0;
 
     try {
-      while (next.length < _pageSize &&
-          offset < totalChannels &&
-          iterations < 5) {
+      while (
+          next.length < _pageSize && offset < totalChannels && iterations < 5) {
         final batch = await channelProvider.getChannelsPage(
           offset: offset,
           limit: _scanChunkSize,
@@ -114,8 +113,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         offset += batch.length;
         for (final channel in batch) {
           final id = channel.tvgId ?? channel.id;
-          final matched =
-              epgService.hasEpgMatch(id, channelName: channel.name);
+          final matched = epgService.hasEpgMatch(id, channelName: channel.name);
           final passes = _matchFilter == _MatchFilter.all ||
               (_matchFilter == _MatchFilter.matched && matched) ||
               (_matchFilter == _MatchFilter.unmatched && !matched);
@@ -182,8 +180,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               channelProvider.getChannelSampleMapsByStride(sampleSize);
           if (sample.isNotEmpty) {
             final matched = epgService.estimateMatchesFast(sample);
-            mappingCount =
-                matched * (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
+            mappingCount = matched *
+                (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
           }
         } catch (e, st) {
           debugLog('EPG Diagnostic: sampling failed: $e\n$st');
@@ -271,20 +269,20 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           await epgService.initialize(forceRefresh: true);
                           await _writeDebugMarker('epg_reload_completed');
                           _refreshStats();
-                          rootScaffoldMessengerKey.currentState?.showSnackBar(
-                              const SnackBar(
-                                content: Text('EPG reload requested'),
-                                backgroundColor: Color(0xFF1E2328),
-                                behavior: SnackBarBehavior.floating,
-                              ));
+                          rootScaffoldMessengerKey.currentState
+                              ?.showSnackBar(const SnackBar(
+                            content: Text('EPG reload requested'),
+                            backgroundColor: Color(0xFF1E2328),
+                            behavior: SnackBarBehavior.floating,
+                          ));
                         } catch (e) {
                           await _writeDebugMarker('epg_reload_failed');
-                          rootScaffoldMessengerKey.currentState?.showSnackBar(
-                              SnackBar(
-                                content: Text('EPG reload failed: $e'),
-                                backgroundColor: const Color(0xFF1E2328),
-                                behavior: SnackBarBehavior.floating,
-                              ));
+                          rootScaffoldMessengerKey.currentState
+                              ?.showSnackBar(SnackBar(
+                            content: Text('EPG reload failed: $e'),
+                            backgroundColor: const Color(0xFF1E2328),
+                            behavior: SnackBarBehavior.floating,
+                          ));
                         }
                       },
                       icon: const Icon(Icons.refresh, size: 16),
@@ -324,8 +322,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   future: _statsFuture,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      debugLog(
-                          'EPG Diagnostic stats error: ${snapshot.error}');
+                      debugLog('EPG Diagnostic stats error: ${snapshot.error}');
                       return Text(
                         'Unable to compute match stats right now.',
                         style: const TextStyle(
@@ -341,8 +338,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                         : ((matched / scanned) * 100).toStringAsFixed(1);
                     final isLoadingStats =
                         snapshot.connectionState == ConnectionState.waiting;
-                    final color =
-                        matched > (scanned * 0.5) ? Colors.green : Colors.orange;
+                    final color = matched > (scanned * 0.5)
+                        ? Colors.green
+                        : Colors.orange;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +360,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                               const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ],
                           ],
@@ -648,5 +647,4 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       // Swallow errors to avoid affecting diagnostics UI
     }
   }
-
 }

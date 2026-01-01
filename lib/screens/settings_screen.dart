@@ -132,8 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
       _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
       _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-      _customEpgUrlController.text =
-          prefs.getString('custom_epg_url') ?? '';
+      _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
       _secondaryEpgUrlController.text =
           prefs.getString('secondary_epg_url') ?? '';
       _detectedEpgUrl = prefs.getString('epg_url') ?? '';
@@ -227,7 +226,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SettingsCategory(title: 'General', icon: Icons.settings),
           SettingsCategory(title: 'Playback', icon: Icons.play_circle),
           SettingsCategory(title: 'AI Features', icon: Icons.auto_awesome),
-          SettingsCategory(title: 'Recordings', icon: Icons.fiber_manual_record),
+          SettingsCategory(
+              title: 'Recordings', icon: Icons.fiber_manual_record),
         ],
         content: _buildActiveContent(),
       ),
@@ -316,8 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final xtreamCounts =
                     data != null ? data[3] as Map<String, int>? : null;
 
-                final channels =
-                    xtreamCounts?['channels'] ?? rawChannels;
+                final channels = xtreamCounts?['channels'] ?? rawChannels;
                 final movies = xtreamCounts?['movies'] ?? rawMovies;
                 final series = xtreamCounts?['series'] ?? rawSeries;
 
@@ -386,8 +385,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const SizedBox(height: 10),
                               BrandSecondaryButton(
                                 label: 'View Response',
-                                onPressed: () =>
-                                    _showPlaylistResponsePreview(responsePreview),
+                                onPressed: () => _showPlaylistResponsePreview(
+                                    responsePreview),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 10,
@@ -470,9 +469,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   titleColor: AppTheme.primaryBlue,
                   focusNode: _loadM3uButtonFocusNode,
                   onTap: _loadM3uPlaylist,
-                  subtitle: cp.isLoading
-                      ? '$statusText ($progressPercent%)'
-                      : null,
+                  subtitle:
+                      cp.isLoading ? '$statusText ($progressPercent%)' : null,
                   trailing: cp.isLoading
                       ? IconButton(
                           icon: const Icon(Icons.cancel),
@@ -534,9 +532,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   titleColor: AppTheme.primaryBlue,
                   focusNode: _loadXtreamButtonFocusNode,
                   onTap: _loadXtreamPlaylist,
-                  subtitle: cp.isLoading
-                      ? '$statusText ($progressPercent%)'
-                      : null,
+                  subtitle:
+                      cp.isLoading ? '$statusText ($progressPercent%)' : null,
                   trailing: cp.isLoading
                       ? IconButton(
                           icon: const Icon(Icons.cancel),
@@ -573,9 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final detected = epgService.currentUrl ?? _detectedEpgUrl;
                 return SettingsActionTile(
                   title: 'Detected EPG URL (from playlist)',
-                  subtitle: detected.isNotEmpty
-                      ? detected
-                      : 'None detected',
+                  subtitle: detected.isNotEmpty ? detected : 'None detected',
                   icon: Icons.link,
                   onTap: null,
                 );
@@ -983,23 +978,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       } else {
         _m3uUrlController.clear();
-            _showMessage('Playlist loaded successfully!');
-            await _savePlaylistToLibrary(
-              SavedPlaylist(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                name: url,
-                type: 'm3u',
-                url: url,
-                epgUrl: prefs.getString('epg_url'),
-                epgUrlSecondary: prefs.getString('secondary_epg_url'),
-                addedDate: DateTime.now(),
-              ),
-            );
-            // Trigger EPG refresh with the detected URL
-            if (mounted) {
-              unawaited(
-              Provider.of<IncrementalEpgService>(context, listen: false)
-                  .initialize(forceRefresh: true));
+        _showMessage('Playlist loaded successfully!');
+        await _savePlaylistToLibrary(
+          SavedPlaylist(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: url,
+            type: 'm3u',
+            url: url,
+            epgUrl: prefs.getString('epg_url'),
+            epgUrlSecondary: prefs.getString('secondary_epg_url'),
+            addedDate: DateTime.now(),
+          ),
+        );
+        // Trigger EPG refresh with the detected URL
+        if (mounted) {
+          unawaited(Provider.of<IncrementalEpgService>(context, listen: false)
+              .initialize(forceRefresh: true));
         }
       }
     }
@@ -1111,9 +1105,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
         // Trigger EPG refresh with the detected URL
         if (mounted) {
-          unawaited(
-              Provider.of<IncrementalEpgService>(context, listen: false)
-                  .initialize(forceRefresh: true));
+          unawaited(Provider.of<IncrementalEpgService>(context, listen: false)
+              .initialize(forceRefresh: true));
         }
       }
     }

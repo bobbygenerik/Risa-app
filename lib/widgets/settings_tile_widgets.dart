@@ -186,7 +186,10 @@ class SettingsActionTile extends StatelessWidget {
                             children: [
                               Text(
                                 title,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
                                       color: titleColor ?? AppTheme.textPrimary,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -195,7 +198,10 @@ class SettingsActionTile extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 Text(
                                   subtitle!,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
                                         color: AppTheme.textSecondary,
                                       ),
                                 ),
@@ -282,7 +288,10 @@ class SettingsSwitchTile extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
                                   color: AppTheme.textPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -291,7 +300,10 @@ class SettingsSwitchTile extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               subtitle!,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     color: AppTheme.textSecondary,
                                   ),
                             ),

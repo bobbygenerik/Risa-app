@@ -558,9 +558,9 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     final epg = Provider.of<IncrementalEpgService>(context, listen: false);
     epg
         .getProgramForChannelAsync(
-          widget.channel!.tvgId ?? widget.channel!.id,
-          channelName: widget.channel!.name,
-        )
+      widget.channel!.tvgId ?? widget.channel!.id,
+      channelName: widget.channel!.name,
+    )
         .then((program) {
       final nextProgress = program?.progressPercentage ?? 0.0;
       if (mounted) {
@@ -784,7 +784,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                 onTap();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   color: isFocused
                       ? Colors.white.withValues(alpha: 0.08)

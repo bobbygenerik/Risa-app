@@ -226,6 +226,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     }
     return widgets;
   }
+
   Widget _buildHeroScrims() {
     return Stack(
       children: [
@@ -460,8 +461,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   boxShadow: isFocused
                       ? [
                           BoxShadow(
-                            color:
-                                AppTheme.primaryBlue.withValues(alpha: 0.25),
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.25),
                             blurRadius: 16,
                           ),
                         ]
@@ -551,7 +551,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('More Like This', style: AppTypography.sectionHeader(context)),
+              Text('More Like This',
+                  style: AppTypography.sectionHeader(context)),
               context.spacingSmBox,
               SizedBox(
                 height: cardHeight + context.spacingLg(),
@@ -579,12 +580,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   List<Content> _buildRecommendations(ContentProvider contentProvider) {
     final current = widget.content;
-    final genres = current.allGenres
-        .map((g) => g.toLowerCase())
-        .toSet();
+    final genres = current.allGenres.map((g) => g.toLowerCase()).toSet();
     final isSeries = current.type == ContentType.series;
-    final source =
-        isSeries ? contentProvider.series : contentProvider.movies;
+    final source = isSeries ? contentProvider.series : contentProvider.movies;
 
     final seenTitles = <String>{};
     final candidates = <Content>[];
@@ -604,8 +602,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
     int score(Content item) {
       if (genres.isEmpty) return 0;
-      final itemGenres =
-          item.allGenres.map((g) => g.toLowerCase()).toSet();
+      final itemGenres = item.allGenres.map((g) => g.toLowerCase()).toSet();
       return itemGenres.intersection(genres).length;
     }
 
@@ -657,8 +654,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   boxShadow: isFocused
                       ? [
                           BoxShadow(
-                            color:
-                                AppTheme.primaryBlue.withValues(alpha: 0.25),
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.25),
                             blurRadius: 16,
                           ),
                         ]

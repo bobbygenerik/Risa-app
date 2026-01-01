@@ -115,9 +115,13 @@ class _MoviesScreenState extends State<MoviesScreen>
   bool _vodRetryRequested = false;
   int _heroImageSkipCount = 0;
   bool _heroSkipScheduled = false;
+  final Map<String, FocusNode> _sectionFirstCardFocusNodes = {};
 
   @override
   void dispose() {
+    for (final node in _sectionFirstCardFocusNodes.values) {
+      node.dispose();
+    }
     _carouselTimer?.cancel();
     _scrollController.removeListener(_handleSectionPrefetch);
     _scrollController.dispose();
@@ -501,9 +505,8 @@ class _MoviesScreenState extends State<MoviesScreen>
       provider.loadMovies(updatedMovies);
       if (_curatedMovies.isNotEmpty) {
         setState(() {
-          _curatedMovies = _curatedMovies
-              .map((m) => m.id == item.id ? patched : m)
-              .toList();
+          _curatedMovies =
+              _curatedMovies.map((m) => m.id == item.id ? patched : m).toList();
         });
       }
     } catch (_) {}
@@ -642,8 +645,8 @@ class _MoviesScreenState extends State<MoviesScreen>
               notification.metrics.pixels;
           if (remaining < context.cardGap() * 6) {
             if (effectiveSectionKey != null) {
-              _bumpRowVisibleCount(
-                  context, effectiveSectionKey, movies.length, movies.length - 1);
+              _bumpRowVisibleCount(context, effectiveSectionKey, movies.length,
+                  movies.length - 1);
             }
             onNearEnd?.call();
           }
@@ -664,8 +667,8 @@ class _MoviesScreenState extends State<MoviesScreen>
               index,
               onItemFocus: (focusedIndex) {
                 if (effectiveSectionKey != null) {
-                  _bumpRowVisibleCount(
-                      context, effectiveSectionKey, movies.length, focusedIndex);
+                  _bumpRowVisibleCount(context, effectiveSectionKey,
+                      movies.length, focusedIndex);
                 }
                 onItemFocus?.call(focusedIndex);
               },
@@ -945,12 +948,12 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   Widget _buildFullScreenHero(
-    BuildContext context,
-    Content featuredMovie,
-    List<Content> heroCandidates,
-    List<Content> allMovies,
-    List<Content> recentMovies,
-    {required bool hasMoreOverall}) {
+      BuildContext context,
+      Content featuredMovie,
+      List<Content> heroCandidates,
+      List<Content> allMovies,
+      List<Content> recentMovies,
+      {required bool hasMoreOverall}) {
     final heroArt = _resolveHeroArt(featuredMovie);
     if (heroArt.url == null || heroArt.url!.isEmpty) {
       _skipHeroWithNoImage(heroCandidates);
@@ -961,9 +964,14 @@ class _MoviesScreenState extends State<MoviesScreen>
       _heroImageSkipCount = 0;
     }
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingXl();
+    final cardPeek = 140.0;
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final screenSize = MediaQuery.of(context).size;
+    final heroInfoWidth = min(
+      screenSize.width * AppSpacing.heroInfoWidth,
+      screenSize.width >= 1920 ? 480.0 : 420.0,
+    );
 
     final sections = <_SectionConfig>[];
     if (recentMovies.isNotEmpty) {
@@ -988,6 +996,15 @@ class _MoviesScreenState extends State<MoviesScreen>
       ),
     );
     _sectionTotal = sections.length;
+    final sectionOrder = sections.map((s) => s.sectionKey).toList();
+    for (final key in _sectionFirstCardFocusNodes.keys
+        .where((key) => !sectionOrder.contains(key))
+        .toList()) {
+      final removed = _sectionFirstCardFocusNodes.remove(key);
+      if (removed != null && removed != _firstRowFocus) {
+        removed.dispose();
+      }
+    }
     final visibleSections =
         sections.take(min(_visibleSectionCount, sections.length)).toList();
 
@@ -1060,25 +1077,6 @@ class _MoviesScreenState extends State<MoviesScreen>
                           child: Stack(
                             children: [
                               _buildHeroContent(featuredMovie, heroArt, 0.0),
-                              // Left-side scrim for readability near sidebar/info box
-                              Positioned.fill(
-                                child: IgnorePointer(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        colors: [
-                                          AppTheme.darkBackground
-                                              .withAlpha((0.7 * 255).round()),
-                                          Colors.transparent,
-                                        ],
-                                        stops: const [0.0, 0.5],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
                               // Gradient fade at bottom
                               Positioned(
                                 bottom: 0,
@@ -1129,19 +1127,26 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: context.spacingXl(),
+                  top: 0,
                   left: contentInset,
+                  right: context.spacingLg(),
+                  height: heroHeight,
                   child: Builder(
                     builder: (context) {
                       final opacity = 1.0 - overlayFadeProgress;
-                      if (opacity <= 0.01) {
-                        return const SizedBox.shrink();
-                      }
+                      if (opacity <= 0.01) return const SizedBox.shrink();
                       return Transform.translate(
                         offset: Offset(0, -scrollOffset),
                         child: Opacity(
                           opacity: opacity,
-                          child: _buildHeroInfo(context, featuredMovie),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _buildHeroInfoPanel(
+                              context,
+                              heroInfoWidth,
+                              _buildHeroInfo(context, featuredMovie),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -1205,6 +1210,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       ],
     );
   }
+
   Widget _buildHeroContent(
       Content featuredMovie, _HeroArt heroArt, double scrollProgress) {
     final heroImage = heroArt.url;
@@ -1270,8 +1276,9 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildHeroInfo(BuildContext context, Content featuredMovie) {
     return HeroInfoBox(
       title: featuredMovie.displayTitle,
-      channelLogoUrl:
-          featuredMovie.logoUrl?.isNotEmpty == true ? featuredMovie.logoUrl : null,
+      channelLogoUrl: featuredMovie.logoUrl?.isNotEmpty == true
+          ? featuredMovie.logoUrl
+          : null,
       description: featuredMovie.description,
       metadata: [
         if (featuredMovie.rating != null)
@@ -1301,6 +1308,96 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
+  Widget _buildHeroInfoPanel(
+    BuildContext context,
+    double width,
+    Widget child,
+  ) {
+    final borderRadius = BorderRadius.circular(AppSpacing.radiusXl);
+    return SizedBox(
+      width: width,
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              color: AppTheme.darkBackground.withAlpha((0.65 * 255).round()),
+              border: Border.all(
+                color: Colors.white.withAlpha((0.1 * 255).round()),
+                width: 1,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroInfoSkeleton(
+    BuildContext context,
+    double width,
+    Size screenSize,
+  ) {
+    return SizedBox(
+      width: width,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        child: Container(
+          color: AppTheme.darkBackground.withAlpha((0.55 * 255).round()),
+          padding: EdgeInsets.all(context.spacingSm()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 28,
+                width: screenSize.width * 0.24,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              SizedBox(height: context.spacingSm()),
+              Container(
+                height: 42,
+                width: screenSize.width * 0.28,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              SizedBox(height: context.spacingSm()),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.15 * 255).round()),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(width: context.spacingXs()),
+                  Container(
+                    width: 28,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.1 * 255).round()),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
@@ -1322,11 +1419,9 @@ class _MoviesScreenState extends State<MoviesScreen>
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
-    final available =
-        screenSize.width - inset - context.spacingLg();
+    final available = screenSize.width - inset - context.spacingLg();
     final perRow = (available / (cardWidth + context.cardGap())).floor();
-    final skeletonItemCount =
-        (perRow + _rowVisibleBuffer).clamp(6, 12);
+    final skeletonItemCount = (perRow + _rowVisibleBuffer).clamp(6, 12);
 
     return Container(
       decoration: const BoxDecoration(
@@ -1347,31 +1442,14 @@ class _MoviesScreenState extends State<MoviesScreen>
             ),
             // Featured info skeleton
             Positioned(
-              bottom: heroHeight * 0.35,
+              top: 0,
               left: contentInset,
-              width: heroInfoWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    height: 28,
-                    width: screenSize.width * 0.24,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.15 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.sm),
-                  Container(
-                    height: 42,
-                    width: screenSize.width * 0.28,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
+              right: context.spacingLg(),
+              height: heroHeight,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child:
+                    _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
               ),
             ),
             // Content skeleton
@@ -1410,11 +1488,11 @@ class _MoviesScreenState extends State<MoviesScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                SizedBox(
-                                  height: rowHeight,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: skeletonItemCount,
+                                  SizedBox(
+                                    height: rowHeight,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: skeletonItemCount,
                                       itemBuilder: (context, cardIndex) =>
                                           Container(
                                         width: cardWidth,

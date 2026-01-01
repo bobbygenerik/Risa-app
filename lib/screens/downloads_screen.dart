@@ -41,7 +41,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       if (_storagePath == null || _storagePath!.isEmpty) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'No storage location configured. Set one in Settings.';
+          _errorMessage =
+              'No storage location configured. Set one in Settings.';
         });
         return;
       }
@@ -55,10 +56,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         return;
       }
 
-      final files = await dir
-          .list()
-          .where((entity) => entity is File)
-          .where((file) {
+      final files =
+          await dir.list().where((entity) => entity is File).where((file) {
         final ext = path.extension(file.path).toLowerCase();
         return ['.mp4', '.mkv', '.ts', '.m2ts', '.avi', '.mov', '.flv', '.webm']
             .contains(ext);
@@ -201,8 +200,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 Expanded(
                   child: _isLoading
                       ? const Center(
-                          child:
-                              CircularProgressIndicator(color: AppTheme.primaryBlue),
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primaryBlue),
                         )
                       : _errorMessage != null
                           ? Center(
@@ -270,8 +269,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                     itemCount: _files.length,
                                     itemBuilder: (context, index) {
                                       final file = _files[index];
-                                      final fileName =
-                                          path.basename(file.path);
+                                      final fileName = path.basename(file.path);
                                       final fileStat = file.statSync();
                                       final fileSize =
                                           _formatFileSize(fileStat.size);
@@ -354,8 +352,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     label: 'Play',
                     color: AppTheme.primaryBlue,
                     onPressed: () {
-                      GoRouter.of(context)
-                          .push('/offline-player', extra: file);
+                      GoRouter.of(context).push('/offline-player', extra: file);
                     },
                   ),
                   const SizedBox(width: 8),
@@ -401,9 +398,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             decoration: BoxDecoration(
               color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
               borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-              border: isFocused
-                  ? Border.all(color: color, width: 2)
-                  : null,
+              border: isFocused ? Border.all(color: color, width: 2) : null,
             ),
             child: IconButton(
               tooltip: label,

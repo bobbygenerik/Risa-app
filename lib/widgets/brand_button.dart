@@ -228,6 +228,10 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ],
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
+        border: Border.all(
+          color: _focused ? AppTheme.focusBorder : Colors.transparent,
+          width: _focused ? 3 : 3,
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.all(1.5),

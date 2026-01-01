@@ -38,7 +38,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
       final List<dynamic> decoded = jsonDecode(playlistsJson);
       _playlists = decoded
-          .map((json) => SavedPlaylist.fromJson(Map<String, dynamic>.from(json)))
+          .map(
+              (json) => SavedPlaylist.fromJson(Map<String, dynamic>.from(json)))
           .toList();
     }
 
@@ -50,19 +51,15 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     });
   }
 
-  Future<void> _migrateLegacyPlaylistsIfNeeded(
-      SharedPreferences prefs) async {
-    final alreadyMigrated =
-        prefs.getBool('legacy_playlists_migrated') ?? false;
+  Future<void> _migrateLegacyPlaylistsIfNeeded(SharedPreferences prefs) async {
+    final alreadyMigrated = prefs.getBool('legacy_playlists_migrated') ?? false;
     final legacyM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
     final legacyXtream = prefs.getStringList('saved_xtream_servers') ?? [];
     if (alreadyMigrated || (legacyM3u.isEmpty && legacyXtream.isEmpty)) {
       return;
     }
 
-    final existingKeys = _playlists
-        .map((p) => '${p.type}:${p.url}')
-        .toSet();
+    final existingKeys = _playlists.map((p) => '${p.type}:${p.url}').toSet();
     final migrated = <SavedPlaylist>[];
 
     for (final url in legacyM3u) {
@@ -640,9 +637,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             decoration: BoxDecoration(
               color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
               borderRadius: BorderRadius.circular(8),
-              border: isFocused
-                  ? Border.all(color: color, width: 2)
-                  : null,
+              border: isFocused ? Border.all(color: color, width: 2) : null,
             ),
             child: IconButton(
               tooltip: tooltip,
@@ -691,7 +686,8 @@ class _PlaylistNameEditScreen extends StatefulWidget {
   });
 
   @override
-  State<_PlaylistNameEditScreen> createState() => _PlaylistNameEditScreenState();
+  State<_PlaylistNameEditScreen> createState() =>
+      _PlaylistNameEditScreenState();
 }
 
 class _PlaylistNameEditScreenState extends State<_PlaylistNameEditScreen> {

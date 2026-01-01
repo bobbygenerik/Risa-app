@@ -555,12 +555,12 @@ class M3UParserService {
     SendPort? progressPort,
     required Directory outputDir,
   }) async {
-    final channelsFile =
-        File(p.join(outputDir.path, 'channels_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
-    final moviesFile =
-        File(p.join(outputDir.path, 'movies_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
-    final seriesFile =
-        File(p.join(outputDir.path, 'series_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+    final channelsFile = File(p.join(outputDir.path,
+        'channels_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+    final moviesFile = File(p.join(outputDir.path,
+        'movies_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+    final seriesFile = File(p.join(outputDir.path,
+        'series_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
 
     final channelSink = channelsFile.openWrite();
     final movieSink = moviesFile.openWrite();
@@ -632,7 +632,8 @@ class M3UParserService {
                 groupTitle,
                 inlineUrl,
               );
-              final isVod = resolvedType != null || _isVodUrl(inlineUrl, groupTitle);
+              final isVod =
+                  resolvedType != null || _isVodUrl(inlineUrl, groupTitle);
               final isSeries = resolvedType == 'series' ||
                   (resolvedType == null &&
                       isVod &&
@@ -723,7 +724,8 @@ class M3UParserService {
             groupTitle,
             channelUrl,
           );
-          final isVod = resolvedType != null || _isVodUrl(channelUrl, groupTitle);
+          final isVod =
+              resolvedType != null || _isVodUrl(channelUrl, groupTitle);
           final isSeries = resolvedType == 'series' ||
               (resolvedType == null &&
                   isVod &&
@@ -984,8 +986,7 @@ class M3UParserService {
           groupTitle,
           channelUrl,
         );
-        final isVod =
-            resolvedType != null || _isVodUrl(channelUrl, groupTitle);
+        final isVod = resolvedType != null || _isVodUrl(channelUrl, groupTitle);
         final isSeries = resolvedType == 'series' ||
             (resolvedType == null &&
                 isVod &&
@@ -1203,8 +1204,7 @@ class M3UParserService {
           line,
         );
         final looksSeries = resolvedType == 'series' ||
-            (resolvedType == null &&
-                _looksLikeSeries(title, groupTitle, line));
+            (resolvedType == null && _looksLikeSeries(title, groupTitle, line));
         final looksMovie = resolvedType == 'movie' ||
             (resolvedType == null &&
                 !looksSeries &&

@@ -287,8 +287,7 @@ class _EPGScreenState extends State<EPGScreen>
       ChannelProvider channelProvider) {
     final categoryKey = _epgState.selectedCategory ?? 'all';
     final favorites = _epgState.epgFavoriteChannelIds;
-    final favoritesKey =
-        favorites.isEmpty ? '0' : favorites.take(8).join('|');
+    final favoritesKey = favorites.isEmpty ? '0' : favorites.take(8).join('|');
     final pageKey = '$categoryKey|${_epgState.currentPage}|$favoritesKey';
     if (_channelPageFuture == null || _channelPageKey != pageKey) {
       _channelPageKey = pageKey;
@@ -352,29 +351,27 @@ class _EPGScreenState extends State<EPGScreen>
               ...categoryList
             ]; // Favorites first, then categories
 
-            final channelPageFuture =
-                _ensureChannelPageFuture(channelProvider);
+            final channelPageFuture = _ensureChannelPageFuture(channelProvider);
             return FutureBuilder<List<Channel>>(
               future: channelPageFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(
-                      child:
-                          CircularProgressIndicator(color: AppTheme.primaryBlue));
+                      child: CircularProgressIndicator(
+                          color: AppTheme.primaryBlue));
                 }
                 final pageSize = _epgState.channelsPerPage;
                 final expected = (_epgState.currentPage + 1) * pageSize;
                 final rawChannels = snapshot.data!;
                 final hasMore = rawChannels.length > expected;
-                final allFilteredChannels =
-                    rawChannels.take(expected).toList();
+                final allFilteredChannels = rawChannels.take(expected).toList();
 
                 _epgState.setHasMore(hasMore);
                 _epgState.updatePaginatedChannels(allFilteredChannels);
                 final filteredChannels = _epgState.paginatedChannels;
 
-            // Calculate header height for offset
-            const headerHeight = 72.0; // Approximate header height
+                // Calculate header height for offset
+                const headerHeight = 72.0; // Approximate header height
 
                 return Container(
                   decoration: const BoxDecoration(
@@ -405,7 +402,8 @@ class _EPGScreenState extends State<EPGScreen>
                                   const SizedBox(width: 16),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
-                                    child: _buildChannelColumn(filteredChannels),
+                                    child:
+                                        _buildChannelColumn(filteredChannels),
                                   ),
                                   const SizedBox(width: 4),
                                   Expanded(
@@ -859,8 +857,8 @@ class _EPGScreenState extends State<EPGScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
-            border:
-                Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1), width: 1),
           ),
           child: Center(
             child: Text(
@@ -1420,8 +1418,7 @@ class _EPGScreenState extends State<EPGScreen>
                               },
                               child: Builder(
                                 builder: (context) {
-                                  final isFocused =
-                                      Focus.of(context).hasFocus;
+                                  final isFocused = Focus.of(context).hasFocus;
                                   return ListTile(
                                     dense: true,
                                     selected: isFocused,
@@ -1439,7 +1436,8 @@ class _EPGScreenState extends State<EPGScreen>
                                                     ? AppTheme.accentGreen
                                                     : suggestionScore > 0.4
                                                         ? AppTheme.primaryBlue
-                                                        : AppTheme.textSecondary,
+                                                        : AppTheme
+                                                            .textSecondary,
                                               )
                                             : const Icon(Icons.tv_outlined,
                                                 color: AppTheme.textSecondary),

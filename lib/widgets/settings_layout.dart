@@ -87,8 +87,9 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     // Ensure the sidebar grabs focus when this screen is shown or when focus is lost
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final node =
-          widget.selectedIndex < _menuFocusNodes.length ? _menuFocusNodes[widget.selectedIndex] : null;
+      final node = widget.selectedIndex < _menuFocusNodes.length
+          ? _menuFocusNodes[widget.selectedIndex]
+          : null;
       if (node != null && !node.hasPrimaryFocus) {
         node.requestFocus();
       }
@@ -128,12 +129,14 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                         ),
                         child: Text(
                           'Settings',
-                          style:
-                              Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                    color: AppTheme.textPrimary,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.5,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                              ),
                         ),
                       ),
 

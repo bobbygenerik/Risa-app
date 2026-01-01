@@ -75,10 +75,9 @@ class TMDBService {
 
   static String _normalizeTitle(String title) {
     var output = title.trim();
-    output = output.replaceAll(
-        RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
     output =
-        output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
+        output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+    output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
     output = output.replaceAll(
         RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
             caseSensitive: false),
@@ -479,7 +478,8 @@ class TMDBService {
       // If TMDB didn't find anything, try OMDb as fallback
       if (details == null ||
           (details['backdrop'] == null && details['poster'] == null)) {
-        debugLog('TMDB miss for "$normalizedTitle", trying OMDb as fallback...');
+        debugLog(
+            'TMDB miss for "$normalizedTitle", trying OMDb as fallback...');
         final omdbTV =
             await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
         final omdbMovie =

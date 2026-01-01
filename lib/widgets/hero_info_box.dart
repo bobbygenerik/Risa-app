@@ -169,9 +169,34 @@ class HeroInfoBox extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Focus(
-                    autofocus: autofocusWatchButton,
-                    canRequestFocus: !autofocusWatchButton,
-                    skipTraversal: !autofocusWatchButton,
+                  autofocus: autofocusWatchButton,
+                  canRequestFocus: !autofocusWatchButton,
+                  skipTraversal: !autofocusWatchButton,
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                        nextFocusOnRight != null) {
+                      nextFocusOnRight!.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: BrandPrimaryButton(
+                    onPressed: onWatchPressed,
+                    label: 'Watch',
+                    icon: Icons.play_arrow_rounded,
+                    padding: compactButtonPadding,
+                    fontSize: 12,
+                    minHeight: 22,
+                    focusNode: primaryButtonFocusNode,
+                    expand: false,
+                  ),
+                ),
+                if (onMoreInfoPressed != null) ...[
+                  SizedBox(width: context.spacingSm()),
+                  Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
                     onKeyEvent: (node, event) {
                       if (event is KeyDownEvent &&
                           event.logicalKey == LogicalKeyboardKey.arrowRight &&
@@ -181,42 +206,17 @@ class HeroInfoBox extends StatelessWidget {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: BrandPrimaryButton(
-                      onPressed: onWatchPressed,
-                      label: 'Watch',
-                      icon: Icons.play_arrow_rounded,
+                    child: BrandSecondaryButton(
+                      onPressed: onMoreInfoPressed!,
+                      label: 'More Info',
+                      icon: Icons.info_outline_rounded,
                       padding: compactButtonPadding,
                       fontSize: 12,
                       minHeight: 22,
-                      focusNode: primaryButtonFocusNode,
+                      focusNode: secondaryButtonFocusNode,
                       expand: false,
                     ),
                   ),
-                if (onMoreInfoPressed != null) ...[
-                  SizedBox(width: context.spacingSm()),
-                  Focus(
-                      canRequestFocus: false,
-                      skipTraversal: true,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent &&
-                            event.logicalKey == LogicalKeyboardKey.arrowRight &&
-                            nextFocusOnRight != null) {
-                          nextFocusOnRight!.requestFocus();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: BrandSecondaryButton(
-                        onPressed: onMoreInfoPressed!,
-                        label: 'More Info',
-                        icon: Icons.info_outline_rounded,
-                        padding: compactButtonPadding,
-                        fontSize: 12,
-                        minHeight: 22,
-                        focusNode: secondaryButtonFocusNode,
-                        expand: false,
-                      ),
-                    ),
                 ],
                 if (trailing != null) ...[
                   const Spacer(),
