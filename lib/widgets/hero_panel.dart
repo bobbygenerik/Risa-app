@@ -32,9 +32,13 @@ class HeroInfoPanel extends StatelessWidget {
 class HeroInfoSkeleton extends StatelessWidget {
   final double width;
 
+  /// Whether to show the small logo/label slot in the skeleton.
+  final bool showLogo;
+
   const HeroInfoSkeleton({
     super.key,
     required this.width,
+    this.showLogo = true,
   });
 
   @override
@@ -46,15 +50,16 @@ class HeroInfoSkeleton extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo/Label slot
-          Container(
-            height: context.tvSpacing(36),
-            width: width * 0.4,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.15 * 255).round()),
-              borderRadius: BorderRadius.circular(4),
+          // Logo/Label slot (only when the real UI shows it)
+          if (showLogo)
+            Container(
+              height: context.tvSpacing(36),
+              width: width * 0.4,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha((0.15 * 255).round()),
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-          ),
           SizedBox(height: context.spacingSm()),
           
           // Title slot

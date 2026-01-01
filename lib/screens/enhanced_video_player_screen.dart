@@ -732,7 +732,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _showRegularSubtitlePicker() async {
     Navigator.pop(context);
-    final captionText = _playerController?.value.caption.text ?? '';
+    String captionText = '';
+    final controller = _playerController;
+    // Only StockPlayerController exposes embedded caption text via its rawController.
+    if (controller is StockPlayerController) {
+      try {
+        captionText = controller.rawController.value.caption.text;
+      } catch (_) {
+        captionText = '';
+      }
+    }
     if (captionText.isEmpty) {
       showAppSnackBar(
         context,
@@ -781,7 +790,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     String captionText = '';
     final controller = _playerController;
     if (controller is StockPlayerController) {
-       captionText = controller.rawController.value.caption.text;
+      captionText = controller.rawController.value.caption.text;
     }
     // Universal doesn't support subtitles for Native yet, handled by Native view?
     // Actually NativeExoPlayer has its own subtitle tracks, but we haven't bridged text rendering to Flutter

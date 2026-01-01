@@ -2,7 +2,6 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';

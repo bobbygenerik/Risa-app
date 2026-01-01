@@ -25,6 +25,7 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/skeleton_loader.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
 
 List<Map<String, dynamic>> _buildSeriesGenreBucketsIsolate(
@@ -1448,220 +1449,91 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final heroInfoWidth = min(
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
-    const cardFocusScale = 1.1;
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
-    final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final available = screenSize.width - inset - context.spacingLg();
     final perRow = (available / (cardWidth + context.cardGap())).floor();
-    final skeletonItemCount = (perRow + _rowVisibleBuffer).clamp(6, 12);
+    final skeletonItemCount = ((perRow + _rowVisibleBuffer).clamp(6, 12)).toInt();
 
     return Focus(
       focusNode: _skeletonFocus,
-      onFocusChange: (hasFocus) {
-        if (hasFocus) {
-          debugLog('Series: Skeleton focused');
-        }
-      },
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
-        ),
-        child: Shimmer(
-          child: Stack(
-            children: [
-              // Hero skeleton
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: heroHeight,
-                child: Container(
-                  color: AppTheme.cardBackground,
-                ),
-              ),
-              // Featured info skeleton - centered like the real overlay
-              Positioned(
-                top: 0,
-                left: contentInset,
-                right: context.spacingLg(),
-                height: heroHeight,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child:
-                      _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
-                ),
-              ),
-              // Scrollable content skeleton
-              Positioned(
-                top: heroHeight - 140.0, // Match cardPeek
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: 140.0, // content offset
-                      bottom: context.spacingXxl(),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...List.generate(
-                            3,
-                            (rowIndex) => Padding(
-                                  padding: EdgeInsets.only(
-                                      bottom: context.sectionSpacing()),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Section header skeleton
-                                      Padding(
-                                        padding: EdgeInsets.only(left: inset),
-                                        child: Container(
-                                          height: 16,
-                                          width: [180, 140, 160][rowIndex % 3]
-                                              .toDouble(),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withAlpha(
-                                                (0.15 * 255).round()),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: AppSizes.sm),
-                                      // Series cards row skeleton
-                                      SizedBox(
-                                        height: rowHeight,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: EdgeInsets.only(left: inset),
-                                          itemCount: skeletonItemCount,
-                                          itemBuilder: (context, cardIndex) =>
-                                            Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            // Series poster skeleton with episode badge
-                                            Stack(
-                                              children: [
-                                                Container(
-                                                  width: cardWidth,
-                                                  height: cardHeight,
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        AppTheme.cardBackground,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                  ),
-                                                ),
-                                                // Episode count badge skeleton
-                                                Positioned(
-                                                  top: 8,
-                                                  right: 8,
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets
-                                                                .symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withAlpha(
-                                                              (0.1 * 255)
-                                                                  .round()),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
-                                                      border: Border.all(
-                                                          color: Colors.white24,
-                                                          width: 1),
-                                                    ),
-                                                    child: Container(
-                                                      width: 40,
-                                                      height: 8,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white
-                                                            .withAlpha(
-                                                                (0.2 * 255)
-                                                                    .round()),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(2),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            // Title skeleton
-                                            Container(
-                                              width: cardWidth,
-                                              height: 14,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withAlpha(
-                                                    (0.15 * 255).round()),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            // Year and rating skeleton
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  width: 30,
-                                                  height: 11,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white
-                                                        .withAlpha((0.1 * 255)
-                                                            .round()),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            4),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  width: 20,
-                                                  height: 11,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white
-                                                        .withAlpha((0.1 * 255)
-                                                            .round()),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            4),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        separatorBuilder: (context, index) =>
-                                            SizedBox(width: context.cardGap()),
-                                      ),
-                                    ),
+        color: AppTheme.darkBackground,
+        child: Stack(
+          children: [
+            // Hero artwork: no skeleton, just backdrop placeholder
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: heroHeight,
+              child: Container(color: AppTheme.cardBackground),
+            ),
+
+            // Hero info skeleton
+            Positioned(
+              top: 0,
+              left: inset,
+              right: context.spacingLg(),
+              height: heroHeight,
+              child: Shimmer(child: HeroInfoSkeleton(width: heroInfoWidth, showLogo: false)),
+            ),
+
+            // Content skeleton (channel cards)
+            Positioned(
+              top: heroHeight - 140.0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.only(top: 140.0, bottom: context.spacingXxl()),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(
+                      3,
+                      (rowIndex) => Padding(
+                        padding: EdgeInsets.only(bottom: context.sectionSpacing()),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(left: inset),
+                              child: SkeletonLine(160.0, height: 16, borderRadius: 4),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            SizedBox(
+                              height: context.rowHeight(),
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                padding: EdgeInsets.only(left: inset),
+                                itemCount: skeletonItemCount,
+                                itemBuilder: (context, index) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Skeleton(width: cardWidth, height: cardHeight, borderRadius: 12),
+                                    const SizedBox(height: 8),
+                                    SkeletonLine(cardWidth * 0.8, height: 12, borderRadius: 4),
                                   ],
                                 ),
-                              )),
-                    ],
+                                separatorBuilder: (context, index) => SizedBox(width: context.cardGap()),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

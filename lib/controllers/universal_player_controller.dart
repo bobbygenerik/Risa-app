@@ -15,6 +15,7 @@ abstract class UniversalPlayerController extends ChangeNotifier {
   Future<void> seekTo(Duration position);
   Future<void> setVolume(double volume);
   Future<void> setMuted(bool muted);
+  @override
   Future<void> dispose();
   
   /// Factory to pick the best implementation for the current platform

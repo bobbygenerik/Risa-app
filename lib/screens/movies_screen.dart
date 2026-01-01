@@ -24,6 +24,7 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/skeleton_loader.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
 
 List<Map<String, dynamic>> _buildMovieGenreBucketsIsolate(
@@ -1326,8 +1327,9 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildHeroInfoSkeleton(
     BuildContext context,
     double width,
-    Size screenSize,
-  ) {
+    Size screenSize, {
+    bool showLogo = true,
+  }) {
     return HeroInfoSkeleton(width: width);
   }
 
@@ -1369,16 +1371,14 @@ class _MoviesScreenState extends State<MoviesScreen>
         ),
         child: Stack(
           children: [
-            // Hero skeleton
+            // Hero artwork — no skeleton, use backdrop/background placeholder
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               height: heroHeight,
-              child: Shimmer(
-                child: Container(
-                  color: AppTheme.cardBackground,
-                ),
+              child: Container(
+                color: AppTheme.cardBackground,
               ),
             ),
             // Featured info skeleton
@@ -1391,7 +1391,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: _buildHeroInfoSkeleton(
-                      context, heroInfoWidth, screenSize),
+                      context, heroInfoWidth, screenSize,
+                      showLogo: false),
                 ),
               ),
             ),
@@ -1408,79 +1409,55 @@ class _MoviesScreenState extends State<MoviesScreen>
                     top: 140.0, // content offset
                     bottom: context.spacingXxl(),
                   ),
-                  child: Shimmer(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...List.generate(
-                            3,
-                            (rowIndex) => Padding(
-                                  padding: EdgeInsets.only(
-                                      bottom: context.sectionSpacing()),
-                                  child: Column(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...List.generate(
+                        3,
+                        (rowIndex) => Padding(
+                          padding: EdgeInsets.only(
+                            bottom: context.sectionSpacing(),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Section Header
+                              Padding(
+                                padding: EdgeInsets.only(left: inset),
+                                child: SkeletonLine(140.0,
+                                    height: 16, borderRadius: 4),
+                              ),
+                              const SizedBox(height: AppSizes.sm),
+                              SizedBox(
+                                height: rowHeight,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: EdgeInsets.only(left: inset),
+                                  itemCount: skeletonItemCount,
+                                  itemBuilder: (context, cardIndex) => Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Section Header
-                                      Padding(
-                                        padding: EdgeInsets.only(left: inset),
-                                        child: Container(
-                                          height: 16,
-                                          width: 140.0,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withAlpha(
-                                                (0.15 * 255).round()),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                        ),
+                                      Skeleton(
+                                        width: cardWidth,
+                                        height: cardHeight,
+                                        borderRadius: 12,
                                       ),
-                                      const SizedBox(height: AppSizes.sm),
-                                      SizedBox(
-                                        height: rowHeight,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: EdgeInsets.only(left: inset),
-                                          itemCount: skeletonItemCount,
-                                          itemBuilder: (context, cardIndex) =>
-                                              Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Container(
-                                                width: cardWidth,
-                                                height: cardHeight,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      AppTheme.cardBackground,
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              // Movie Title skeleton
-                                              Container(
-                                                width: cardWidth * 0.8,
-                                                height: 12,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withAlpha(
-                                                      (0.1 * 255).round()),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          separatorBuilder: (context, index) =>
-                                              SizedBox(
-                                                  width: context.cardGap()),
-                                        ),
-                                      ),
+                                      const SizedBox(height: 8),
+                                      // Movie Title skeleton
+                                      SkeletonLine(cardWidth * 0.8,
+                                          height: 12, borderRadius: 4),
                                     ],
                                   ),
-                                )),
-                      ],
-                    ),
+                                  separatorBuilder: (context, index) =>
+                                      SizedBox(width: context.cardGap()),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
