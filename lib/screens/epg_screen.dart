@@ -259,19 +259,38 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Start spinning animation
     await _refreshAnimationController.repeat();
+    
+    // Show "Refreshing..." feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Refreshing EPG data...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
 
     if (!mounted) return;
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
 
-    // Refresh EPG in background
-    await epgService.initialize();
+    // Force refresh EPG (bypass cache)
+    await epgService.forceRefresh();
 
     // Stop spinning
     _refreshAnimationController.stop();
     _refreshAnimationController.reset();
 
-    // Don't show snackbar on EPG screen - user can see the data loading in the grid
+    // Show completion feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('EPG refreshed: ${epgService.availableChannels.length} channels'),
+          backgroundColor: AppTheme.accentGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleEpgFavorite(Channel channel) async {
@@ -399,7 +418,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 children: [
                                   // Category sidebar
                                   _buildCategorySidebar(categoryNames),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 4),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
                                     child:
@@ -796,8 +815,8 @@ class _EPGScreenState extends State<EPGScreen>
                 children: [
                   // Time header (scrolls horizontally)
                   Container(
-                    height: 64,
-                    margin: const EdgeInsets.only(bottom: 4),
+                    height: 68, // Match channel item height
+                    margin: const EdgeInsets.only(bottom: 0),
                     child: SingleChildScrollView(
                       controller: _timeHeaderScrollController,
                       scrollDirection: Axis.horizontal,
@@ -852,8 +871,8 @@ class _EPGScreenState extends State<EPGScreen>
     return Column(
       children: [
         Container(
-          height: 64,
-          margin: const EdgeInsets.only(bottom: 4, right: 4),
+          height: 68, // Match channel item height (itemExtent)
+          margin: const EdgeInsets.only(bottom: 0, right: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
@@ -909,7 +928,7 @@ class _EPGScreenState extends State<EPGScreen>
     final cellWidth = 240.0;
 
     return SizedBox(
-      height: 64,
+      height: 68, // Match channel item height
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -917,7 +936,7 @@ class _EPGScreenState extends State<EPGScreen>
 
           return Container(
             width: cellWidth,
-            height: 64,
+            height: 68, // Match channel item height
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),

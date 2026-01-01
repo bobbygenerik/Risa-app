@@ -619,6 +619,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final currentProgram = epgService.getCurrentProgram(
         channelId,
         channelName: channel.name,
+        groupTitle: channel.groupTitle,
       );
 
       if (currentProgram != null) {
@@ -658,6 +659,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final currentProgram = epgService.getCurrentProgram(
         channelId,
         channelName: channel.name,
+        groupTitle: channel.groupTitle,
       );
 
       if (currentProgram != null) {
@@ -937,21 +939,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final descriptionStyle = AppTypography.heroDescription(context);
     final logoSlotHeight = context.tvSpacing(36);
 
-    final maxBoxHeight = MediaQuery.of(context).size.height * 0.4;
+    // Cap info box to 30% of screen height to prevent overlap with channel list
+    final maxBoxHeight = MediaQuery.of(context).size.height * 0.30;
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
         maxHeight: maxBoxHeight,
       ),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: 0,
-          vertical: context.spacingLg(),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: ClipRect(
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: 0,
+            vertical: context.spacingLg(),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Lock text block heights so the info box doesn't resize on updates.
             SizedBox(
               height: logoSlotHeight,
@@ -966,12 +970,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
             ),
             SizedBox(height: context.tvSpacing(8)),
-            Text(
-              title,
-              style: titleStyle,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            // Only show text title if no logo is available
+            if (titleLogoUrl == null)
+              Text(
+                title,
+                style: titleStyle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
             SizedBox(height: context.tvSpacing(8)),
             Text(
               description,
@@ -1022,6 +1028,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1251,6 +1258,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final program = epgService.getCurrentProgram(
         channelId,
         channelName: channel.name,
+        groupTitle: channel.groupTitle,
       );
       if (program == null) {
         unawaited(epgService.ensureChannelLoaded(
@@ -1427,6 +1435,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final program = epgService.getCurrentProgram(
         channelId,
         channelName: channel.name,
+        groupTitle: channel.groupTitle,
       );
       if (program == null) {
         unawaited(epgService.ensureChannelLoaded(
@@ -1467,10 +1476,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         (titleStyle.height ?? 1.2);
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
-    final infoSpacing = context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + (infoSpacing * 2);
-    // Tighter vertical stack similar to major streaming apps
-    final rowHeight = cardHeight + infoSpacing + infoHeight + focusExtra;
+    // Tighter spacing - minimal gaps between elements
+    final infoSpacing = 2.0;
+    final infoHeight = titleHeight + timeHeight + infoSpacing;
+    // Minimal vertical padding, just enough for focus scaling
+    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
@@ -1499,7 +1509,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 4),
+          padding: EdgeInsets.only(left: rowInset, bottom: 2),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
@@ -1509,7 +1519,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 2),
+          padding: EdgeInsets.only(left: rowInset, bottom: 0),
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -1631,10 +1641,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         (titleStyle.height ?? 1.2);
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
-    // Reduce info spacing estimate
-    final infoSpacing = 4.0;
+    // Match the tighter spacing used in _buildChannelSection
+    final infoSpacing = 2.0;
     final infoHeight = titleHeight + timeHeight + infoSpacing;
-    final rowHeight = cardHeight + 4.0 + infoHeight + focusExtra;
+    // Minimal vertical padding, just enough for focus scaling
+    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
     return rowHeight;
   }
 
@@ -1718,6 +1729,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final currentProgram = epgService.getCurrentProgram(
               channel.tvgId ?? channel.id,
               channelName: channel.name,
+              groupTitle: channel.groupTitle,
             );
             if (isFocused) {
               unawaited(epgService.ensureChannelLoaded(
