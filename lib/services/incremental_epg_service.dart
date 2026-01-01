@@ -415,7 +415,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveNormalizedMappingToPrefs(Map<String, String>? map) async {
+  Future<void> _saveNormalizedMappingToPrefs(Map<String, List<String>>? map) async {
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.path}/$_normalizedMapFileName');
@@ -454,9 +454,10 @@ class IncrementalEpgService extends ChangeNotifier {
       final jsonStr = await file.readAsString();
       if (jsonStr.isEmpty) return;
       final Map<String, dynamic> decoded = jsonDecode(jsonStr);
-      _normalizedAvailableChannels =
-          decoded.map((k, v) => MapEntry(k, v.toString()));
-      _availableChannels.addAll(_normalizedAvailableChannels!.values);
+      _normalizedAvailableChannels = decoded.map((k, v) =>
+          MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()));
+      _availableChannels.addAll(
+          _normalizedAvailableChannels!.values.expand((list) => list));
       debugLog(
           'EPG: Loaded normalized mapping from file (${_normalizedAvailableChannels!.length} entries)');
     } catch (e) {
@@ -908,8 +909,9 @@ class IncrementalEpgService extends ChangeNotifier {
                 _availableChannels.clear();
                 _availableChannels.addAll(_programsByChannel.keys);
                 if (_normalizedAvailableChannels != null) {
-                  _availableChannels.addAll(_normalizedAvailableChannels!.values);
-                }
+            _availableChannels.addAll(
+                _normalizedAvailableChannels!.values.expand((list) => list));
+          }
                 
                 debugLog('EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
                 _hasParsed = true;
@@ -940,9 +942,8 @@ class IncrementalEpgService extends ChangeNotifier {
             debugLog(
                 'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
             
-            // Ensure availableChannels is populated from the normalized map
-            _availableChannels.clear();
-            _availableChannels.addAll(_normalizedAvailableChannels!.values);
+            _availableChannels.addAll(
+                _normalizedAvailableChannels!.values.expand((list) => list));
             
             _hasParsed = true;
             _isLoading = false;
@@ -1009,12 +1010,13 @@ class IncrementalEpgService extends ChangeNotifier {
               (scanResult['channelIds'] as List<dynamic>).cast<String>();
           final matchedChannelIds =
               (scanResult['matchedChannelIds'] as List<dynamic>).cast<String>();
-          final scannedNormalizedChannels = <String, String>{};
+          final scannedNormalizedChannels = <String, List<String>>{};
           for (final id in scannedChannelIds) {
             final normalized = normalizeForFilter(id);
-            if (normalized.isNotEmpty &&
-                !scannedNormalizedChannels.containsKey(normalized)) {
-              scannedNormalizedChannels[normalized] = id;
+            if (normalized.isNotEmpty) {
+              scannedNormalizedChannels
+                  .putIfAbsent(normalized, () => [])
+                  .add(id);
             }
           }
           final targetedAllowed =
@@ -1076,8 +1078,9 @@ class IncrementalEpgService extends ChangeNotifier {
           break;
         }
 
-        final normalizedChannels = Map<String, String>.from(
-            parseResult['normalizedChannels'] as Map<String, String>);
+        final normalizedChannels = (parseResult['normalizedChannels'] as Map)
+            .map((k, v) => MapEntry(k.toString(),
+                (v as List<dynamic>).map((e) => e.toString()).toList()));
         final stagedPrograms = <String, List<Program>>{};
 
         // Stream programs from the temp file into memory (capped) and DB in batches
@@ -1151,7 +1154,8 @@ class IncrementalEpgService extends ChangeNotifier {
           await _loadNormalizedMappingFromPrefs();
           if (_normalizedAvailableChannels != null &&
               _normalizedAvailableChannels!.isNotEmpty) {
-            _availableChannels.addAll(_normalizedAvailableChannels!.values);
+            _availableChannels.addAll(
+                _normalizedAvailableChannels!.values.expand((list) => list));
           }
           break;
         }
@@ -1240,7 +1244,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     final channelIds = <String>{};
-    final normalizedChannels = <String, String>{};
+    final normalizedChannels = <String, List<String>>{};
     var tempFile = File(
         '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}.jsonl');
     int programCount = 0;
@@ -1440,7 +1444,9 @@ class IncrementalEpgService extends ChangeNotifier {
           }
           channelIds.add(channelId);
           if (normalizedChannelId.isNotEmpty) {
-            normalizedChannels.putIfAbsent(normalizedChannelId, () => []).add(channelId);
+            normalizedChannels
+                .putIfAbsent(normalizedChannelId, () => [])
+                .add(channelId);
           }
           final title = extractTagText(block, 'title') ?? 'Unknown';
           final description = extractTagText(block, 'desc');
@@ -1599,7 +1605,7 @@ class IncrementalEpgService extends ChangeNotifier {
   static void _processChannel(
     List<XmlEvent> events,
     Set<String> channelIds,
-    Map<String, String> normalizedChannels, {
+    Map<String, List<String>> normalizedChannels, {
     Set<String> allowedNormalized = const {},
     required String Function(String input) normalize,
   }) {
@@ -1620,7 +1626,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
       channelIds.add(id);
       if (normalizedId.isNotEmpty) {
-        normalizedChannels[normalizedId] = id;
+        normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
       }
 
       // Parse <display-name> elements to improve name->id matching
@@ -1640,9 +1646,8 @@ class IncrementalEpgService extends ChangeNotifier {
 
       if (displayName != null && displayName.isNotEmpty) {
         final normalizedDisplay = normalize(displayName);
-        if (normalizedDisplay.isNotEmpty &&
-            !normalizedChannels.containsKey(normalizedDisplay)) {
-          normalizedChannels[normalizedDisplay] = id;
+        if (normalizedDisplay.isNotEmpty) {
+          normalizedChannels.putIfAbsent(normalizedDisplay, () => []).add(id);
         }
       }
     }
@@ -1651,7 +1656,7 @@ class IncrementalEpgService extends ChangeNotifier {
   static void _processProgramme(
     List<XmlEvent> events,
     Set<String> channelIds,
-    Map<String, String> normalizedChannels,
+    Map<String, List<String>> normalizedChannels,
     IOSink sink,
     void Function() onProgram,
     Set<String> allowedNormalized,
@@ -1742,9 +1747,10 @@ class IncrementalEpgService extends ChangeNotifier {
     channelIds.add(channelId);
 
     // Also track in normalized map for loose matching
-    if (normalizedChannelId.isNotEmpty &&
-        !normalizedChannels.containsKey(normalizedChannelId)) {
-      normalizedChannels[normalizedChannelId] = channelId;
+    if (normalizedChannelId.isNotEmpty) {
+      normalizedChannels
+          .putIfAbsent(normalizedChannelId, () => [])
+          .add(channelId);
     }
 
     final payload = {
