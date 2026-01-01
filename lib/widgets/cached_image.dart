@@ -55,10 +55,10 @@ class CachedImage extends StatelessWidget {
             ),
           ),
       // Cache configuration
-      memCacheWidth: width?.toInt(),
-      memCacheHeight: height?.toInt(),
-      maxWidthDiskCache: 800, // Limit disk cache size
-      maxHeightDiskCache: 600,
+      memCacheWidth: width != null ? (width! * MediaQuery.of(context).devicePixelRatio).round() : null,
+      memCacheHeight: height != null ? (height! * MediaQuery.of(context).devicePixelRatio).round() : null,
+      maxWidthDiskCache: 1200, // Increased from 800 for better quality
+      maxHeightDiskCache: 800, // Increased from 600
     );
 
     if (borderRadius != null) {
@@ -104,7 +104,7 @@ class CachedChannelLogo extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      memCacheWidth: cacheWidth ?? (size * 2).toInt(),
+      memCacheWidth: cacheWidth ?? (size * MediaQuery.of(context).devicePixelRatio).round(),
       // memCacheHeight removed to preserve aspect ratio
       placeholder: (context, url) => Container(
         width: size,

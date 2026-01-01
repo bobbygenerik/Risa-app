@@ -959,7 +959,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
     final titleStyle = AppTypography.heroTitle(context);
     final descriptionStyle = AppTypography.heroDescription(context);
-    final logoSlotHeight = context.tvSpacing(30);
+    final logoSlotHeight = context.tvSpacing(64); // Increased from 30 for higher resolution
 
     // Safe max height: visible area above the row with buffer
     final heroHeight = context.heroHeight();
@@ -992,7 +992,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   errorWidget: const SizedBox.shrink(),
                 ),
               ),
-              SizedBox(height: context.tvSpacing(6)),
+              SizedBox(height: context.tvSpacing(12)),
             ],
             if (titleLogoUrl == null && title.isNotEmpty) ...[
               Text(
@@ -1757,279 +1757,261 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         child: Consumer<IncrementalEpgService>(
           builder: (context, epgService, _) {
             final isFocused = Focus.of(context).hasFocus;
-            final currentProgram = epgService.getCurrentProgram(
+            
+            // Optimization: Get current program only when needed
+            final program = epgService.getCurrentProgram(
               channel.tvgId ?? channel.id,
               channelName: channel.name,
               groupTitle: channel.groupTitle,
             );
+            
             if (isFocused) {
               unawaited(epgService.ensureChannelLoaded(
                 channel.tvgId ?? channel.id,
                 channelName: channel.name,
               ));
             }
-            final progress = currentProgram?.progressPercentage ?? 0.0;
-            final imageUrl =
-                _getChannelCardImage(currentProgram, channel, allowPrefetch);
-            final dpr = MediaQuery.of(context).devicePixelRatio;
-            final cacheWidth = (cardWidth * dpr).round();
-            final cacheHeight = (cardHeight * dpr).round();
-            final logoCacheWidth = (56 * dpr).round();
-            final logoCacheHeight = (32 * dpr).round();
-
-            const cardFocusScale = 1.05;
-
-            // ENHANCEMENT: Ensure we have sufficient data to display a quality card
-            final hasMinimumData = currentProgram != null &&
-                currentProgram.title.isNotEmpty &&
-                (channel.logoUrl?.isNotEmpty == true || imageUrl != null);
-
-            return GestureDetector(
-              onTap: () => context.push('/player', extra: channel),
-              child: AnimatedScale(
-                scale: isFocused ? cardFocusScale : 1.0,
-                duration: TVFocusStyle.animationDuration,
-                curve: TVFocusStyle.animationCurve,
-                alignment: Alignment.topCenter,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    AnimatedContainer(
-                      duration: TVFocusStyle.animationDuration,
-                      curve: TVFocusStyle.animationCurve,
-                      width: cardWidth,
-                      height: cardHeight,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.cardBackground,
-                        border: isFocused
-                            ? Border.all(color: AppTheme.focusBorder, width: 3)
-                            : null,
-                        boxShadow: isFocused
-                            ? TVFocusStyle.focusedShadow
-                            : TVFocusStyle.defaultShadow,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          children: [
-                            if (imageUrl != null)
-                              Positioned.fill(
-                                child: CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: cacheWidth,
-                                  memCacheHeight: cacheHeight,
-                                  placeholder: (_, __) => Container(
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF2a2a3e),
-                                          Color(0xFF1a1a2e),
-                                          AppTheme.cardBackground
-                                        ],
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.tv,
-                                        color: AppTheme.primaryBlue
-                                            .withAlpha((0.4 * 255).round()),
-                                        size: 32,
-                                      ),
-                                    ),
-                                  ),
-                                  errorWidget: (_, __, ___) => Container(
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF2a2a3e),
-                                          Color(0xFF1a1a2e),
-                                          AppTheme.cardBackground
-                                        ],
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.tv,
-                                        color: AppTheme.primaryBlue
-                                            .withAlpha((0.4 * 255).round()),
-                                        size: 32,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFF2a2a3e),
-                                      Color(0xFF1a1a2e),
-                                      AppTheme.cardBackground
-                                    ],
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.tv,
-                                    color: AppTheme.primaryBlue
-                                        .withAlpha((0.4 * 255).round()),
-                                    size: 32,
-                                  ),
-                                ),
-                              ),
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: SizedBox(
-                                width: 40,
-                                height: 24,
-                                child: _buildChannelLogoWidget(
-                                  channel,
-                                  logoCacheWidth,
-                                  logoCacheHeight,
-                                ),
-                              ),
-                            ),
-                            // Data quality indicators
-                            if (currentProgram == null)
-                              const Positioned(
-                                top: 8,
-                                right: 8,
-                                child: BrandBadge.noEpg(
-                                  fontSize: 8,
-                                ),
-                              )
-                            else if (!hasMinimumData)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange
-                                        .withAlpha((0.8 * 255).round()),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'Limited Data',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            // Progress bar overlay at bottom
-                            if (currentProgram != null)
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: Container(
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    ),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    ),
-                                    child: LinearProgressIndicator(
-                                      value: progress,
-                                      backgroundColor: Colors.black
-                                          .withAlpha((0.4 * 255).round()),
-                                      color: AppTheme.primaryBlue,
-                                      minHeight: 4,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Program info with quality check
-                    if (currentProgram != null &&
-                        currentProgram.title.isNotEmpty) ...[
-                      const SizedBox(height: 4), // Tighter spacing (was context.spacingXs())
-                      SizedBox(
-                        width: cardWidth,
-                        child: Text(
-                          currentProgram.title,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 11, // Smaller title
-                            fontWeight: FontWeight.w500,
-                            height: 1.1, // Tighter line height
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 2), // Very tight spacing
-                      SizedBox(
-                        width: cardWidth,
-                        child: Text(
-                          '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 10, // Smaller time
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                    ] else if (channel.name.isNotEmpty) ...[
-                      // Fallback to channel name if no program data
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        width: cardWidth,
-                        child: Text(
-                          channel.name,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            height: 1.1,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      SizedBox(
-                        width: cardWidth,
-                        child: Text(
-                          'No program data',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 10,
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+            
+            return RepaintBoundary(
+              child: GestureDetector(
+                onTap: () => context.push('/player', extra: channel),
+                child: AnimatedScale(
+                  scale: isFocused ? 1.05 : 1.0,
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  alignment: Alignment.topCenter,
+                  child: _buildCardContent(
+                    context, 
+                    channel, 
+                    program, 
+                    isFocused, 
+                    cardWidth, 
+                    cardHeight, 
+                    allowPrefetch
+                  ),
                 ),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardContent(
+    BuildContext context,
+    Channel channel,
+    Program? currentProgram,
+    bool isFocused,
+    double cardWidth,
+    double cardHeight,
+    bool allowPrefetch,
+  ) {
+    final progress = currentProgram?.progressPercentage ?? 0.0;
+    final imageUrl = _getChannelCardImage(currentProgram, channel, allowPrefetch);
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final cacheWidth = (cardWidth * dpr).round();
+    final cacheHeight = (cardHeight * dpr).round();
+    final logoCacheWidth = (56 * dpr).round();
+    final logoCacheHeight = (32 * dpr).round();
+
+    // ENHANCEMENT: Ensure we have sufficient data to display a quality card
+    final hasMinimumData = currentProgram != null &&
+        currentProgram.title.isNotEmpty &&
+        (channel.logoUrl?.isNotEmpty == true || imageUrl != null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        AnimatedContainer(
+          duration: TVFocusStyle.animationDuration,
+          curve: TVFocusStyle.animationCurve,
+          width: cardWidth,
+          height: cardHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: AppTheme.cardBackground,
+            border: isFocused
+                ? Border.all(color: AppTheme.focusBorder, width: 3)
+                : null,
+            boxShadow: isFocused
+                ? TVFocusStyle.focusedShadow
+                : TVFocusStyle.defaultShadow,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                if (imageUrl != null)
+                  Positioned.fill(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      memCacheWidth: cacheWidth,
+                      memCacheHeight: cacheHeight,
+                      placeholder: (_, __) => _buildChannelPlaceholder(),
+                      errorWidget: (_, __, ___) => _buildChannelPlaceholder(),
+                    ),
+                  )
+                else
+                  _buildChannelPlaceholder(),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: SizedBox(
+                    width: 40,
+                    height: 24,
+                    child: _buildChannelLogoWidget(
+                      channel,
+                      logoCacheWidth,
+                      logoCacheHeight,
+                    ),
+                  ),
+                ),
+                // Data quality indicators
+                if (currentProgram == null)
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: BrandBadge.noEpg(
+                      fontSize: 8,
+                    ),
+                  )
+                else if (!hasMinimumData)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Limited Data',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Progress bar overlay at bottom
+                if (currentProgram != null)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.black.withValues(alpha: 0.4),
+                          color: AppTheme.primaryBlue,
+                          minHeight: 4,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        // Program info with quality check
+        if (currentProgram != null && currentProgram.title.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          SizedBox(
+            width: cardWidth,
+            child: Text(
+              currentProgram.title,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 2),
+          SizedBox(
+            width: cardWidth,
+            child: Text(
+              '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 10,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ] else if (channel.name.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          SizedBox(
+            width: cardWidth,
+            child: Text(
+              channel.name,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 2),
+          SizedBox(
+            width: cardWidth,
+            child: const Text(
+              'No program data',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChannelPlaceholder() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2a2a3e),
+            Color(0xFF1a1a2e),
+            AppTheme.cardBackground
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.tv,
+          color: AppTheme.primaryBlue.withValues(alpha: 0.4),
+          size: 32,
         ),
       ),
     );

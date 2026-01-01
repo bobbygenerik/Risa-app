@@ -53,7 +53,7 @@ class HeroInfoSkeleton extends StatelessWidget {
           // Logo/Label slot (only when the real UI shows it)
           if (showLogo)
             Container(
-              height: context.tvSpacing(36),
+              height: context.tvSpacing(64),
               width: width * 0.4,
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha((0.15 * 255).round()),

@@ -22,7 +22,7 @@ class CatchupInfo {
 class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _availableChannels = {};
   final Set<String> _loadedChannels = {};
-  final Map<String, String> _internalToEpgIdMapping = {};
+  final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]
   final Map<String, String> _normalizeCache = {};
@@ -438,9 +438,11 @@ class IncrementalEpgService extends ChangeNotifier {
     unawaited(_db.upsertEpgMapping({channelId: epgId}));
   }
 
-  String _cacheResolvedMapping(String channelId, String epgId) {
+  String? _cacheResolvedMapping(String channelId, String? epgId) {
     _internalToEpgIdMapping[channelId] = epgId;
-    _queueMappingPersist(channelId, epgId);
+    if (epgId != null) {
+      _queueMappingPersist(channelId, epgId);
+    }
     return epgId;
   }
 
@@ -2243,18 +2245,22 @@ class IncrementalEpgService extends ChangeNotifier {
     bool allowLoose = true,
     String? countryHint,
   }) {
-    _ensureNormalizedMap();
-    
-    // Extract country code from hint (e.g., "Australia" -> "au")
-    final countryCode = _extractCountryCode(countryHint);
-    
-    final cached = _internalToEpgIdMapping[channelId];
-    if (cached != null) {
+    if (_internalToEpgIdMapping.containsKey(channelId)) {
+      final cached = _internalToEpgIdMapping[channelId];
+      if (cached == null) {
+        return null;
+      }
       if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
         return cached;
       }
       _internalToEpgIdMapping.remove(channelId);
     }
+
+    _ensureNormalizedMap();
+    
+    // Extract country code from hint (e.g., "Australia" -> "au")
+    final countryCode = _extractCountryCode(countryHint);
+    
     // 1. Exact match
     if (_availableChannels.contains(channelId)) {
       return _cacheResolvedMapping(channelId, channelId);
@@ -2407,13 +2413,8 @@ class IncrementalEpgService extends ChangeNotifier {
       }
     }
 
-    if (logIfMissing) {
-      // Don't spam logs for every single missing channel
-      // debugLog(
-      //   'EPG: Could not find matching EPG ID for channelId="$channelId" (normalized: "$normalizedId"), name="$channelName"',
-      // );
-    }
-    return null;
+    // No match found - cache the negative result to avoid re-running expensive fuzzy matches
+    return _cacheResolvedMapping(channelId, null);
   }
 
   List<Program> getProgramsForChannel(String channelId, {String? channelName, String? groupTitle}) {
@@ -2528,43 +2529,30 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   Program? getCurrentProgram(String channelId, {String? channelName, String? groupTitle}) {
-    final epgId = _internalToEpgIdMapping[channelId] ??
-        _findBestEpgId(channelId, channelName, countryHint: groupTitle);
-    if (epgId == null) {
-      debugLog(
-          'EPG: No EPG ID found for channel "$channelId" (name: "${channelName ?? 'none'}")');
-      return null;
+    final epgId = _findBestEpgId(channelId, channelName, countryHint: groupTitle, logIfMissing: false);
+    if (epgId == null) return null;
+
+  final programs = getProgramsForChannel(epgId);
+  if (programs.isEmpty) return null;
+  
+  final now = DateTime.now();
+
+  // 1. Try to find strictly current program
+  for (final program in programs) {
+    if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
+      return program;
     }
-
-    // Cache the mapping
-    _cacheResolvedMapping(channelId, epgId);
-
-    final programs = getProgramsForChannel(epgId);
-    final now = DateTime.now();
-
-    debugLog(
-        'EPG: Looking for current program on channel "$channelId" (EPG: "$epgId") - ${programs.length} programs available');
-
-    for (final program in programs) {
-      if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
-        debugLog(
-            'EPG: Found current program: "${program.title}" on "$channelId"');
-        return program;
-      }
-    }
-
-    // If no current program, return the next upcoming program
-    for (final program in programs) {
-      if (program.startTime.isAfter(now)) {
-        debugLog(
-            'EPG: No current program, returning next: "${program.title}" on "$channelId"');
-        return program;
-      }
-    }
-
-    debugLog('EPG: No program data available for channel "$channelId"');
-    return null;
   }
+
+  // 2. Fallback to next upcoming
+  for (final program in programs) {
+    if (program.startTime.isAfter(now)) {
+      return program;
+    }
+  }
+
+  return null;
+}
 
   /// Convenience method: resolve a playlist channel to an EPG id and return its current program.
   Program? getProgramForChannel(String channelId, {String? channelName, String? groupTitle}) {

@@ -554,7 +554,7 @@ class TMDBService {
             if (logos.isNotEmpty) {
               final logoPath = logos.first['file_path'] as String?;
               if (logoPath != null) {
-                logoUrl = 'https://image.tmdb.org/t/p/w500$logoPath';
+                logoUrl = 'https://image.tmdb.org/t/p/original$logoPath';
               }
             }
           }
@@ -580,7 +580,7 @@ class TMDBService {
               if (logos.isNotEmpty) {
                 final logoPath = logos.first['file_path'] as String?;
                 if (logoPath != null) {
-                  logoUrl = 'https://image.tmdb.org/t/p/w500$logoPath';
+                  logoUrl = 'https://image.tmdb.org/t/p/original$logoPath';
                 }
               }
             }
