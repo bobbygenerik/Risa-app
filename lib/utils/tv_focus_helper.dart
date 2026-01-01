@@ -8,12 +8,14 @@ import 'package:iptv_player/utils/app_theme.dart';
 /// Provides utilities for managing focus and handling remote control input
 class TVFocusHelper {
   /// Check if running on Android TV
-  static bool get isAndroidTV {
-    if (kIsWeb) return false;
-    if (!Platform.isAndroid) return false;
-    // On Android, assume TV if screen is large (basic heuristic)
-    // More sophisticated detection would require platform channels
-    return true; // Requires platform channel for precise detection
+  static bool _isAndroidTV = false;
+
+  /// Check if running on Android TV
+  static bool get isAndroidTV => _isAndroidTV;
+
+  /// Update the TV status (called during app initialization)
+  static void setIsAndroidTV(bool value) {
+    _isAndroidTV = value;
   }
 
   /// Create a focusable widget optimized for TV remote control

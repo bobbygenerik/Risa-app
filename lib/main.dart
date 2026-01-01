@@ -134,11 +134,33 @@ void main() {
 
       // Only lock landscape on Android TV, allow portrait on mobile
       if (!kIsWeb && Platform.isAndroid) {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]);
-        StartupProbe.mark('Preferred orientations locked (Android TV)');
+        // Detect if running on TV
+        try {
+          final result =
+              await Process.run('getprop', ['ro.build.characteristics']);
+          final model = await Process.run('getprop', ['ro.product.model']);
+          final characteristics = result.stdout.toString().toLowerCase();
+          final modelName = model.stdout.toString();
+          
+          final isTv = characteristics.contains('tv') || 
+                      modelName.contains('Shield') ||
+                      modelName.contains('Android TV');
+          
+          TVFocusHelper.setIsAndroidTV(isTv);
+          debugLog('Device Detection: isTV=$isTv (chars=$characteristics, model=$modelName)');
+          
+          if (isTv) {
+            await SystemChrome.setPreferredOrientations([
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]);
+            StartupProbe.mark('Preferred orientations locked (Android TV)');
+          } else {
+             StartupProbe.mark('Mobile device detected - orientations unlocked');
+          }
+        } catch (e) {
+          debugLog('Error detecting device type: $e');
+        }
       }
 
       FlutterError.onError = (FlutterErrorDetails details) {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import '../utils/tv_focus_helper.dart';
 
 /// Abstract interface for a video player controller.
 /// This allows switching between the stock `video_player` (Texture-based)
@@ -23,8 +24,10 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     required String url,
     bool autoPlay = true,
   }) {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      // Use native implementation on Android to fix color tinting issues (Nvidia Shield)
+    if (defaultTargetPlatform == TargetPlatform.android && 
+        TVFocusHelper.isAndroidTV) {
+      // Use native implementation ONLY on Android TV to fix color tinting issues (Nvidia Shield)
+      // Mobile devices use Stock player to avoid SurfaceView crashes
       return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
     // Use stock implementation on other platforms

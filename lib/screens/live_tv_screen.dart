@@ -693,9 +693,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final cardPeek = 140.0;
+    final cardPeek = 80.0;
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
-    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset =
+        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
 
     // Calculate available width for content
@@ -831,7 +832,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return Opacity(
                 opacity: opacity,
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: const Alignment(-1.0, -0.6),
                   child: _buildHeroInfoPanel(
                     context,
                     heroInfoWidth,
@@ -892,7 +893,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 ),
               ),
               SliverToBoxAdapter(
-                child: SizedBox(height: context.sectionSpacing()),
+                child: SizedBox(height: context.spacing(12)),
               ),
             ],
           ),
@@ -1086,8 +1087,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final logoCacheWidth = (40 * dpr).round();
     final logoCacheHeight = (24 * dpr).round();
     return SizedBox(
-      height: 64,
-      width: 96,
+      height: 48,
+      width: 72,
       child: Center(
         child: Builder(builder: (context) {
           final url = channel.logoUrl!;
@@ -1476,7 +1477,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 4),
+          padding: EdgeInsets.only(left: rowInset, bottom: 2),
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -1551,7 +1552,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 0),
       ],
     );
   }
@@ -1599,7 +1600,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final infoSpacing = context.spacingXs();
     final infoHeight = titleHeight + timeHeight + (infoSpacing * 2);
     final rowHeight = cardHeight + infoSpacing + infoHeight + focusExtra;
-    return rowHeight + 8;
+    return rowHeight;
   }
 
   void _prefetchEpgForRow(String category, List<Channel> channels) {
@@ -1811,8 +1812,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               top: 8,
                               left: 8,
                               child: SizedBox(
-                                width: 56,
-                                height: 32,
+                                width: 40,
+                                height: 24,
                                 child: _buildChannelLogoWidget(
                                   channel,
                                   logoCacheWidth,
