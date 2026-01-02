@@ -35,12 +35,12 @@ import 'package:iptv_player/services/focus_pool_service.dart';
 
 class _HeroCandidate {
   final Channel channel;
-  final Program program;
+  final Program? program;
   final String heroImage;
 
   const _HeroCandidate({
     required this.channel,
-    required this.program,
+    this.program,
     required this.heroImage,
   });
 }
@@ -2101,7 +2101,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
     final screenSize = MediaQuery.of(context).size;
-    final screenWidth = MediaQuery.of(context).size.width;
     final skeletonCardWidth = context.cardWidth();
     final skeletonCardHeight = context.cardHeight();
     final cardPeek = 80.0;

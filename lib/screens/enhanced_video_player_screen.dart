@@ -8,7 +8,7 @@ import '../utils/debug_helper.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
-import '../widgets/cached_image.dart';
+
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
@@ -238,7 +238,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildModernControls() {
-    final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(

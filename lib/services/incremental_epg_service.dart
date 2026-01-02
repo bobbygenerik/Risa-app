@@ -21,7 +21,6 @@ class CatchupInfo {
 
 class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _availableChannels = {};
-  final Set<String> _loadedChannels = {};
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]

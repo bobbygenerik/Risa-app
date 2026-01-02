@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
@@ -35,7 +34,6 @@ class BrandPrimaryButton extends StatefulWidget {
 
 class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
   bool _focused = false;
-  final bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {

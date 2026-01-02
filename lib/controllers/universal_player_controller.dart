@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
-import '../utils/tv_focus_helper.dart';
 
 /// Abstract interface for a video player controller.
 /// This allows switching between the stock `video_player` (Texture-based)
