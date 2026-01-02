@@ -98,9 +98,11 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
           return Stack(
             alignment: Alignment.center,
             children: [
-              ExoPlayerVideoView(
-                controller: _controller as NativeExoPlayerController,
-                fit: widget.fit,
+              Positioned.fill(
+                child: ExoPlayerVideoView(
+                  controller: _controller as NativeExoPlayerController,
+                  fit: widget.fit,
+                ),
               ),
               if (_controller.value.isBuffering || !_controller.value.isInitialized)
                 const Center(child: CircularProgressIndicator(color: Colors.white)),
