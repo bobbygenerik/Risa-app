@@ -632,37 +632,38 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                            Icon(
-                              tab.icon,
-                              color: isActive 
-                                  ? AppTheme.primaryBlue 
-                                  : (isFocused ? Colors.white : Colors.white70),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                tab.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isActive 
-                                      ? AppTheme.primaryBlue 
-                                      : (isFocused ? Colors.white : Colors.white70),
-                                  fontSize: 12,
-                                  fontWeight: isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
-                                ),
+                          Icon(
+                            icon,
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : (isFocused ? Colors.white : Colors.white70),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isActive
+                                    ? AppTheme.primaryBlue
+                                    : (isFocused ? Colors.white : Colors.white70),
+                                fontSize: 12,
+                                fontWeight:
+                                    isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
                               ),
                             ),
-                          ],
-                        )
-                      : Icon(
-                          tab.icon,
-                          color: isActive 
-                              ? AppTheme.primaryBlue 
-                              : (isFocused ? Colors.white : Colors.white70),
-                          size: 16,
-                        ),
+                          ),
+                        ],
+                      )
+                    : Icon(
+                        icon,
+                        color: isActive
+                            ? AppTheme.primaryBlue
+                            : (isFocused ? Colors.white : Colors.white70),
+                        size: 16,
+                      ),
               ),
             ),
           );

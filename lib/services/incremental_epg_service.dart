@@ -8,6 +8,7 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/local_db_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:iptv_player/utils/epg_matching_utils.dart';
 
 // Provider-block exception type removed — provider HTML cases are handled
 // via graceful aborts and user-facing `_error` messages to preserve
@@ -2780,8 +2781,16 @@ class IncrementalEpgService extends ChangeNotifier {
   List<String> getEpgChannelIds() => _availableChannels.toList();
   List<MapEntry<String, double>> getSuggestedMatches(
           String channelId, String? channelName,
-          {int limit = 10}) =>
-      [];
+          {int limit = 10}) {
+    final allKeys = {..._availableChannels};
+    if (allKeys.isEmpty) return [];
+    return EPGMatchingUtils.getSuggestedMatches(
+      channelId,
+      channelName,
+      allKeys,
+      limit: limit,
+    );
+  }
   String? getChannelPreview(String epgChannelId) => null;
   Future<void> setManualMapping(String channelId, String epgChannelId) async {}
   Future<void> removeManualMapping(String channelId) async {}
