@@ -917,6 +917,19 @@ class IncrementalEpgService extends ChangeNotifier {
                 }
                 _internalToEpgIdMapping.clear();
                 
+                // CRITICAL: Rebuild normalized mapping from DB keys if missing
+                if (_normalizedAvailableChannels == null || _normalizedAvailableChannels!.isEmpty) {
+                  debugLog('EPG: Rebuilding normalized mapping from DB keys...');
+                  _normalizedAvailableChannels = {};
+                  for (final epgId in _programsByChannel.keys) {
+                    final normalized = _normalize(epgId);
+                    if (normalized.isNotEmpty) {
+                      _normalizedAvailableChannels!.putIfAbsent(normalized, () => []).add(epgId);
+                    }
+                  }
+                  debugLog('EPG: Built normalized mapping with ${_normalizedAvailableChannels!.length} entries from ${_programsByChannel.length} channels');
+                }
+                
                 debugLog('EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
                 _hasParsed = true;
                 _isLoading = false;
@@ -2574,29 +2587,36 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Program? getCurrentProgram(String channelId, {String? channelName, String? groupTitle}) {
     final epgId = _findBestEpgId(channelId, channelName, countryHint: groupTitle, logIfMissing: false);
-    if (epgId == null) return null;
-
-  final programs = getProgramsForChannel(epgId);
-  if (programs.isEmpty) return null;
-  
-  final now = DateTime.now();
-
-  // 1. Try to find strictly current program
-  for (final program in programs) {
-    if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
-      return program;
+    if (epgId == null) {
+      debugLog('EPG: getCurrentProgram - No EPG ID found for "$channelId" (name: "${channelName ?? 'none'}", available: ${_availableChannels.length}, normalized: ${_normalizedAvailableChannels?.length ?? 0}, programs: ${_programsByChannel.length})');
+      return null;
     }
+
+    final programs = getProgramsForChannel(epgId);
+    if (programs.isEmpty) {
+      debugLog('EPG: getCurrentProgram - No programs for epgId "$epgId" (channelId: "$channelId", total program channels: ${_programsByChannel.length})');
+      return null;
+    }
+    
+    final now = DateTime.now();
+
+    // 1. Try to find strictly current program
+    for (final program in programs) {
+      if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
+        return program;
+      }
+    }
+
+    // 2. Fallback to next upcoming
+    for (final program in programs) {
+      if (program.startTime.isAfter(now)) {
+        return program;
+      }
+    }
+
+    return null;
   }
 
-  // 2. Fallback to next upcoming
-  for (final program in programs) {
-    if (program.startTime.isAfter(now)) {
-      return program;
-    }
-  }
-
-  return null;
-}
 
   /// Convenience method: resolve a playlist channel to an EPG id and return its current program.
   Program? getProgramForChannel(String channelId, {String? channelName, String? groupTitle}) {
