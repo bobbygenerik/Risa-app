@@ -117,12 +117,7 @@ class _ExitScreenState extends State<ExitScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App logo or icon
-                Image.asset(
-                  'assets/images/croppedlogo2.png',
-                  height: 60,
-                ),
-                const SizedBox(height: 24),
+
 
                 // Exit message
                 Text(
@@ -142,7 +137,7 @@ class _ExitScreenState extends State<ExitScreen> {
                   children: [
                     SizedBox(
                       width: 160,
-                      child: BrandSecondaryButton(
+                      child: BrandPrimaryButton(
                         focusNode: _backButtonFocus,
                         onPressed: () => context.go('/home'),
                         label: 'Go Back',

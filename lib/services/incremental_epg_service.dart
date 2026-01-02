@@ -468,7 +468,7 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   Future<File> _getCacheFile() async {
-    final dir = await getApplicationSupportDirectory();
+    final dir = await getTemporaryDirectory();
     return File('${dir.path}/epg_cache.xml');
   }
 

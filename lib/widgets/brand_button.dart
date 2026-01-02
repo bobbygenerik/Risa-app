@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
@@ -96,6 +97,18 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
 
     return FocusableActionDetector(
       focusNode: widget.focusNode,
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed();
+            return null;
+          },
+        ),
+      },
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       onFocusChange: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
@@ -219,6 +232,18 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
 
     return FocusableActionDetector(
       focusNode: widget.focusNode,
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed();
+            return null;
+          },
+        ),
+      },
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       onFocusChange: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
