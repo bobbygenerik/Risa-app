@@ -1576,10 +1576,13 @@ class IncrementalEpgService extends ChangeNotifier {
             .value;
         if (id.isEmpty) continue;
         channelIds.add(id);
-          final normalizedId = normalizeCached(id);
+        final normalizedId = normalizeCached(id);
+        if (normalizedId.isNotEmpty) {
+          normalizedIds.add(normalizedId);
           if (allowedNormalized.contains(normalizedId)) {
             matchedChannelIds.add(id);
           }
+        }
 
         String? displayName;
         for (final event in subtree) {
