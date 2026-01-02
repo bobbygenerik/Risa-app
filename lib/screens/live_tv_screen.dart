@@ -1723,11 +1723,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final isFocused = Focus.of(context).hasFocus;
             
             // Optimization: Get current program only when needed
-            final program = epgService.getCurrentProgram(
-              channel.tvgId ?? channel.id,
-              channelName: channel.name,
-              groupTitle: channel.groupTitle,
-            );
+            // Prevents freeze: Skip expensive lookups if EPG is actively loading/parsing
+            final program = (epgService.isLoading || epgService.isParsing) 
+                ? null 
+                : epgService.getCurrentProgram(
+                    channel.tvgId ?? channel.id,
+                    channelName: channel.name,
+                    groupTitle: channel.groupTitle,
+                  );
             
             if (isFocused) {
               unawaited(epgService.ensureChannelLoaded(
@@ -1774,8 +1777,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final cacheWidth = (cardWidth * dpr).round();
     final cacheHeight = (cardHeight * dpr).round();
-    final logoCacheWidth = (56 * dpr).round();
-    final logoCacheHeight = (32 * dpr).round();
+    final logoCacheWidth = (150 * dpr).round();
+    final logoCacheHeight = (80 * dpr).round();
 
     // ENHANCEMENT: Ensure we have sufficient data to display a quality card
     final hasMinimumData = currentProgram != null &&

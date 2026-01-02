@@ -680,9 +680,10 @@ class IncrementalEpgService extends ChangeNotifier {
             }
 
             received += data.length;
-            if (received % (2 * 1024 * 1024) < 100000) {
+            if (received % (5 * 1024 * 1024) < 100000) {
               debugLog(
                   'EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+              // Don't notifyListeners here to prevent UI jank/freeze during download
             }
           } catch (e) {
             debugLog('EPG: Stream chunk handling error: $e');

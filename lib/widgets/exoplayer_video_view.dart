@@ -34,8 +34,7 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
     const String viewType = 'com.streamhub.iptv/exoplayer';
     final Map<String, dynamic> creationParams = <String, dynamic>{
       'muted': false, // Controller handles this
-      // Default to SurfaceView for better color stability on Android TV (NVIDIA Shield)
-      'surfaceType': 'surface',
+      'surfaceType': 'texture',
       'extensionRenderers': 'on',
     };
 
