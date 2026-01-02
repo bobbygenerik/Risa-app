@@ -581,20 +581,25 @@ class EpgService with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final cacheTimeStr = prefs.getString(_secondaryCacheTimeKey);
 
-      if (cacheTimeStr == null) return false;
-
-      final cacheTime = DateTime.parse(cacheTimeStr);
-      final age = DateTime.now().difference(cacheTime);
-
-      if (age > _cacheValidity) {
-        debugLog('Secondary EPG cache expired');
-        return false;
-      }
-
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_secondaryCacheFileName');
 
       if (!await file.exists()) return false;
+
+      DateTime? cacheTime;
+      if (cacheTimeStr != null) {
+        cacheTime = DateTime.parse(cacheTimeStr);
+      } else {
+        cacheTime = await file.lastModified();
+        await prefs.setString(
+            _secondaryCacheTimeKey, cacheTime.toIso8601String());
+      }
+
+      final age = DateTime.now().difference(cacheTime);
+      if (age > _cacheValidity) {
+        debugLog('Secondary EPG cache expired');
+        return false;
+      }
 
       debugLog('Secondary EPG: Loading from cache...');
       final cachedData = await file.readAsString();
@@ -822,7 +827,9 @@ class EpgService with ChangeNotifier {
           debugLog('EPG: Could not parse cache time, loading anyway');
         }
       } else {
-        debugLog('EPG: No cache timestamp, loading anyway');
+        debugLog('EPG: No cache timestamp, inferring from file metadata');
+        cacheTime = await file.lastModified();
+        await prefs.setString(_cacheTimeKey, cacheTime.toIso8601String());
       }
 
       final cachedData = await file.readAsString();
@@ -860,14 +867,7 @@ class EpgService with ChangeNotifier {
         _epgData[channelId] = programs;
       }
 
-      if (cacheTime != null) {
-        _lastFetchTime = cacheTime;
-      } else {
-        // If no timestamp, set it to now so we know cache exists
-        _lastFetchTime = DateTime.now();
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_cacheTimeKey, _lastFetchTime!.toIso8601String());
-      }
+      _lastFetchTime = cacheTime ?? DateTime.now();
       debugLog(
           'EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
       debugLog('EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
