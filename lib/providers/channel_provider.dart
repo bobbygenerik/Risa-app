@@ -1034,8 +1034,12 @@ class ChannelProvider with ChangeNotifier {
           offset += pageSize;
           if (series.length >= maxItems) break;
         }
-      } else if (!_dbReady || shouldFallbackToCache) {
+      } else if (shouldFallbackToCache) {
         // Offload heavy JSON decoding to an isolate and cap in-memory hydration
+        if (_moviesCachePath == null || _seriesCachePath == null) {
+          debugLog('ChannelProvider: Cache paths missing for fallback hydration');
+          return;
+        }
         final result = await compute(_parseVodCachesInIsolate, {
           'moviesPath': _moviesCachePath!,
           'seriesPath': _seriesCachePath!,
@@ -1057,8 +1061,8 @@ class ChannelProvider with ChangeNotifier {
       if (_disposed) return;
       _contentProvider!.loadMovies(movies);
       _contentProvider!.loadSeries(series);
-      final moviesComplete = _moviesCount > 0 && movies.length >= _moviesCount;
-      final seriesComplete = _seriesCount > 0 && series.length >= _seriesCount;
+      final moviesComplete = _moviesCount <= 0 || movies.length >= _moviesCount;
+      final seriesComplete = _seriesCount <= 0 || series.length >= _seriesCount;
       _vodHydrated = moviesComplete && seriesComplete;
       debugLog(
           'ChannelProvider: Hydrated ContentProvider with ${movies.length}/$_moviesCount movies and ${series.length}/$_seriesCount series (capped for performance)');

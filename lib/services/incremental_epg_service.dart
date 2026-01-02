@@ -135,7 +135,7 @@ class IncrementalEpgService extends ChangeNotifier {
   bool get isParsing => _isParsing;
   String? get error => _error;
   Set<String> get availableChannels => _availableChannels;
-  int get loadedChannelCount => _loadedChannels.length;
+  int get loadedChannelCount => _availableChannels.length;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
   String? get currentUrl => _epgUrl;
   int get allowedChannelCount => _allowedChannelCount;
@@ -2692,6 +2692,8 @@ class IncrementalEpgService extends ChangeNotifier {
       return;
     }
 
+    _availableChannels.add(epgId);
+
     // Cache the mapping
     _cacheResolvedMapping(channelId, epgId);
 
@@ -2740,6 +2742,7 @@ class IncrementalEpgService extends ChangeNotifier {
         continue;
       }
       if (!seen.add(epgId)) continue;
+      _availableChannels.add(epgId);
       epgIdsToLoad.add(epgId);
     }
 

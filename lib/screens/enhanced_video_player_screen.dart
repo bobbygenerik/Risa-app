@@ -270,14 +270,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       onPressed: () => Navigator.pop(context),
                       size: 24,
                     ),
-                    if (logoUrl != null && logoUrl.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      CachedChannelLogo(
-                        logoUrl: logoUrl,
-                        size: 32,
-                        fallbackIcon: Icons.tv,
-                      ),
-                    ],
                     const Spacer(),
                     if (widget.isLive) ...[
                       IconButton(

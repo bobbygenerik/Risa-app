@@ -632,9 +632,60 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const Scaffold(
-            body: Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryBlue))),
+        home: Scaffold(
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1E1E2E), Color(0xFF0D0D12)],
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.live_tv,
+                    size: 80,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const CircularProgressIndicator(
+                  color: AppTheme.primaryBlue,
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'RISA IPTV PLAYER',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Initializing experience...',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 14,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

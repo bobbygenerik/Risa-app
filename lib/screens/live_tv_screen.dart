@@ -28,9 +28,10 @@ import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
-import 'package:iptv_player/services/focus_pool_service.dart';
+import 'package:iptv_player/widgets/skeleton_loader.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
+import 'package:iptv_player/services/focus_pool_service.dart';
 
 class _HeroCandidate {
   final Channel channel;
@@ -954,14 +955,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildFeaturedInfo(
       BuildContext context, Channel channel, Program? program) {
-    if (program == null) {
-      return const SizedBox.shrink();
-    }
-    final title = program.title;
-    final description = program.description ?? '';
-    final timeRange =
-        '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}';
-    final progress = program.progressPercentage;
+    final title = program?.title ?? channel.name;
+    final description = program?.description ?? 'No program data available.';
+    final timeRange = program != null
+        ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
+        : 'Live Stream';
+    final progress = program?.progressPercentage ?? 0.0;
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
     final titleStyle = AppTypography.heroTitle(context);
     final descriptionStyle = AppTypography.heroDescription(context);
@@ -1157,7 +1156,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   String? _getChannelCardImage(
       Program? program, Channel? channel, bool allowPrefetch) {
-    // Prefer program artwork when it's not a poster/portrait image.
+    // Strictly prefer program artwork when it's not a poster/portrait image.
     if (program != null) {
       final cached = _programArtwork[program.id];
       if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
@@ -1181,27 +1180,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           programImage.isNotEmpty &&
           !_isLikelyPosterUrl(programImage)) {
         return programImage;
-      }
-    }
-
-    // Use channel-based TMDB artwork if program artwork isn't available.
-    if (channel != null) {
-      final channelKey = 'channel_${channel.id}';
-      final cachedChannelArt = _programArtwork[channelKey];
-      if (cachedChannelArt != null &&
-          cachedChannelArt.isNotEmpty &&
-          !_isLikelyPosterUrl(cachedChannelArt)) {
-        return cachedChannelArt;
-      }
-
-      // Fetch TMDB artwork based on channel name if enabled.
-      if (_tmdbEnabled &&
-          allowPrefetch &&
-          (!_programArtwork.containsKey(channelKey) ||
-              _shouldRetryArtwork(channelKey))) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _fetchChannelArtwork(channel);
-        });
       }
     }
 
@@ -1290,6 +1268,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     List<Channel> channels,
     IncrementalEpgService epgService,
   ) {
+    if (channels.isEmpty) return [];
+
     final candidates = <_HeroCandidate>[];
     for (final channel in channels) {
       final channelId = channel.tvgId ?? channel.id;
@@ -1298,44 +1278,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         channelName: channel.name,
         groupTitle: channel.groupTitle,
       );
-      if (program == null) {
-        unawaited(epgService.ensureChannelLoaded(
-          channelId,
-          channelName: channel.name,
-        ));
-        continue;
-      }
 
-      // ENHANCEMENT: More flexible hero candidate selection
-      // Accept candidates with minimal data and provide fallbacks
-      final hasBasicInfo = program.title.isNotEmpty;
+      // If no program, still consider as candidate but with null program
+      // This ensures we always have something to show in the Hero section
       final heroImage = _resolveHeroImage(program, channel);
-
-      // Only skip if completely lacking basic program info
-      if (!hasBasicInfo) continue;
 
       candidates.add(_HeroCandidate(
         channel: channel,
         program: program,
-        heroImage: heroImage ?? '', // Allow empty heroImage, will use fallback
+        heroImage: heroImage ?? '', 
       ));
+
+      // Limit to 15 candidates for performance
+      if (candidates.length >= 15) break;
     }
+
+    // Sort: channels with programs first
+    candidates.sort((a, b) {
+      if (a.program != null && b.program == null) return -1;
+      if (a.program == null && b.program != null) return 1;
+      return 0;
+    });
+
     return candidates;
   }
 
   String? _resolveHeroImage(Program? program, Channel channel) {
-    // Prefer TMDB/OMDb program artwork first.
+    // Only return artwork if we have a specific program from the EPG
     if (program != null) {
+      // 1. Try cached TMDB/OMDb program artwork
       final cached = _programArtwork[program.id];
       if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
         return cached;
       }
 
+      // 2. Trigger a fetch if TMDB is enabled
       if (_tmdbEnabled) {
         _fetchProgramArtwork(program);
       }
 
-      // Fall back to EPG art while TMDB resolves.
+      // 3. Fall back to the direct image URL provided in the EPG XML itself
       final direct = program.imageUrl;
       if (direct != null && direct.isNotEmpty && !_isLikelyPosterUrl(direct)) {
         if (_isLikelyTitleLogoUrl(direct)) return null;
@@ -1347,39 +1329,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  Future<void> _fetchChannelArtwork(Channel channel) async {
-    final channelKey = 'channel_${channel.id}';
-    if (_artworkRequests.contains(channelKey) ||
-        _programArtwork.containsKey(channelKey)) {
-      return;
-    }
-    if (!_shouldAttemptArtwork(channelKey)) return;
-    _artworkRequests.add(channelKey);
-    try {
-      debugLog('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
-      final image = await TMDBService.getBestBackdrop(channel.name);
-      if (!mounted) return;
-      if (image != null) {
-        debugLog(
-            'LiveTV: Found TMDB art for channel "${channel.name}": $image');
-      } else {
-        debugLog('LiveTV: No TMDB art found for channel "${channel.name}"');
-      }
-      setState(() {
-        _programArtwork[channelKey] = image ?? '';
-      });
-    } catch (e) {
-      debugLog(
-          'LiveTV: Error fetching TMDB art for channel "${channel.name}": $e');
-      if (mounted) {
-        setState(() {
-          _programArtwork[channelKey] = '';
-        });
-      }
-      _markArtworkFailure(channelKey);
-    }
-    _artworkRequests.remove(channelKey);
-  }
 
   Future<void> _fetchProgramArtwork(Program program) async {
     if (_artworkRequests.contains(program.id) ||
@@ -1886,9 +1835,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   const Positioned(
                     top: 8,
                     right: 8,
-                    child: BrandBadge.noEpg(
-                      fontSize: 8,
-                    ),
+                    child: BrandBadge.noEpg(fontSize: 8),
                   )
                 else if (!hasMinimumData)
                   Positioned(
@@ -1912,6 +1859,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         ),
                       ),
                     ),
+                  )
+                else
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: BrandBadge.live(fontSize: 8),
                   ),
                 // Progress bar overlay at bottom
                 if (currentProgram != null)
@@ -2149,11 +2102,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rightInset = context.spacingLg();
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxCardWidth =
-        screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
-    final skeletonCardWidth = math.min(context.cardWidth(), maxCardWidth);
-    final skeletonCardHeight = skeletonCardWidth * 0.6;
-    final cardPeek = 140.0;
+    final skeletonCardWidth = context.cardWidth();
+    final skeletonCardHeight = context.cardHeight();
+    final cardPeek = 80.0;
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final rowInset = contentInset;
     final perRow =
@@ -2195,10 +2146,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             top: 0,
             left: contentInset,
             right: rightInset,
-            height: heroHeight,
+            height: contentTop,
             child: Align(
-              alignment: Alignment.centerLeft,
-              child: _buildHeroInfoSkeleton(context, heroInfoWidth, screenSize),
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Shimmer(
+                  child: _buildHeroInfoSkeleton(
+                      context, heroInfoWidth, screenSize),
+                ),
+              ),
             ),
           ),
           Positioned.fill(
@@ -2216,32 +2173,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                     child: Shimmer(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
                             // Category Title Skeleton
                             Padding(
                               padding: EdgeInsets.only(
-                                  left: rowInset, bottom: context.spacingXs()),
-                              child: Container(
-                                width: 140,
-                                height: context.tvTextSize(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(
-                                      AppSpacing.radiusSm),
-                                ),
+                                  left: rowInset, bottom: 2),
+                              child: SkeletonLine(
+                                140,
+                                height: 16,
+                                borderRadius: 4,
                               ),
                             ),
                             // Underline Skeleton
                             Padding(
                               padding: EdgeInsets.only(
-                                  left: rowInset, bottom: context.spacingSm()),
+                                  left: rowInset, bottom: 8),
                               child: Container(
                                 height: 3,
                                 width: context.spacingXl(),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.08),
+                                  color: AppTheme.primaryBlue.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                               ),
@@ -2260,43 +2212,54 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 itemBuilder: (context, index) {
                                   return Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        CrossAxisAlignment.center,
                                     children: [
-                                      Container(
-                                        width: skeletonCardWidth,
-                                        height: skeletonCardHeight,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.08),
-                                          borderRadius: BorderRadius.circular(
-                                            AppSpacing.radiusMd,
+                                      Stack(
+                                        children: [
+                                          Skeleton(
+                                            width: skeletonCardWidth,
+                                            height: skeletonCardHeight,
+                                            borderRadius: 12,
                                           ),
-                                        ),
-                                      ),
-                                      SizedBox(height: context.spacingXs()),
-                                      // Title Line 1
-                                      Container(
-                                        width: skeletonCardWidth * 0.8,
-                                        height: 12,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.06),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
+                                          // Logo placeholder
+                                          Positioned(
+                                            top: 8,
+                                            left: 8,
+                                            child: Container(
+                                              width: 40,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(3),
+                                              ),
+                                            ),
+                                          ),
+                                          // Progress bar placeholder
+                                          Positioned(
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            child: Container(
+                                              height: 4,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.15),
+                                                borderRadius: const BorderRadius.only(
+                                                  bottomLeft: Radius.circular(12),
+                                                  bottomRight: Radius.circular(12),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       SizedBox(height: 4),
-                                      // Title Line 2 (Time)
-                                      Container(
-                                        width: skeletonCardWidth * 0.4,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.04),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                      ),
+                                      // Title Line
+                                      SkeletonLine(skeletonCardWidth * 0.8,
+                                          height: 12, borderRadius: 4),
+                                      SizedBox(height: 2),
+                                      // Time Line
+                                      SkeletonLine(skeletonCardWidth * 0.4,
+                                          height: 10, borderRadius: 4),
                                     ],
                                   );
                                 },

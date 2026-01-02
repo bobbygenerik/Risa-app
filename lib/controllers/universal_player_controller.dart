@@ -24,13 +24,13 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     required String url,
     bool autoPlay = true,
   }) {
-    if (defaultTargetPlatform == TargetPlatform.android && 
-        TVFocusHelper.isAndroidTV) {
-      // Use native implementation ONLY on Android TV to fix color tinting issues (Nvidia Shield)
-      // Mobile devices use Stock player to avoid SurfaceView crashes
+    // Use native implementation on all Android devices
+    // This provides much better support for IPTV streams (HLS/TS/RTMP)
+    // and fixes color tinting issues on newer chipsets.
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
-    // Use stock implementation on other platforms
+    // Use stock implementation on other platforms (iOS/Web/Desktop)
     return StockPlayerController(url, autoPlay: autoPlay);
   }
 }

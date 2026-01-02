@@ -40,14 +40,8 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
   @override
   Widget build(BuildContext context) {
     const baseColor = AppTheme.primaryBlue;
-    final pressedColor = _pressed
-        ? HSLColor.fromColor(baseColor)
-            .withLightness((HSLColor.fromColor(baseColor).lightness + 0.06)
-                .clamp(0.0, 1.0))
-            .toColor()
-        : baseColor;
     final resolvedColor =
-        _focused ? Colors.white.withValues(alpha: 0.9) : pressedColor;
+        _focused ? Colors.white.withValues(alpha: 0.9) : baseColor;
     final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
 
     final resolvedPadding = widget.padding.resolve(Directionality.of(context));
@@ -58,22 +52,19 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       context.tvSpacing(resolvedPadding.bottom),
     );
 
-    final innerButton = AnimatedContainer(
+    final minH = context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0);
+
+    final content = AnimatedContainer(
       duration: AppDurations.fast,
+      constraints: BoxConstraints(minHeight: minH),
       decoration: BoxDecoration(
         color: resolvedColor,
         borderRadius:
             BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
+        boxShadow:
+            _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
       ),
-      padding: EdgeInsets.only(
-        left: scaledPadding.left,
-        right: scaledPadding.right,
-        top: scaledPadding.top,
-        bottom: scaledPadding.bottom,
-      ),
-      constraints: BoxConstraints(
-        minHeight: context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0),
-      ),
+      padding: scaledPadding,
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment:
@@ -88,19 +79,16 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             SizedBox(width: context.tvSpacing(8)),
           ],
           Flexible(
-            child: Center(
-              child: Text(
-                widget.label,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: labelColor,
-                  fontSize: context
-                      .tvTextSize(widget.fontSize ?? 14)
-                      .clamp(10.0, 16.0),
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
+            child: Text(
+              widget.label,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: labelColor,
+                fontSize:
+                    context.tvTextSize(widget.fontSize ?? 14).clamp(10.0, 16.0),
+                fontWeight: FontWeight.w600,
+                height: 1.1,
               ),
             ),
           ),
@@ -108,61 +96,21 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       ),
     );
 
-    final content = AnimatedContainer(
-      duration: AppDurations.fast,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        border: null,
-        boxShadow: _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
-      ),
-      child: innerButton,
-    );
-
-    final button = Shortcuts(
-      shortcuts: const {
-        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-      },
-      child: Actions(
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (intent) {
-              widget.onPressed();
-              return null;
-            },
-          ),
-        },
-        child: FocusableActionDetector(
-          focusNode: widget.focusNode,
-          onShowFocusHighlight: (v) => setState(() => _focused = v),
-          onShowHoverHighlight: (_) {},
-          mouseCursor: SystemMouseCursors.click,
-          onFocusChange: (v) => setState(() => _focused = v),
-          child: AnimatedScale(
-            scale: _focused ? 1.05 : 1.0,
-            duration: AppDurations.fast,
-            curve: Curves.easeOutCubic,
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                splashColor: Colors.white.withValues(alpha: 0.15),
-                highlightColor: Colors.white.withValues(alpha: 0.08),
-                onTap: widget.onPressed,
-                child: content,
-              ),
-            ),
-          ),
+    return FocusableActionDetector(
+      focusNode: widget.focusNode,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      onFocusChange: (v) => setState(() => _focused = v),
+      mouseCursor: SystemMouseCursors.click,
+      child: AnimatedScale(
+        scale: _focused ? 1.05 : 1.0,
+        duration: AppDurations.fast,
+        curve: Curves.easeOutCubic,
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: content,
         ),
       ),
     );
-
-    if (widget.expand) {
-      return SizedBox(width: double.infinity, child: button);
-    }
-    return button;
   }
 }
 
@@ -210,8 +158,11 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
     );
 
     final focusFill = Colors.white.withValues(alpha: 0.9);
+    final minH = context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0);
+
     final content = AnimatedContainer(
       duration: AppDurations.fast,
+      constraints: BoxConstraints(minHeight: minH),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
@@ -222,113 +173,66 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ],
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        border: Border.all(
-          color: Colors.transparent,
-          width: 3,
-        ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(1.5),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _focused ? focusFill : Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius - 2),
-            // Removed focus boxShadow to avoid dual highlighted borders
-          ),
-          padding: EdgeInsets.only(
-            left: scaledPadding.left,
-            right: scaledPadding.right,
-            top: scaledPadding.top,
-            bottom: scaledPadding.bottom,
-          ),
-          constraints: BoxConstraints(
-            minHeight:
-                context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0),
-          ),
-          child: Row(
-            mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment: widget.expand
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: [
-              if (widget.icon != null) ...[
-                AnimatedScale(
-                  scale: _focused ? 1.15 : 1.0,
-                  duration: TVFocusStyle.animationDuration,
-                  child: context.iconSm(
-                    widget.icon!,
-                    color: _focused ? AppTheme.darkBackground : Colors.white,
-                  ),
-                ),
-                SizedBox(width: context.tvSpacing(8)),
-              ],
-              Flexible(
-                child: Center(
-                  child: Text(
-                    widget.label,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: _focused ? AppTheme.darkBackground : Colors.white,
-                      fontSize: context
-                          .tvTextSize(widget.fontSize ?? 14)
-                          .clamp(10.0, 16.0),
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                  ),
+      padding: const EdgeInsets.all(2.0), // Consistent border simulation
+      child: AnimatedContainer(
+        duration: AppDurations.fast,
+        decoration: BoxDecoration(
+          color: _focused ? focusFill : AppTheme.darkBackground,
+          borderRadius: BorderRadius.circular(widget.borderRadius - 1.5),
+        ),
+        padding: scaledPadding,
+        child: Row(
+          mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: widget.expand
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
+          children: [
+            if (widget.icon != null) ...[
+              AnimatedScale(
+                scale: _focused ? 1.15 : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                child: context.iconSm(
+                  widget.icon!,
+                  color: _focused ? AppTheme.darkBackground : Colors.white,
                 ),
               ),
+              SizedBox(width: context.tvSpacing(8)),
             ],
-          ),
-        ),
-      ),
-    );
-
-    final button = Shortcuts(
-      shortcuts: const {
-        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-      },
-      child: Actions(
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (intent) {
-              widget.onPressed();
-              return null;
-            },
-          ),
-        },
-        child: FocusableActionDetector(
-          focusNode: widget.focusNode,
-          onShowFocusHighlight: (v) => setState(() => _focused = v),
-          onShowHoverHighlight: (_) {},
-          mouseCursor: SystemMouseCursors.click,
-          onFocusChange: (v) => setState(() => _focused = v),
-          child: AnimatedScale(
-            scale: _focused ? 1.05 : 1.0,
-            duration: AppDurations.fast,
-            curve: Curves.easeOutCubic,
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                splashColor: Colors.white.withValues(alpha: 0.15),
-                highlightColor: Colors.white.withValues(alpha: 0.08),
-                onTap: widget.onPressed,
-                child: content,
+            Flexible(
+              child: Text(
+                widget.label,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _focused ? AppTheme.darkBackground : Colors.white,
+                  fontSize: context
+                      .tvTextSize(widget.fontSize ?? 14)
+                      .clamp(10.0, 16.0),
+                  fontWeight: FontWeight.w600,
+                  height: 1.1,
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
 
-    if (widget.expand) {
-      return SizedBox(width: double.infinity, child: button);
-    }
-    return button;
+    return FocusableActionDetector(
+      focusNode: widget.focusNode,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      onFocusChange: (v) => setState(() => _focused = v),
+      mouseCursor: SystemMouseCursors.click,
+      child: AnimatedScale(
+        scale: _focused ? 1.05 : 1.0,
+        duration: AppDurations.fast,
+        curve: Curves.easeOutCubic,
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: content,
+        ),
+      ),
+    );
   }
 }

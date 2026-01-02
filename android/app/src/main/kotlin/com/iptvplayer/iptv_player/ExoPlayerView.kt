@@ -47,9 +47,8 @@ class ExoPlayerView(
         val inflater = LayoutInflater.from(context)
         val requestedSurface = (creationParams?.get("surfaceType") as? String)?.lowercase()
         val layoutId = when (requestedSurface) {
-            "texture" -> R.layout.exo_player_view_texture
-            "surface" -> R.layout.exo_player_view
-            else -> R.layout.exo_player_view
+            "surface" -> R.layout.exo_player_view // Explicit opt-in for SurfaceView
+            else -> R.layout.exo_player_view_texture // Default to TextureView to fix color tinting
         }
         val inflated = inflater.inflate(layoutId, null)
         playerView = inflated as PlayerView

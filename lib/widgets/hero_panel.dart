@@ -101,6 +101,17 @@ class HeroInfoSkeleton extends StatelessWidget {
           ),
           SizedBox(height: context.spacingMd()),
           
+          // Progress Bar slot
+          Container(
+            height: 4,
+            width: width * 0.95,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.1 * 255).round()),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: context.spacingSm()),
+          
           // Description lines
           Container(
             height: 14,
