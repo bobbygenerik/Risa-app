@@ -1,7 +1,8 @@
-import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
@@ -184,8 +185,25 @@ class _MainShellState extends State<MainShell> {
                       opacity: showSidebarScrim ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
-                      child: Container(
-                        color: Colors.black54,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(
+                          sigmaX: showSidebarScrim ? 6.0 : 0.0,
+                          sigmaY: showSidebarScrim ? 6.0 : 0.0,
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.7),
+                                Colors.black.withValues(alpha: 0.35),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.35, 1.0],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -278,7 +296,7 @@ class _MainShellState extends State<MainShell> {
       }
     });
 
-    if (location.startsWith('/settings')) {
+    if (location.startsWith('/settings') || location.startsWith('/player')) {
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
     }

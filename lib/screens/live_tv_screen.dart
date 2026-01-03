@@ -909,9 +909,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           child: AnimatedBuilder(
             animation: _scrollController,
             child: Builder(builder: (context) {
-              if (currentProgram == null) {
-                return const SizedBox.shrink();
-              }
               final scrollPos =
                   _scrollController.hasClients ? _scrollController.offset : 0.0;
               final fadeProgress =
@@ -1239,7 +1236,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           programImage.isNotEmpty &&
           !_isLikelyPosterUrl(programImage) &&
           !_isLikelyTitleLogoUrl(programImage) &&
-          channelLogo != programImage) {
+          channelLogo != programImage &&
+          (channel == null || !_matchesChannelLogo(programImage, channel))) {
         return programImage;
       }
     }
@@ -1347,9 +1345,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (url == null || url.isEmpty) return '';
     try {
       final uri = Uri.parse(url);
+      final scheme = uri.scheme.toLowerCase();
       final host = uri.host.toLowerCase();
       final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
-      return '$host$path';
+      return '$scheme://$host$path';
     } catch (_) {
       return url.toLowerCase();
     }
@@ -1358,7 +1357,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
     final cacheKey = program.id;
     try {
-      final logo = await TMDBService.getTitleLogo(program.title);
+      var logo = await TMDBService.getTitleLogo(program.title);
+      if (_matchesChannelLogo(logo ?? '', channel)) {
+        logo = '';
+      }
       final isValid = _isValidTitleLogo(logo, channel);
       final stored = isValid ? (logo ?? '') : '';
       if (mounted) {
