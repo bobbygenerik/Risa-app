@@ -2265,18 +2265,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return Positioned.fill(
       child: DecoratedBox(
         decoration: heroGradient,
-        child: Center(
-          child: CachedNetworkImage(
-            imageUrl: heroImage,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            width: heroWidth,
-            height: heroHeight,
-            memCacheWidth: heroCacheWidth,
-            memCacheHeight: heroCacheHeight,
-            placeholder: (_, __) => _buildHeroFallback(),
-            errorWidget: (_, __, ___) => _buildHeroFallback(),
-          ),
+        child: CachedNetworkImage(
+          imageUrl: heroImage,
+          fit: BoxFit.cover,
+          width: heroWidth,
+          height: heroHeight,
+          memCacheWidth: heroCacheWidth,
+          memCacheHeight: heroCacheHeight,
+          placeholder: (_, __) => _buildHeroFallback(),
+          errorWidget: (_, __, ___) => _buildHeroFallback(),
         ),
       ),
     );
