@@ -235,71 +235,42 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               widget.onCategorySelected(index);
               _menuFocusNodes[index].requestFocus();
             },
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 140),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
               curve: Curves.easeOutCubic,
-              scale: (isFocused || isSelected) ? 1.03 : 1.0,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: (isFocused || isSelected)
-                      ? const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF1F1F2C),
-                            Color(0xFF14141D),
-                          ],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border(
-                    left: BorderSide(
-                      color: (isFocused || isSelected)
-                          ? AppTheme.primaryBlue
-                          : Colors.transparent,
-                      width: (isFocused || isSelected) ? 4 : 0,
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border(
+                  left: BorderSide(
+                    color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                    width: isFocused ? 4 : 0,
+                  ),
+                ),
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    category.icon,
+                    color: isSelected ? AppTheme.primaryBlue : Colors.white70,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    category.title,
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
-                  boxShadow: (isFocused || isSelected)
-                      ? TVFocusStyle.focusedShadow
-                      : null,
-                  color: (isFocused || isSelected)
-                      ? null
-                      : Colors.transparent,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      category.icon,
-                      color: (isFocused || isSelected)
-                          ? Colors.white
-                          : Colors.white70,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        category.title,
-                        style: TextStyle(
-                          color: (isFocused || isSelected)
-                              ? Colors.white
-                              : Colors.white70,
-                          fontSize: 16,
-                          fontWeight: (isFocused || isSelected)
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           );

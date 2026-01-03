@@ -10,7 +10,6 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
-import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,12 +25,6 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   bool _isLoading = true;
   String? _activePlaylistId;
   final List<FocusNode> _playlistFocusNodes = [];
-  final ScrollController _contentScrollController = ScrollController();
-  final List<SettingsCategory> _categories = const [
-    SettingsCategory(title: 'Playlists', icon: Icons.playlist_play),
-    SettingsCategory(title: 'Actions', icon: Icons.settings),
-  ];
-  int _selectedCategoryIndex = 0;
 
   @override
   void initState() {
@@ -41,7 +34,6 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
   @override
   void dispose() {
-    _contentScrollController.dispose();
     for (final node in _playlistFocusNodes) {
       node.dispose();
     }
@@ -445,102 +437,77 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsLayout(
-      categories: _categories,
-      selectedIndex: _selectedCategoryIndex,
-      onCategorySelected: (index) {
-        setState(() {
-          _selectedCategoryIndex = index;
-        });
-      },
-      content: _buildSettingsContent(),
-      onBackToHome: () {
-        context.go('/settings');
-      },
-      onRequestContentFocus: () {
-        if (_playlistFocusNodes.isNotEmpty) {
-          _playlistFocusNodes.first.requestFocus();
-        } else {
-          FocusScope.of(context).nextFocus();
-        }
-      },
-      autoFocusOnShow: true,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Manage Playlists'),
+        backgroundColor: AppTheme.darkBackground,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
+        // No add action here — playlists should be added from Settings → General
+        actions: [],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.darkBackground,
+        ),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue))
+            : _playlists.isEmpty
+                ? _buildEmptyState()
+                : _buildPlaylistList(),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.playlist_play,
-              size: 80,
-              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-            ),
-            const SizedBox(height: AppSizes.lg),
-            Text(
-              'No Saved Playlists',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'No saved playlists. Add playlists from Settings → General',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: AppSizes.xl),
-            // Intentionally no add button here to centralize playlist creation
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaylistList() {
-    final tiles = List<Widget>.generate(
-      _playlists.length,
-      (index) {
-        final playlist = _playlists[index];
-        final isActive = playlist.id == _activePlaylistId;
-        return _buildFocusablePlaylistTile(
-          playlist: playlist,
-          isActive: isActive,
-          index: index,
-        );
-      },
-    );
-
-    return FocusTraversalGroup(
-      policy: WidgetOrderTraversalPolicy(),
-      child: ListView(
-        controller: _contentScrollController,
-        padding: const EdgeInsets.all(AppSizes.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SettingsSectionHeader(
-            title: 'Manage Playlists',
-            subtitle: 'Select or edit a saved playlist',
+          Icon(
+            Icons.playlist_play,
+            size: 80,
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+          ),
+          const SizedBox(height: AppSizes.lg),
+          Text(
+            'No Saved Playlists',
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: AppSizes.sm),
-          ...tiles,
+          Text(
+            'No saved playlists. Add playlists from Settings → General',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: AppSizes.xl),
+          // Intentionally no add button here to centralize playlist creation
         ],
       ),
     );
   }
 
-  Widget _buildSettingsContent() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-      );
-    }
-    if (_playlists.isEmpty) {
-      return _buildEmptyState();
-    }
-    return _buildPlaylistList();
+  Widget _buildPlaylistList() {
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        itemCount: _playlists.length,
+        itemBuilder: (context, index) {
+          final playlist = _playlists[index];
+          final isActive = playlist.id == _activePlaylistId;
+
+          return _buildFocusablePlaylistTile(
+            playlist: playlist,
+            isActive: isActive,
+            index: index,
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildFocusablePlaylistTile({
