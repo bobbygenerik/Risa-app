@@ -2231,22 +2231,47 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroHeight = context.heroHeight();
     final heroCacheWidth = (heroWidth * dpr).round();
     final heroCacheHeight = (heroHeight * dpr).round();
-    // Default: show static image
-    return heroImage != null && heroImage.isNotEmpty
-        ? Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: heroImage,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              width: double.infinity,
-              height: double.infinity,
-              memCacheWidth: heroCacheWidth,
-              memCacheHeight: heroCacheHeight,
-              placeholder: (_, __) => _buildHeroFallback(),
-              errorWidget: (_, __, ___) => _buildHeroFallback(),
-            ),
-          )
-        : _buildHeroFallback();
+    final heroGradient = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppTheme.darkBackground,
+          AppTheme.darkBackground.withAlpha((0.95 * 255).round()),
+          AppTheme.darkBackground,
+        ],
+        stops: const [0.0, 0.6, 1.0],
+      ),
+    );
+
+    final hasHeroImage = heroImage != null && heroImage.isNotEmpty;
+    if (!hasHeroImage) {
+      return Positioned.fill(
+        child: DecoratedBox(
+          decoration: heroGradient,
+          child: _buildHeroFallback(),
+        ),
+      );
+    }
+
+    return Positioned.fill(
+      child: DecoratedBox(
+        decoration: heroGradient,
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: heroImage,
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            width: heroWidth,
+            height: heroHeight,
+            memCacheWidth: heroCacheWidth,
+            memCacheHeight: heroCacheHeight,
+            placeholder: (_, __) => _buildHeroFallback(),
+            errorWidget: (_, __, ___) => _buildHeroFallback(),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSkeletonLoader() {
