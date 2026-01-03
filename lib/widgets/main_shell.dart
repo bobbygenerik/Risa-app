@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/sidebar_navigation.dart';
 import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 const bool kForceSearchPopup = bool.fromEnvironment(
@@ -178,29 +179,39 @@ class _MainShellState extends State<MainShell> {
                     ),
                   ),
                 ),
-                Positioned.fill(
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
                   child: IgnorePointer(
                     ignoring: !showSidebarScrim,
                     child: AnimatedOpacity(
                       opacity: showSidebarScrim ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(
-                          sigmaX: showSidebarScrim ? 6.0 : 0.0,
-                          sigmaY: showSidebarScrim ? 6.0 : 0.0,
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.7),
-                                Colors.black.withValues(alpha: 0.35),
-                                Colors.transparent,
-                              ],
-                              stops: const [0.0, 0.35, 1.0],
+                      child: ClipRect(
+                        child: SizedBox(
+                          width: showSidebarScrim
+                              ? AppSpacing.sidebarWidth
+                              : AppSpacing.sidebarCollapsedWidth,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(
+                              sigmaX: showSidebarScrim ? 4.0 : 0.0,
+                              sigmaY: showSidebarScrim ? 4.0 : 0.0,
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.75),
+                                    Colors.black.withValues(alpha: 0.45),
+                                    Colors.transparent,
+                                  ],
+                                  stops: const [0.0, 0.5, 1.0],
+                                ),
+                              ),
                             ),
                           ),
                         ),
