@@ -49,6 +49,10 @@ class IncrementalEpgService extends ChangeNotifier {
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
+  static const int _channelFailureThreshold = 3;
+  final Map<String, int> _channelFailureCounts = {};
+  final Set<String> _loggedMissingEpgIds = {};
+  final Set<String> _loggedMissingProgramChannels = {};
   final LocalDbService _db = LocalDbService.instance;
   bool get _suspendDbReads => _isParsing || _isDownloading || _isLoading;
 
@@ -2499,10 +2503,89 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     if (!_isParsing && !_isLoading && _allowedChannelIdsNormalized.isNotEmpty) {
+      _maybeLogMissingPrograms(channelId, channelName: channelName);
+    }
+    return [];
+  }
+
+  bool hasProgramsForChannel(String channelId,
+      {String? channelName, String? groupTitle}) {
+    final epgId = _internalToEpgIdMapping[channelId] ??
+        _findBestEpgId(channelId, channelName, countryHint: groupTitle);
+    if (epgId != null) {
+      final programs = _programsByChannel[epgId];
+      if (programs != null && programs.isNotEmpty) {
+        _clearChannelFailures(channelId);
+        return true;
+      }
+      _recordChannelFailure(channelId);
+      _maybeLogMissingPrograms(channelId, epgId: epgId);
+      return false;
+    }
+
+    final directPrograms = _programsByChannel[channelId];
+    if (directPrograms != null && directPrograms.isNotEmpty) {
+      _cacheResolvedMapping(channelId, channelId);
+      _clearChannelFailures(channelId);
+      return true;
+    }
+
+    final normalizedId = _normalize(channelId);
+    for (final key in _programsByChannel.keys) {
+      if (_normalize(key) == normalizedId) {
+        final programs = _programsByChannel[key];
+        if (programs != null && programs.isNotEmpty) {
+          _cacheResolvedMapping(channelId, key);
+          _clearChannelFailures(channelId);
+          return true;
+        }
+      }
+    }
+
+    _recordChannelFailure(channelId);
+    _maybeLogMissingEpgId(channelId, channelName);
+    return false;
+  }
+
+  void _recordChannelFailure(String channelId) {
+    if (channelId.isEmpty) return;
+    _channelFailureCounts[channelId] =
+        (_channelFailureCounts[channelId] ?? 0) + 1;
+  }
+
+  void _clearChannelFailures(String channelId) {
+    if (channelId.isEmpty) return;
+    _channelFailureCounts.remove(channelId);
+    _loggedMissingEpgIds.remove(channelId);
+    _loggedMissingProgramChannels.remove(channelId);
+  }
+
+  bool shouldHideChannel(String channelId, {String? channelName}) {
+    if (_isUnknownChannelName(channelName)) return true;
+    return (_channelFailureCounts[channelId] ?? 0) >= _channelFailureThreshold;
+  }
+
+  bool _isUnknownChannelName(String? channelName) {
+    if (channelName == null || channelName.trim().isEmpty) return false;
+    return channelName.toLowerCase().contains('unknown');
+  }
+
+  void _maybeLogMissingEpgId(String channelId, String? channelName) {
+    if (!_loggedMissingEpgIds.add(channelId)) return;
+    debugLog(
+        'EPG: getCurrentProgram - No EPG ID found for "$channelId" (name: "${channelName ?? 'none'}", available: ${_availableChannels.length}, normalized: ${_normalizedAvailableChannels?.length ?? 0}, programs: ${_programsByChannel.length})');
+  }
+
+  void _maybeLogMissingPrograms(String channelId,
+      {String? epgId, String? channelName}) {
+    if (!_loggedMissingProgramChannels.add(channelId)) return;
+    if (epgId != null) {
+      debugLog(
+          'EPG: getCurrentProgram - No programs for epgId "$epgId" (channelId: "$channelId", total program channels: ${_programsByChannel.length})');
+    } else {
       debugLog(
           'EPG: No programs found for channel "$channelId" (name: "${channelName ?? 'none'}")');
     }
-    return [];
   }
 
   bool hasEpgData(String channelId) {
@@ -2586,19 +2669,24 @@ class IncrementalEpgService extends ChangeNotifier {
     return matched;
   }
 
-  Program? getCurrentProgram(String channelId, {String? channelName, String? groupTitle}) {
-    final epgId = _findBestEpgId(channelId, channelName, countryHint: groupTitle, logIfMissing: false);
+  Program? getCurrentProgram(String channelId,
+      {String? channelName, String? groupTitle}) {
+    final epgId = _findBestEpgId(channelId, channelName,
+        countryHint: groupTitle, logIfMissing: false);
     if (epgId == null) {
-      debugLog('EPG: getCurrentProgram - No EPG ID found for "$channelId" (name: "${channelName ?? 'none'}", available: ${_availableChannels.length}, normalized: ${_normalizedAvailableChannels?.length ?? 0}, programs: ${_programsByChannel.length})');
+      _maybeLogMissingEpgId(channelId, channelName);
+      _recordChannelFailure(channelId);
       return null;
     }
 
     final programs = getProgramsForChannel(epgId);
     if (programs.isEmpty) {
-      debugLog('EPG: getCurrentProgram - No programs for epgId "$epgId" (channelId: "$channelId", total program channels: ${_programsByChannel.length})');
+      _maybeLogMissingPrograms(channelId, epgId: epgId);
+      _recordChannelFailure(channelId);
       return null;
     }
-    
+
+    _clearChannelFailures(channelId);
     final now = DateTime.now();
 
     // 1. Try to find strictly current program

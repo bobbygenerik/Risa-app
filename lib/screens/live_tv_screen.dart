@@ -199,6 +199,34 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _requestCategoryPrefetch();
   }
 
+  List<Channel> _filterChannelsWithLoadedEpg(
+      List<Channel> channels, IncrementalEpgService epgService) {
+    final ready = <Channel>[];
+    for (final channel in channels) {
+      final channelId = channel.tvgId ?? channel.id;
+      final hasPrograms = epgService.hasProgramsForChannel(
+        channelId,
+        channelName: channel.name,
+        groupTitle: channel.groupTitle,
+      );
+      if (!hasPrograms) {
+        unawaited(epgService.ensureChannelLoaded(
+          channelId,
+          channelName: channel.name,
+        ));
+        continue;
+      }
+      if (epgService.shouldHideChannel(
+        channelId,
+        channelName: channel.name,
+      )) {
+        continue;
+      }
+      ready.add(channel);
+    }
+    return ready;
+  }
+
   int _initialRowVisibleCount(
       BuildContext context, double cardWidth, double rowInset) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -582,14 +610,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               if (previewList.isEmpty) {
                 return _buildSkeletonLoader();
               }
-              if (_featuredIndex >= previewList.length) _featuredIndex = 0;
-              if (_featuredIndex == 0 && previewList.isNotEmpty) {
-                _featuredIndex = math.Random().nextInt(previewList.length);
-              }
-              final featuredChannel = previewList[_featuredIndex];
-
               final epgService =
                   Provider.of<IncrementalEpgService>(context, listen: false);
+              final readyChannels =
+                  _filterChannelsWithLoadedEpg(previewList, epgService);
+              if (readyChannels.isEmpty) {
+                return _buildSkeletonLoader();
+              }
+              if (_featuredIndex >= readyChannels.length) _featuredIndex = 0;
+              if (_featuredIndex == 0 && readyChannels.isNotEmpty) {
+                _featuredIndex = math.Random().nextInt(readyChannels.length);
+              }
+              final featuredChannel = readyChannels[_featuredIndex];
               final channelId = featuredChannel.tvgId ?? featuredChannel.id;
               Future.microtask(() => epgService.ensureChannelLoaded(channelId,
                   channelName: featuredChannel.name));
@@ -597,7 +629,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return _buildFullScreenHero(
                 context,
                 featuredChannel,
-                previewList,
+                readyChannels,
               );
             },
           );
@@ -644,15 +676,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         groupTitle: channel.groupTitle,
       );
 
-      if (currentProgram != null) {
-        final normalizedTitle = normalizeForFilter(currentProgram.title);
-        if (featuredProgramTitles.contains(normalizedTitle)) {
-          debugLog(
-              'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
-          continue;
-        }
-        featuredProgramTitles.add(normalizedTitle);
+      if (currentProgram == null) {
+        unawaited(epgService.ensureChannelLoaded(
+          channelId,
+          channelName: channel.name,
+        ));
+        continue;
       }
+
+      if (epgService.shouldHideChannel(
+        channelId,
+        channelName: channel.name,
+      )) {
+        continue;
+      }
+
+      final normalizedTitle = normalizeForFilter(currentProgram.title);
+      if (featuredProgramTitles.contains(normalizedTitle)) {
+        debugLog(
+            'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
+        continue;
+      }
+      featuredProgramTitles.add(normalizedTitle);
 
       if (!addedChannelIds.contains(channelId)) {
         featuredChannels.add(channel);
@@ -684,15 +729,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         groupTitle: channel.groupTitle,
       );
 
-      if (currentProgram != null) {
-        final normalizedTitle = normalizeForFilter(currentProgram.title);
-        if (featuredProgramTitles.contains(normalizedTitle)) {
-          debugLog(
-              'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
-          continue;
-        }
-        featuredProgramTitles.add(normalizedTitle);
+      if (currentProgram == null) {
+        unawaited(epgService.ensureChannelLoaded(
+          channelId,
+          channelName: channel.name,
+        ));
+        continue;
       }
+
+      if (epgService.shouldHideChannel(
+        channelId,
+        channelName: channel.name,
+      )) {
+        continue;
+      }
+
+      final normalizedTitle = normalizeForFilter(currentProgram.title);
+      if (featuredProgramTitles.contains(normalizedTitle)) {
+        debugLog(
+            'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
+        continue;
+      }
+      featuredProgramTitles.add(normalizedTitle);
 
       featuredChannels.add(channel);
       addedChannelIds.add(channelId);
@@ -1157,6 +1215,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String? _getChannelCardImage(
       Program? program, Channel? channel, bool allowPrefetch) {
     // Strictly prefer program artwork when it's not a poster/portrait image.
+    final channelLogo = channel?.logoUrl;
     if (program != null) {
       final cached = _programArtwork[program.id];
       if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
@@ -1178,7 +1237,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final programImage = program.imageUrl;
       if (programImage != null &&
           programImage.isNotEmpty &&
-          !_isLikelyPosterUrl(programImage)) {
+          !_isLikelyPosterUrl(programImage) &&
+          !_isLikelyTitleLogoUrl(programImage) &&
+          channelLogo != programImage) {
         return programImage;
       }
     }
@@ -1206,6 +1267,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
+  bool _isValidProgramArtwork(String? url, Channel channel) {
+    if (url == null || url.isEmpty) return false;
+    if (_isLikelyPosterUrl(url) || _isLikelyTitleLogoUrl(url)) {
+      return false;
+    }
+    final channelLogo = channel.logoUrl;
+    if (channelLogo != null && channelLogo == url) {
+      return false;
+    }
+    if (_matchesChannelLogo(url, channel)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _isValidTitleLogo(String? url, Channel channel) {
+    if (url == null || url.isEmpty) return false;
+    final channelLogo = channel.logoUrl;
+    if (channelLogo != null && channelLogo == url) {
+      return false;
+    }
+    if (_matchesChannelLogo(url, channel)) {
+      return false;
+    }
+    return true;
+  }
+
   bool _isLikelyTitleLogoUrl(String url) {
     final lower = url.toLowerCase();
     if (lower.contains('clearlogo') ||
@@ -1222,45 +1310,74 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Check TMDB title logo cache first
     final cacheKey = program.id;
-    if (_programTitleLogos.containsKey(cacheKey)) {
-      final cached = _programTitleLogos[cacheKey];
-      return cached?.isNotEmpty == true ? cached : null;
+    final cachedUrl = _programTitleLogos[cacheKey];
+    if (_isValidTitleLogo(cachedUrl, channel) &&
+        _isLikelyTitleLogoUrl(cachedUrl!)) {
+      return cachedUrl;
     }
-    
+
     // If not cached, try EPG-provided logo
     final url = program.imageUrl;
-    if (url != null && url.isNotEmpty) {
-      if (!_isLikelyPosterUrl(url) &&
-          channel.logoUrl != url &&
-          _isLikelyTitleLogoUrl(url)) {
-        return url;
-      }
+    if (url != null &&
+        url.isNotEmpty &&
+        _isValidTitleLogo(url, channel) &&
+        _isLikelyTitleLogoUrl(url)) {
+      return url;
     }
-    
+
     // Trigger async TMDB fetch if not already requested
     if (_tmdbEnabled && !_titleLogoRequests.contains(cacheKey)) {
       _titleLogoRequests.add(cacheKey);
-      _fetchTitleLogo(program);
+      _fetchTitleLogo(program, channel);
     }
     
     return null;
   }
+
+  bool _matchesChannelLogo(String url, Channel channel) {
+    final channelLogo = channel.logoUrl;
+    final normalizedChannelLogo = _normalizeUrl(channelLogo);
+    if (normalizedChannelLogo.isEmpty) return false;
+    return _normalizeUrl(url) == normalizedChannelLogo;
+  }
+
+  String _normalizeUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    try {
+      final uri = Uri.parse(url);
+      final scheme = uri.scheme.toLowerCase();
+      final host = uri.host.toLowerCase();
+      final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
+      return '$scheme://$host$path';
+    } catch (_) {
+      return url.toLowerCase();
+    }
+  }
   
-  Future<void> _fetchTitleLogo(Program program) async {
+  Future<void> _fetchTitleLogo(Program program, Channel channel) async {
+    final cacheKey = program.id;
     try {
       final logo = await TMDBService.getTitleLogo(program.title);
+      final isValid = _isValidTitleLogo(logo, channel);
+      final stored = isValid ? (logo ?? '') : '';
       if (mounted) {
         setState(() {
-          _programTitleLogos[program.id] = logo ?? '';
+          _programTitleLogos[cacheKey] = stored;
         });
+      } else {
+        _programTitleLogos[cacheKey] = stored;
       }
     } catch (e) {
       debugLog('Error fetching title logo for "${program.title}": $e');
       if (mounted) {
         setState(() {
-          _programTitleLogos[program.id] = '';
+          _programTitleLogos[cacheKey] = '';
         });
+      } else {
+        _programTitleLogos[cacheKey] = '';
       }
+    } finally {
+      _titleLogoRequests.remove(cacheKey);
     }
   }
 
@@ -1278,6 +1395,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         channelName: channel.name,
         groupTitle: channel.groupTitle,
       );
+
+      if (epgService.shouldHideChannel(
+        channelId,
+        channelName: channel.name,
+      )) {
+        continue;
+      }
 
       // If no program, still consider as candidate but with null program
       // This ensures we always have something to show in the Hero section
@@ -1308,20 +1432,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (program != null) {
       // 1. Try cached TMDB/OMDb program artwork
       final cached = _programArtwork[program.id];
-      if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
+      if (_isValidProgramArtwork(cached, channel)) {
         return cached;
       }
 
       // 2. Trigger a fetch if TMDB is enabled
       if (_tmdbEnabled) {
-        _fetchProgramArtwork(program);
+        _ensureFreshProgramArtwork(program, channel);
       }
 
       // 3. Fall back to the direct image URL provided in the EPG XML itself
       final direct = program.imageUrl;
-      if (direct != null && direct.isNotEmpty && !_isLikelyPosterUrl(direct)) {
-        if (_isLikelyTitleLogoUrl(direct)) return null;
-        if (channel.logoUrl != null && channel.logoUrl == direct) return null;
+      if (_isValidProgramArtwork(direct, channel)) {
         return direct;
       }
     }
@@ -1329,10 +1451,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
+  void _ensureFreshProgramArtwork(Program program, Channel channel) {
+    if (!_tmdbEnabled) return;
+    if (_artworkRequests.contains(program.id)) return;
+    final existing = _programArtwork[program.id];
+    if (existing != null && existing.isNotEmpty &&
+        _isValidProgramArtwork(existing, channel)) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final current = _programArtwork[program.id];
+      if (current != null && current.isNotEmpty &&
+          _isValidProgramArtwork(current, channel)) {
+        return;
+      }
+      _programArtwork[program.id] = '';
+      _fetchProgramArtwork(program);
+    });
+  }
+
 
   Future<void> _fetchProgramArtwork(Program program) async {
+    final existing = _programArtwork[program.id];
     if (_artworkRequests.contains(program.id) ||
-        _programArtwork.containsKey(program.id)) {
+        (existing != null && existing.isNotEmpty)) {
       return;
     }
     if (!_shouldAttemptArtwork(program.id)) return;
@@ -1429,7 +1573,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           channelId,
           channelName: channel.name,
         ));
-        filteredChannels.add(channel);
+        continue;
+      }
+
+      if (epgService.shouldHideChannel(
+        channelId,
+        channelName: channel.name,
+      )) {
         continue;
       }
       if (isFirstRow) {

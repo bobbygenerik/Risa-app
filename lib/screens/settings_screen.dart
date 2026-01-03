@@ -100,6 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Map<String, int>? _xtreamPanelCounts;
   DateTime? _xtreamPanelCountsFetchedAt;
   bool _xtreamPanelCountsInFlight = false;
+  FocusNode? _lastGeneralFocusNode;
 
   @override
   void initState() {
@@ -120,6 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _customEpgUrlController.addListener(_saveCustomEpgUrl);
     _secondaryEpgUrlController.addListener(_saveSecondaryEpgUrl);
 
+    _registerGeneralFocusNodes();
     _loadSettingsSync();
   }
 
@@ -169,6 +171,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _saveSecondaryEpgUrl() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('secondary_epg_url', _secondaryEpgUrlController.text);
+  }
+
+  void _registerGeneralFocusNodes() {
+    final nodes = [
+      _inputMethodFocusNode,
+      _m3uUrlFocusNode,
+      _xtreamServerFocusNode,
+      _xtreamUsernameFocusNode,
+      _xtreamPasswordFocusNode,
+      _customEpgUrlFocusNode,
+      _secondaryEpgUrlFocusNode,
+      _realDebridApiKeyFocusNode,
+      _openSubtitlesUsernameFocusNode,
+      _openSubtitlesPasswordFocusNode,
+      _loadM3uButtonFocusNode,
+      _loadXtreamButtonFocusNode,
+      _clearM3uButtonFocusNode,
+      _clearXtreamButtonFocusNode,
+      _updateEpgButtonFocusNode,
+      _clearEpgButtonFocusNode,
+      _browseStorageButtonFocusNode,
+    ];
+
+    for (final node in nodes) {
+      node.addListener(() {
+        if (node.hasFocus) {
+          _lastGeneralFocusNode = node;
+        }
+      });
+    }
   }
 
   @override
@@ -251,7 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     FocusNode? target;
     switch (_selectedIndex) {
       case 0:
-        target = _inputMethodFocusNode;
+        target = _lastGeneralFocusNode ?? _inputMethodFocusNode;
         break;
       case 1:
         target = _playbackFirstFocusNode;

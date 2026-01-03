@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// A premium Split-Pane layout for TV Settings.
 ///
@@ -240,33 +241,30 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               margin: const EdgeInsets.symmetric(vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: isSelected && isFocused
-                    ? Colors.white
-                    : (isSelected
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.transparent),
+                color: isFocused
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
-                border: isFocused && !isSelected
-                    ? Border.all(
-                        color: Colors.white.withValues(alpha: 0.5), width: 2)
-                    : null,
+                border: Border(
+                  left: BorderSide(
+                    color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                    width: isFocused ? 4 : 0,
+                  ),
+                ),
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
               ),
               child: Row(
                 children: [
                   Icon(
                     category.icon,
-                    color: isSelected && isFocused
-                        ? Colors.black
-                        : (isSelected ? Colors.white : Colors.grey),
+                    color: isSelected ? AppTheme.primaryBlue : Colors.white70,
                     size: 24,
                   ),
                   const SizedBox(width: 16),
                   Text(
                     category.title,
                     style: TextStyle(
-                      color: isSelected && isFocused
-                          ? Colors.black
-                          : (isSelected ? Colors.white : Colors.grey),
+                      color: AppTheme.textPrimary,
                       fontSize: 16,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w500,

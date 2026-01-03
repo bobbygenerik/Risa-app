@@ -81,7 +81,7 @@ class SettingsGroup extends StatelessWidget {
             color: const Color(0xFF14161A), // Dark card background
             borderRadius: BorderRadius.circular(16),
           ),
-          clipBehavior: Clip.antiAlias,
+          clipBehavior: Clip.none,
           child: Column(
             children: children,
           ),

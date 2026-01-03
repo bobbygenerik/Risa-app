@@ -8,7 +8,7 @@ import '../utils/debug_helper.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
-
+import '../widgets/cached_image.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
@@ -238,6 +238,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildModernControls() {
+    final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -269,6 +270,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       onPressed: () => Navigator.pop(context),
                       size: 24,
                     ),
+                    if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CachedImage(
+                          imageUrl: logoUrl,
+                          fit: BoxFit.contain,
+                          errorWidget: const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (widget.isLive) ...[
                       IconButton(
@@ -277,7 +290,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                             color: Colors.white, size: 24),
                       ),
                       const SizedBox(width: 16),
-                      const BrandBadge.live(),
+                      SizedBox(
+                        height: 32,
+                        child: Center(
+                          child: const BrandBadge.live(),
+                        ),
+                      ),
                     ] else
                       IconButton(
                         onPressed: _toggleGuide,

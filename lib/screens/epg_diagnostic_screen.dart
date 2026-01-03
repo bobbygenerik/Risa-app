@@ -9,6 +9,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:math' as math;
+import 'package:iptv_player/widgets/brand_button.dart';
 
 enum _MatchFilter { all, matched, unmatched }
 
@@ -45,6 +46,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   String _pageSignature = '';
   static const int _pageSize = 100;
   static const int _scanChunkSize = 200;
+  final FocusNode _reloadFocus = FocusNode(debugLabel: 'EpgReload');
+  final FocusNode _configureFocus = FocusNode(debugLabel: 'EpgConfigure');
+  final FocusNode _loadMoreFocus = FocusNode(debugLabel: 'EpgLoadMore');
 
   @override
   void initState() {
@@ -214,6 +218,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   @override
+  void dispose() {
+    _reloadFocus.dispose();
+    _configureFocus.dispose();
+    _loadMoreFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     _writeDebugMarker('epg_diagnostic_build');
     return Scaffold(
@@ -246,9 +258,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -256,39 +270,46 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                       'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
                       style: TextStyle(
                         color: epgService.availableChannels.isNotEmpty
-                            ? Colors.green
-                            : Colors.red,
+                            ? AppTheme.accentGreen
+                            : AppTheme.accentOrange,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          await _writeDebugMarker('epg_reload_requested');
-                          await epgService.initialize(forceRefresh: true);
-                          await _writeDebugMarker('epg_reload_completed');
-                          _refreshStats();
-                          rootScaffoldMessengerKey.currentState
-                              ?.showSnackBar(const SnackBar(
-                            content: Text('EPG reload requested'),
-                            backgroundColor: Color(0xFF1E2328),
-                            behavior: SnackBarBehavior.floating,
-                          ));
-                        } catch (e) {
-                          await _writeDebugMarker('epg_reload_failed');
-                          rootScaffoldMessengerKey.currentState
-                              ?.showSnackBar(SnackBar(
-                            content: Text('EPG reload failed: $e'),
-                            backgroundColor: const Color(0xFF1E2328),
-                            behavior: SnackBarBehavior.floating,
-                          ));
-                        }
-                      },
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Reload EPG'),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue),
+                    SizedBox(
+                      width: 180,
+                      child: BrandPrimaryButton(
+                        focusNode: _reloadFocus,
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.maybeOf(context);
+                          try {
+                            await _writeDebugMarker('epg_reload_requested');
+                            await epgService.initialize(forceRefresh: true);
+                            await _writeDebugMarker('epg_reload_completed');
+                            if (!mounted) return;
+                            _refreshStats();
+                            if (!mounted) return;
+                            _deliverSnackBar(
+                              messenger,
+                              const SnackBar(
+                                  content: Text('EPG reload requested')),
+                            );
+                          } catch (e) {
+                            await _writeDebugMarker('epg_reload_failed');
+                            if (!mounted) return;
+                            _deliverSnackBar(
+                              messenger,
+                              SnackBar(
+                                  content:
+                                      Text('EPG reload failed: ${e.toString()}')),
+                            );
+                          }
+                        },
+                        icon: Icons.refresh,
+                        label: 'Reload EPG',
+                        expand: true,
+                        minHeight: 36,
+                      ),
                     ),
                   ],
                 ),
@@ -443,16 +464,18 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                   fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () => context.push('/epg-manager'),
-                              icon: const Icon(Icons.settings, size: 16),
-                              label: const Text('Configure EPG'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                textStyle: const TextStyle(fontSize: 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 160,
+                                child: BrandSecondaryButton(
+                                  focusNode: _configureFocus,
+                                  onPressed: () => context.push('/epg-manager'),
+                                  icon: Icons.settings,
+                                  label: 'Configure EPG',
+                                  expand: true,
+                                  minHeight: 32,
+                                ),
                               ),
                             ),
                           ],
@@ -617,10 +640,16 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   )
                 else if (_pageHasMore)
                   Center(
-                    child: ElevatedButton.icon(
-                      onPressed: _loadNextMatchPage,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Load more'),
+                    child: SizedBox(
+                      width: 160,
+                      child: BrandSecondaryButton(
+                        focusNode: _loadMoreFocus,
+                        onPressed: _loadNextMatchPage,
+                        icon: Icons.add,
+                        label: 'Load more',
+                        expand: true,
+                        minHeight: 34,
+                      ),
                     ),
                   )
                 else
@@ -632,10 +661,17 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   ),
               ],
             ),
-          );
+          ),
+        );
         },
       ),
     );
+  }
+
+  void _deliverSnackBar(
+      ScaffoldMessengerState? messenger, SnackBar snackBar) {
+    final target = messenger ?? rootScaffoldMessengerKey.currentState;
+    target?.showSnackBar(snackBar);
   }
 
   Future<void> _writeDebugMarker(String name) async {
