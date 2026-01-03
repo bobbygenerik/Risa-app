@@ -84,6 +84,14 @@ class TMDBService {
         RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
             caseSensitive: false),
         '');
+    output = output.replaceAll(
+        RegExp(r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b', caseSensitive: false),
+        '');
+    output = output.replaceAll(
+        RegExp(
+            r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
+            caseSensitive: false),
+        '');
     output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
     return output;
   }
@@ -298,8 +306,9 @@ class TMDBService {
     String type = 'movie', // 'movie' or 'series'
   }) async {
     try {
+      final normalizedTitle = _normalizeTitle(title);
       var searchUrl =
-          '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(title)}';
+          '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(normalizedTitle)}';
       if (year != null) {
         searchUrl += '&y=$year';
       }
