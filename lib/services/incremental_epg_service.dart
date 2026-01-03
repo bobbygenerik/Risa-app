@@ -128,6 +128,7 @@ class IncrementalEpgService extends ChangeNotifier {
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
   static const String _epgCacheUrlKey = 'epg_cache_url';
+  static const String _epgCacheBackupFileName = 'epg_cache_backup.xml';
   static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
@@ -477,6 +478,37 @@ class IncrementalEpgService extends ChangeNotifier {
     return File('${dir.path}/epg_cache.xml');
   }
 
+  Future<File> _getCacheBackupFile() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/$_epgCacheBackupFileName');
+  }
+
+  Future<void> _restoreCacheFromBackupIfMissing() async {
+    try {
+      final cacheFile = await _getCacheFile();
+      if (await cacheFile.exists()) return;
+      final backupFile = await _getCacheBackupFile();
+      if (!await backupFile.exists()) return;
+      await backupFile.copy(cacheFile.path);
+      debugLog('EPG: Restored cache from backup.');
+    } catch (e) {
+      debugLog('EPG: Failed to restore cache backup: $e');
+    }
+  }
+
+  Future<void> _backupCacheFile() async {
+    try {
+      final cacheFile = await _getCacheFile();
+      if (!await cacheFile.exists()) return;
+      final backupFile = await _getCacheBackupFile();
+      await backupFile.parent.create(recursive: true);
+      await cacheFile.copy(backupFile.path);
+      debugLog('EPG: Saved cache backup to ${backupFile.path}');
+    } catch (e) {
+      debugLog('EPG: Failed to backup cache file: $e');
+    }
+  }
+
   Future<bool> _isCacheValid({bool allowStale = false}) async {
     try {
       final file = await _getCacheFile();
@@ -523,6 +555,8 @@ class IncrementalEpgService extends ChangeNotifier {
       debugLog('EPG: Download skipped, no EPG URL.');
       return;
     }
+
+    await _restoreCacheFromBackupIfMissing();
 
     // Check cache validity - if we have stale cache and no force refresh,
     // use the stale cache for immediate loading and refresh in background
@@ -1134,6 +1168,7 @@ class IncrementalEpgService extends ChangeNotifier {
         
         // Persist normalized mapping to file for faster startup
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
+        await _backupCacheFile();
 
         debugLog(
             'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs with ~$parsedProgramCount programs');

@@ -1344,15 +1344,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String _normalizeUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     try {
-      final uri = Uri.parse(url);
-      final scheme = uri.scheme.toLowerCase();
-      final host = uri.host.toLowerCase();
-      final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
-      return '$scheme://$host$path';
-    } catch (_) {
-      return url.toLowerCase();
-    }
+    final uri = Uri.parse(url);
+    final host = uri.host.toLowerCase();
+    final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
+    if (host.isEmpty) return path;
+    return '$host$path';
+  } catch (_) {
+    return url.toLowerCase();
   }
+}
   
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
     final cacheKey = program.id;
