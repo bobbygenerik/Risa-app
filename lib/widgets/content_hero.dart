@@ -410,8 +410,7 @@ class EPGHero extends StatelessWidget {
 
         final title = currentProgram?.title ?? channel.name;
         final description = currentProgram?.description;
-        final heroImage =
-            customHeroImage ?? currentProgram?.imageUrl ?? channel.logoUrl;
+        final heroImage = customHeroImage ?? currentProgram?.imageUrl;
         final isLive = currentProgram?.isCurrentlyPlaying == true;
 
         return Stack(
