@@ -16,7 +16,7 @@ class _CacheItem {
 class TMDBService {
   static const String _apiKey = ''; // Configure in consuming app
   static const String _baseUrl = 'https://api.themoviedb.org/3';
-  static const String _omdbApiKey = ''; // Configure in consuming app
+  static const String _omdbApiKey = 'c5832aa4'; // Configure in consuming app
   static const String _omdbBaseUrl = 'https://www.omdbapi.com';
   // Simple in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Evicts oldest entries when size grows too large.
@@ -73,6 +73,19 @@ class TMDBService {
 
   static String _cacheKey(String prefix, String query, {int? year}) {
     return '$prefix:${query.toLowerCase().trim()}:${year ?? ''}';
+  }
+
+  static String _normalizeTitle(String title) {
+    var output = title.trim();
+    output = output.replaceAll(
+        RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+    output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
+    output = output.replaceAll(
+        RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
+            caseSensitive: false),
+        '');
+    output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return output;
   }
 
   static Map<String, dynamic>? _getFromCache(String key) {
@@ -381,64 +394,60 @@ class TMDBService {
   }
 
   /// Returns the best available backdrop/poster URL for a given title.
-  /// Prefers TV results first, falling back to movie matches.
-  /// This version batches requests to reduce API calls.
+  /// Prefers TV results first, falling back to movie matches and heuristics.
   static Future<String?> getBestBackdrop(String title, {int? year}) async {
     await init();
-    final cacheKey = _cacheKey('art:best', title, year: year);
+    final normalizedTitle = _normalizeTitle(title);
+    final cacheKey = _cacheKey('art:best', normalizedTitle, year: year);
     final cached = _getFromCache(cacheKey);
     if (cached != null && cached.containsKey('image')) {
-      return (cached['image'] as String?)?.isNotEmpty == true
-          ? cached['image'] as String
-          : null;
+      final cachedImage = (cached['image'] as String?)?.trim();
+      if (cachedImage?.isNotEmpty == true) {
+        return cachedImage;
+      }
+      return null;
     }
 
-    // Check if this request is already being processed
     if (_processingRequests.contains(cacheKey)) {
-      // Wait for the existing request to complete
       final completer = Completer<String?>();
       _pendingRequests.putIfAbsent(cacheKey, () => []).add(completer.complete);
       return completer.future;
     }
 
-    // Mark as processing
     _processingRequests.add(cacheKey);
-
     try {
-      Map<String, dynamic>? details;
-      details = await getTVDetails(title, year: year);
-      details ??= await getMovieDetails(title, year: year);
+      var details = await _resolveTmdbBackdrop(normalizedTitle, year);
 
-      // If TMDB didn't find anything, try OMDb as fallback
-      if (details == null ||
-          (details['backdrop'] == null && details['poster'] == null)) {
-        debugPrint('TMDB miss for "$title", trying OMDb as fallback...');
-        final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
-        final omdbMovie =
-            await _getOMDbDetails(title, year: year, type: 'movie');
-        details = omdbTV ?? omdbMovie;
-        if (details != null) {
+      if (!_hasArtwork(details)) {
+        debugPrint('TMDB miss for "$normalizedTitle", trying heuristics.');
+        details ??= await _tryTeamHeuristic(normalizedTitle, year);
+        if (_hasArtwork(details)) {
           debugPrint(
-              'OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+              'Team heuristic returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
         } else {
-          debugPrint('No artwork found for "$title" in TMDB or OMDb');
+          debugPrint(
+              'Team heuristic failed for "$normalizedTitle", querying OMDb fallback.');
+          details ??= await _tryOmdbFallback(normalizedTitle, year);
+          if (_hasArtwork(details)) {
+            debugPrint(
+                'OMDb fallback returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
+          } else {
+            debugPrint(
+                'OMDb fallback returned no artwork for "$normalizedTitle".');
+          }
         }
       } else {
         debugPrint(
-            'TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+            'TMDB found artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
       }
 
-      final image =
-          (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
-      // Cache both hits and misses (shorter TTL for misses) to avoid spamming APIs
+      final image = _extractBackdropUrl(details);
       _setCache(
-          cacheKey,
-          {
-            'image': image,
-          },
-          ttl: image == null ? const Duration(hours: 1) : null);
+        cacheKey,
+        {'image': image},
+        ttl: image == null ? const Duration(hours: 1) : null,
+      );
 
-      // Notify all pending requests
       final pending = _pendingRequests.remove(cacheKey);
       if (pending != null) {
         for (final callback in pending) {
@@ -450,6 +459,75 @@ class TMDBService {
     } finally {
       _processingRequests.remove(cacheKey);
     }
+  }
+
+  static Future<Map<String, dynamic>?> _resolveTmdbBackdrop(
+      String normalizedTitle, int? year) async {
+    Map<String, dynamic>? details;
+    final tvTitle = normalizedTitle.length <= 4
+        ? '$normalizedTitle channel'
+        : normalizedTitle;
+    details = await getTVDetails(tvTitle, year: year);
+    details ??= await getMovieDetails(normalizedTitle, year: year);
+    return details;
+  }
+
+  static Future<Map<String, dynamic>?> _tryOmdbFallback(
+      String normalizedTitle, int? year) async {
+    final seriesResult =
+        await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
+    if (_hasArtwork(seriesResult)) return seriesResult;
+    final movieResult =
+        await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
+    if (_hasArtwork(movieResult)) return movieResult;
+    return null;
+  }
+
+  static bool _hasArtwork(Map<String, dynamic>? details) {
+    final backdrop = (details?['backdrop'] as String?)?.trim();
+    if (backdrop?.isNotEmpty == true) return true;
+    final poster = (details?['poster'] as String?)?.trim();
+    return poster?.isNotEmpty == true;
+  }
+
+  static String? _extractBackdropUrl(Map<String, dynamic>? details) {
+    final backdrop = (details?['backdrop'] as String?)?.trim();
+    if (backdrop?.isNotEmpty == true) return backdrop;
+    final poster = (details?['poster'] as String?)?.trim();
+    if (poster?.isNotEmpty == true) return poster;
+    return null;
+  }
+
+  static List<String> _extractSportsTeams(String title) {
+    final normalized = title.toLowerCase();
+    const separators = [' vs ', ' vs. ', ' v ', ' at ', ' @ ', ' vs/', ' - '];
+    for (final separator in separators) {
+      if (normalized.contains(separator)) {
+        final parts = normalized.split(separator);
+        if (parts.length >= 2) {
+          return parts
+              .take(2)
+              .map((segment) => segment.trim())
+              .where((segment) => segment.isNotEmpty)
+              .toList();
+        }
+      }
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> _tryTeamHeuristic(
+      String title, int? year) async {
+    final teams = _extractSportsTeams(title);
+    if (teams.isEmpty) return null;
+    for (final team in teams) {
+      final normalizedTeam = _normalizeTitle(team);
+      final tvMatch = await getTVDetails(normalizedTeam, year: year);
+      if (_hasArtwork(tvMatch)) return tvMatch;
+      final movieMatch = await getMovieDetails(normalizedTeam, year: year);
+      if (_hasArtwork(movieMatch)) return movieMatch;
+    }
+    return null;
   }
 
   /// Batch fetch artwork for multiple titles at once.

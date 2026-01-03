@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
-import 'package:iptv_player/config/omdb_config.dart';
+import 'package:iptv_player/services/fanart_service.dart';
 import 'package:path_provider/path_provider.dart';
 
 class _CacheItem {
@@ -18,7 +18,7 @@ class _CacheItem {
 class TMDBService {
   static const String _apiKey = TMDBConfig.apiKey;
   static const String _baseUrl = 'https://api.themoviedb.org/3';
-  static const String _omdbApiKey = OMDbConfig.apiKey;
+  static const String _omdbApiKey = 'c5832aa4';
   static const String _omdbBaseUrl = 'https://www.omdbapi.com';
   // LRU in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Uses LRU eviction for better hit rates.
@@ -297,6 +297,8 @@ class TMDBService {
             'overview': movie['overview'] as String?,
             'release_date': movie['release_date'] as String?,
             'genres': genres.isNotEmpty ? genres : null,
+            'tmdbId': movie['id'],
+            'mediaType': 'movie',
           };
           _setCache(cacheKey, result);
           return result;
@@ -309,12 +311,12 @@ class TMDBService {
     return null;
   }
 
-  /// Fetch artwork from OMDb API as fallback
   static Future<Map<String, dynamic>?> _getOMDbDetails(
     String title, {
     int? year,
-    String type = 'movie', // 'movie' or 'series'
+    String type = 'movie',
   }) async {
+    if (_omdbApiKey.isEmpty) return null;
     try {
       var searchUrl =
           '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(title)}';
@@ -327,20 +329,17 @@ class TMDBService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
         if (data['Response'] == 'True') {
           final poster = data['Poster'] as String?;
-          // OMDb returns 'N/A' for missing posters
           final validPoster =
-              (poster != null && poster != 'N/A') ? poster : null;
+              (poster?.isNotEmpty == true && poster != 'N/A') ? poster : null;
 
           return {
             'rating': data['imdbRating'] != null && data['imdbRating'] != 'N/A'
                 ? double.tryParse(data['imdbRating'] as String)
                 : null,
             'poster': validPoster,
-            'backdrop':
-                validPoster, // OMDb doesn't have separate backdrops, use poster
+            'backdrop': validPoster,
             'overview': data['Plot'] as String?,
             'release_date': data['Year'] as String?,
           };
@@ -349,7 +348,6 @@ class TMDBService {
     } catch (e) {
       debugLog('OMDb API error for "$title": $e');
     }
-
     return null;
   }
 
@@ -400,6 +398,8 @@ class TMDBService {
             'overview': show['overview'] as String?,
             'first_air_date': show['first_air_date'] as String?,
             'genres': genres.isNotEmpty ? genres : null,
+            'tmdbId': show['id'],
+            'mediaType': 'tv',
           };
           _setCache(cacheKey, result);
           return result;
@@ -413,100 +413,60 @@ class TMDBService {
   }
 
   /// Returns the best available backdrop/poster URL for a given title.
-  /// Prefers TV results first, falling back to movie matches.
-  /// This version batches requests to reduce API calls.
+  /// Prefers TV results first, falling back to movie matches and heuristics.
   static Future<String?> getBestBackdrop(String title, {int? year}) async {
     await init();
     final normalizedTitle = _normalizeTitle(title);
     final cacheKey = _cacheKey('art:best', normalizedTitle, year: year);
     final cached = _getFromCache(cacheKey);
     if (cached != null && cached.containsKey('image')) {
-      return (cached['image'] as String?)?.isNotEmpty == true
-          ? cached['image'] as String
-          : null;
+      final cachedImage = (cached['image'] as String?)?.trim();
+      if (cachedImage?.isNotEmpty == true) {
+        return cachedImage;
+      }
+      return null;
     }
 
-    // Check if this request is already being processed
     if (_processingRequests.contains(cacheKey)) {
-      // Wait for the existing request to complete
       final completer = Completer<String?>();
       _pendingRequests.putIfAbsent(cacheKey, () => []).add(completer.complete);
       return completer.future;
     }
 
-    // Mark as processing
     _processingRequests.add(cacheKey);
-
     try {
-      Map<String, dynamic>? details;
-      String? companyLogoUrl;
+      var details = await _resolveTmdbBackdrop(normalizedTitle, year);
 
-      // Try TV/movie content first for better backdrop quality
-      if (normalizedTitle.length <= 4) {
-        details = await getTVDetails('$normalizedTitle channel', year: year);
-      } else {
-        details = await getTVDetails(normalizedTitle, year: year);
-      }
-      details ??= await getMovieDetails(normalizedTitle, year: year);
-
-      // Only use company logos as last resort if no backdrop/poster found
-      if (details == null ||
-          (details['backdrop'] == null && details['poster'] == null)) {
-        final companySearchUrl =
-            '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(normalizedTitle)}';
-        final companyResponse = await http.get(Uri.parse(companySearchUrl));
-        if (companyResponse.statusCode == 200) {
-          final companyData = json.decode(companyResponse.body);
-          final companyResults = companyData['results'] as List;
-          if (companyResults.isNotEmpty) {
-            final company = companyResults.first;
-            if (company['logo_path'] != null) {
-              companyLogoUrl =
-                  'https://image.tmdb.org/t/p/w500${company['logo_path']}';
-            }
+      if (!_hasArtwork(details)) {
+        debugLog('TMDB miss for "$normalizedTitle", trying sports heuristics.');
+        details ??= await _tryTeamHeuristic(normalizedTitle, year);
+        if (_hasArtwork(details)) {
+          debugLog(
+              'Team heuristic returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
+        } else {
+          debugLog(
+              'Team heuristic failed for "$normalizedTitle", querying OMDb fallback.');
+          details ??= await _tryOmdbFallback(normalizedTitle, year);
+          if (_hasArtwork(details)) {
+            debugLog(
+                'OMDb fallback returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
+          } else {
+            debugLog(
+                'OMDb fallback returned no artwork for "$normalizedTitle".');
           }
         }
-
-        // Only use company logo if no other artwork found
-        if (companyLogoUrl != null &&
-            (details == null ||
-                (details['backdrop'] == null && details['poster'] == null))) {
-          details = {'backdrop': companyLogoUrl};
-        }
-      }
-
-      // If TMDB didn't find anything, try OMDb as fallback
-      if (details == null ||
-          (details['backdrop'] == null && details['poster'] == null)) {
-        debugLog(
-            'TMDB miss for "$normalizedTitle", trying OMDb as fallback...');
-        final omdbTV =
-            await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
-        final omdbMovie =
-            await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
-        details = omdbTV ?? omdbMovie;
-        if (details != null) {
-          debugLog(
-              'OMDb found artwork for "$normalizedTitle": ${details['backdrop'] ?? details['poster']}');
-        } else {
-          debugLog('No artwork found for "$normalizedTitle" in TMDB or OMDb');
-        }
       } else {
         debugLog(
-            'TMDB found artwork for "$normalizedTitle": ${details['backdrop'] ?? details['poster']}');
+            'TMDB found artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
       }
 
-      final image =
-          (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
-      // Cache both hits and misses (shorter TTL for misses) to avoid spamming APIs
+      final image = _extractBackdropUrl(details);
       _setCache(
-          cacheKey,
-          {
-            'image': image,
-          },
-          ttl: image == null ? const Duration(hours: 1) : null);
+        cacheKey,
+        {'image': image},
+        ttl: image == null ? const Duration(hours: 1) : null,
+      );
 
-      // Notify all pending requests
       final pending = _pendingRequests.remove(cacheKey);
       if (pending != null) {
         for (final callback in pending) {
@@ -518,6 +478,121 @@ class TMDBService {
     } finally {
       _processingRequests.remove(cacheKey);
     }
+  }
+
+  static Future<Map<String, dynamic>?> _resolveTmdbBackdrop(
+      String normalizedTitle, int? year) async {
+    Map<String, dynamic>? details;
+    final tvTitle = normalizedTitle.length <= 4
+        ? '$normalizedTitle channel'
+        : normalizedTitle;
+    details = await getTVDetails(tvTitle, year: year);
+    details ??= await getMovieDetails(normalizedTitle, year: year);
+
+    if (details != null) {
+      final hasArtwork = _hasArtwork(details);
+      final tmdbId = details['tmdbId'] as int?;
+      final mediaType = details['mediaType'] as String?;
+      if (!hasArtwork && tmdbId != null && mediaType != null) {
+        final fanartImage = await FanartService.getBackdrop(
+          tmdbId,
+          isTv: mediaType == 'tv',
+        );
+        if (fanartImage != null) {
+          details['backdrop'] = fanartImage;
+          debugLog('Fanart provided art for "$normalizedTitle": $fanartImage');
+        }
+      }
+
+      if (!_hasArtwork(details)) {
+        final companyLogo = await _fetchCompanyLogo(normalizedTitle);
+        if (companyLogo != null) {
+          details['backdrop'] = companyLogo;
+        }
+      }
+    }
+
+    return details;
+  }
+
+  static Future<Map<String, dynamic>?> _tryOmdbFallback(
+      String normalizedTitle, int? year) async {
+    final seriesResult =
+        await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
+    if (_hasArtwork(seriesResult)) return seriesResult;
+    final movieResult =
+        await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
+    if (_hasArtwork(movieResult)) return movieResult;
+    return null;
+  }
+
+  static bool _hasArtwork(Map<String, dynamic>? details) {
+    final backdrop = (details?['backdrop'] as String?)?.trim();
+    if (backdrop?.isNotEmpty == true) return true;
+    final poster = (details?['poster'] as String?)?.trim();
+    return poster?.isNotEmpty == true;
+  }
+
+  static String? _extractBackdropUrl(Map<String, dynamic>? details) {
+    final backdrop = (details?['backdrop'] as String?)?.trim();
+    if (backdrop?.isNotEmpty == true) return backdrop;
+    final poster = (details?['poster'] as String?)?.trim();
+    if (poster?.isNotEmpty == true) return poster;
+    return null;
+  }
+
+  static Future<String?> _fetchCompanyLogo(String query) async {
+    try {
+      final searchUrl =
+          '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(query)}';
+      final response = await http.get(Uri.parse(searchUrl));
+      if (response.statusCode == 200) {
+        final companyData = json.decode(response.body);
+        final companyResults = companyData['results'] as List? ?? [];
+        if (companyResults.isNotEmpty) {
+          final company = companyResults.first;
+          final logoPath = company['logo_path'] as String?;
+          if (logoPath != null && logoPath.isNotEmpty) {
+            return 'https://image.tmdb.org/t/p/w500$logoPath';
+          }
+        }
+      }
+    } catch (e) {
+      debugLog('Company logo lookup failed for "$query": $e');
+    }
+    return null;
+  }
+
+  static List<String> _extractSportsTeams(String title) {
+    final normalized = title.toLowerCase();
+    const separators = [' vs ', ' vs. ', ' v ', ' at ', ' @ ', ' vs/', ' - '];
+    for (final separator in separators) {
+      if (normalized.contains(separator)) {
+        final parts = normalized.split(separator);
+        if (parts.length >= 2) {
+          return parts
+              .take(2)
+              .map((segment) => segment.trim())
+              .where((segment) => segment.isNotEmpty)
+              .toList();
+        }
+      }
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> _tryTeamHeuristic(
+      String title, int? year) async {
+    final teams = _extractSportsTeams(title);
+    if (teams.isEmpty) return null;
+    for (final team in teams) {
+      final normalizedTeam = _normalizeTitle(team);
+      final tvMatch = await getTVDetails(normalizedTeam, year: year);
+      if (_hasArtwork(tvMatch)) return tvMatch;
+      final movieMatch = await getMovieDetails(normalizedTeam, year: year);
+      if (_hasArtwork(movieMatch)) return movieMatch;
+    }
+    return null;
   }
 
   /// Returns the title logo (clearart) URL for a given title from TMDB.
