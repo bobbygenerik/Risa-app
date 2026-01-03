@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 class CrashLogger {
@@ -52,18 +51,6 @@ class CrashLogger {
       // Mirror to external app storage so logs are easy to pull via adb
       await _writeExternal(buffer.toString());
 
-      // Try to also write to external Downloads/RisaLogs via platform channel
-      try {
-        const channel = MethodChannel('com.streamhub.iptv/debug_io');
-        final filename =
-            'crash_${DateTime.now().toIso8601String().replaceAll(':', '-')}.txt';
-        await channel.invokeMethod('writeFile', {
-          'name': filename,
-          'content': buffer.toString(),
-        });
-      } catch (_) {
-        // ignore platform write failures
-      }
     } catch (_) {
       // Ignore logging failures to avoid crashing during crash handling.
     }

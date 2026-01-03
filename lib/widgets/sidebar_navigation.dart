@@ -295,51 +295,31 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
-                padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: isFocused 
-                      ? Colors.white.withValues(alpha: 0.15) 
-                      : Colors.transparent,
-                  border: isFocused 
-                      ? const Border(left: BorderSide(color: AppTheme.primaryBlue, width: 3))
+                  color: Colors.transparent,
+                ),
+                child: _buildSidebarRow(
+                  isFocused: isFocused,
+                  icon: Icon(
+                    tab.icon,
+                    color: (isActive || isFocused) ? Colors.white : Colors.white70,
+                    size: 16,
+                  ),
+                  label: _isExpanded
+                      ? Text(
+                          tab.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: (isActive || isFocused) ? Colors.white : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        )
                       : null,
                 ),
-                child: _isExpanded
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            tab.icon,
-                            color: (isActive || isFocused)
-                                ? Colors.white
-                                : Colors.white70,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              tab.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: (isActive || isFocused)
-                                    ? Colors.white
-                                    : Colors.white70,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Icon(
-                        tab.icon,
-                        color: (isActive || isFocused)
-                            ? Colors.white
-                            : Colors.white70,
-                        size: 16,
-                      ),
               ),
             ),
           );
@@ -427,58 +407,71 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
-                padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: isFocused 
-                      ? Colors.white.withValues(alpha: 0.15) 
-                      : Colors.transparent,
-                  border: isFocused 
-                      ? const Border(left: BorderSide(color: AppTheme.primaryBlue, width: 3))
-                      : null,
+                  color: Colors.transparent,
                 ),
-                child: _isExpanded
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            tab.icon,
+                child: _buildSidebarRow(
+                  isFocused: isFocused,
+                  icon: Icon(
+                    tab.icon,
+                    color:
+                        isActive ? AppTheme.primaryBlue : (isFocused ? Colors.white : Colors.white70),
+                    size: 16,
+                  ),
+                  label: _isExpanded
+                      ? Text(
+                          tab.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: isActive
                                 ? AppTheme.primaryBlue
                                 : (isFocused ? Colors.white : Colors.white70),
-                            size: 16,
+                            fontSize: 12,
+                            fontWeight:
+                                isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              tab.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: isActive
-                                    ? AppTheme.primaryBlue
-                                    : (isFocused ? Colors.white : Colors.white70),
-                                fontSize: 12,
-                                fontWeight: isActive || isFocused
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Icon(
-                        tab.icon,
-                        color: isActive
-                            ? AppTheme.primaryBlue
-                            : (isFocused ? Colors.white : Colors.white70),
-                        size: 16,
-                      ),
+                        )
+                      : null,
+                ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSidebarRow({
+    required bool isFocused,
+    required Widget icon,
+    Widget? label,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: TVFocusStyle.animationDuration,
+          curve: TVFocusStyle.animationCurve,
+          width: 4,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(4),
+              bottomRight: Radius.circular(4),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        icon,
+        if (label != null) ...[
+          const SizedBox(width: 8),
+          Flexible(child: label),
+        ],
+      ],
     );
   }
 
@@ -618,52 +611,36 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
-                padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: isFocused 
-                      ? Colors.white.withValues(alpha: 0.15) 
-                      : Colors.transparent,
-                  border: isFocused 
-                      ? const Border(left: BorderSide(color: AppTheme.primaryBlue, width: 3))
-                      : null,
+                  color: Colors.transparent,
                 ),
-                child: _isExpanded
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            icon,
+                child: _buildSidebarRow(
+                  isFocused: isFocused,
+                  icon: Icon(
+                    icon,
+                    color: isActive
+                        ? AppTheme.primaryBlue
+                        : (isFocused ? Colors.white : Colors.white70),
+                    size: 16,
+                  ),
+                  label: _isExpanded
+                      ? Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: isActive
                                 ? AppTheme.primaryBlue
                                 : (isFocused ? Colors.white : Colors.white70),
-                            size: 16,
+                            fontSize: 12,
+                            fontWeight:
+                                isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: isActive
-                                    ? AppTheme.primaryBlue
-                                    : (isFocused ? Colors.white : Colors.white70),
-                                fontSize: 12,
-                                fontWeight:
-                                    isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Icon(
-                        icon,
-                        color: isActive
-                            ? AppTheme.primaryBlue
-                            : (isFocused ? Colors.white : Colors.white70),
-                        size: 16,
-                      ),
+                        )
+                      : null,
+                ),
               ),
             ),
           );

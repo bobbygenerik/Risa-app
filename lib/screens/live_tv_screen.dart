@@ -1248,22 +1248,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   bool _isLikelyPosterUrl(String url) {
-    // Relaxed check: Only filter out very obvious portrait poster formats
-    // from TMDB, but allow images that might be legitimate program art.
     final lower = url.toLowerCase();
-    
-    // Explicit portrait orientations
-    if (lower.contains('poster') ||
-        lower.contains('portrait')) {
+    final path = Uri.tryParse(url)?.path.toLowerCase() ?? lower;
+
+    // Poster assets often live in dedicated directories or include "poster" in the filename.
+    if (path.contains('/poster/') ||
+        path.endsWith('_poster.jpg') ||
+        path.endsWith('_poster.png') ||
+        path.contains('/portrait/')) {
       return true;
     }
-    
-    // TMDB specific portrait patterns (common poster sizes)
-    if (lower.contains('tmdb.org') && 
-       (lower.contains('/w342') || lower.contains('/w185'))) {
+
+    // TMDB portrait/backdrop size hints that usually represent poster art only.
+    if (lower.contains('tmdb.org') && (lower.contains('/w342') || lower.contains('/w185'))) {
       return true;
     }
-    
+
     return false;
   }
 
@@ -1296,12 +1296,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   bool _isLikelyTitleLogoUrl(String url) {
     final lower = url.toLowerCase();
-    if (lower.contains('clearlogo') ||
-        lower.contains('logo') ||
-        lower.contains('logotype') ||
-        lower.contains('titlecard')) {
+
+    if (lower.contains('/clearlogo/') ||
+        lower.contains('/logo/') ||
+        lower.contains('/logotype/') ||
+        lower.contains('/titlecard/')) {
       return true;
     }
+
     return lower.endsWith('.svg');
   }
 
@@ -1345,10 +1347,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (url == null || url.isEmpty) return '';
     try {
       final uri = Uri.parse(url);
-      final scheme = uri.scheme.toLowerCase();
       final host = uri.host.toLowerCase();
       final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
-      return '$scheme://$host$path';
+      return '$host$path';
     } catch (_) {
       return url.toLowerCase();
     }
@@ -1615,10 +1616,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
     // Tighter spacing - minimal gaps between elements
-    final infoSpacing = 2.0;
+    final infoSpacing = context.spacingXs() + context.spacingXs();
     final infoHeight = titleHeight + timeHeight + infoSpacing;
     // Minimal vertical padding, just enough for focus scaling
-    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    final rowHeight =
+        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
@@ -1714,6 +1716,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         filteredChannels.length,
                         allowPrefetch,
                         isFirstRow: isFirstRow,
+                        rowHeight: rowHeight,
                         focusNode: focusNode,
                         onItemFocus: () => _bumpRowVisibleCount(
                           sectionKey,
@@ -1780,7 +1783,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
     // Match the tighter spacing used in _buildChannelSection
-    final infoSpacing = 2.0;
+    final infoSpacing = context.spacingXs() + context.spacingXs();
     final infoHeight = titleHeight + timeHeight + infoSpacing;
     // Account for category header + underline + spacers
     final captionStyle = AppTypography.caption(context);
@@ -1790,7 +1793,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowBottomSpacing = context.spacingMd();
 
     // Total calculated height of one full row block in the list
-    final cardRowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    final cardRowHeight =
+        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
     return cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
   }
 
@@ -1824,23 +1828,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       int totalCount,
       bool allowPrefetch,
       {required bool isFirstRow,
+      required double rowHeight,
       FocusNode? focusNode,
       VoidCallback? onItemFocus}) {
     return SizedBox(
       width: cardWidth,
+      height: rowHeight,
       child: Focus(
         focusNode: focusNode,
         canRequestFocus: true,
         onFocusChange: (hasFocus) {
           if (hasFocus) {
             // Update focused index without triggering full screen rebuild if possible
-
             _focusedIndexBySection[sectionKey] = index;
-            
-
-            
             _scrollToHeroPeekOnFocus();
             onItemFocus?.call();
+          } else if (_focusedIndexBySection[sectionKey] == index) {
+            // Clear the stored focus when the card loses focus so hero navigation
+            // can resume once all rows are unfocused.
+            _focusedIndexBySection[sectionKey] = -1;
           }
         },
         onKeyEvent: (node, event) {
@@ -2338,118 +2344,80 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Positioned.fill(
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  SliverToBoxAdapter(child: SizedBox(height: contentTop))
-                      .child!, // Hacky way to reuse spacing logic
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: 0,
-                      right: rightInset,
-                      bottom: context.spacingLg(),
-                    ),
-                    child: Shimmer(
-                      child: Column(
-                        children: [
-                          for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
-                            // Category Title Skeleton
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  left: rowInset, bottom: 2),
-                              child: SkeletonLine(
-                                140,
-                                height: 16,
-                                borderRadius: 4,
-                              ),
-                            ),
-                            // Underline Skeleton
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  left: rowInset, bottom: 8),
-                              child: Container(
-                                height: 3,
-                                width: context.spacingXl(),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(999),
+                  child: Column(
+                    children: [
+                      SizedBox(height: contentTop + context.spacingLg()),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: 0,
+                          right: rightInset,
+                          bottom: context.spacingLg(),
+                        ),
+                        child: Shimmer(
+                          child: Column(
+                            children: [
+                              for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                      left: rowInset, bottom: 2),
+                                  child: SkeletonLine(
+                                    140,
+                                    height: 16,
+                                    borderRadius: 4,
+                                  ),
                                 ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: skeletonCardHeight +
-                                  context.spacingXs() +
-                                  context.tvTextSize(30), // info area space
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: EdgeInsets.only(left: rowInset),
-                                itemCount: perRow,
-                                separatorBuilder: (context, index) =>
-                                    SizedBox(width: context.cardGap()),
-                                itemBuilder: (context, index) {
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Stack(
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                      left: rowInset, bottom: 8),
+                                  child: Container(
+                                    height: 3,
+                                    width: context.spacingXl(),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryBlue.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: skeletonCardHeight +
+                                      context.spacingXs() +
+                                      context.tvTextSize(30),
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: EdgeInsets.only(left: rowInset),
+                                    itemCount: perRow,
+                                    separatorBuilder: (context, index) =>
+                                        SizedBox(width: context.cardGap()),
+                                    itemBuilder: (context, index) {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
                                         children: [
                                           Skeleton(
                                             width: skeletonCardWidth,
                                             height: skeletonCardHeight,
                                             borderRadius: 12,
                                           ),
-                                          // Logo placeholder
-                                          Positioned(
-                                            top: 8,
-                                            left: 8,
-                                            child: Container(
-                                              width: 40,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(3),
-                                              ),
-                                            ),
-                                          ),
-                                          // Progress bar placeholder
-                                          Positioned(
-                                            bottom: 0,
-                                            left: 0,
-                                            right: 0,
-                                            child: Container(
-                                              height: 4,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.15),
-                                                borderRadius: const BorderRadius.only(
-                                                  bottomLeft: Radius.circular(12),
-                                                  bottomRight: Radius.circular(12),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
+                                          SizedBox(height: 4),
+                                          SkeletonLine(skeletonCardWidth * 0.8,
+                                              height: 12, borderRadius: 4),
+                                          SizedBox(height: 2),
+                                          SkeletonLine(skeletonCardWidth * 0.5,
+                                              height: 10, borderRadius: 4),
                                         ],
-                                      ),
-                                      SizedBox(height: 4),
-                                      // Title Line
-                                      SkeletonLine(skeletonCardWidth * 0.8,
-                                          height: 12, borderRadius: 4),
-                                      SizedBox(height: 2),
-                                      // Time Line
-                                      SkeletonLine(skeletonCardWidth * 0.4,
-                                          height: 10, borderRadius: 4),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                            SizedBox(height: context.spacingLg()),
-                          ],
-                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: context.spacingLg()),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
             ),
           ),
         ],
