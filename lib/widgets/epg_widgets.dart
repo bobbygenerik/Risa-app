@@ -52,6 +52,8 @@ class EPGChannelSidebar extends StatelessWidget {
         physics: const ClampingScrollPhysics(),
         itemCount: channels.length + (isLoadingMore ? 1 : 0),
         itemExtent: 68,
+        cacheExtent: 68 * 15, // Cache more items for smoother scrolling
+        addAutomaticKeepAlives: true, // Keep channel widgets alive
         itemBuilder: (context, index) {
           if (index >= channels.length) {
             return const Center(
@@ -65,6 +67,7 @@ class EPGChannelSidebar extends StatelessWidget {
             );
           }
           return EPGChannelItem(
+            key: ValueKey(channels[index].id), // Add key for better performance
             channel: channels[index],
             onTap: () => onChannelTap(channels[index]),
             onLongPress: () => onChannelLongPress(channels[index]),
@@ -79,7 +82,7 @@ class EPGChannelSidebar extends StatelessWidget {
   }
 }
 
-class EPGChannelItem extends StatelessWidget {
+class EPGChannelItem extends StatefulWidget {
   final Channel channel;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
@@ -100,73 +103,79 @@ class EPGChannelItem extends StatelessWidget {
   });
 
   @override
+  State<EPGChannelItem> createState() => _EPGChannelItemState();
+}
+
+class _EPGChannelItemState extends State<EPGChannelItem> {
+  bool _isFocused = false;
+  
+  @override
   Widget build(BuildContext context) {
     return Focus(
-      focusNode: focusNode,
+      focusNode: widget.focusNode,
       canRequestFocus: true,
+      onFocusChange: (focused) {
+        if (_isFocused != focused) {
+          setState(() => _isFocused = focused);
+        }
+      },
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.select ||
               event.logicalKey == LogicalKeyboardKey.enter) {
-            onTap();
+            widget.onTap();
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            if (onMoveLeft == null) {
+            if (widget.onMoveLeft == null) {
               return KeyEventResult.ignored;
             }
-            onMoveLeft!.call();
+            widget.onMoveLeft!.call();
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            if (onMoveRight == null) {
+            if (widget.onMoveRight == null) {
               return KeyEventResult.ignored;
             }
-            onMoveRight!.call();
+            widget.onMoveRight!.call();
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowUp &&
-              onMoveUpFromFirst != null) {
-            onMoveUpFromFirst!.call();
+              widget.onMoveUpFromFirst != null) {
+            widget.onMoveUpFromFirst!.call();
             return KeyEventResult.handled;
           }
         }
         return KeyEventResult.ignored;
       },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return GestureDetector(
-            onTap: onTap,
-            onLongPress: onLongPress,
-            child: Container(
-              height: 64,
-              margin: const EdgeInsets.only(bottom: 4, right: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
-                border: isFocused
-                    ? Border.all(color: AppTheme.focusBorder, width: 2)
-                    : Border.all(
-                        color: Colors.white.withValues(alpha: 0.1), width: 1),
-                // Optimization: No shadow here
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: CachedChannelLogo(
-                    logoUrl: channel.logoUrl,
-                    size: 48,
-                    cacheWidth: 96,
-                    cacheHeight: 96,
-                    fallbackIcon: Icons.dvr,
-                  ),
-                ),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: Container(
+          height: 64,
+          margin: const EdgeInsets.only(bottom: 4, right: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(8),
+            border: _isFocused
+                ? Border.all(color: AppTheme.focusBorder, width: 2)
+                : Border.all(
+                    color: Colors.white.withValues(alpha: 0.1), width: 1),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: CachedChannelLogo(
+                logoUrl: widget.channel.logoUrl,
+                size: 48,
+                cacheWidth: 96,
+                cacheHeight: 96,
+                fallbackIcon: Icons.dvr,
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -207,6 +216,7 @@ class EPGProgramsGrid extends StatelessWidget {
           physics: const ClampingScrollPhysics(),
           itemCount: channels.length + (isLoadingMore ? 1 : 0),
           itemExtent: 68,
+          cacheExtent: 68 * 10, // Cache 10 items ahead/behind
           itemBuilder: (context, index) {
             if (index >= channels.length) {
               return const SizedBox(height: 64);

@@ -73,6 +73,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final FocusNode _skeletonFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
+  final Map<String, Future<String?>> _pendingArtworkRequests = {}; // Deduplication
   final List<Program> _artworkQueue = [];
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
@@ -301,11 +302,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   void dispose() {
+    _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
     _artworkThrottle?.cancel();
     _featuredRotationTimer?.cancel();
     _artworkQueue.clear();
     _artworkRequests.clear();
+    _pendingArtworkRequests.clear();
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
@@ -315,6 +318,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card', 'live_tv_skeleton'],
     );
     super.dispose();
+  }
+  
+  final ValueNotifier<bool> _focusChangeNotifier = ValueNotifier(false);
+  
+  void _batchSetState(VoidCallback updates) {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(updates);
+      }
+    });
   }
 
   @override
@@ -1555,10 +1569,35 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         (existing != null && existing.isNotEmpty)) {
       return;
     }
+    
+    // Check for pending request
+    if (_pendingArtworkRequests.containsKey(program.id)) {
+      return _pendingArtworkRequests[program.id]!;
+    }
+    
     if (!_shouldAttemptArtwork(program.id)) return;
     _artworkRequests.add(program.id);
-    _artworkQueue.add(program);
-    _scheduleArtworkDrain();
+    
+    // Create and store the future for deduplication
+    final future = _fetchArtworkWithFallback(program);
+    _pendingArtworkRequests[program.id] = future;
+    
+    try {
+      final result = await future;
+      if (mounted) {
+        setState(() {
+          _programArtwork[program.id] = result ?? '';
+        });
+      }
+    } finally {
+      _pendingArtworkRequests.remove(program.id);
+      _artworkRequests.remove(program.id);
+    }
+  }
+  
+  Future<String?> _fetchArtworkWithFallback(Program program) async {
+    final isSports = _isSportsProgram(program);
+    return isSports ? await _fetchSportsImage(program) : await _fetchRegularImage(program);
   }
 
   void _scheduleArtworkDrain() {
@@ -1628,9 +1667,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
   
   Future<String?> _fetchSportsImage(Program program) async {
+    const timeout = Duration(seconds: 5);
+    
     // Try SportRadar first (if quota available)
     try {
-      final sportRadarImage = await SportRadarService.getImage(program.title);
+      final sportRadarImage = await SportRadarService.getImage(program.title).timeout(timeout);
       if (sportRadarImage != null && sportRadarImage.isNotEmpty) {
         return sportRadarImage;
       }
@@ -1640,7 +1681,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Fallback to TheSportsDB
     try {
-      final sportsDbImage = await TheSportsDBService.getImage(program.title);
+      final sportsDbImage = await TheSportsDBService.getImage(program.title).timeout(timeout);
       if (sportsDbImage != null && sportsDbImage.isNotEmpty) {
         return sportsDbImage;
       }
@@ -1653,9 +1694,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
   
   Future<String?> _fetchRegularImage(Program program) async {
+    const timeout = Duration(seconds: 5);
+    
     // Try TMDB first
     try {
-      final tmdbImage = await TMDBService.getBestBackdrop(program.title);
+      final tmdbImage = await TMDBService.getBestBackdrop(program.title).timeout(timeout);
       if (tmdbImage != null && tmdbImage.isNotEmpty) {
         return tmdbImage;
       }
@@ -1665,7 +1708,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Fallback to Fanart.tv
     try {
-      final fanartImage = await FanartService.getImage(program.title);
+      final fanartImage = await FanartService.getImage(program.title).timeout(timeout);
       if (fanartImage != null && fanartImage.isNotEmpty) {
         return fanartImage;
       }
@@ -1675,7 +1718,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Fallback to OMDB
     try {
-      final omdbImage = await OMDBService.getImage(program.title);
+      final omdbImage = await OMDBService.getImage(program.title).timeout(timeout);
       if (omdbImage != null && omdbImage.isNotEmpty) {
         return omdbImage;
       }
