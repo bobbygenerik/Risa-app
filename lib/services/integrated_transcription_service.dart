@@ -61,6 +61,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   // VOD (SRT) subtitles parsed for VOD playback
   final List<VodSubtitle> _vodSubtitles = [];
 
+  static const int _maxSubtitleHistory = 200;
+  static const int _maxVodSubtitles = 400;
+
   Timer? _cleanupTimer;
 
   // Getters
@@ -231,6 +234,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       _vodSubtitles
         ..clear()
         ..addAll(parsed);
+      _trimVodSubtitles();
       notifyListeners();
       debugLog('Loaded ${_vodSubtitles.length} VOD subtitles');
     } catch (e) {
@@ -293,17 +297,13 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     );
 
     _subtitles.add(entry);
+    _trimSubtitleHistory();
 
     // Translate if enabled and languages differ
     if (_isTranslating && _sourceLanguage != _targetLanguage) {
       await _translateEntry(entry);
     } else {
       entry.translatedText = text;
-    }
-
-    // Limit to 100 entries
-    if (_subtitles.length > 100) {
-      _subtitles.removeAt(0);
     }
 
     notifyListeners();
@@ -513,6 +513,17 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
     _subtitles.removeWhere((entry) => entry.timestamp.isBefore(cutoff));
     notifyListeners();
+  }
+
+  void _trimVodSubtitles() {
+    if (_vodSubtitles.length <= _maxVodSubtitles) return;
+    _vodSubtitles.removeRange(_maxVodSubtitles, _vodSubtitles.length);
+  }
+
+  void _trimSubtitleHistory() {
+    while (_subtitles.length > _maxSubtitleHistory) {
+      _subtitles.removeAt(0);
+    }
   }
 
   /// Export as SRT subtitle file
