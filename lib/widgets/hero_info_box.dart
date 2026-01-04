@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -47,18 +49,28 @@ class HeroInfoBox extends StatelessWidget {
     final titleStyle = AppTypography.heroTitle(context).copyWith(
       shadows: [
         Shadow(
-          color: Colors.black.withValues(alpha: 0.8),
-          blurRadius: 12,
+          color: Colors.black.withValues(alpha: 0.9),
+          blurRadius: 16,
           offset: const Offset(0, 2),
+        ),
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.5),
+          blurRadius: 4,
+          offset: const Offset(0, 1),
         ),
       ],
     );
     final descriptionStyle = AppTypography.heroDescription(context).copyWith(
       shadows: [
         Shadow(
-          color: Colors.black.withValues(alpha: 0.65),
-          blurRadius: 8,
+          color: Colors.black.withValues(alpha: 0.8),
+          blurRadius: 12,
           offset: const Offset(0, 1),
+        ),
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.4),
+          blurRadius: 3,
+          offset: const Offset(0, 0.5),
         ),
       ],
     );
@@ -67,12 +79,30 @@ class HeroInfoBox extends StatelessWidget {
         maxWidth: context.heroInfoWidth(),
         maxHeight: maxHeight,
       ),
-      child: Container(
-        padding: EdgeInsets.all(context.spacingSm()),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.darkBackground.withAlpha((0.95 * 255).round()),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.all(context.spacingSm()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // Channel/Brand Identifier if provided
             if (channelLogoUrl != null) ...[
               Container(
@@ -91,8 +121,8 @@ class HeroInfoBox extends StatelessWidget {
               Text(
                 title,
                 style: titleStyle,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
+                softWrap: true,
               ),
 
             SizedBox(height: context.spacingSm()),
@@ -227,6 +257,8 @@ class HeroInfoBox extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

@@ -18,8 +18,11 @@ class _CacheItem {
 class TMDBService {
   static const String _apiKey = TMDBConfig.apiKey;
   static const String _baseUrl = 'https://api.themoviedb.org/3';
+  static const String _imageBaseUrl = 'https://image.tmdb.org/t/p/original';
   static const String _omdbApiKey = 'c5832aa4';
   static const String _omdbBaseUrl = 'https://www.omdbapi.com';
+  static const int _kPreferredBackdropWidth = 1600;
+  static const int _kPreferredBackdropHeight = 900;
   // LRU in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Uses LRU eviction for better hit rates.
   static final Map<String, _CacheItem> _cache = <String, _CacheItem>{};
@@ -297,10 +300,10 @@ class TMDBService {
           final result = {
             'rating': movie['vote_average'] as double?,
             'poster': movie['poster_path'] != null
-                ? 'https://image.tmdb.org/t/p/w500${movie['poster_path']}'
+                ? '$_imageBaseUrl${movie['poster_path']}'
                 : null,
             'backdrop': movie['backdrop_path'] != null
-                ? 'https://image.tmdb.org/t/p/w1280${movie['backdrop_path']}'
+                ? '$_imageBaseUrl${movie['backdrop_path']}'
                 : null,
             'overview': movie['overview'] as String?,
             'release_date': movie['release_date'] as String?,
@@ -399,10 +402,10 @@ class TMDBService {
           final result = {
             'rating': show['vote_average'] as double?,
             'poster': show['poster_path'] != null
-                ? 'https://image.tmdb.org/t/p/w500${show['poster_path']}'
+                ? '$_imageBaseUrl${show['poster_path']}'
                 : null,
             'backdrop': show['backdrop_path'] != null
-                ? 'https://image.tmdb.org/t/p/w1280${show['backdrop_path']}'
+                ? '$_imageBaseUrl${show['backdrop_path']}'
                 : null,
             'overview': show['overview'] as String?,
             'first_air_date': show['first_air_date'] as String?,
@@ -513,6 +516,13 @@ class TMDBService {
         }
       }
 
+      if (tmdbId != null && mediaType != null) {
+        final tmdbBackdrop = await _getHighResBackdrop(tmdbId, mediaType);
+        if (tmdbBackdrop != null && tmdbBackdrop.isNotEmpty) {
+          details['backdrop'] = tmdbBackdrop;
+        }
+      }
+
       if (!_hasArtwork(details)) {
         final companyLogo = await _fetchCompanyLogo(normalizedTitle);
         if (companyLogo != null) {
@@ -547,6 +557,44 @@ class TMDBService {
     if (backdrop?.isNotEmpty == true) return backdrop;
     final poster = (details?['poster'] as String?)?.trim();
     if (poster?.isNotEmpty == true) return poster;
+    return null;
+  }
+
+  static Future<String?> _getHighResBackdrop(
+      int tmdbId, String mediaType) async {
+    final typePath = mediaType == 'tv' ? 'tv' : 'movie';
+    final url =
+        '$_baseUrl/$typePath/$tmdbId/images?api_key=$_apiKey&include_image_language=en,null';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final available = (data['backdrops'] as List?) ?? [];
+      if (available.isEmpty) return null;
+      available.sort((a, b) {
+        final aw = (a['width'] as int?) ?? 0;
+        final ah = (a['height'] as int?) ?? 0;
+        final bw = (b['width'] as int?) ?? 0;
+        final bh = (b['height'] as int?) ?? 0;
+        return (bw * bh).compareTo(aw * ah);
+      });
+      for (final entry in available) {
+        final width = (entry['width'] as int?) ?? 0;
+        final height = (entry['height'] as int?) ?? 0;
+        final filePath = (entry['file_path'] as String?)?.trim();
+        if (filePath == null || filePath.isEmpty) continue;
+        if (width >= _kPreferredBackdropWidth ||
+            height >= _kPreferredBackdropHeight) {
+          return '$_imageBaseUrl$filePath';
+        }
+      }
+      final firstPath = (available.first['file_path'] as String?)?.trim();
+      if (firstPath != null && firstPath.isNotEmpty) {
+        return '$_imageBaseUrl$firstPath';
+      }
+    } catch (e, st) {
+      debugLog('TMDB image lookup failed for $mediaType/$tmdbId: $e\n$st');
+    }
     return null;
   }
 

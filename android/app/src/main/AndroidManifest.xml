@@ -23,7 +23,9 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/croppedlogo2"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true">
         
         <activity
             android:name=".MainActivity"

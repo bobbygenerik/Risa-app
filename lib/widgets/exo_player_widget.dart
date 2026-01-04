@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/controllers/universal_player_controller.dart';
 import 'package:iptv_player/widgets/exoplayer_video_view.dart';
+import '../utils/memory_manager.dart';
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
@@ -33,6 +34,11 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   @override
   void initState() {
     super.initState();
+    // Check memory before initializing player
+    MemoryManager.checkMemoryPressure();
+    if (MemoryManager.isLowMemory) {
+      MemoryManager.clearCaches();
+    }
     _initializeController();
   }
   
@@ -46,28 +52,46 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   }
 
   void _initializeController() {
-    _controller = UniversalPlayerController.create(
-      url: widget.url,
-      autoPlay: true,
-    );
-    
-    // Pass controller up to parent if requested
-    if (widget.controllerNotifier != null) {
-      // Defer to next frame to avoid build-phase modifications if value notifier is listened to
-      Future.microtask(() {
-         widget.controllerNotifier!.value = _controller;
-      });
-    }
-
-    _controller.initialize().then((_) {
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
+    try {
+      _controller = UniversalPlayerController.create(
+        url: widget.url,
+        autoPlay: false, // Don't auto-play to prevent immediate memory allocation
+      );
+      
+      // Pass controller up to parent if requested
+      if (widget.controllerNotifier != null) {
+        // Defer to next frame to avoid build-phase modifications if value notifier is listened to
+        Future.microtask(() {
+           widget.controllerNotifier!.value = _controller;
         });
       }
-    });
 
-    _controller.addListener(_onControllerUpdate);
+      _controller.initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+          // Start playback after initialization is complete
+          _controller.play();
+        }
+      }).catchError((error) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = false;
+          });
+        }
+        debugPrint('Player initialization failed: $error');
+      });
+
+      _controller.addListener(_onControllerUpdate);
+    } catch (e) {
+      debugPrint('Failed to create player controller: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = false;
+        });
+      }
+    }
   }
 
   void _onControllerUpdate() {
@@ -81,6 +105,8 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   void dispose() {
     _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
+    // Force garbage collection after disposing player
+    MemoryManager.forceGarbageCollection();
     super.dispose();
   }
 

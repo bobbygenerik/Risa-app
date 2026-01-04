@@ -18,6 +18,8 @@ class SettingsLayout extends StatefulWidget {
   final VoidCallback? onBackToHome;
   final VoidCallback? onRequestContentFocus;
   final bool autoFocusOnShow;
+  final String headerTitle;
+  final bool showHeader;
 
   const SettingsLayout({
     super.key,
@@ -28,6 +30,8 @@ class SettingsLayout extends StatefulWidget {
     this.onBackToHome,
     this.onRequestContentFocus,
     this.autoFocusOnShow = false,
+    this.headerTitle = 'Settings',
+    this.showHeader = true,
   });
 
   @override
@@ -120,26 +124,27 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // App Branding / Header (aligned with main sidebar top)
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          24,
-                          context.spacingLg(),
-                          16,
-                          0,
+                      if (widget.showHeader && widget.headerTitle.isNotEmpty) ...[
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            24,
+                            context.spacingLg(),
+                            16,
+                            0,
+                          ),
+                          child: Text(
+                            widget.headerTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.5,
+                                ),
+                          ),
                         ),
-                        child: Text(
-                          'Settings',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                              ),
-                        ),
-                      ),
+                      ],
 
                       // Allow menu to scroll when the keyboard is visible
                       Expanded(
@@ -229,80 +234,78 @@ class _SettingsLayoutState extends State<SettingsLayout> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
+           final isHighlighted = isFocused || isSelected;
+           final iconColor = isSelected
+               ? AppTheme.primaryBlue
+               : (isFocused ? Colors.white : Colors.white70);
+           final labelColor = isSelected
+               ? AppTheme.primaryBlue
+               : (isFocused ? Colors.white : Colors.white70);
 
-          return GestureDetector(
-            onTap: () {
-              widget.onCategorySelected(index);
-              _menuFocusNodes[index].requestFocus();
-            },
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.easeOutCubic,
-              scale: (isFocused || isSelected) ? 1.03 : 1.0,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: (isFocused || isSelected)
-                      ? const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF1F1F2C),
-                            Color(0xFF14141D),
-                          ],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border(
-                    left: BorderSide(
-                      color: (isFocused || isSelected)
-                          ? AppTheme.primaryBlue
-                          : Colors.transparent,
-                      width: (isFocused || isSelected) ? 4 : 0,
-                    ),
-                  ),
-                  boxShadow: (isFocused || isSelected)
-                      ? TVFocusStyle.focusedShadow
-                      : null,
-                  color: (isFocused || isSelected)
-                      ? null
-                      : Colors.transparent,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      category.icon,
-                      color: (isFocused || isSelected)
-                          ? Colors.white
-                          : Colors.white70,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        category.title,
-                        style: TextStyle(
-                          color: (isFocused || isSelected)
-                              ? Colors.white
-                              : Colors.white70,
-                          fontSize: 16,
-                          fontWeight: (isFocused || isSelected)
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+           return GestureDetector(
+             onTap: () {
+               widget.onCategorySelected(index);
+               _menuFocusNodes[index].requestFocus();
+             },
+             child: AnimatedScale(
+               duration: TVFocusStyle.animationDuration,
+               curve: TVFocusStyle.animationCurve,
+               scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+               child: AnimatedContainer(
+                 duration: TVFocusStyle.animationDuration,
+                 curve: TVFocusStyle.animationCurve,
+                 margin: const EdgeInsets.symmetric(vertical: 4),
+                 padding: const EdgeInsets.symmetric(
+                   horizontal: 20,
+                   vertical: 14,
+                 ),
+                 decoration: BoxDecoration(
+                   color: Colors.transparent,
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+                 child: Row(
+                   children: [
+                     AnimatedContainer(
+                       duration: TVFocusStyle.animationDuration,
+                       curve: TVFocusStyle.animationCurve,
+                       width: 4,
+                       height: 42,
+                       decoration: BoxDecoration(
+                         color: isHighlighted
+                             ? AppTheme.primaryBlue
+                             : Colors.transparent,
+                         borderRadius: const BorderRadius.only(
+                           topRight: Radius.circular(4),
+                           bottomRight: Radius.circular(4),
+                         ),
+                       ),
+                     ),
+                     const SizedBox(width: 12),
+                     Icon(
+                       category.icon,
+                       color: iconColor,
+                       size: 24,
+                     ),
+                     const SizedBox(width: 14),
+                     Expanded(
+                       child: Text(
+                         category.title,
+                         style: TextStyle(
+                           color: labelColor,
+                           fontSize: 16,
+                           fontWeight: isHighlighted
+                               ? FontWeight.w600
+                               : FontWeight.w500,
+                         ),
+                         maxLines: 1,
+                         overflow: TextOverflow.ellipsis,
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+           );
         },
       ),
     );

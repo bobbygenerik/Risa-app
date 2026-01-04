@@ -104,6 +104,8 @@ class _EPGScreenState extends State<EPGScreen>
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     // Load EPG data on init - non-blocking
+    _loadEpgData();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -112,22 +114,23 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
-      // Auto-load EPG on first open if an URL exists (respect cache behavior)
-      try {
-        if (!mounted) return;
-        final epgService =
-            Provider.of<IncrementalEpgService>(context, listen: false);
-        final epgUrl =
-            prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-        if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
-          debugLog('EPG Screen: Found EPG URL - initializing service');
-          // Initialize without forcing a refresh so cache behavior is respected
-          unawaited(epgService.initialize());
-        }
-      } catch (e) {
-        debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
-      }
     });
+  }
+  
+  Future<void> _loadEpgData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      
+      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+        debugLog('EPG Screen: Found EPG URL - initializing service');
+        // Initialize without forcing a refresh so cache behavior is respected
+        unawaited(epgService.initialize());
+      }
+    } catch (e) {
+      debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
+    }
   }
 
   /// Scroll the EPG grid to show the current time
@@ -424,7 +427,6 @@ class _EPGScreenState extends State<EPGScreen>
                                     child:
                                         _buildChannelColumn(filteredChannels),
                                   ),
-                                  const SizedBox(width: 4),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
                                         epgService, allFilteredChannels),
@@ -581,81 +583,69 @@ class _EPGScreenState extends State<EPGScreen>
                   icon: context.timeIcon(),
                   color: AppTheme.primaryBlue,
                   tooltip: 'Jump to Now',
+                  onFocusChange: (hasFocus) {
+                    if (hasFocus) {
+                      // Handle down arrow to focus first channel
+                      Focus.of(context).onKeyEvent = (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          _firstChannelFocus.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      };
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: 8),
               // Refresh button
-              Focus(
-                focusNode: _refreshButtonFocus,
-                onKeyEvent: (node, event) {
-                  if (event is KeyDownEvent) {
-                    if (event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.enter) {
-                      if (!epgService.isLoading) {
-                        setState(() => _refreshPressed = true);
-                        unawaited(_triggerEpgRefresh());
-                        Future.delayed(const Duration(milliseconds: 150), () {
-                          if (mounted) setState(() => _refreshPressed = false);
-                        });
-                      }
-                      return KeyEventResult.handled;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                      _firstCategoryFocus.requestFocus();
-                      return KeyEventResult.handled;
-                    }
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Builder(
-                  builder: (context) {
-                    final isFocused = Focus.of(context).hasFocus;
-                    return GestureDetector(
-                      onTapDown: (_) => setState(() => _refreshPressed = true),
-                      onTapCancel: () =>
-                          setState(() => _refreshPressed = false),
-                      onTapUp: (_) => setState(() => _refreshPressed = false),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _refreshPressed
-                              ? AppTheme.primaryBlue.withValues(alpha: 0.2)
-                              : Colors.black.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(8),
-                          border: isFocused
-                              ? Border.all(
-                                  color: AppTheme.primaryBlue, width: 2)
-                              : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.darkBackgroundOpacity(0.3),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+                child: IconButton(
+                  focusNode: _refreshButtonFocus,
+                  onPressed: epgService.isLoading ? null : () {
+                    setState(() => _refreshPressed = true);
+                    unawaited(_triggerEpgRefresh());
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      if (mounted) setState(() => _refreshPressed = false);
+                    });
+                  },
+                  icon: AnimatedBuilder(
+                    animation: _refreshAnimationController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: epgService.isLoading
+                            ? _refreshAnimationController.value * 2 * 3.14159
+                            : 0,
+                        child: Icon(
+                          AppIcons.refresh,
+                          size: 18,
+                          color: epgService.isLoading
+                              ? AppTheme.primaryBlue
+                              : Colors.white.withValues(alpha: 0.8),
                         ),
-                        child: IconButton(
-                          icon: AnimatedBuilder(
-                            animation: _refreshAnimationController,
-                            builder: (context, child) {
-                              return Transform.rotate(
-                                angle: epgService.isLoading
-                                    ? _refreshAnimationController.value *
-                                        2 *
-                                        3.14159
-                                    : 0,
-                                child: Icon(
-                                  AppIcons.refresh,
-                                  size: 18,
-                                  color: epgService.isLoading
-                                      ? AppTheme.primaryBlue
-                                      : Colors.white.withValues(alpha: 0.8),
-                                ),
-                              );
-                            },
-                          ),
-                          onPressed: epgService.isLoading
-                              ? null
-                              : () => unawaited(_triggerEpgRefresh()),
-                          tooltip: 'Refresh EPG Data',
-                        ),
-                      ),
-                    );
+                      );
+                    },
+                  ),
+                  tooltip: 'Refresh EPG',
+                  onFocusChange: (hasFocus) {
+                    if (hasFocus) {
+                      // Handle down arrow to focus first channel
+                      Focus.of(context).onKeyEvent = (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          _firstChannelFocus.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      };
+                    }
                   },
                 ),
               ),
+
             ],
           ),
         ],
@@ -740,28 +730,53 @@ class _EPGScreenState extends State<EPGScreen>
         return GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: Container(
-            margin: EdgeInsets.symmetric(
-              horizontal: context.spacingSm(),
-              vertical: context.spacingXs() * 0.25,
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: context.spacingSm(),
-              vertical: context.spacingXs(),
-            ),
-            child: Text(
-              name,
-              style: TextStyle(
-                color: isFocused || isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
-                fontWeight: (isFocused || isSelected)
-                    ? FontWeight.w600
-                    : FontWeight.w500,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 90),
+            curve: Curves.easeOut,
+            scale: isFocused ? 1.05 : 1.0,
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: context.spacingSm(),
+                vertical: context.spacingXs() * 0.25,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              padding: EdgeInsets.symmetric(
+                horizontal: context.spacingSm(),
+                vertical: context.spacingXs(),
+              ),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 90),
+                    curve: Curves.easeOut,
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(4),
+                        bottomRight: Radius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        color: isFocused || isSelected
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.7),
+                        fontSize: 14,
+                        fontWeight: (isFocused || isSelected)
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -872,7 +887,7 @@ class _EPGScreenState extends State<EPGScreen>
       children: [
         Container(
           height: 68, // Match channel item height (itemExtent)
-          margin: const EdgeInsets.only(bottom: 0, right: 4),
+          margin: const EdgeInsets.only(bottom: 1, right: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),

@@ -61,4 +61,5 @@ dependencies {
     // ExoPlayer for native Android playback and track management (using latest stable)
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-exoplayer-smoothstreaming:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
 }

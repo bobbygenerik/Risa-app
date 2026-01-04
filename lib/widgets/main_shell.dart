@@ -194,25 +194,52 @@ class _MainShellState extends State<MainShell> {
                           width: showSidebarScrim
                               ? AppSpacing.sidebarWidth
                               : AppSpacing.sidebarCollapsedWidth,
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: showSidebarScrim ? 4.0 : 0.0,
-                              sigmaY: showSidebarScrim ? 4.0 : 0.0,
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.75),
-                                    Colors.black.withValues(alpha: 0.45),
-                                    Colors.transparent,
-                                  ],
-                                  stops: const [0.0, 0.5, 1.0],
+                          child: Stack(
+                            children: [
+                              // Strong blur on left side
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: showSidebarScrim ? AppSpacing.sidebarWidth * 0.6 : 0,
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: showSidebarScrim ? 6.0 : 0.0,
+                                    sigmaY: showSidebarScrim ? 6.0 : 0.0,
+                                  ),
+                                  child: Container(color: Colors.transparent),
                                 ),
                               ),
-                            ),
+                              // Medium blur in middle
+                              Positioned(
+                                left: showSidebarScrim ? AppSpacing.sidebarWidth * 0.3 : 0,
+                                top: 0,
+                                bottom: 0,
+                                width: showSidebarScrim ? AppSpacing.sidebarWidth * 0.4 : 0,
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: showSidebarScrim ? 3.0 : 0.0,
+                                    sigmaY: showSidebarScrim ? 3.0 : 0.0,
+                                  ),
+                                  child: Container(color: Colors.transparent),
+                                ),
+                              ),
+                              // Gradient overlay
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      Colors.black.withValues(alpha: 0.75),
+                                      Colors.black.withValues(alpha: 0.45),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.5, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

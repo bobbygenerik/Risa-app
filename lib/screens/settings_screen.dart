@@ -68,10 +68,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // EPG Settings
   int _epgCacheDuration = 6; // hours
   int _epgRetentionDays = 7; // days
-  bool _storeDescriptions = true;
-  bool _showLogos = true;
-  bool _showImages = true;
-
   // Focus nodes
   final FocusNode _inputMethodFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -157,9 +153,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           prefs.getBool('remember_playback_position') ?? true;
       _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
-      _storeDescriptions = prefs.getBool('epg_store_descriptions') ?? true;
-      _showLogos = prefs.getBool('epg_show_logos') ?? true;
-      _showImages = prefs.getBool('epg_show_images') ?? true;
     });
   }
 
@@ -595,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
 
         SettingsGroup(
-          title: 'EPG',
+          title: 'EPG Preferences',
           children: [
             Consumer<IncrementalEpgService>(
               builder: (context, epgService, _) {
@@ -628,12 +621,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               focusNode: _clearEpgButtonFocusNode,
               onTap: _handleClearEpg,
             ),
-          ],
-        ),
-
-        SettingsGroup(
-          title: 'EPG Preferences',
-          children: [
             SettingsActionTile(
               title: 'Auto-refresh Interval',
               subtitle: 'Refresh every $_epgCacheDuration hours',
@@ -666,21 +653,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            SettingsSwitchTile(
-                title: 'Store Descriptions',
-                value: _storeDescriptions,
-                onChanged: (v) =>
-                    _handleSwitchTileChange('Store Program Descriptions', v)),
-            SettingsSwitchTile(
-                title: 'Show Channel Logos',
-                value: _showLogos,
-                onChanged: (v) =>
-                    _handleSwitchTileChange('Show Channel Logos', v)),
-            SettingsSwitchTile(
-                title: 'Show Program Images',
-                value: _showImages,
-                onChanged: (v) =>
-                    _handleSwitchTileChange('Show Program Images', v)),
           ],
         ),
 
@@ -1204,15 +1176,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         case 'Enable Translation':
           _translationEnabled = newValue;
           break;
-        case 'Store Program Descriptions':
-          _storeDescriptions = newValue;
-          break;
-        case 'Show Channel Logos':
-          _showLogos = newValue;
-          break;
-        case 'Show Program Images':
-          _showImages = newValue;
-          break;
         case 'Hero Video Preview':
           _heroVideoPreview = newValue;
           break;
@@ -1261,15 +1224,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Provider.of<IntegratedTranscriptionService>(context, listen: false)
               .setTranslationEnabled(newValue);
         }
-        break;
-      case 'Store Program Descriptions':
-        await prefs.setBool('epg_store_descriptions', newValue);
-        break;
-      case 'Show Channel Logos':
-        await prefs.setBool('epg_show_logos', newValue);
-        break;
-      case 'Show Program Images':
-        await prefs.setBool('epg_show_images', newValue);
         break;
       case 'Hero Video Preview':
         await prefs.setBool('hero_video_preview', newValue);

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 // removed unused imports
 // Note: This screen intentionally does not use `SettingsLayout` to avoid
@@ -172,15 +174,25 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-      children: [
-        const SettingsSectionHeader(
-          title: 'Saved Playlists',
-          subtitle: 'Manage your existing playlists',
-        ),
-        ..._savedPlaylists.map((playlist) => _buildPlaylistCard(playlist)),
-      ],
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+        children: [
+          const SettingsSectionHeader(
+            title: 'Saved Playlists',
+            subtitle: 'Manage your existing playlists',
+          ),
+          ..._savedPlaylists.asMap().entries.map((entry) {
+            final index = entry.key;
+            final playlist = entry.value;
+            return TVFocusable(
+              autofocus: index == 0,
+              child: _buildPlaylistCard(playlist),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -250,21 +262,26 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                       title: 'Update Frequency',
                       subtitle: 'Every ${playlist.updateFrequency} hours',
                       icon: Icons.timer,
-                      trailing: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove, color: Colors.white),
-                            onPressed: () =>
-                                _updatePlaylistFrequency(playlist, -1),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.add, color: Colors.white),
-                            onPressed: () =>
-                                _updatePlaylistFrequency(playlist, 1),
-                          ),
-                        ],
-                      ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TVFocusable(
+                              child: IconButton(
+                                icon: const Icon(Icons.remove, color: Colors.white),
+                                onPressed: () =>
+                                    _updatePlaylistFrequency(playlist, -1),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TVFocusable(
+                              child: IconButton(
+                                icon: const Icon(Icons.add, color: Colors.white),
+                                onPressed: () =>
+                                    _updatePlaylistFrequency(playlist, 1),
+                              ),
+                            ),
+                          ],
+                        ),
                     ),
                   ],
                 ),
@@ -488,15 +505,19 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
+          TVFocusable(
             autofocus: true,
-            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppTheme.accentRed)),
+          TVFocusable(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete',
+                  style: TextStyle(color: AppTheme.accentRed)),
+            ),
           ),
         ],
       ),

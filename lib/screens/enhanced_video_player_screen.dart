@@ -128,31 +128,39 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return;
     }
 
-    // Prepare transcription service and detect any subtitle URL from channel metadata
-    final service =
-        Provider.of<IntegratedTranscriptionService>(context, listen: false);
-    String? subtitleUrl;
-    subtitleUrl ??= widget.channel?.attributes != null
-        ? widget.channel!.attributes!['subtitleUrl']
-        : null;
-    subtitleUrl ??= widget.channel?.attributes != null
-        ? widget.channel!.attributes!['subtitle']
-        : null;
+    try {
+      // Prepare transcription service and detect any subtitle URL from channel metadata
+      final service =
+          Provider.of<IntegratedTranscriptionService>(context, listen: false);
+      String? subtitleUrl;
+      subtitleUrl ??= widget.channel?.attributes != null
+          ? widget.channel!.attributes!['subtitleUrl']
+          : null;
+      subtitleUrl ??= widget.channel?.attributes != null
+          ? widget.channel!.attributes!['subtitle']
+          : null;
 
-    // Keep wakelock active while playing
-    await WakelockPlus.enable();
-    _hideControlsAfterDelay();
+      // Keep wakelock active while playing
+      await WakelockPlus.enable();
+      _hideControlsAfterDelay();
 
-    // Auto-load VOD subtitles if found (fire-and-forget)
-    if (subtitleUrl != null && subtitleUrl.isNotEmpty) {
-      try {
-        // fire-and-forget loading of VOD subtitles
-        // ignore: unawaited_futures
-        service.loadSrtFromUrl(subtitleUrl);
-      } catch (_) {}
+      // Auto-load VOD subtitles if found (fire-and-forget)
+      if (subtitleUrl != null && subtitleUrl.isNotEmpty) {
+        try {
+          // fire-and-forget loading of VOD subtitles
+          // ignore: unawaited_futures
+          service.loadSrtFromUrl(subtitleUrl);
+        } catch (_) {}
+      }
+
+      setState(() => _isLoading = false);
+    } catch (e) {
+      debugLog('Video Player: Initialization error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorDialog('Initialization Error', 'Failed to initialize player: $e');
+      }
     }
-
-    setState(() => _isLoading = false);
   }
 
   void _showErrorDialog(String title, String message) {

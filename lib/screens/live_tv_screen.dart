@@ -18,6 +18,9 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/fanart_service.dart';
+import 'package:iptv_player/services/thesportsdb_service.dart';
+import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -73,6 +76,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final List<Program> _artworkQueue = [];
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
+  late final bool _fanartEnabled;
+  late final bool _sportsDbEnabled;
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
   final Map<String, DateTime> _artworkRetryAfter = {};
@@ -120,6 +125,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void initState() {
     super.initState();
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
+    _fanartEnabled = ServiceValidator.isFanartAvailable;
+    _sportsDbEnabled = ServiceValidator.isSportsDbAvailable;
 
     // Initialize scroll controller
     _scrollController = ScrollController();
@@ -1220,7 +1227,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // Side-effect free artwork fetching check
-      if (_tmdbEnabled &&
+      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) &&
           allowPrefetch &&
           (!_programArtwork.containsKey(program.id) ||
               _shouldRetryArtwork(program.id))) {
@@ -1230,14 +1237,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         });
       }
 
-      // Fall back to EPG-provided art while TMDB is resolving.
+      // Fall back to EPG-provided art while services are resolving.
       final programImage = program.imageUrl;
-      if (programImage != null &&
-          programImage.isNotEmpty &&
-          !_isLikelyPosterUrl(programImage) &&
-          !_isLikelyTitleLogoUrl(programImage) &&
-          channelLogo != programImage &&
-          (channel == null || !_matchesChannelLogo(programImage, channel))) {
+      if (_isValidProgramArtwork(programImage, channel)) {
         return programImage;
       }
     }
@@ -1325,8 +1327,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return url;
     }
 
-    // Trigger async TMDB fetch if not already requested
-    if (_tmdbEnabled && !_titleLogoRequests.contains(cacheKey)) {
+    // Trigger async fetch if not already requested
+    if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) && !_titleLogoRequests.contains(cacheKey)) {
       _titleLogoRequests.add(cacheKey);
       _fetchTitleLogo(program, channel);
     }
@@ -1357,7 +1359,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
     final cacheKey = program.id;
     try {
-      var logo = await TMDBService.getTitleLogo(program.title);
+      String? logo;
+      
+      // Check if it's a sports program
+      final isSports = _isSportsProgram(program);
+      
+      if (isSports) {
+        // Sports: SportRadar -> TheSportsDB -> TMDB -> Fanart -> OMDB
+        logo = await _fetchSportsLogo(program);
+      } else {
+        // Regular: TMDB -> Fanart -> OMDB
+        logo = await _fetchRegularLogo(program);
+      }
+      
       if (_matchesChannelLogo(logo ?? '', channel)) {
         logo = '';
       }
@@ -1382,6 +1396,65 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } finally {
       _titleLogoRequests.remove(cacheKey);
     }
+  }
+  
+  Future<String?> _fetchSportsLogo(Program program) async {
+    // Try SportRadar first
+    try {
+      final sportRadarLogo = await SportRadarService.getLogo(program.title);
+      if (sportRadarLogo != null && sportRadarLogo.isNotEmpty) {
+        return sportRadarLogo;
+      }
+    } catch (e) {
+      debugLog('SportRadar logo failed: $e');
+    }
+    
+    // Fallback to TheSportsDB
+    try {
+      final sportsDbLogo = await TheSportsDBService.getLogo(program.title);
+      if (sportsDbLogo != null && sportsDbLogo.isNotEmpty) {
+        return sportsDbLogo;
+      }
+    } catch (e) {
+      debugLog('TheSportsDB logo failed: $e');
+    }
+    
+    // Fallback to regular logo chain
+    return await _fetchRegularLogo(program);
+  }
+  
+  Future<String?> _fetchRegularLogo(Program program) async {
+    // Try TMDB first
+    try {
+      final tmdbLogo = await TMDBService.getTitleLogo(program.title);
+      if (tmdbLogo != null && tmdbLogo.isNotEmpty) {
+        return tmdbLogo;
+      }
+    } catch (e) {
+      debugLog('TMDB logo failed: $e');
+    }
+    
+    // Fallback to Fanart.tv
+    try {
+      final fanartLogo = await FanartService.getLogo(program.title);
+      if (fanartLogo != null && fanartLogo.isNotEmpty) {
+        return fanartLogo;
+      }
+    } catch (e) {
+      debugLog('Fanart logo failed: $e');
+    }
+    
+    // Fallback to OMDB
+    try {
+      final omdbLogo = await OMDBService.getLogo(program.title);
+      if (omdbLogo != null && omdbLogo.isNotEmpty) {
+        return omdbLogo;
+      }
+    } catch (e) {
+      debugLog('OMDB logo failed: $e');
+    }
+    
+    return null;
   }
 
   List<_HeroCandidate> _buildHeroCandidates(
@@ -1439,8 +1512,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return cached;
       }
 
-      // 2. Trigger a fetch if TMDB is enabled
-      if (_tmdbEnabled) {
+      // 2. Trigger a fetch if any image service is enabled
+      if (_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) {
         _ensureFreshProgramArtwork(program, channel);
       }
 
@@ -1455,7 +1528,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _ensureFreshProgramArtwork(Program program, Channel channel) {
-    if (!_tmdbEnabled) return;
+    if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled)) return;
     if (_artworkRequests.contains(program.id)) return;
     final existing = _programArtwork[program.id];
     if (existing != null && existing.isNotEmpty &&
@@ -1504,19 +1577,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     for (final program in batch) {
       try {
-        debugLog('LiveTV: Fetching TMDB art for: "${program.title}"');
-        final image = await TMDBService.getBestBackdrop(program.title);
+        debugLog('LiveTV: Fetching artwork for: "${program.title}"');
+        String? image;
+        
+        // Check if it's a sports program
+        final isSports = _isSportsProgram(program);
+        
+        if (isSports) {
+          // Sports: SportRadar -> TheSportsDB -> TMDB -> Fanart -> OMDB
+          image = await _fetchSportsImage(program);
+        } else {
+          // Regular: TMDB -> Fanart -> OMDB
+          image = await _fetchRegularImage(program);
+        }
+        
         if (!mounted) return;
         if (image != null) {
-          debugLog('LiveTV: Found TMDB art for "${program.title}": $image');
+          debugLog('LiveTV: Found artwork for "${program.title}": $image');
         } else {
-          debugLog('LiveTV: No TMDB art found for "${program.title}"');
+          debugLog('LiveTV: No artwork found for "${program.title}"');
         }
         setState(() {
           _programArtwork[program.id] = image ?? '';
         });
       } catch (e) {
-        debugLog('LiveTV: Error fetching TMDB art for "${program.title}": $e');
+        debugLog('LiveTV: Error fetching artwork for "${program.title}": $e');
         if (mounted) {
           setState(() {
             _programArtwork[program.id] = '';
@@ -1530,6 +1615,75 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_artworkQueue.isNotEmpty) {
       _scheduleArtworkDrain();
     }
+  }
+  
+  bool _isSportsProgram(Program program) {
+    final title = program.title.toLowerCase();
+    final description = program.description?.toLowerCase() ?? '';
+    return title.contains('football') || title.contains('soccer') || 
+           title.contains('basketball') || title.contains('baseball') ||
+           title.contains('hockey') || title.contains('tennis') ||
+           title.contains('golf') || title.contains('racing') ||
+           description.contains('sport') || description.contains('game');
+  }
+  
+  Future<String?> _fetchSportsImage(Program program) async {
+    // Try SportRadar first (if quota available)
+    try {
+      final sportRadarImage = await SportRadarService.getImage(program.title);
+      if (sportRadarImage != null && sportRadarImage.isNotEmpty) {
+        return sportRadarImage;
+      }
+    } catch (e) {
+      debugLog('SportRadar failed: $e');
+    }
+    
+    // Fallback to TheSportsDB
+    try {
+      final sportsDbImage = await TheSportsDBService.getImage(program.title);
+      if (sportsDbImage != null && sportsDbImage.isNotEmpty) {
+        return sportsDbImage;
+      }
+    } catch (e) {
+      debugLog('TheSportsDB failed: $e');
+    }
+    
+    // Fallback to regular image chain
+    return await _fetchRegularImage(program);
+  }
+  
+  Future<String?> _fetchRegularImage(Program program) async {
+    // Try TMDB first
+    try {
+      final tmdbImage = await TMDBService.getBestBackdrop(program.title);
+      if (tmdbImage != null && tmdbImage.isNotEmpty) {
+        return tmdbImage;
+      }
+    } catch (e) {
+      debugLog('TMDB failed: $e');
+    }
+    
+    // Fallback to Fanart.tv
+    try {
+      final fanartImage = await FanartService.getImage(program.title);
+      if (fanartImage != null && fanartImage.isNotEmpty) {
+        return fanartImage;
+      }
+    } catch (e) {
+      debugLog('Fanart failed: $e');
+    }
+    
+    // Fallback to OMDB
+    try {
+      final omdbImage = await OMDBService.getImage(program.title);
+      if (omdbImage != null && omdbImage.isNotEmpty) {
+        return omdbImage;
+      }
+    } catch (e) {
+      debugLog('OMDB failed: $e');
+    }
+    
+    return null;
   }
 
   bool _shouldAttemptArtwork(String key) {
@@ -2368,14 +2522,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 Padding(
                                   padding: EdgeInsets.only(
                                       left: rowInset, bottom: 8),
-                                  child: Container(
-                                    height: 3,
-                                    width: context.spacingXl(),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryBlue.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                  ),
+                                  child: SizedBox.shrink(),
                                 ),
                                 SizedBox(
                                   height: skeletonCardHeight +

@@ -10,6 +10,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:math' as math;
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 enum _MatchFilter { all, matched, unmatched }
 
@@ -49,11 +50,16 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   final FocusNode _reloadFocus = FocusNode(debugLabel: 'EpgReload');
   final FocusNode _configureFocus = FocusNode(debugLabel: 'EpgConfigure');
   final FocusNode _loadMoreFocus = FocusNode(debugLabel: 'EpgLoadMore');
+  final List<FocusNode> _chipFocusNodes = List.generate(
+    3,
+    (index) => FocusNode(debugLabel: 'EpgMatchChip$index'),
+  );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshStats());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _requestInitialFocus());
   }
 
   void _refreshStats() {
@@ -155,6 +161,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     });
   }
 
+  void _requestInitialFocus() {
+    if (_reloadFocus.hasFocus) return;
+    _reloadFocus.requestFocus();
+  }
+
   Future<Map<String, int>> _computeStats() async {
     _statsInFlight = true;
     try {
@@ -222,6 +233,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     _reloadFocus.dispose();
     _configureFocus.dispose();
     _loadMoreFocus.dispose();
+    for (final node in _chipFocusNodes) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -263,413 +277,350 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
-                      style: TextStyle(
-                        color: epgService.availableChannels.isNotEmpty
-                            ? AppTheme.accentGreen
-                            : AppTheme.accentOrange,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 180,
-                      child: BrandPrimaryButton(
-                        focusNode: _reloadFocus,
-                        onPressed: () async {
-                          final messenger = ScaffoldMessenger.maybeOf(context);
-                          try {
-                            await _writeDebugMarker('epg_reload_requested');
-                            await epgService.initialize(forceRefresh: true);
-                            await _writeDebugMarker('epg_reload_completed');
-                            if (!mounted) return;
-                            _refreshStats();
-                            if (!mounted) return;
-                            _deliverSnackBar(
-                              messenger,
-                              const SnackBar(
-                                  content: Text('EPG reload requested')),
-                            );
-                          } catch (e) {
-                            await _writeDebugMarker('epg_reload_failed');
-                            if (!mounted) return;
-                            _deliverSnackBar(
-                              messenger,
-                              SnackBar(
-                                  content:
-                                      Text('EPG reload failed: ${e.toString()}')),
-                            );
-                          }
-                        },
-                        icon: Icons.refresh,
-                        label: 'Reload EPG',
-                        expand: true,
-                        minHeight: 36,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (epgService.isDownloading ||
-                    epgService.isParsing ||
-                    epgService.isLoading)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle"}',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                if (epgService.error != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('EPG Error: ${epgService.error}',
-                        style: const TextStyle(color: Colors.redAccent)),
-                  ),
-                ],
-                Text(
-                  'EPG Channels: $epgCount',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                Text(
-                  'Playlist Channels: $totalChannels',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                FutureBuilder<Map<String, int>>(
-                  future: _statsFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      debugLog('EPG Diagnostic stats error: ${snapshot.error}');
-                      return Text(
-                        'Unable to compute match stats right now.',
-                        style: const TextStyle(
-                            color: Colors.orangeAccent, fontSize: 14),
-                      );
-                    }
-                    final stats = snapshot.data;
-                    final matched = stats?['matched'] ?? 0;
-                    final scanned = stats?['scanned'] ?? totalChannels;
-                    final overall = stats?['total'] ?? totalChannels;
-                    final percent = scanned == 0
-                        ? '0.0'
-                        : ((matched / scanned) * 100).toStringAsFixed(1);
-                    final isLoadingStats =
-                        snapshot.connectionState == ConnectionState.waiting;
-                    final color = matched > (scanned * 0.5)
-                        ? Colors.green
-                        : Colors.orange;
-
-                    return Column(
+                  _buildDiagnosticCard(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Matched: $matched/$scanned ($percent%)',
+                              'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
                               style: TextStyle(
-                                color: color,
-                                fontSize: 16,
+                                color: epgService.availableChannels.isNotEmpty
+                                    ? AppTheme.accentGreen
+                                    : AppTheme.accentOrange,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (isLoadingStats) ...[
-                              const SizedBox(width: 8),
-                              const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                            SizedBox(
+                              width: 180,
+                              child: BrandPrimaryButton(
+                                focusNode: _reloadFocus,
+                                onPressed: () async {
+                                  final messenger =
+                                      ScaffoldMessenger.maybeOf(context);
+                                  try {
+                                    await _writeDebugMarker(
+                                        'epg_reload_requested');
+                                    await epgService.initialize(
+                                        forceRefresh: true);
+                                    await _writeDebugMarker(
+                                        'epg_reload_completed');
+                                    if (!mounted) return;
+                                    _refreshStats();
+                                    if (!mounted) return;
+                                    _deliverSnackBar(
+                                      messenger,
+                                      const SnackBar(
+                                          content:
+                                              Text('EPG reload requested')),
+                                    );
+                                  } catch (e) {
+                                    await _writeDebugMarker(
+                                        'epg_reload_failed');
+                                    if (!mounted) return;
+                                    _deliverSnackBar(
+                                      messenger,
+                                      SnackBar(
+                                          content: Text(
+                                              'EPG reload failed: ${e.toString()}')),
+                                    );
+                                  }
+                                },
+                                icon: Icons.refresh,
+                                label: 'Reload EPG',
+                                expand: true,
+                                minHeight: 36,
                               ),
-                            ],
+                            ),
                           ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            'Mapped $matched of $overall channels (full scan, persisted).',
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                        const SizedBox(height: 8),
+                        if (isEpgBusy)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle"}',
+                              style: const TextStyle(color: Colors.white70),
+                            ),
                           ),
+                        if (epgService.error != null) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text('EPG Error: ${epgService.error}',
+                                style:
+                                    const TextStyle(color: Colors.redAccent)),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          'EPG Channels: $epgCount',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        ),
+                        Text(
+                          'Playlist Channels: $totalChannels',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        ),
+                        FutureBuilder<Map<String, int>>(
+                          future: _statsFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              debugLog(
+                                  'EPG Diagnostic stats error: ${snapshot.error}');
+                              return Text(
+                                'Failed to compute stats: ${snapshot.error}',
+                                style: const TextStyle(
+                                    color: Colors.redAccent, fontSize: 14),
+                              );
+                            }
+                            if (!snapshot.hasData) {
+                              return const Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                            final data = snapshot.data!;
+                            final matched = data['matched'] ?? 0;
+                            final total = data['total'] ?? 0;
+                            final scanned = data['scanned'] ?? 0;
+                            final epgChannels = data['epgChannels'] ?? 0;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 12),
+                                LinearProgressIndicator(
+                                  value: total == 0 ? 0 : matched / total,
+                                  color: AppTheme.primaryBlue,
+                                  backgroundColor: Colors.white12,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Matches: $matched / $total ($scanned scanned, $epgChannels guide entries)',
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // EPG Configuration Status
-                FutureBuilder<Map<String, String?>>(
-                  future: _getEpgConfiguration(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const SizedBox.shrink();
-
-                    final config = snapshot.data!;
-                    final primaryUrl = config['primary'];
-                    final secondaryUrl = config['secondary'];
-
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: (primaryUrl?.isNotEmpty == true)
-                            ? Colors.green.withAlpha(50)
-                            : Colors.red.withAlpha(50),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: (primaryUrl?.isNotEmpty == true)
-                              ? Colors.green
-                              : Colors.red,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'EPG Configuration',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Primary EPG URL: ${primaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
-                            style: TextStyle(
+                    ),
+                  ),
+                  _buildDiagnosticCard(
+                    child: FutureBuilder<Map<String, String?>>(
+                      future: _getEpgConfiguration(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        final config = snapshot.data!;
+                        final primaryUrl = config['primary'];
+                        final secondaryUrl = config['secondary'];
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: (primaryUrl?.isNotEmpty == true)
+                                ? Colors.green.withAlpha(50)
+                                : Colors.red.withAlpha(50),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
                               color: (primaryUrl?.isNotEmpty == true)
                                   ? Colors.green
                                   : Colors.red,
-                              fontSize: 14,
+                              width: 1,
                             ),
                           ),
-                          Text(
-                            'Secondary EPG URL: ${secondaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
-                            style: TextStyle(
-                              color: (secondaryUrl?.isNotEmpty == true)
-                                  ? Colors.green
-                                  : Colors.orange,
-                              fontSize: 14,
-                            ),
-                          ),
-                          if (primaryUrl?.isEmpty != false) ...[
-                            const SizedBox(height: 8),
-                            const Text(
-                              '⚠️ No EPG URL configured. Xtream/M3U should provide one automatically, but you can paste a guide URL if your provider omits it.',
-                              style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: SizedBox(
-                                width: 160,
-                                child: BrandSecondaryButton(
-                                  focusNode: _configureFocus,
-                                  onPressed: () => context.push('/epg-manager'),
-                                  icon: Icons.settings,
-                                  label: 'Configure EPG',
-                                  expand: true,
-                                  minHeight: 32,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'EPG Configuration',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Primary EPG URL: ${primaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
+                                style: TextStyle(
+                                  color: (primaryUrl?.isNotEmpty == true)
+                                      ? Colors.green
+                                      : Colors.red,
+                                  fontSize: 14,
                                 ),
                               ),
+                              Text(
+                                'Secondary EPG URL: ${secondaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
+                                style: TextStyle(
+                                  color: (secondaryUrl?.isNotEmpty == true)
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (primaryUrl?.isEmpty != false) ...[
+                                const SizedBox(height: 8),
+                                const Text(
+                                  '⚠️ No EPG URL configured. Xtream/M3U should provide one automatically, but you can paste a guide URL if your provider omits it.',
+                                  style: TextStyle(
+                                      color: Colors.orange,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: SizedBox(
+                                    width: 160,
+                                    child: BrandSecondaryButton(
+                                      focusNode: _configureFocus,
+                                      onPressed: () =>
+                                          context.push('/epg-manager'),
+                                      icon: Icons.settings,
+                                      label: 'Configure EPG',
+                                      expand: true,
+                                      minHeight: 32,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  _buildDiagnosticCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'What these numbers mean',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '• Playlist channels: every entry delivered by your provider (can be tens of thousands).\n'
+                          '• EPG channels: unique guide IDs declared inside the XML source; providers often publish fewer EPG IDs than playlist entries.\n'
+                          '• Matching: we normalize IDs/names, strip regional suffixes (Manchester, Yorkshire, etc.), collapse plus-one variants, and convert number words ("ONE" -> 1) to improve hit rate.',
+                          style: TextStyle(color: Colors.white70, height: 1.35),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildDiagnosticCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Match Samples',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Loaded: ${_pageEntries.length}',
+                              style: const TextStyle(color: Colors.white70),
                             ),
                           ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'What these numbers mean',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  '• Playlist channels: every entry delivered by your provider (can be tens of thousands).\n'
-                  '• EPG channels: unique guide IDs declared inside the XML source; providers often publish fewer EPG IDs than playlist entries.\n'
-                  '• Matching: we normalize IDs/names, strip regional suffixes (Manchester, Yorkshire, etc.), collapse plus-one variants, and convert number words ("ONE" -> 1) to improve hit rate.',
-                  style: TextStyle(color: Colors.white70, height: 1.35),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Match Samples',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Loaded: ${_pageEntries.length}',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('All'),
-                      selected: _matchFilter == _MatchFilter.all,
-                      onSelected: (_) {
-                        setState(() {
-                          _matchFilter = _MatchFilter.all;
-                          _resetPagedMatches();
-                        });
-                      },
-                    ),
-                    ChoiceChip(
-                      label: const Text('Matched'),
-                      selected: _matchFilter == _MatchFilter.matched,
-                      onSelected: (_) {
-                        setState(() {
-                          _matchFilter = _MatchFilter.matched;
-                          _resetPagedMatches();
-                        });
-                      },
-                    ),
-                    ChoiceChip(
-                      label: const Text('Unmatched'),
-                      selected: _matchFilter == _MatchFilter.unmatched,
-                      onSelected: (_) {
-                        setState(() {
-                          _matchFilter = _MatchFilter.unmatched;
-                          _resetPagedMatches();
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (_pageEntries.isEmpty && _pageLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (_pageEntries.isEmpty)
-                  const Text(
-                    'No samples loaded yet.',
-                    style: TextStyle(color: Colors.white70),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _pageEntries.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final entry = _pageEntries[index];
-                      final statusColor =
-                          entry.matched ? Colors.green : Colors.orange;
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: statusColor.withAlpha(120),
-                          ),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Icon(
-                              entry.matched ? Icons.check_circle : Icons.error,
-                              color: statusColor,
-                              size: 18,
+                            _buildMatchFilterChip(
+                              label: 'All',
+                              filter: _MatchFilter.all,
+                              focusNode: _chipFocusNodes[0],
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    entry.channel.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'ID: ${entry.id}',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    entry.matched
-                                        ? 'Matched'
-                                        : 'No match found',
-                                    style: TextStyle(
-                                      color: statusColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
+                            _buildMatchFilterChip(
+                              label: 'Matched',
+                              filter: _MatchFilter.matched,
+                              focusNode: _chipFocusNodes[1],
+                            ),
+                            _buildMatchFilterChip(
+                              label: 'Unmatched',
+                              filter: _MatchFilter.unmatched,
+                              focusNode: _chipFocusNodes[2],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_pageEntries.isEmpty)
+                          if (_pageLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else
+                            const Text(
+                              'No samples loaded yet.',
+                              style: TextStyle(color: Colors.white70),
+                            )
+                        else
+                          Column(
+                            children: [
+                              for (final entry in _pageEntries)
+                                _buildMatchEntryRow(entry),
+                            ],
+                          ),
+                        const SizedBox(height: 12),
+                        if (_pageLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (_pageHasMore)
+                          Center(
+                            child: SizedBox(
+                              width: 160,
+                              child: BrandSecondaryButton(
+                                focusNode: _loadMoreFocus,
+                                onPressed: _loadNextMatchPage,
+                                icon: Icons.add,
+                                label: 'Load more',
+                                expand: true,
+                                minHeight: 34,
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 12),
-                if (_pageLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (_pageHasMore)
-                  Center(
-                    child: SizedBox(
-                      width: 160,
-                      child: BrandSecondaryButton(
-                        focusNode: _loadMoreFocus,
-                        onPressed: _loadNextMatchPage,
-                        icon: Icons.add,
-                        label: 'Load more',
-                        expand: true,
-                        minHeight: 34,
-                      ),
-                    ),
-                  )
-                else
-                  const Center(
-                    child: Text(
-                      'No more results.',
-                      style: TextStyle(color: Colors.white70),
+                          )
+                        else
+                          const Center(
+                            child: Text(
+                              'No more results.',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );
   }
 
-  void _deliverSnackBar(
-      ScaffoldMessengerState? messenger, SnackBar snackBar) {
+  void _deliverSnackBar(ScaffoldMessengerState? messenger, SnackBar snackBar) {
     final target = messenger ?? rootScaffoldMessengerKey.currentState;
     target?.showSnackBar(snackBar);
   }
@@ -682,5 +633,125 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     } catch (e) {
       // Swallow errors to avoid affecting diagnostics UI
     }
+  }
+
+  Widget _buildDiagnosticCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withAlpha(60),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black45,
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildMatchEntryRow(_MatchEntry entry) {
+    final statusColor = entry.matched ? Colors.green : Colors.orange;
+    return TVFocusable(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withAlpha(40),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              entry.matched ? Icons.check_circle : Icons.error,
+              color: statusColor,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.channel.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'ID: ${entry.id}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    entry.matched ? 'Matched' : 'No match found',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMatchFilterChip({
+    required String label,
+    required _MatchFilter filter,
+    required FocusNode focusNode,
+  }) {
+    final isSelected = _matchFilter == filter;
+    return TVFocusable(
+      focusNode: focusNode,
+      onPressed: () {
+        setState(() {
+          _matchFilter = filter;
+          _resetPagedMatches();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primaryBlue
+              : AppTheme.cardBackground.withAlpha((0.85 * 255).round()),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryBlue
+                : Colors.white.withAlpha(40),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white70,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
   }
 }

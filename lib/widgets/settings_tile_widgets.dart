@@ -165,20 +165,21 @@ class SettingsActionTile extends StatelessWidget {
               return AnimatedScale(
                 scale: isFocused ? 1.05 : 1.0,
                 duration: TVFocusStyle.animationDuration,
-                child: AnimatedContainer(
-                  duration: TVFocusStyle.animationDuration,
-                  decoration: BoxDecoration(
-                    color: isFocused
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: isFocused
-                        ? Border.all(color: AppTheme.focusBorder, width: 3)
-                        : null,
-                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
-                  ),
-                  child: InkWell(
-                    onTap: onTap,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                decoration: BoxDecoration(
+                  color: isFocused
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: isFocused
+                      ? Border.all(color: AppTheme.focusBorder, width: 3)
+                      : null,
+                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                ),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                child: InkWell(
+                  onTap: onTap,
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -288,19 +289,20 @@ class SettingsSwitchTile extends StatelessWidget {
           return AnimatedScale(
             scale: isFocused ? 1.05 : 1.0,
             duration: TVFocusStyle.animationDuration,
-            child: AnimatedContainer(
-              duration: TVFocusStyle.animationDuration,
-              decoration: BoxDecoration(
-                color: isFocused
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isFocused
-                    ? Border.all(color: AppTheme.focusBorder, width: 3)
-                    : null,
-                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
-              ),
-              child: InkWell(
+          child: AnimatedContainer(
+            duration: TVFocusStyle.animationDuration,
+            decoration: BoxDecoration(
+              color: isFocused
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: isFocused
+                  ? Border.all(color: AppTheme.focusBorder, width: 3)
+                  : null,
+              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            child: InkWell(
                 onTap: () => onChanged(!value),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(

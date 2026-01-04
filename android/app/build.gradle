@@ -39,6 +39,11 @@ android {
         targetSdk 36
         versionCode 20
         versionName "1.9.6"
+        
+        // Increase heap size to prevent OOM crashes
+        manifestPlaceholders = [
+            'android:largeHeap': 'true'
+        ]
     }
     
     // splits {

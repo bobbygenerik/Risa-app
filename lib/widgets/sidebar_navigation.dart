@@ -55,7 +55,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
   bool _isExpanded = false;
   bool _suppressAutoExpandOnInitialFocus = false;
   String? _lastRoutePath;
-  static const double _expandedWidth = 180.0;
+  static const double _expandedWidth = AppSpacing.sidebarWidth;
+  static const Duration _focusDuration = Duration(milliseconds: 90);
+  static const Duration _widthDuration = Duration(milliseconds: 120);
 
   final List<NavTab> _tabs = [
     NavTab(id: 'search', label: 'Search', icon: Icons.search, route: '/search'),
@@ -288,11 +290,11 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               }
             },
             child: AnimatedScale(
-              duration: TVFocusStyle.animationDuration,
+              duration: _focusDuration,
               curve: TVFocusStyle.animationCurve,
               scale: isFocused && _isExpanded ? 1.1 : 1.0,
               child: AnimatedContainer(
-                duration: TVFocusStyle.animationDuration,
+                duration: _focusDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -400,11 +402,11 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               }
             },
             child: AnimatedScale(
-              duration: TVFocusStyle.animationDuration,
+              duration: _focusDuration,
               curve: TVFocusStyle.animationCurve,
               scale: isFocused && _isExpanded ? 1.1 : 1.0,
               child: AnimatedContainer(
-                duration: TVFocusStyle.animationDuration,
+                duration: _focusDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -453,7 +455,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
-          duration: TVFocusStyle.animationDuration,
+          duration: _focusDuration,
           curve: TVFocusStyle.animationCurve,
           width: 4,
           height: 32,
@@ -484,7 +486,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
       },
       child: AnimatedContainer(
-        duration: AppDurations.fast,
+        duration: _widthDuration,
         width:
             _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
         decoration: BoxDecoration(
@@ -604,11 +606,11 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               }
             },
             child: AnimatedScale(
-              duration: TVFocusStyle.animationDuration,
+              duration: _focusDuration,
               curve: TVFocusStyle.animationCurve,
               scale: isFocused && _isExpanded ? 1.1 : 1.0,
               child: AnimatedContainer(
-                duration: TVFocusStyle.animationDuration,
+                duration: _focusDuration,
                 curve: TVFocusStyle.animationCurve,
                 height: 32,
                 padding: const EdgeInsets.symmetric(vertical: 6),

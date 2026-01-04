@@ -106,6 +106,11 @@ class EPGChannelItem extends StatelessWidget {
       canRequestFocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            onTap();
+            return KeyEventResult.handled;
+          }
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
             if (onMoveLeft == null) {
               return KeyEventResult.ignored;
@@ -240,6 +245,24 @@ class EPGProgramRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final channelKey = channel.tvgId ?? channel.id;
     epgService.ensureChannelLoaded(channelKey, channelName: channel.name);
+    
+    // Check if EPG data is available for this channel
+    final hasEpgData = epgService.hasEpgData(channelKey);
+    if (!hasEpgData) {
+      return Container(
+        height: 64,
+        width: 12 * 240.0, // totalWidth
+        margin: const EdgeInsets.only(bottom: 4, left: 0),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 12),
+        child: Text(
+          'Loading EPG...',
+          style: TextStyle(
+              fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+        ),
+      );
+    }
+    
     final programs =
         epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 

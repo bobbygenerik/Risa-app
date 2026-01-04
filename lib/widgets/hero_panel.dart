@@ -38,49 +38,74 @@ class HeroInfoSkeleton extends StatelessWidget {
   const HeroInfoSkeleton({
     super.key,
     required this.width,
-    this.showLogo = true,
+    this.showLogo = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: EdgeInsets.all(context.spacingSm()),
+      padding: EdgeInsets.symmetric(
+        vertical: context.spacingMd(),
+        horizontal: context.spacingSm(),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo/Label slot (only when the real UI shows it)
           if (showLogo)
             Container(
-              height: context.tvSpacing(64),
-              width: width * 0.4,
+              height: context.tvSpacing(40),
+              width: width * 0.35,
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha((0.15 * 255).round()),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-          SizedBox(height: context.spacingSm()),
-          
-          // Title slot
+          if (showLogo) SizedBox(height: context.spacingSm()),
           Container(
-            height: context.tvSpacing(48),
-            width: width * 0.8,
+            height: context.tvSpacing(32),
+            width: width * 0.75,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.12 * 255).round()),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          SizedBox(height: context.spacingXs()),
+          Container(
+            height: 12,
+            width: width * 0.9,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.08 * 255).round()),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: context.spacingXs()),
+          Container(
+            height: 12,
+            width: width * 0.6,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.08 * 255).round()),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: context.spacingMd()),
+          Container(
+            height: 4,
+            width: width * 0.9,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
           SizedBox(height: context.spacingSm()),
-          
-          // Metadata row
           Row(
             children: [
               Container(
                 width: 40,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  color: Colors.white.withAlpha((0.12 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -89,38 +114,16 @@ class HeroInfoSkeleton extends StatelessWidget {
                 width: 60,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  color: Colors.white.withAlpha((0.12 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ],
           ),
-          SizedBox(height: context.spacingMd()),
-          
-          // Description lines
-          Container(
-            height: 14,
-            width: width * 0.9,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.05 * 255).round()),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          SizedBox(height: 8),
-          Container(
-            height: 14,
-            width: width * 0.7,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.05 * 255).round()),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
           SizedBox(height: context.spacingLg()),
-          
-          // Button slot
           Container(
-            height: 36,
-            width: 120,
+            height: 34,
+            width: width * 0.45,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(8),

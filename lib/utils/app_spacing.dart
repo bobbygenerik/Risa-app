@@ -25,7 +25,7 @@ class AppSpacing {
   static const double formFieldSpacing = lg;
 
   // Layout dimensions
-  static const double sidebarWidth = 240.0;
+  static const double sidebarWidth = 180.0;
   static const double sidebarCollapsedWidth = 80.0;
   static const double categoryBarWidth = 140.0;
   static const double channelSidebarWidth = 80.0;

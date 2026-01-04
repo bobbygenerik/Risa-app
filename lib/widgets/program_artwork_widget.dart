@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
+import 'package:iptv_player/services/sportradar_service.dart';
+import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
+import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
@@ -71,39 +74,46 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         ? currentProgram!.title
         : widget.channel.name;
 
+    final isSports = SportsClassifier.isSportsProgram(
+      currentProgram,
+      widget.channel,
+    );
+    final cacheKey =
+        '${searchTitle.toLowerCase()}|${isSports ? 'sports' : 'general'}';
+
     debugLog(
         'ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
 
     // Check cache
-    if (_artworkCache.containsKey(searchTitle)) {
+    if (_artworkCache.containsKey(cacheKey)) {
       if (mounted) {
         setState(() {
-          _artworkUrl = _artworkCache[searchTitle];
+          _artworkUrl = _artworkCache[cacheKey];
         });
       }
       return;
     }
 
     // Check if already fetching
-    if (_pendingRequests.contains(searchTitle)) {
+    if (_pendingRequests.contains(cacheKey)) {
       // Wait a bit and check cache again
       await Future.delayed(const Duration(milliseconds: 500));
-      if (_artworkCache.containsKey(searchTitle) && mounted) {
+      if (_artworkCache.containsKey(cacheKey) && mounted) {
         setState(() {
-          _artworkUrl = _artworkCache[searchTitle];
+          _artworkUrl = _artworkCache[cacheKey];
         });
       }
       return;
     }
 
-    _pendingRequests.add(searchTitle);
+    _pendingRequests.add(cacheKey);
 
     try {
       // First try program's own image URL from EPG
       if (currentProgram?.imageUrl != null &&
           currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
-        _artworkCache[searchTitle] = url;
+        _artworkCache[cacheKey] = url;
         if (mounted) {
           setState(() {
             _artworkUrl = url;
@@ -113,10 +123,49 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
 
       // Fetch from TMDB
+      if (isSports) {
+        debugLog('ProgramArtwork: Attempting Sportradar for "$searchTitle"');
+        final sportradarUrl =
+            await SportradarService.getHeroImage(searchTitle);
+        if (sportradarUrl != null) {
+          _artworkCache[cacheKey] = sportradarUrl;
+          if (mounted) {
+            setState(() {
+              _artworkUrl = sportradarUrl;
+            });
+          }
+          return;
+        }
+
+        debugLog(
+            'ProgramArtwork: Sportradar miss, falling back to TheSportsDB for "$searchTitle"');
+        final sportsDbUrl =
+            await TheSportsDbService.getHeroImage(searchTitle);
+        if (sportsDbUrl != null) {
+          _artworkCache[cacheKey] = sportsDbUrl;
+          if (mounted) {
+            setState(() {
+              _artworkUrl = sportsDbUrl;
+            });
+          }
+          return;
+        }
+
+        debugLog(
+            'ProgramArtwork: No sports hero available for "$searchTitle"; skipping TMDB');
+        _artworkCache[cacheKey] = null;
+        if (mounted) {
+          setState(() {
+            _artworkUrl = null;
+          });
+        }
+        return;
+      }
+
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
 
-      _artworkCache[searchTitle] = url;
+      _artworkCache[cacheKey] = url;
 
       if (mounted) {
         if (url != null) {
@@ -130,14 +179,14 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
     } catch (e) {
       debugLog('ProgramArtwork: Error fetching art for "$searchTitle": $e');
-      _artworkCache[searchTitle] = null;
+      _artworkCache[cacheKey] = null;
       if (mounted) {
         setState(() {
           _artworkUrl = null;
         });
       }
     } finally {
-      _pendingRequests.remove(searchTitle);
+      _pendingRequests.remove(cacheKey);
     }
   }
 

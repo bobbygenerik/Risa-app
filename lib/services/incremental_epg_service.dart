@@ -49,6 +49,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
+  final Map<String, int> _lastProgramIndexByChannel = {};
   static const int _channelFailureThreshold = 3;
   final Map<String, int> _channelFailureCounts = {};
   final Set<String> _loggedMissingEpgIds = {};
@@ -167,6 +168,10 @@ class IncrementalEpgService extends ChangeNotifier {
     _isLoading = false;
     _isDownloading = false;
     _isParsing = false;
+  }
+
+  void _invalidateProgramIndexCache() {
+    _lastProgramIndexByChannel.clear();
   }
 
   /// Quick startup initialization that prioritizes cached data
@@ -417,6 +422,7 @@ class IncrementalEpgService extends ChangeNotifier {
       _availableChannels.clear();
       _internalToEpgIdMapping.clear();
       _programsByChannel.clear();
+      _invalidateProgramIndexCache();
       _hasParsed = false;
     } else if (cachedUrl.isEmpty) {
       await prefs.setString(_epgCacheUrlKey, currentUrl);
@@ -933,6 +939,7 @@ class IncrementalEpgService extends ChangeNotifier {
               if (dbPrograms.isNotEmpty) {
                 // Populate in-memory cache from DB
                 _programsByChannel.clear();
+                _invalidateProgramIndexCache();
                 for (final entry in dbPrograms.entries) {
                   final epgId = entry.key;
                   final programs = entry.value.map((row) => Program(
@@ -2723,22 +2730,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
     _clearChannelFailures(channelId);
     final now = DateTime.now();
-
-    // 1. Try to find strictly current program
-    for (final program in programs) {
-      if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
-        return program;
-      }
-    }
-
-    // 2. Fallback to next upcoming
-    for (final program in programs) {
-      if (program.startTime.isAfter(now)) {
-        return program;
-      }
-    }
-
-    return null;
+    return _findCurrentOrNextProgram(epgId, programs, now);
   }
 
 
@@ -2759,17 +2751,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       final now = DateTime.now();
-      for (final program in programs) {
-        if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
-          return program;
-        }
-      }
-      for (final program in programs) {
-        if (program.startTime.isAfter(now)) {
-          return program;
-        }
-      }
-      return null;
+      return _findCurrentOrNextProgram(epgId, programs, now);
     }
 
     // Fall back to existing behaviour
@@ -2789,20 +2771,44 @@ class IncrementalEpgService extends ChangeNotifier {
         programs = getProgramsForChannel(epgId, channelName: channelName);
       }
       final now = DateTime.now();
-      for (final program in programs) {
-        if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
-          return program;
-        }
-      }
-      for (final program in programs) {
-        if (program.startTime.isAfter(now)) {
-          return program;
-        }
-      }
-      return null;
+      return _findCurrentOrNextProgram(epgId, programs, now);
     }
     await loadMappingsFromDb();
     return null;
+  }
+
+  Program? _findCurrentOrNextProgram(
+      String epgId, List<Program> programs, DateTime now) {
+    if (programs.isEmpty) return null;
+    final cachedIndex = _lastProgramIndexByChannel[epgId];
+    if (cachedIndex != null &&
+        cachedIndex >= 0 &&
+        cachedIndex < programs.length) {
+      final cachedProgram = programs[cachedIndex];
+      if (now.isAfter(cachedProgram.startTime) &&
+          now.isBefore(cachedProgram.endTime)) {
+        return cachedProgram;
+      }
+    }
+
+    Program? nextProgram;
+    int nextIndex = -1;
+    for (int i = 0; i < programs.length; i++) {
+      final program = programs[i];
+      if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
+        _lastProgramIndexByChannel[epgId] = i;
+        return program;
+      }
+      if (nextProgram == null && program.startTime.isAfter(now)) {
+        nextProgram = program;
+        nextIndex = i;
+      }
+    }
+
+    if (nextProgram != null) {
+      _lastProgramIndexByChannel[epgId] = nextIndex;
+    }
+    return nextProgram;
   }
 
   final List<String> _pendingBatch = [];

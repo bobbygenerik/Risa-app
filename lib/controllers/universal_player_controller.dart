@@ -108,12 +108,19 @@ class StockPlayerController extends UniversalPlayerController {
 
   @override
   Future<void> initialize() async {
-    await _controller.initialize();
-    _controller.addListener(_listener);
-    if (autoPlay) {
-      await _controller.play();
+    try {
+      await _controller.initialize();
+      _controller.addListener(_listener);
+      if (autoPlay) {
+        // Add a small delay before auto-playing to prevent memory pressure
+        await Future.delayed(const Duration(milliseconds: 100));
+        await _controller.play();
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('StockPlayerController initialization failed: $e');
+      rethrow;
     }
-    notifyListeners();
   }
 
   void _listener() {
