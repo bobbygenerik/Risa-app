@@ -42,7 +42,8 @@ android {
         
         // Increase heap size to prevent OOM crashes
         manifestPlaceholders = [
-            'android:largeHeap': 'true'
+            'android:largeHeap': 'true',
+            'applicationName': 'io.flutter.app.FlutterApplication'
         ]
     }
     

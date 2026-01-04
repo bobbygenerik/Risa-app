@@ -1032,11 +1032,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final descriptionStyle = AppTypography.heroDescription(context);
     final logoSlotHeight = context.tvSpacing(64); // Increased from 30 for higher resolution
 
-    // Safe max height: visible area above the row with buffer
+    // Safe max height: more generous space for content
     final heroHeight = context.heroHeight();
     final cardPeek = 80.0;
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
-    final safeMaxHeight = contentTop - 40; // Tighter buffer since we are shrinking it
+    final safeMaxHeight = contentTop - 20; // More generous buffer
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -1066,17 +1066,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               Text(
                 title,
                 style: titleStyle,
-                maxLines: 1, // Stricter lines for stability
+                maxLines: 2, // Allow 2 lines for longer titles
                 overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: context.tvSpacing(6)),
             ],
             if (description.isNotEmpty) ...[
-              Text(
-                description,
-                style: descriptionStyle,
-                maxLines: 4, // Increased from 3
-                overflow: TextOverflow.ellipsis,
+              Flexible(
+                child: Text(
+                  description,
+                  style: descriptionStyle,
+                  maxLines: 3, // Reduced to make room for title
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               SizedBox(height: context.tvSpacing(12)),
             ],
