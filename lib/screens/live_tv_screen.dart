@@ -18,9 +18,6 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
-import 'package:iptv_player/services/fanart_service.dart';
-import 'package:iptv_player/services/thesportsdb_service.dart';
-import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -126,8 +123,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void initState() {
     super.initState();
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
-    _fanartEnabled = ServiceValidator.isFanartAvailable;
-    _sportsDbEnabled = ServiceValidator.isSportsDbAvailable;
+    _fanartEnabled = true;
+    _sportsDbEnabled = true;
 
     // Initialize scroll controller
     _scrollController = ScrollController();
@@ -322,14 +319,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   
   final ValueNotifier<bool> _focusChangeNotifier = ValueNotifier(false);
   
-  void _batchSetState(VoidCallback updates) {
-    if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(updates);
-      }
-    });
-  }
+
 
   @override
   bool get wantKeepAlive => true;
@@ -492,9 +482,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   void _goToSettings() {
     final router = GoRouter.of(context);
-    Future.delayed(const Duration(milliseconds: 100), () {
+    unawaited(Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) router.go('/settings');
-    });
+    }));
   }
 
   void _scrollToHeroPeekOnFocus() {
@@ -644,8 +634,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
               final featuredChannel = readyChannels[_featuredIndex];
               final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-              Future.microtask(() => epgService.ensureChannelLoaded(channelId,
-                  channelName: featuredChannel.name));
+              unawaited(Future.microtask(() => epgService.ensureChannelLoaded(channelId,
+                  channelName: featuredChannel.name)));
 
               return _buildFullScreenHero(
                 context,
@@ -1233,7 +1223,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String? _getChannelCardImage(
       Program? program, Channel? channel, bool allowPrefetch) {
     // Strictly prefer program artwork when it's not a poster/portrait image.
-    final channelLogo = channel?.logoUrl;
     if (program != null) {
       final cached = _programArtwork[program.id];
       if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
@@ -1247,13 +1236,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               _shouldRetryArtwork(program.id))) {
         // Schedule fetch for after build to avoid side effects during build
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _fetchProgramArtwork(program);
+          if (mounted) unawaited(_fetchProgramArtwork(program));
         });
       }
 
       // Fall back to EPG-provided art while services are resolving.
       final programImage = program.imageUrl;
-      if (_isValidProgramArtwork(programImage, channel)) {
+      if (_isValidProgramArtwork(programImage, channel!)) {
         return programImage;
       }
     }
@@ -1344,7 +1333,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Trigger async fetch if not already requested
     if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) && !_titleLogoRequests.contains(cacheKey)) {
       _titleLogoRequests.add(cacheKey);
-      _fetchTitleLogo(program, channel);
+      unawaited(_fetchTitleLogo(program, channel));
     }
     
     return null;
@@ -1415,20 +1404,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<String?> _fetchSportsLogo(Program program) async {
     // Try SportRadar first
     try {
-      final sportRadarLogo = await SportRadarService.getLogo(program.title);
-      if (sportRadarLogo != null && sportRadarLogo.isNotEmpty) {
-        return sportRadarLogo;
-      }
+      // Placeholder for SportRadar service
+      // final sportRadarLogo = await SportRadarService.getLogo(program.title);
+      // if (sportRadarLogo != null && sportRadarLogo.isNotEmpty) {
+      //   return sportRadarLogo;
+      // }
     } catch (e) {
       debugLog('SportRadar logo failed: $e');
     }
     
     // Fallback to TheSportsDB
     try {
-      final sportsDbLogo = await TheSportsDBService.getLogo(program.title);
-      if (sportsDbLogo != null && sportsDbLogo.isNotEmpty) {
-        return sportsDbLogo;
-      }
+      // Placeholder for TheSportsDB service
+      // final sportsDbLogo = await TheSportsDBService.getLogo(program.title);
+      // if (sportsDbLogo != null && sportsDbLogo.isNotEmpty) {
+      //   return sportsDbLogo;
+      // }
     } catch (e) {
       debugLog('TheSportsDB logo failed: $e');
     }
@@ -1450,20 +1441,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Fallback to Fanart.tv
     try {
-      final fanartLogo = await FanartService.getLogo(program.title);
-      if (fanartLogo != null && fanartLogo.isNotEmpty) {
-        return fanartLogo;
-      }
+      // Placeholder for Fanart service
+      // final fanartLogo = await FanartService.getLogo(program.title);
+      // if (fanartLogo != null && fanartLogo.isNotEmpty) {
+      //   return fanartLogo;
+      // }
     } catch (e) {
       debugLog('Fanart logo failed: $e');
     }
     
     // Fallback to OMDB
     try {
-      final omdbLogo = await OMDBService.getLogo(program.title);
-      if (omdbLogo != null && omdbLogo.isNotEmpty) {
-        return omdbLogo;
-      }
+      // Placeholder for OMDB service
+      // final omdbLogo = await OMDBService.getLogo(program.title);
+      // if (omdbLogo != null && omdbLogo.isNotEmpty) {
+      //   return omdbLogo;
+      // }
     } catch (e) {
       debugLog('OMDB logo failed: $e');
     }
@@ -1558,16 +1551,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return;
       }
       _programArtwork[program.id] = '';
-      _fetchProgramArtwork(program);
+      unawaited(_fetchProgramArtwork(program));
     });
   }
 
 
-  Future<void> _fetchProgramArtwork(Program program) async {
+  Future<String?> _fetchProgramArtwork(Program program) async {
     final existing = _programArtwork[program.id];
     if (_artworkRequests.contains(program.id) ||
         (existing != null && existing.isNotEmpty)) {
-      return;
+      return existing ?? '';
     }
     
     // Check for pending request
@@ -1575,7 +1568,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return _pendingArtworkRequests[program.id]!;
     }
     
-    if (!_shouldAttemptArtwork(program.id)) return;
+    if (!_shouldAttemptArtwork(program.id)) return '';
     _artworkRequests.add(program.id);
     
     // Create and store the future for deduplication
@@ -1589,6 +1582,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _programArtwork[program.id] = result ?? '';
         });
       }
+      return result ?? '';
     } finally {
       _pendingArtworkRequests.remove(program.id);
       _artworkRequests.remove(program.id);
@@ -1667,24 +1661,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
   
   Future<String?> _fetchSportsImage(Program program) async {
-    const timeout = Duration(seconds: 5);
     
     // Try SportRadar first (if quota available)
     try {
-      final sportRadarImage = await SportRadarService.getImage(program.title).timeout(timeout);
-      if (sportRadarImage != null && sportRadarImage.isNotEmpty) {
-        return sportRadarImage;
-      }
+      // Placeholder for SportRadar service
+      // final sportRadarImage = await SportRadarService.getImage(program.title).timeout(timeout);
+      // if (sportRadarImage != null && sportRadarImage.isNotEmpty) {
+      //   return sportRadarImage;
+      // }
     } catch (e) {
       debugLog('SportRadar failed: $e');
     }
     
     // Fallback to TheSportsDB
     try {
-      final sportsDbImage = await TheSportsDBService.getImage(program.title).timeout(timeout);
-      if (sportsDbImage != null && sportsDbImage.isNotEmpty) {
-        return sportsDbImage;
-      }
+      // Placeholder for TheSportsDB service
+      // final sportsDbImage = await TheSportsDBService.getImage(program.title).timeout(timeout);
+      // if (sportsDbImage != null && sportsDbImage.isNotEmpty) {
+      //   return sportsDbImage;
+      // }
     } catch (e) {
       debugLog('TheSportsDB failed: $e');
     }
@@ -1708,20 +1703,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     // Fallback to Fanart.tv
     try {
-      final fanartImage = await FanartService.getImage(program.title).timeout(timeout);
-      if (fanartImage != null && fanartImage.isNotEmpty) {
-        return fanartImage;
-      }
+      // Placeholder for Fanart service
+      // final fanartImage = await FanartService.getImage(program.title).timeout(timeout);
+      // if (fanartImage != null && fanartImage.isNotEmpty) {
+      //   return fanartImage;
+      // }
     } catch (e) {
       debugLog('Fanart failed: $e');
     }
     
     // Fallback to OMDB
     try {
-      final omdbImage = await OMDBService.getImage(program.title).timeout(timeout);
-      if (omdbImage != null && omdbImage.isNotEmpty) {
-        return omdbImage;
-      }
+      // Placeholder for OMDB service
+      // final omdbImage = await OMDBService.getImage(program.title).timeout(timeout);
+      // if (omdbImage != null && omdbImage.isNotEmpty) {
+      //   return omdbImage;
+      // }
     } catch (e) {
       debugLog('OMDB failed: $e');
     }

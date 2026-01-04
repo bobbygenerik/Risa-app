@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 
 class MemoryManager {
   static const int _maxMemoryThresholdMB = 200; // Conservative threshold

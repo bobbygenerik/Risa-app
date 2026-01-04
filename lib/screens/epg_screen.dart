@@ -62,7 +62,7 @@ class _EPGScreenState extends State<EPGScreen>
   late final FocusNode _firstCategoryFocus;
   late final FocusNode _firstChannelFocus;
   late final FocusNode _firstProgramFocus;
-  bool _refreshPressed = false;
+
   Future<List<Channel>>? _channelPageFuture;
   String _channelPageKey = '';
 
@@ -583,18 +583,6 @@ class _EPGScreenState extends State<EPGScreen>
                   icon: context.timeIcon(),
                   color: AppTheme.primaryBlue,
                   tooltip: 'Jump to Now',
-                  onFocusChange: (hasFocus) {
-                    if (hasFocus) {
-                      // Handle down arrow to focus first channel
-                      Focus.of(context).onKeyEvent = (node, event) {
-                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                          _firstChannelFocus.requestFocus();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      };
-                    }
-                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -607,11 +595,7 @@ class _EPGScreenState extends State<EPGScreen>
                 child: IconButton(
                   focusNode: _refreshButtonFocus,
                   onPressed: epgService.isLoading ? null : () {
-                    setState(() => _refreshPressed = true);
                     unawaited(_triggerEpgRefresh());
-                    Future.delayed(const Duration(milliseconds: 150), () {
-                      if (mounted) setState(() => _refreshPressed = false);
-                    });
                   },
                   icon: AnimatedBuilder(
                     animation: _refreshAnimationController,
@@ -631,18 +615,6 @@ class _EPGScreenState extends State<EPGScreen>
                     },
                   ),
                   tooltip: 'Refresh EPG',
-                  onFocusChange: (hasFocus) {
-                    if (hasFocus) {
-                      // Handle down arrow to focus first channel
-                      Focus.of(context).onKeyEvent = (node, event) {
-                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                          _firstChannelFocus.requestFocus();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      };
-                    }
-                  },
                 ),
               ),
 
