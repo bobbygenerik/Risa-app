@@ -70,7 +70,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final FocusNode _skeletonFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
-  final Map<String, Future<String?>> _pendingArtworkRequests = {}; // Deduplication
+  final Map<String, Future<String?>> _pendingArtworkRequests =
+      {}; // Deduplication
   final List<Program> _artworkQueue = [];
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
@@ -141,8 +142,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'live_tv_first_card',
       debugLabel: 'Live TV First Card',
     );
-    _skeletonFocus =
-        _focusPool.getFocusNode('live_tv_skeleton', debugLabel: 'Live TV Skeleton');
+    _skeletonFocus = _focusPool.getFocusNode('live_tv_skeleton',
+        debugLabel: 'Live TV Skeleton');
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
@@ -312,14 +313,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     _rowScrollControllers.clear();
     _focusPool.returnFocusNodes(
-      ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card', 'live_tv_skeleton'],
+      [
+        'live_tv_watch',
+        'live_tv_settings',
+        'live_tv_first_card',
+        'live_tv_skeleton'
+      ],
     );
     super.dispose();
   }
-  
-  final ValueNotifier<bool> _focusChangeNotifier = ValueNotifier(false);
-  
 
+  final ValueNotifier<bool> _focusChangeNotifier = ValueNotifier(false);
 
   @override
   bool get wantKeepAlive => true;
@@ -634,7 +638,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
               final featuredChannel = readyChannels[_featuredIndex];
               final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-              unawaited(Future.microtask(() => epgService.ensureChannelLoaded(channelId,
+              unawaited(Future.microtask(() => epgService.ensureChannelLoaded(
+                  channelId,
                   channelName: featuredChannel.name)));
 
               return _buildFullScreenHero(
@@ -786,8 +791,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
-
   Widget _buildFullScreenHero(
     BuildContext context,
     Channel featuredChannel,
@@ -797,8 +800,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroHeight = context.heroHeight();
     final cardPeek = 80.0;
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
 
     // Calculate available width for content
@@ -1030,7 +1032,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
     final titleStyle = AppTypography.heroTitle(context);
     final descriptionStyle = AppTypography.heroDescription(context);
-    final logoSlotHeight = context.tvSpacing(64); // Increased from 30 for higher resolution
+    final logoSlotHeight =
+        context.tvSpacing(64); // Increased from 30 for higher resolution
 
     // Safe max height: more generous space for content
     final heroHeight = context.heroHeight();
@@ -1120,7 +1123,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: BrandPrimaryButton(
                 onPressed: () => context.push('/player', extra: channel),
                 label: 'Watch Now',
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 fontSize: 13,
                 minHeight: 28,
                 focusNode: _watchButtonFocus,
@@ -1192,7 +1196,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Center(
         child: Builder(builder: (context) {
           final url = channel.logoUrl!;
-          final isSvg = url.toLowerCase().endsWith('.svg') || url.toLowerCase().contains('.svg?');
+          final isSvg = url.toLowerCase().endsWith('.svg') ||
+              url.toLowerCase().contains('.svg?');
           if (isSvg) {
             return SvgPicture.network(
               url,
@@ -1265,7 +1270,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // TMDB portrait/backdrop size hints that usually represent poster art only.
-    if (lower.contains('tmdb.org') && (lower.contains('/w342') || lower.contains('/w185'))) {
+    if (lower.contains('tmdb.org') &&
+        (lower.contains('/w342') || lower.contains('/w185'))) {
       return true;
     }
 
@@ -1314,7 +1320,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
-    
+
     // Check TMDB title logo cache first
     final cacheKey = program.id;
     final cachedUrl = _programTitleLogos[cacheKey];
@@ -1333,11 +1339,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // Trigger async fetch if not already requested
-    if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) && !_titleLogoRequests.contains(cacheKey)) {
+    if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) &&
+        !_titleLogoRequests.contains(cacheKey)) {
       _titleLogoRequests.add(cacheKey);
       unawaited(_fetchTitleLogo(program, channel));
     }
-    
+
     return null;
   }
 
@@ -1351,24 +1358,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String _normalizeUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     try {
-    final uri = Uri.parse(url);
-    final host = uri.host.toLowerCase();
-    final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
-    if (host.isEmpty) return path;
-    return '$host$path';
-  } catch (_) {
-    return url.toLowerCase();
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
+      if (host.isEmpty) return path;
+      return '$host$path';
+    } catch (_) {
+      return url.toLowerCase();
+    }
   }
-}
-  
+
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
     final cacheKey = program.id;
     try {
       String? logo;
-      
+
       // Check if it's a sports program
       final isSports = _isSportsProgram(program);
-      
+
       if (isSports) {
         // Sports: SportRadar -> TheSportsDB -> TMDB -> Fanart -> OMDB
         logo = await _fetchSportsLogo(program);
@@ -1376,7 +1383,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // Regular: TMDB -> Fanart -> OMDB
         logo = await _fetchRegularLogo(program);
       }
-      
+
       if (_matchesChannelLogo(logo ?? '', channel)) {
         logo = '';
       }
@@ -1402,7 +1409,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _titleLogoRequests.remove(cacheKey);
     }
   }
-  
+
   Future<String?> _fetchSportsLogo(Program program) async {
     // Try SportRadar first
     try {
@@ -1414,7 +1421,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('SportRadar logo failed: $e');
     }
-    
+
     // Fallback to TheSportsDB
     try {
       // Placeholder for TheSportsDB service
@@ -1425,11 +1432,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('TheSportsDB logo failed: $e');
     }
-    
+
     // Fallback to regular logo chain
     return await _fetchRegularLogo(program);
   }
-  
+
   Future<String?> _fetchRegularLogo(Program program) async {
     // Try TMDB first
     try {
@@ -1440,7 +1447,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('TMDB logo failed: $e');
     }
-    
+
     // Fallback to Fanart.tv
     try {
       // Placeholder for Fanart service
@@ -1451,7 +1458,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('Fanart logo failed: $e');
     }
-    
+
     // Fallback to OMDB
     try {
       // Placeholder for OMDB service
@@ -1462,7 +1469,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('OMDB logo failed: $e');
     }
-    
+
     return null;
   }
 
@@ -1495,7 +1502,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       candidates.add(_HeroCandidate(
         channel: channel,
         program: program,
-        heroImage: heroImage ?? '', 
+        heroImage: heroImage ?? '',
       ));
 
       // Limit to 15 candidates for performance
@@ -1540,7 +1547,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled)) return;
     if (_artworkRequests.contains(program.id)) return;
     final existing = _programArtwork[program.id];
-    if (existing != null && existing.isNotEmpty &&
+    if (existing != null &&
+        existing.isNotEmpty &&
         _isValidProgramArtwork(existing, channel)) {
       return;
     }
@@ -1548,7 +1556,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final current = _programArtwork[program.id];
-      if (current != null && current.isNotEmpty &&
+      if (current != null &&
+          current.isNotEmpty &&
           _isValidProgramArtwork(current, channel)) {
         return;
       }
@@ -1557,26 +1566,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
-
   Future<String?> _fetchProgramArtwork(Program program) async {
     final existing = _programArtwork[program.id];
     if (_artworkRequests.contains(program.id) ||
         (existing != null && existing.isNotEmpty)) {
       return existing ?? '';
     }
-    
+
     // Check for pending request
     if (_pendingArtworkRequests.containsKey(program.id)) {
       return _pendingArtworkRequests[program.id]!;
     }
-    
+
     if (!_shouldAttemptArtwork(program.id)) return '';
     _artworkRequests.add(program.id);
-    
+
     // Create and store the future for deduplication
     final future = _fetchArtworkWithFallback(program);
     _pendingArtworkRequests[program.id] = future;
-    
+
     try {
       final result = await future;
       if (mounted) {
@@ -1586,14 +1594,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
       return result ?? '';
     } finally {
-      _pendingArtworkRequests.remove(program.id);
+      unawaited(_pendingArtworkRequests.remove(program.id));
       _artworkRequests.remove(program.id);
     }
   }
-  
+
   Future<String?> _fetchArtworkWithFallback(Program program) async {
     final isSports = _isSportsProgram(program);
-    return isSports ? await _fetchSportsImage(program) : await _fetchRegularImage(program);
+    return isSports
+        ? await _fetchSportsImage(program)
+        : await _fetchRegularImage(program);
   }
 
   void _scheduleArtworkDrain() {
@@ -1614,10 +1624,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       try {
         debugLog('LiveTV: Fetching artwork for: "${program.title}"');
         String? image;
-        
+
         // Check if it's a sports program
         final isSports = _isSportsProgram(program);
-        
+
         if (isSports) {
           // Sports: SportRadar -> TheSportsDB -> TMDB -> Fanart -> OMDB
           image = await _fetchSportsImage(program);
@@ -1625,7 +1635,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           // Regular: TMDB -> Fanart -> OMDB
           image = await _fetchRegularImage(program);
         }
-        
+
         if (!mounted) return;
         if (image != null) {
           debugLog('LiveTV: Found artwork for "${program.title}": $image');
@@ -1651,19 +1661,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _scheduleArtworkDrain();
     }
   }
-  
+
   bool _isSportsProgram(Program program) {
     final title = program.title.toLowerCase();
     final description = program.description?.toLowerCase() ?? '';
-    return title.contains('football') || title.contains('soccer') || 
-           title.contains('basketball') || title.contains('baseball') ||
-           title.contains('hockey') || title.contains('tennis') ||
-           title.contains('golf') || title.contains('racing') ||
-           description.contains('sport') || description.contains('game');
+    return title.contains('football') ||
+        title.contains('soccer') ||
+        title.contains('basketball') ||
+        title.contains('baseball') ||
+        title.contains('hockey') ||
+        title.contains('tennis') ||
+        title.contains('golf') ||
+        title.contains('racing') ||
+        description.contains('sport') ||
+        description.contains('game');
   }
-  
+
   Future<String?> _fetchSportsImage(Program program) async {
-    
     // Try SportRadar first (if quota available)
     try {
       // Placeholder for SportRadar service
@@ -1674,7 +1688,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('SportRadar failed: $e');
     }
-    
+
     // Fallback to TheSportsDB
     try {
       // Placeholder for TheSportsDB service
@@ -1685,24 +1699,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('TheSportsDB failed: $e');
     }
-    
+
     // Fallback to regular image chain
     return await _fetchRegularImage(program);
   }
-  
+
   Future<String?> _fetchRegularImage(Program program) async {
     const timeout = Duration(seconds: 5);
-    
+
     // Try TMDB first
     try {
-      final tmdbImage = await TMDBService.getBestBackdrop(program.title).timeout(timeout);
+      final tmdbImage =
+          await TMDBService.getBestBackdrop(program.title).timeout(timeout);
       if (tmdbImage != null && tmdbImage.isNotEmpty) {
         return tmdbImage;
       }
     } catch (e) {
       debugLog('TMDB failed: $e');
     }
-    
+
     // Fallback to Fanart.tv
     try {
       // Placeholder for Fanart service
@@ -1713,7 +1728,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('Fanart failed: $e');
     }
-    
+
     // Fallback to OMDB
     try {
       // Placeholder for OMDB service
@@ -1724,7 +1739,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } catch (e) {
       debugLog('OMDB failed: $e');
     }
-    
+
     return null;
   }
 
@@ -1857,7 +1872,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 8), // Added bottom spacing
+          padding: EdgeInsets.only(
+              left: rowInset, bottom: 8), // Added bottom spacing
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -1972,7 +1988,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const cardFocusScale = 1.05;
     final cardHeight = cardWidth * 0.6;
     // On mobile, focus scale is minimal/transient, so don't reserve huge space
-    final isMobile = screenWidth < 800; 
+    final isMobile = screenWidth < 800;
     final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
     final timeStyle = AppTypography.programTime(context);
@@ -1985,7 +2001,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final infoHeight = titleHeight + timeHeight + infoSpacing;
     // Account for category header + underline + spacers
     final captionStyle = AppTypography.caption(context);
-    final captionHeight = (captionStyle.fontSize ?? 13.0) * (captionStyle.height ?? 1.2);
+    final captionHeight =
+        (captionStyle.fontSize ?? 13.0) * (captionStyle.height ?? 1.2);
     // Header spacing structure: title bottom(2) + underline height(3) + underline bottom(8)
     const headerSpacing = 2 + 3 + 8;
     final rowBottomSpacing = context.spacingMd();
@@ -2075,24 +2092,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         child: Consumer<IncrementalEpgService>(
           builder: (context, epgService, _) {
             final isFocused = Focus.of(context).hasFocus;
-            
+
             // Optimization: Get current program only when needed
             // Prevents freeze: Skip expensive lookups if EPG is actively loading/parsing
-            final program = (epgService.isLoading || epgService.isParsing) 
-                ? null 
+            final program = (epgService.isLoading || epgService.isParsing)
+                ? null
                 : epgService.getCurrentProgram(
                     channel.tvgId ?? channel.id,
                     channelName: channel.name,
                     groupTitle: channel.groupTitle,
                   );
-            
+
             if (isFocused) {
               unawaited(epgService.ensureChannelLoaded(
                 channel.tvgId ?? channel.id,
                 channelName: channel.name,
               ));
             }
-            
+
             return GestureDetector(
               onTap: () => context.push('/player', extra: channel),
               child: AnimatedScale(
@@ -2100,15 +2117,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 alignment: Alignment.topCenter,
-                child: _buildCardContent(
-                  context, 
-                  channel, 
-                  program, 
-                  isFocused, 
-                  cardWidth, 
-                  cardHeight, 
-                  allowPrefetch
-                ),
+                child: _buildCardContent(context, channel, program, isFocused,
+                    cardWidth, cardHeight, allowPrefetch),
               ),
             );
           },
@@ -2127,7 +2137,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool allowPrefetch,
   ) {
     final progress = currentProgram?.progressPercentage ?? 0.0;
-    final imageUrl = _getChannelCardImage(currentProgram, channel, allowPrefetch);
+    final imageUrl =
+        _getChannelCardImage(currentProgram, channel, allowPrefetch);
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final cacheWidth = (cardWidth * dpr).round();
     final cacheHeight = (cardHeight * dpr).round();
@@ -2539,73 +2550,73 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Positioned.fill(
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      SizedBox(height: contentTop + context.spacingLg()),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: 0,
-                          right: rightInset,
-                          bottom: context.spacingLg(),
-                        ),
-                        child: Shimmer(
-                          child: Column(
-                            children: [
-                              for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                      left: rowInset, bottom: 2),
-                                  child: SkeletonLine(
-                                    140,
-                                    height: 16,
-                                    borderRadius: 4,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                      left: rowInset, bottom: 8),
-                                  child: SizedBox.shrink(),
-                                ),
-                                SizedBox(
-                                  height: skeletonCardHeight +
-                                      context.spacingXs() +
-                                      context.tvTextSize(30),
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    padding: EdgeInsets.only(left: rowInset),
-                                    itemCount: perRow,
-                                    separatorBuilder: (context, index) =>
-                                        SizedBox(width: context.cardGap()),
-                                    itemBuilder: (context, index) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Skeleton(
-                                            width: skeletonCardWidth,
-                                            height: skeletonCardHeight,
-                                            borderRadius: 12,
-                                          ),
-                                          SizedBox(height: 4),
-                                          SkeletonLine(skeletonCardWidth * 0.8,
-                                              height: 12, borderRadius: 4),
-                                          SizedBox(height: 2),
-                                          SkeletonLine(skeletonCardWidth * 0.5,
-                                              height: 10, borderRadius: 4),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                                SizedBox(height: context.spacingLg()),
-                              ],
-                            ],
-                          ),
-                        ),
+              child: Column(
+                children: [
+                  SizedBox(height: contentTop + context.spacingLg()),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: 0,
+                      right: rightInset,
+                      bottom: context.spacingLg(),
+                    ),
+                    child: Shimmer(
+                      child: Column(
+                        children: [
+                          for (int rowIndex = 0; rowIndex < 3; rowIndex++) ...[
+                            Padding(
+                              padding:
+                                  EdgeInsets.only(left: rowInset, bottom: 2),
+                              child: SkeletonLine(
+                                140,
+                                height: 16,
+                                borderRadius: 4,
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  EdgeInsets.only(left: rowInset, bottom: 8),
+                              child: SizedBox.shrink(),
+                            ),
+                            SizedBox(
+                              height: skeletonCardHeight +
+                                  context.spacingXs() +
+                                  context.tvTextSize(30),
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: EdgeInsets.only(left: rowInset),
+                                itemCount: perRow,
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(width: context.cardGap()),
+                                itemBuilder: (context, index) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Skeleton(
+                                        width: skeletonCardWidth,
+                                        height: skeletonCardHeight,
+                                        borderRadius: 12,
+                                      ),
+                                      SizedBox(height: 4),
+                                      SkeletonLine(skeletonCardWidth * 0.8,
+                                          height: 12, borderRadius: 4),
+                                      SizedBox(height: 2),
+                                      SkeletonLine(skeletonCardWidth * 0.5,
+                                          height: 10, borderRadius: 4),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            SizedBox(height: context.spacingLg()),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
             ),
           ),
         ],

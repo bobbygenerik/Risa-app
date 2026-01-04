@@ -102,12 +102,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   void dispose() {
-    if (_transcriptionServiceRef != null && _transcriptionListener != null) {
-      _transcriptionServiceRef!.removeListener(_transcriptionListener!);
+    try {
+      if (_transcriptionServiceRef != null && _transcriptionListener != null) {
+        _transcriptionServiceRef!.removeListener(_transcriptionListener!);
+      }
+      _controlsHideTimer?.cancel();
+      _playerControllerNotifier.removeListener(_handleControllerUpdate);
+      _detachPlayerController();
+    } catch (e) {
+      debugLog('Error disposing video player: $e');
     }
-    _controlsHideTimer?.cancel();
-    _playerControllerNotifier.removeListener(_handleControllerUpdate);
-    _detachPlayerController();
     super.dispose();
   }
 
@@ -129,7 +133,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     try {
-      // Prepare transcription service and detect any subtitle URL from channel metadata
       final service =
           Provider.of<IntegratedTranscriptionService>(context, listen: false);
       String? subtitleUrl;
@@ -140,11 +143,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           ? widget.channel!.attributes!['subtitle']
           : null;
 
-      // Keep wakelock active while playing
       await WakelockPlus.enable();
       _hideControlsAfterDelay();
 
-      // Auto-load VOD subtitles if found (fire-and-forget)
       if (subtitleUrl != null && subtitleUrl.isNotEmpty) {
         try {
           // fire-and-forget loading of VOD subtitles
@@ -153,7 +154,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         } catch (_) {}
       }
 
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
       debugLog('Video Player: Initialization error: $e');
       if (mounted) {

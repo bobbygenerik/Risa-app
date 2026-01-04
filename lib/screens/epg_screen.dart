@@ -105,7 +105,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Load EPG data on init - non-blocking
     _loadEpgData();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -116,13 +116,17 @@ class _EPGScreenState extends State<EPGScreen>
       _scrollToCurrentTime(animate: false);
     });
   }
-  
+
   Future<void> _loadEpgData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
-      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-      
+      if (!mounted) return;
+
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
+      final epgUrl =
+          prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+
       if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
         debugLog('EPG Screen: Found EPG URL - initializing service');
         // Initialize without forcing a refresh so cache behavior is respected
@@ -158,15 +162,21 @@ class _EPGScreenState extends State<EPGScreen>
       // 30 minutes = 1800 seconds
       if (!mounted) return;
 
-      final epgService =
-          Provider.of<IncrementalEpgService>(context, listen: false);
-      final prefs = await SharedPreferences.getInstance();
-      final epgUrl =
-          prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (!mounted) return;
 
-      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
-        debugLog('EPG Screen: Auto-refreshing EPG data...');
-        await epgService.initialize();
+        final epgService =
+            Provider.of<IncrementalEpgService>(context, listen: false);
+        final epgUrl =
+            prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+
+        if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+          debugLog('EPG Screen: Auto-refreshing EPG data...');
+          await epgService.initialize();
+        }
+      } catch (e) {
+        debugLog('EPG Screen: Auto-refresh failed: $e');
       }
     });
   }
@@ -262,7 +272,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Start spinning animation
     await _refreshAnimationController.repeat();
-    
+
     // Show "Refreshing..." feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,7 +298,8 @@ class _EPGScreenState extends State<EPGScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('EPG refreshed: ${epgService.availableChannels.length} channels'),
+          content: Text(
+              'EPG refreshed: ${epgService.availableChannels.length} channels'),
           backgroundColor: AppTheme.accentGreen,
           duration: const Duration(seconds: 2),
         ),
@@ -594,9 +605,11 @@ class _EPGScreenState extends State<EPGScreen>
                 ),
                 child: IconButton(
                   focusNode: _refreshButtonFocus,
-                  onPressed: epgService.isLoading ? null : () {
-                    unawaited(_triggerEpgRefresh());
-                  },
+                  onPressed: epgService.isLoading
+                      ? null
+                      : () {
+                          unawaited(_triggerEpgRefresh());
+                        },
                   icon: AnimatedBuilder(
                     animation: _refreshAnimationController,
                     builder: (context, child) {
@@ -617,7 +630,6 @@ class _EPGScreenState extends State<EPGScreen>
                   tooltip: 'Refresh EPG',
                 ),
               ),
-
             ],
           ),
         ],
@@ -696,7 +708,6 @@ class _EPGScreenState extends State<EPGScreen>
         }
         return KeyEventResult.ignored;
       },
-
       child: Builder(builder: (context) {
         final bool isFocused = Focus.of(context).hasFocus;
         return GestureDetector(
@@ -723,7 +734,8 @@ class _EPGScreenState extends State<EPGScreen>
                     width: 4,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                      color:
+                          isFocused ? AppTheme.primaryBlue : Colors.transparent,
                       borderRadius: const BorderRadius.only(
                         topRight: Radius.circular(4),
                         bottomRight: Radius.circular(4),
