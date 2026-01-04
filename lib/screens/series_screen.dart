@@ -536,14 +536,18 @@ class _SeriesScreenState extends State<SeriesScreen>
             Provider.of<ChannelProvider>(context, listen: false);
         final series = contentProvider.series;
         final recentSeries = contentProvider.recentlyAddedSeries;
-        final hasMoreOverall = channelProvider.seriesCount > 0 &&
-            series.length < channelProvider.seriesCount;
+        final hasCachedVod = channelProvider.hasVodCache;
+        final hasVodSource =
+            channelProvider.seriesCount > 0 || hasCachedVod;
+        final totalSeries = channelProvider.seriesCount;
+        final hasMoreOverall =
+            totalSeries > 0 && series.length < totalSeries;
 
         if (series.isEmpty && contentProvider.isLoading) {
           return _buildSkeletonLoader();
         }
 
-        if (series.isEmpty && channelProvider.seriesCount > 0) {
+        if (series.isEmpty && hasVodSource) {
           if (!_vodRetryRequested) {
             _vodRetryRequested = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {

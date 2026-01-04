@@ -1,19 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
-import '../providers/settings_provider.dart';
-import '../utils/tv_focus_helper.dart';
 import 'enhanced_video_player_screen.dart';
-import 'exoplayer_fullscreen_screen.dart';
 
-/// A smart video player wrapper that routes to the appropriate player backend
-/// based on user settings and device type.
-///
-/// For Android TV devices (like Nvidia Shield), ExoPlayer is preferred as it
-/// provides better hardware codec compatibility. For phones/tablets, MediaKit
-/// is the default as it provides more features and cross-platform consistency.
+/// Always builds the `EnhancedVideoPlayerScreen` so the Flutter overlay
+/// controls are used for every playback.
 class VideoPlayerRouter extends StatelessWidget {
   final Channel? channel;
   final Content? content;
@@ -36,42 +27,14 @@ class VideoPlayerRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final backend = settings.videoPlayerBackend;
-
-    // Determine which player to use. Only use the native ExoPlayer fullscreen
-    // view when the user explicitly selects the 'ExoPlayer' backend. For
-    // 'Auto', prefer native ExoPlayer on Android TV to avoid color-space
-    // issues in Flutter's video_player, otherwise use EnhancedVideoPlayerScreen
-    // so app overlays remain authoritative.
-    final bool explicitExo = backend == 'ExoPlayer';
-    final bool preferNativeOnTv =
-        backend == 'Auto' && TVFocusHelper.isAndroidTV;
-    final bool useNativeExo = explicitExo || preferNativeOnTv;
-
-    if (useNativeExo && defaultTargetPlatform == TargetPlatform.android) {
-      return ExoPlayerFullscreenScreen(
-        channel: channel,
-        content: content,
-        streamUrl: streamUrl,
-        videoUrl: videoUrl,
-        title: title,
-        subtitle: subtitle,
-        isLive: isLive,
-      );
-    } else {
-      return EnhancedVideoPlayerScreen(
-        channel: channel,
-        content: content,
-        streamUrl: streamUrl,
-        videoUrl: videoUrl,
-        title: title,
-        subtitle: subtitle,
-        isLive: isLive,
-      );
-    }
+    return EnhancedVideoPlayerScreen(
+      channel: channel,
+      content: content,
+      streamUrl: streamUrl,
+      videoUrl: videoUrl,
+      title: title,
+      subtitle: subtitle,
+      isLive: isLive,
+    );
   }
-
-  // Note: routing now uses explicit backend == 'ExoPlayer' to choose the
-  // native ExoPlayer fullscreen; helper removed to avoid confusion.
 }

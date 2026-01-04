@@ -45,7 +45,6 @@ import 'package:iptv_player/screens/exit_screen.dart';
 import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
-import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/multi_view_screen.dart';
 import 'package:iptv_player/widgets/safe_pop_scope.dart';
@@ -54,6 +53,7 @@ import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
 
 import 'package:iptv_player/screens/search_screen.dart';
+import 'package:iptv_player/screens/video_player_router.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -1056,11 +1056,15 @@ final _router = GoRouter(
         String videoUrl =
             'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
         String title = 'Video';
+        String? subtitle;
+        String? streamUrl;
         Channel? channel;
+        Content? content;
         bool isLive = false;
 
         if (data is Channel) {
           videoUrl = data.url;
+          streamUrl = data.url;
           title = data.name;
           channel = data;
           isLive = true;
@@ -1072,18 +1076,34 @@ final _router = GoRouter(
             channelProvider.incrementWatchCount(data.id);
           });
         } else if (data is Content) {
+          content = data;
           videoUrl = data.videoUrl ?? videoUrl;
           title = data.title;
+          subtitle = data.description;
+          streamUrl = videoUrl;
+        } else if (data is Map<String, dynamic> || data is Map) {
+          final mapArgs = data is Map<String, dynamic>
+              ? data
+              : Map<String, dynamic>.from(data as Map);
+          videoUrl = mapArgs['videoUrl'] ?? videoUrl;
+          streamUrl = mapArgs['streamUrl'] ?? streamUrl;
+          title = mapArgs['title'] ?? title;
+          subtitle = mapArgs['subtitle'] ?? subtitle;
+          isLive = mapArgs['isLive'] ?? isLive;
+          streamUrl ??= videoUrl;
         }
 
         return _fadeSlidePage(
           key: state.pageKey,
           child: SafePopScope(
-            child: EnhancedVideoPlayerScreen(
+            child: VideoPlayerRouter(
+              channel: channel,
+              content: content,
+              streamUrl: streamUrl,
               videoUrl: videoUrl,
               title: title,
+              subtitle: subtitle,
               isLive: isLive,
-              channel: channel,
             ),
           ),
         );

@@ -1,8 +1,9 @@
-import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:io';
-import 'dart:convert';
+
+import 'package:iptv_player/utils/debug_helper.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../utils/hash_utils.dart';
@@ -37,8 +38,10 @@ class M3UParserService {
   // Pre-compiled regex patterns for performance (avoid recreating per-line)
 
   // Simpler, analyzer-safe regexes to avoid raw-string delimiter issues
-  static final RegExp _epgUrlRegex =
-      RegExp(r'(?:url-tvg|x-tvg-url|tvg-url)=([^\s]+)', caseSensitive: false);
+  static final RegExp _epgUrlRegex = RegExp(
+    r"""(?:url-tvg|x-tvg-url|tvg-url)=["']?([^"']+)""",
+    caseSensitive: false,
+  );
   static final RegExp _seriesEpisodeRegex =
       RegExp(r'S\d+E\d+', caseSensitive: false);
   static final RegExp _urlRegex =
@@ -46,6 +49,19 @@ class M3UParserService {
 
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
+
+  bool _tryCaptureEpgUrl(String line) {
+    if (_epgUrl != null) return true;
+    final match = _epgUrlRegex.firstMatch(line);
+    if (match != null) {
+      _epgUrl = match.group(1);
+      if (_epgUrl != null) {
+        debugLog('M3UParser: Captured EPG URL: $_epgUrl');
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// Parses M3U playlist content and returns a list of channels with chunked processing
   List<Channel> parseM3U(String content) {
@@ -60,17 +76,8 @@ class M3UParserService {
       'M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}',
     );
 
-    // Check for EPG URL in M3U header (multiple possible attributes)
-    if (rawLines.isNotEmpty &&
-        (rawLines[0].toLowerCase().contains('url-tvg=') ||
-            rawLines[0].toLowerCase().contains('x-tvg-url=') ||
-            rawLines[0].toLowerCase().contains('tvg-url='))) {
-      final firstLine = rawLines[0];
-      final urlMatch = _epgUrlRegex.firstMatch(firstLine);
-      if (urlMatch != null) {
-        _epgUrl = urlMatch.group(1);
-        debugLog('M3UParser: Found EPG URL: $_epgUrl');
-      }
+    if (rawLines.isNotEmpty) {
+      _tryCaptureEpgUrl(rawLines[0]);
     }
 
     // Process lines in chunks to prevent UI blocking on large playlists
@@ -111,18 +118,12 @@ class M3UParserService {
     // attributes (supports both single and double quotes). Many Xtream
     // providers don't include x-tvg-url on the very first raw line, so scan
     // a small window to find it.
-    final scanLimit = lines.length < 10 ? lines.length : 10;
+    final scanLimit = lines.length < 50 ? lines.length : 50;
     for (int i = 0; i < scanLimit; i++) {
-      try {
-        final match = _epgUrlRegex.firstMatch(lines[i]);
-        if (match != null) {
-          _epgUrl = match.group(1);
-          debugLog(
-              'M3UParser: Found EPG URL in logical line ${i + 1}: $_epgUrl');
-          break;
-        }
-      } catch (_) {
-        // ignore malformed lines while scanning
+      if (_tryCaptureEpgUrl(lines[i])) {
+        debugLog(
+            'M3UParser: Found EPG URL in logical line ${i + 1}: $_epgUrl');
+        break;
       }
     }
 
@@ -315,23 +316,21 @@ class M3UParserService {
     int channelCount = 0;
     int logicalIndex = 0;
     bool headerProcessed = false;
+    int epgLinesChecked = 0;
+    const int epgScanLimit = 25;
     final seenUrls = <String>{};
 
     void processLogicalLine(String line) {
       if (line.isEmpty) return;
 
+      if (_epgUrl == null && epgLinesChecked < epgScanLimit) {
+        epgLinesChecked++;
+        _tryCaptureEpgUrl(line);
+      }
+
       if (!headerProcessed) {
         headerProcessed = true;
-        final lowerLine = line.toLowerCase();
-        if (lowerLine.contains('url-tvg=') ||
-            lowerLine.contains('x-tvg-url=') ||
-            lowerLine.contains('tvg-url=')) {
-          final urlMatch = _epgUrlRegex.firstMatch(line);
-          if (urlMatch != null) {
-            _epgUrl = urlMatch.group(1);
-            debugLog('M3UParser: (stream) Found EPG URL: $_epgUrl');
-          }
-        } else {
+        if (_epgUrl == null) {
           debugLog('M3UParser: (stream) EPG URL not found in header line.');
         }
       }
@@ -580,6 +579,8 @@ class M3UParserService {
     int logicalIndex = 0;
     bool headerProcessed = false;
     final seenUrls = <String>{};
+    int epgLinesChecked = 0;
+    const int epgScanLimit = 25;
 
     Future<void> closeSinks() async {
       await channelSink.flush();
@@ -796,14 +797,19 @@ class M3UParserService {
           continue;
         }
 
+        if (_epgUrl == null && epgLinesChecked < epgScanLimit) {
+          epgLinesChecked++;
+          _tryCaptureEpgUrl(trimmed);
+        }
+
         if (trimmed.contains('#EXTINF:') || trimmed.contains('EXTINF:')) {
           processLogicalLine(trimmed);
         } else if (trimmed.startsWith('#EXTM3U')) {
-          // Header - handle EPG in header
-          final urlMatch = _epgUrlRegex.firstMatch(trimmed);
-          if (urlMatch != null) {
-            _epgUrl = urlMatch.group(1);
+          if (_epgUrl == null) {
+            debugLog('M3UParser: (files) EPG URL not found in header line.');
           }
+          pendingLine = trimmed;
+          continue;
         } else if (trimmed.startsWith('#')) {
           // Ignore other tags
           continue;
@@ -852,21 +858,15 @@ class M3UParserService {
     int logicalIndex = 0;
     bool headerProcessed = false;
     final seenUrls = <String>{};
+    int epgLinesChecked = 0;
+    const int epgScanLimit = 25;
 
     void processLogicalLine(String line) {
       if (line.isEmpty) return;
 
       if (!headerProcessed) {
         headerProcessed = true;
-        final lowerLine = line.toLowerCase();
-        if (lowerLine.contains('url-tvg=') ||
-            lowerLine.contains('x-tvg-url=') ||
-            lowerLine.contains('tvg-url=')) {
-          final urlMatch = _epgUrlRegex.firstMatch(line);
-          if (urlMatch != null) {
-            _epgUrl = urlMatch.group(1);
-          }
-        }
+        _tryCaptureEpgUrl(line);
       }
 
       void processExtinfSegment(String segment) {
@@ -1047,7 +1047,19 @@ class M3UParserService {
 
     await for (final rawLine in lineStream) {
       final trimmedRaw = rawLine.trim();
+      if (_epgUrl == null && epgLinesChecked < epgScanLimit) {
+        epgLinesChecked++;
+        _tryCaptureEpgUrl(trimmedRaw);
+      }
       if (trimmedRaw.isEmpty) continue;
+
+      if (trimmedRaw.startsWith('#EXTM3U')) {
+        if (_epgUrl == null) {
+          debugLog('M3UParser: (maps) EPG URL not found in header line.');
+        }
+        pendingLine = trimmedRaw;
+        continue;
+      }
 
       if (trimmedRaw.startsWith('#') ||
           trimmedRaw.contains('://') ||

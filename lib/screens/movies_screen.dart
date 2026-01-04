@@ -438,14 +438,18 @@ class _MoviesScreenState extends State<MoviesScreen>
             Provider.of<ChannelProvider>(context, listen: false);
         final movies = contentProvider.movies;
         final recentMovies = contentProvider.recentlyAddedMovies;
-        final hasMoreOverall = channelProvider.moviesCount > 0 &&
-            movies.length < channelProvider.moviesCount;
+        final hasCachedVod = channelProvider.hasVodCache;
+        final hasVodSource =
+            channelProvider.moviesCount > 0 || hasCachedVod;
+        final totalMovies = channelProvider.moviesCount;
+        final hasMoreOverall =
+            totalMovies > 0 && movies.length < totalMovies;
 
         if (movies.isEmpty && contentProvider.isLoading) {
           return _buildSkeletonLoader();
         }
 
-        if (movies.isEmpty && channelProvider.moviesCount > 0) {
+        if (movies.isEmpty && hasVodSource) {
           if (!_vodRetryRequested) {
             _vodRetryRequested = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -3,6 +3,7 @@ import '../providers/playlist_isolate.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -145,6 +146,31 @@ class ChannelProvider with ChangeNotifier {
   List<Map<String, dynamic>> _channelMaps = [];
   // Cache of converted Channel objects (populated on-demand)
   final Map<int, Channel> _channelCache = {};
+  final Map<String, int> _channelIndexById = {};
+  final Map<String, List<int>> _channelIndicesByGroup = {};
+  List<String> _channelLowerNames = [];
+  List<String> _channelLowerGroups = [];
+
+  void _rebuildChannelCaches() {
+    _channelIndexById.clear();
+    _channelIndicesByGroup.clear();
+    _channelLowerNames = List<String>.filled(_channelMaps.length, '');
+    _channelLowerGroups = List<String>.filled(_channelMaps.length, '');
+    for (int i = 0; i < _channelMaps.length; i++) {
+      final map = _channelMaps[i];
+      final id = (map['id'] ?? '').toString();
+      if (id.isNotEmpty) {
+        _channelIndexById[id] = i;
+      }
+      final name = (map['name'] as String?) ?? '';
+      final normalizedName = name.toLowerCase().trim();
+      _channelLowerNames[i] = normalizedName;
+      final group = ((map['groupTitle'] ?? '').toString()).toLowerCase().trim();
+      _channelLowerGroups[i] = group;
+      final groupKey = group.isNotEmpty ? group : 'uncategorized';
+      _channelIndicesByGroup.putIfAbsent(groupKey, () => []).add(i);
+    }
+  }
 
   final List<Channel> _favoriteChannels = [];
   // Store VOD content count only - lazy load actual content on demand
@@ -615,6 +641,7 @@ class ChannelProvider with ChangeNotifier {
         if (preview.isNotEmpty) {
           _channelMaps = preview;
           _channelCache.clear();
+          _rebuildChannelCaches();
           _channelCountDb = _channelMaps.length;
           _cachedCategories = null;
           _updateEpgAllowedChannels();
@@ -1422,23 +1449,20 @@ class ChannelProvider with ChangeNotifier {
   List<Map<String, dynamic>> getChannelMapsForCategory(String category,
       {int limit = 50}) {
     final result = <Map<String, dynamic>>[];
-    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
-      final channelMap = _channelMaps[i];
-      final channelCategory =
-          (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
-      if (channelCategory == category) {
-        result.add(channelMap);
-      }
+    final lowerCategory = category.toLowerCase();
+    final indices = _channelIndicesByGroup[lowerCategory] ?? const [];
+    for (final i in indices) {
+      if (result.length >= limit) break;
+      result.add(_channelMaps[i]);
     }
     return result;
   }
 
   /// Find a channel by ID (lazy conversion)
   Channel? getChannelById(String id) {
-    for (int i = 0; i < _channelMaps.length; i++) {
-      if (_channelMaps[i]['id'] == id) {
-        return _getChannelAt(i);
-      }
+    final index = _channelIndexById[id];
+    if (index != null) {
+      return _getChannelAt(index);
     }
     return null;
   }
@@ -1451,25 +1475,28 @@ class ChannelProvider with ChangeNotifier {
     int limit = 500,
   }) {
     final result = <Channel>[];
-    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
-      final map = _channelMaps[i];
+    final lowerCategory = category?.toLowerCase();
+    Iterable<int> indices;
 
-      // Filter by hidden
-      if (excludeHidden && map['isHidden'] == true) continue;
+    if (lowerCategory != null) {
+      indices = _channelIndicesByGroup[lowerCategory] ?? const [];
+    } else {
+      indices = Iterable<int>.generate(_channelMaps.length);
+    }
 
-      // Filter by category
-      if (category != null) {
-        final channelCategory =
-            (map['groupTitle'] as String?) ?? 'Uncategorized';
-        if (channelCategory != category) continue;
+    for (final i in indices) {
+      if (excludeHidden &&
+          i < _channelMaps.length &&
+          _channelMaps[i]['isHidden'] == true) {
+        continue;
       }
-
-      // Filter by favorites
       if (favoriteIds != null) {
-        final channelId = map['id'] as String?;
-        if (channelId == null || !favoriteIds.contains(channelId)) continue;
+        final channelId = _channelMaps[i]['id'] as String?;
+        if (channelId == null || !favoriteIds.contains(channelId)) {
+          continue;
+        }
       }
-
+      if (result.length >= limit) break;
       result.add(_getChannelAt(i));
     }
     return result;
@@ -1548,8 +1575,21 @@ class ChannelProvider with ChangeNotifier {
   }
 
   List<Channel> get favoriteChannels => _favoriteChannels;
-  int get moviesCount => _moviesCount;
-  int get seriesCount => _seriesCount;
+  int get moviesCount {
+    final providerCount = _contentProvider?.movies.length ?? 0;
+    return max(_moviesCount, providerCount);
+  }
+
+  int get seriesCount {
+    final providerCount = _contentProvider?.series.length ?? 0;
+    return max(_seriesCount, providerCount);
+  }
+
+  bool get hasVodCache =>
+      _moviesCachePath != null ||
+      _seriesCachePath != null ||
+      _moviesJsonlPath != null ||
+      _seriesJsonlPath != null;
   double get loadingProgress => _loadingProgress;
   String get loadingStatus => _loadingStatus;
 
@@ -1750,6 +1790,7 @@ class ChannelProvider with ChangeNotifier {
         if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
           _channelMaps = [];
           _channelCache.clear();
+          _rebuildChannelCaches();
           _moviesCount = 0;
           _seriesCount = 0;
           _moviesCachePath = null;
@@ -1816,9 +1857,11 @@ class ChannelProvider with ChangeNotifier {
             _channelMaps = cachedChannels;
             _vodHydrated = false;
             _channelCache.clear();
+            _rebuildChannelCaches();
             _channelCountDb = _channelMaps.length;
             _invalidateCategoryCaches();
-            await _applyXtreamEpgMapFromCache();
+        _rebuildChannelCaches();
+        await _applyXtreamEpgMapFromCache();
             _updateEpgAllowedChannels();
             await _setCurrentEpgMapSignature(
               prefs: prefs,
@@ -1952,6 +1995,7 @@ class ChannelProvider with ChangeNotifier {
                 .map((c) => Map<String, dynamic>.from(c))
                 .toList();
             _channelCache.clear();
+            _rebuildChannelCaches();
             _channelCountDb = _channelMaps.length;
             _updateEpgAllowedChannels();
             await _setCurrentEpgMapSignature(
@@ -2586,6 +2630,7 @@ class ChannelProvider with ChangeNotifier {
           .map((c) => Map<String, dynamic>.from(c))
           .toList();
       _channelCache.clear();
+      _rebuildChannelCaches();
       _channelCountDb = _channelMaps.length;
       _updateEpgAllowedChannels();
       unawaited(_primeXtreamLiveMetadata(url));
@@ -2725,6 +2770,7 @@ class ChannelProvider with ChangeNotifier {
           .map((channel) => Map<String, dynamic>.from(channel as Map))
           .toList();
       _channelCache.clear();
+      _rebuildChannelCaches();
       _channelCountDb = _channelMaps.length;
       await _applyXtreamEpgMapFromCache();
       _updateEpgAllowedChannels();
@@ -2913,6 +2959,7 @@ class ChannelProvider with ChangeNotifier {
     if (hydrated.isEmpty) return;
     _channelMaps = hydrated;
     _channelCache.clear();
+    _rebuildChannelCaches();
     _channelCountDb = _channelMaps.length;
     _invalidateCategoryCaches();
     _updateEpgAllowedChannels();
@@ -3362,8 +3409,8 @@ class ChannelProvider with ChangeNotifier {
     final lowerQuery = query.toLowerCase();
     final result = <Channel>[];
     for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
-      final name = (_channelMaps[i]['name'] as String?) ?? '';
-      if (name.toLowerCase().contains(lowerQuery)) {
+      if (i < _channelLowerNames.length &&
+          _channelLowerNames[i].contains(lowerQuery)) {
         result.add(_getChannelAt(i));
       }
     }
@@ -3388,48 +3435,32 @@ class ChannelProvider with ChangeNotifier {
   List<Channel> filterByCategory(String category,
       {int offset = 0, int limit = 100}) {
     final result = <Channel>[];
-    int skipped = 0;
-    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
-      final channelCategory =
-          (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
-      if (channelCategory == category) {
-        if (skipped < offset) {
-          skipped++;
-          continue;
-        }
-        result.add(_getChannelAt(i));
-      }
+    final lowerCategory = category.toLowerCase();
+    final indices = _channelIndicesByGroup[lowerCategory] ?? const [];
+    for (int i = offset; i < indices.length && result.length < limit; i++) {
+      result.add(_getChannelAt(indices[i]));
     }
     return result;
   }
 
   /// Get count of channels in a category (no conversion needed)
   int getChannelCountForCategory(String category) {
-    int count = 0;
-    for (int i = 0; i < _channelMaps.length; i++) {
-      final channelCategory =
-          (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
-      if (channelCategory == category) {
-        count++;
-      }
-    }
-    return count;
+    final lowerCategory = category.toLowerCase();
+    return _channelIndicesByGroup[lowerCategory]?.length ?? 0;
   }
 
   /// Get a channel at a specific index within a category (for lazy loading)
   Channel? getChannelInCategoryAtIndex(String category, int index) {
-    int found = 0;
-    for (int i = 0; i < _channelMaps.length; i++) {
-      final channelCategory =
-          (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
-      if (channelCategory == category) {
-        if (found == index) {
-          return _getChannelAt(i);
-        }
-        found++;
-      }
+    final lowerCategory = category.toLowerCase();
+    final indices = _channelIndicesByGroup[lowerCategory];
+    if (indices == null ||
+        index < 0 ||
+        index >= indices.length ||
+        indices[index] < 0 ||
+        indices[index] >= _channelMaps.length) {
+      return null;
     }
-    return null;
+    return _getChannelAt(indices[index]);
   }
 
   /// Compute EPG match stats asynchronously to avoid freezing the UI
