@@ -194,6 +194,16 @@ Example M3U format:
 http://example.com/stream1.m3u8
 ```
 
+## Xtream EPG matcher
+
+For troubleshooting Xtream-based playlists you can run the helper script:
+
+```bash
+python3 tools/xtream_playlist_epg_matcher.py https://xtream.host:port username password
+```
+
+The tool probes for XMLTV feeds, downloads the playlist, and prints matched/unmatched samples. Add `--xmltv-url` to override the discovery step or `--verbose` to see probes.
+
 ## Contributing
 
 Contributions are welcome! Please see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
