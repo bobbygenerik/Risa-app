@@ -17,6 +17,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:video_player/video_player.dart'; // Keep for type if needed, but prefer Universal
 import '../controllers/universal_player_controller.dart';
 import '../widgets/exo_player_widget.dart';
+import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
@@ -58,12 +59,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   VoidCallback? _playerListener;
   Timer? _controlsHideTimer;
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
+  bool _playerReady = false;
+  bool _playerLoadScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _playerControllerNotifier.addListener(_handleControllerUpdate);
     _initializePlayer();
+    _schedulePlayerWarmup();
   }
 
   IntegratedTranscriptionService? _transcriptionServiceRef;
@@ -166,6 +170,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
   }
 
+  void _schedulePlayerWarmup() {
+    if (_playerLoadScheduled) return;
+    _playerLoadScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      MemoryManager.checkMemoryPressure();
+      MemoryManager.clearCaches();
+      MemoryManager.forceGarbageCollection();
+      setState(() => _playerReady = true);
+    });
+  }
+
   void _showErrorDialog(String title, String message) {
     showDialog(
       context: context,
@@ -200,26 +216,34 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
         child: GestureDetector(
           onTap: _toggleControls,
+
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                   children: [
                     // Player fills the available area
-                    Positioned.fill(
-                      child: ExoPlayerWidget(
-                        url: widget.videoUrl ??
-                            widget.content?.videoUrl ??
-                            widget.streamUrl ??
-                            widget.channel?.url ??
-                            '',
-                        isLive: widget.isLive,
-                        transcriptionService:
-                            Provider.of<IntegratedTranscriptionService>(context,
-                                listen: false),
-                        controllerNotifier: _playerControllerNotifier,
-                        fit: _videoFit,
+                    if (_playerReady)
+                      Positioned.fill(
+                        child: ExoPlayerWidget(
+                          url: widget.videoUrl ??
+                              widget.content?.videoUrl ??
+                              widget.streamUrl ??
+                              widget.channel?.url ??
+                              '',
+                          isLive: widget.isLive,
+                          transcriptionService:
+                              Provider.of<IntegratedTranscriptionService>(context,
+                                  listen: false),
+                          controllerNotifier: _playerControllerNotifier,
+                          fit: _videoFit,
+                        ),
+                      )
+                    else
+                      const Positioned.fill(
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
                       ),
-                    ),
                     // Live subtitle overlay positioned at bottom center
                     if (_subtitleMode == EnhancedSubtitleMode.liveTranslation)
                       Positioned(
