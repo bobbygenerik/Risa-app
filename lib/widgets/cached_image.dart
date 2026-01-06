@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
+import 'package:iptv_player/utils/network_error_logger.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -27,8 +31,26 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedUrl = normalizeImageUrl(imageUrl);
+    final maxCacheDimension = context.mediaQuerySize.shortestSide >= 800
+        ? 900
+        : 700;
+    final maxCacheDimensionDouble = maxCacheDimension.toDouble();
+    final rawCacheWidth = width != null
+        ? (width! * MediaQuery.of(context).devicePixelRatio)
+        : null;
+    final rawCacheHeight = height != null
+        ? (height! * MediaQuery.of(context).devicePixelRatio)
+        : null;
+    final cacheWidth = rawCacheWidth == null
+        ? null
+        : math.min(rawCacheWidth, maxCacheDimensionDouble).round();
+    final cacheHeight = rawCacheHeight == null
+        ? null
+        : math.min(rawCacheHeight, maxCacheDimensionDouble).round();
+
     Widget image = CachedNetworkImage(
-      imageUrl: imageUrl,
+      imageUrl: normalizedUrl,
       httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
@@ -46,20 +68,22 @@ class CachedImage extends StatelessWidget {
               ),
             ),
           ),
-      errorWidget: (context, url, error) =>
-          errorWidget ??
-          Container(
-            width: width,
-            height: height,
-            color: Colors.grey.withAlpha((0.2 * 255).round()),
-            child: const Icon(
-              Icons.broken_image,
-              color: Colors.white54,
-            ),
-          ),
+      errorWidget: (context, url, error) {
+        logHandshakeIfNeeded(url, error, context: 'CachedImage');
+        return errorWidget ??
+            Container(
+              width: width,
+              height: height,
+              color: Colors.grey.withAlpha((0.2 * 255).round()),
+              child: const Icon(
+                Icons.broken_image,
+                color: Colors.white54,
+              ),
+            );
+      },
       // Cache configuration
-      memCacheWidth: width != null ? (width! * MediaQuery.of(context).devicePixelRatio).round() : null,
-      memCacheHeight: height != null ? (height! * MediaQuery.of(context).devicePixelRatio).round() : null,
+      memCacheWidth: cacheWidth,
+      memCacheHeight: cacheHeight,
       maxWidthDiskCache: 1200, // Increased from 800 for better quality
       maxHeightDiskCache: 800, // Increased from 600
     );
@@ -102,8 +126,9 @@ class CachedChannelLogo extends StatelessWidget {
       );
     }
 
+    final normalizedUrl = normalizeImageUrl(logoUrl!);
     final provider = LogoImageCache.providerFor(
-      logoUrl!,
+      normalizedUrl,
       headers: HttpClientService().imageHeaders,
     );
     final placeholder = _buildLogoPlaceholder(size, fallbackIcon);
@@ -120,7 +145,14 @@ class CachedChannelLogo extends StatelessWidget {
         }
         return placeholder;
       },
-      errorBuilder: (context, error, stackTrace) => placeholder,
+      errorBuilder: (context, error, stackTrace) {
+        logHandshakeIfNeeded(
+          normalizedUrl,
+          error,
+          context: 'CachedChannelLogo',
+        );
+        return placeholder;
+      },
     );
   }
 }

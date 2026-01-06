@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
 
 class _LogoCacheEntry {
   final ImageProvider provider;
@@ -16,14 +17,16 @@ class LogoImageCache {
     String url, {
     Map<String, String>? headers,
   }) {
-    final key = _cacheKey(url, headers);
+    final normalizedUrl = normalizeImageUrl(url);
+    final key = _cacheKey(normalizedUrl, headers);
     final existing = _cache[key];
     if (existing != null) {
       _touch(key);
       return existing.provider;
     }
 
-    final provider = CachedNetworkImageProvider(url, headers: headers);
+    final provider =
+        CachedNetworkImageProvider(normalizedUrl, headers: headers);
     _cache[key] = _LogoCacheEntry(provider);
     _order.add(key);
     _trim();
@@ -48,5 +51,10 @@ class LogoImageCache {
       final oldest = _order.removeAt(0);
       _cache.remove(oldest);
     }
+  }
+
+  static void clear() {
+    _cache.clear();
+    _order.clear();
   }
 }

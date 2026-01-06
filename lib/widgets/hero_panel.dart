@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
-import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A unified container for Hero information panels.
@@ -35,72 +34,37 @@ class HeroInfoSkeleton extends StatelessWidget {
 
   /// Whether to show the small logo/label slot in the skeleton.
   final bool showLogo;
+  final EdgeInsets? padding;
 
   const HeroInfoSkeleton({
     super.key,
     required this.width,
-    this.showLogo = false,
+    this.showLogo = true,
+    this.padding,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: EdgeInsets.symmetric(
-        vertical: context.spacingMd(),
-        horizontal: context.spacingSm(),
-      ),
-      decoration: BoxDecoration(
-        color: AppTheme.darkBackground.withAlpha((0.9 * 255).round()),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
-      ),
+      padding: padding ?? EdgeInsets.all(context.spacingSm()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showLogo)
             Container(
-              height: context.tvSpacing(40),
-              width: width * 0.35,
+              height: context.tvSpacing(64),
+              width: width * 0.4,
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha((0.15 * 255).round()),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-          if (showLogo) SizedBox(height: context.spacingSm()),
+          SizedBox(height: context.spacingSm()),
           Container(
-            height: context.tvSpacing(32),
-            width: width * 0.75,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.12 * 255).round()),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          SizedBox(height: context.spacingXs()),
-          Container(
-            height: 12,
-            width: width * 0.9,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.08 * 255).round()),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          SizedBox(height: context.spacingXs()),
-          Container(
-            height: 12,
-            width: width * 0.6,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha((0.08 * 255).round()),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          SizedBox(height: context.spacingMd()),
-          Container(
-            height: 4,
-            width: width * 0.9,
+            height: context.tvSpacing(48),
+            width: width * 0.8,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(4),
@@ -113,7 +77,7 @@ class HeroInfoSkeleton extends StatelessWidget {
                 width: 40,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.12 * 255).round()),
+                  color: Colors.white.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -122,16 +86,33 @@ class HeroInfoSkeleton extends StatelessWidget {
                 width: 60,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.12 * 255).round()),
+                  color: Colors.white.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ],
           ),
+          Container(
+            height: 14,
+            width: width * 0.9,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.05 * 255).round()),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            height: 14,
+            width: width * 0.7,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.05 * 255).round()),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           SizedBox(height: context.spacingLg()),
           Container(
-            height: 34,
-            width: width * 0.45,
+            height: 36,
+            width: 120,
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(8),

@@ -1137,6 +1137,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _handleClearEpg() async {
     _customEpgUrlController.clear();
     _secondaryEpgUrlController.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('live_tv_program_artwork_title_cache_v1');
+    await prefs.remove('live_tv_program_artwork_negative_cache_v1');
     _showMessage('EPG cleared.');
   }
 

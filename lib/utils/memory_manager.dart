@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:iptv_player/utils/logo_image_cache.dart';
 
 class MemoryManager {
   static const int _maxMemoryThresholdMB = 200; // Conservative threshold
@@ -44,6 +45,7 @@ class MemoryManager {
       // Clear image cache
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
+      LogoImageCache.clear();
       
       debugPrint('Cleared image caches');
     } catch (e) {

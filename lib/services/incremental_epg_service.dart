@@ -147,6 +147,12 @@ class IncrementalEpgService extends ChangeNotifier {
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _availableChannels.length;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
+  bool get isReady =>
+      _hasParsed &&
+      !_isLoading &&
+      !_isDownloading &&
+      !_isParsing &&
+      _availableChannels.isNotEmpty;
   String? get currentUrl => _epgUrl;
   int get allowedChannelCount => _allowedChannelCount;
   int get catchupChannelCount => _catchupByNormalizedId.length;
