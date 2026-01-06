@@ -621,6 +621,41 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final epgReadyStable = epgReady &&
               _epgReadySince != null &&
               DateTime.now().difference(_epgReadySince!) >= _epgReadyGrace;
+          final latestCategories = channelProvider.getAllCategoryNames();
+          if (latestCategories.isNotEmpty) {
+            final shouldUpdate = _categoryNames.isEmpty ||
+                latestCategories.length > _categoryNames.length;
+            if (shouldUpdate) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                if (_categoryNames.isEmpty) {
+                  _categoryNames = List<String>.from(latestCategories);
+                  _categoryNameSet
+                    ..clear()
+                    ..addAll(_categoryNames);
+                } else {
+                  for (final name in latestCategories) {
+                    if (_categoryNameSet.add(name)) {
+                      _categoryNames.add(name);
+                    }
+                  }
+                }
+                if (_visibleCategoryCount < _initialCategoryPrefetchCount) {
+                  _visibleCategoryCount = math.min(
+                    _initialCategoryPrefetchCount,
+                    _categoryNames.length,
+                  );
+                } else {
+                  _visibleCategoryCount =
+                      math.min(_visibleCategoryCount, _categoryNames.length);
+                }
+                _lastPrefetchAnchor = -1;
+                setState(() {});
+                unawaited(_prefetchInitialCategoryRows());
+              });
+            }
+          }
+
           // Improved EPG loading detection - only show skeleton if truly loading
           final epgBusy = epgService.hasEpgUrl &&
               (epgService.isDownloading ||
@@ -684,41 +719,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
           _requestCategoryPrefetch();
           _maybeRefreshCategories(channelProvider.channelCount);
-          final latestCategories = channelProvider.getAllCategoryNames();
-          if (latestCategories.isNotEmpty) {
-            final shouldUpdate =
-                _categoryNames.isEmpty || latestCategories.length >
-                    _categoryNames.length;
-            if (shouldUpdate) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (_categoryNames.isEmpty) {
-                  _categoryNames = List<String>.from(latestCategories);
-                  _categoryNameSet
-                    ..clear()
-                    ..addAll(_categoryNames);
-                } else {
-                  for (final name in latestCategories) {
-                    if (_categoryNameSet.add(name)) {
-                      _categoryNames.add(name);
-                    }
-                  }
-                }
-                if (_visibleCategoryCount < _initialCategoryPrefetchCount) {
-                  _visibleCategoryCount = math.min(
-                    _initialCategoryPrefetchCount,
-                    _categoryNames.length,
-                  );
-                } else {
-                  _visibleCategoryCount =
-                      math.min(_visibleCategoryCount, _categoryNames.length);
-                }
-                _lastPrefetchAnchor = -1;
-                setState(() {});
-                unawaited(_prefetchInitialCategoryRows());
-              });
-            }
-          }
           final previewCount = channelProvider.channelCount;
           if (_previewFuture == null ||
               _lastPreviewChannelCount != previewCount) {
