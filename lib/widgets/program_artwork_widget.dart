@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
@@ -205,6 +206,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         child: _artworkUrl != null && _artworkUrl!.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: _artworkUrl!,
+                httpHeaders: HttpClientService().imageHeaders,
                 fit: widget.fit,
                 placeholder: (context, url) =>
                     widget.placeholder ??

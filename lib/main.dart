@@ -65,6 +65,7 @@ import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+const bool _enablePrewarm = false;
 
 class _DeviceMemoryInfo {
   final bool isLowMemory;
@@ -711,10 +712,8 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = IncrementalEpgService();
-              // Initialize EPG service immediately with URL from settings
-              service.initialize().catchError((e) {
-                debugLog('EPG Service initialization failed: $e');
-              });
+              // Defer EPG initialization until the user opens EPG screens to
+              // avoid large memory spikes during playback.
               return service;
             },
           ),
@@ -836,7 +835,7 @@ class _MyAppState extends State<MyApp> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               BackgroundTaskManager.start(context);
             });
-            if (!_prewarmStarted) {
+            if (_enablePrewarm && !_prewarmStarted) {
               _prewarmStarted = true;
               _runDeferred(
                 () async {

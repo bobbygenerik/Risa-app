@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/logo_image_cache.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -27,6 +29,7 @@ class CachedImage extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
+      httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
       fit: fit,
@@ -99,39 +102,41 @@ class CachedChannelLogo extends StatelessWidget {
       );
     }
 
-    return CachedNetworkImage(
-      imageUrl: logoUrl!,
+    final provider = LogoImageCache.providerFor(
+      logoUrl!,
+      headers: HttpClientService().imageHeaders,
+    );
+    final placeholder = _buildLogoPlaceholder(size, fallbackIcon);
+
+    return Image(
+      image: provider,
       width: size,
       height: size,
       fit: BoxFit.contain,
-      memCacheWidth: cacheWidth ?? (size * MediaQuery.of(context).devicePixelRatio).round(),
-      // memCacheHeight removed to preserve aspect ratio
-      placeholder: (context, url) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.grey.withAlpha((0.2 * 255).round()),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          fallbackIcon,
-          size: size * 0.6,
-          color: Colors.white54,
-        ),
-      ),
-      errorWidget: (context, url, error) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.grey.withAlpha((0.2 * 255).round()),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          fallbackIcon,
-          size: size * 0.6,
-          color: Colors.white54,
-        ),
-      ),
+      filterQuality: FilterQuality.high,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) {
+          return child;
+        }
+        return placeholder;
+      },
+      errorBuilder: (context, error, stackTrace) => placeholder,
     );
   }
+}
+
+Widget _buildLogoPlaceholder(double size, IconData fallbackIcon) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: Colors.grey.withAlpha((0.2 * 255).round()),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Icon(
+      fallbackIcon,
+      size: size * 0.6,
+      color: Colors.white54,
+    ),
+  );
 }

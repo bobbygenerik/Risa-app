@@ -11,6 +11,7 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -156,13 +157,14 @@ class CategoryScreen extends StatelessWidget {
                                     .tvSpacing(8)), // AppSizes.sm assumed 8
                                 child: CachedNetworkImage(
                                   imageUrl: channel.logoUrl!,
-                                  fit: BoxFit.contain,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  httpHeaders: const {
+                                  httpHeaders: {
+                                    ...HttpClientService().imageHeaders,
                                     'User-Agent':
                                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                                   },
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                  height: double.infinity,
                                   placeholder: (context, url) =>
                                       _buildChannelPlaceholder(channel.name),
                                   errorWidget: (context, url, error) =>

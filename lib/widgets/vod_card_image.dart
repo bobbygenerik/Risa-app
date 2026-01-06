@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 /// Widget that displays VOD card image with TMDB fallback
 /// If imageUrl is missing/invalid, fetches poster from TMDB
@@ -95,6 +96,7 @@ class _VodCardImageState extends State<VodCardImage> {
         if (tmdbUrl != null && tmdbUrl.isNotEmpty) {
           return CachedNetworkImage(
             imageUrl: tmdbUrl,
+            httpHeaders: HttpClientService().imageHeaders,
             fit: widget.fit,
             width: double.infinity,
             height: double.infinity,
@@ -116,6 +118,7 @@ class _VodCardImageState extends State<VodCardImage> {
     if (originalUrl != null && originalUrl.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: originalUrl,
+        httpHeaders: HttpClientService().imageHeaders,
         fit: widget.fit,
         width: double.infinity,
         height: double.infinity,

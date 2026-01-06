@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -222,13 +223,14 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                     ),
                                     child: CachedNetworkImage(
                                       imageUrl: channel.logoUrl!,
-                                      fit: BoxFit.contain,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      httpHeaders: const {
+                                      httpHeaders: {
+                                        ...HttpClientService().imageHeaders,
                                         'User-Agent':
                                             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                                       },
+                                      fit: BoxFit.contain,
+                                      width: double.infinity,
+                                      height: double.infinity,
                                       placeholder: (context, url) =>
                                           _buildChannelPlaceholder(
                                               channel.name),

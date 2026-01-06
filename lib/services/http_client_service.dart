@@ -62,6 +62,12 @@ class HttpClientService {
         'Range': 'bytes=0-',
       };
 
+  Map<String, String> get imageHeaders => {
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
+        'Connection': 'keep-alive',
+        'Accept': 'image/*,*/*',
+      };
+
   void dispose() {
     _httpClient.close();
     _dio.close();

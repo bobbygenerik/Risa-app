@@ -26,6 +26,7 @@ import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
 import 'package:iptv_player/widgets/skeleton_loader.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 List<Map<String, dynamic>> _buildMovieGenreBucketsIsolate(
     List<Map<String, dynamic>> items) {
@@ -95,6 +96,8 @@ class _MoviesScreenState extends State<MoviesScreen>
   final FocusNode _settingsFocus = FocusNode();
   final FocusNode _firstRowFocus = FocusNode();
   final FocusNode _skeletonFocus = FocusNode(debugLabel: 'Movies Skeleton');
+  Timer? _startupGraceTimer;
+  bool _startupGraceActive = true;
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
   final Set<String> _heroDetailsRequests = {};
@@ -126,6 +129,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       node.dispose();
     }
     _carouselTimer?.cancel();
+    _startupGraceTimer?.cancel();
     _scrollController.removeListener(_handleSectionPrefetch);
     _scrollController.dispose();
     _playFocus.removeListener(_onPlayFocusChange);
@@ -198,6 +202,10 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   void initState() {
     super.initState();
+    _startupGraceTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() => _startupGraceActive = false);
+    });
     _playFocus.addListener(_onPlayFocusChange);
     _scrollController.addListener(_handleSectionPrefetch);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -462,6 +470,9 @@ class _MoviesScreenState extends State<MoviesScreen>
         }
 
         if (movies.isEmpty) {
+          if (_startupGraceActive) {
+            return _buildStartupLoader();
+          }
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
@@ -561,6 +572,27 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartupLoader() {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: AppTheme.primaryBlue),
+            const SizedBox(height: AppSizes.md),
+            Text(
+              'Loading Movies...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -1238,6 +1270,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       return Positioned.fill(
         child: CachedNetworkImage(
           imageUrl: heroImage,
+          httpHeaders: HttpClientService().imageHeaders,
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
@@ -1256,6 +1289,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: CachedNetworkImage(
               imageUrl: heroImage,
+              httpHeaders: HttpClientService().imageHeaders,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
@@ -1271,6 +1305,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           Center(
             child: CachedNetworkImage(
               imageUrl: heroImage,
+              httpHeaders: HttpClientService().imageHeaders,
               fit: BoxFit.contain,
               width: double.infinity,
               height: double.infinity,
@@ -1410,7 +1445,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 physics: const NeverScrollableScrollPhysics(),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    top: 140.0, // content offset
+                    top: 0,
                     bottom: context.spacingXxl(),
                   ),
                   child: Column(

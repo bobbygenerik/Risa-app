@@ -305,6 +305,7 @@ class TMDBService {
             'backdrop': movie['backdrop_path'] != null
                 ? '$_imageBaseUrl${movie['backdrop_path']}'
                 : null,
+            'title': movie['title'] ?? movie['original_title'],
             'overview': movie['overview'] as String?,
             'release_date': movie['release_date'] as String?,
             'genres': genres.isNotEmpty ? genres : null,
@@ -352,6 +353,7 @@ class TMDBService {
                 : null,
             'poster': validPoster,
             'backdrop': validPoster,
+            'title': data['Title'] as String? ?? normalizedTitle,
             'overview': data['Plot'] as String?,
             'release_date': data['Year'] as String?,
           };
@@ -407,6 +409,7 @@ class TMDBService {
             'backdrop': show['backdrop_path'] != null
                 ? '$_imageBaseUrl${show['backdrop_path']}'
                 : null,
+            'title': show['name'] ?? show['original_name'],
             'overview': show['overview'] as String?,
             'first_air_date': show['first_air_date'] as String?,
             'genres': genres.isNotEmpty ? genres : null,
@@ -490,6 +493,42 @@ class TMDBService {
     } finally {
       _processingRequests.remove(cacheKey);
     }
+  }
+
+  /// Returns image + metadata for a given title (for blacklist/validation use cases).
+  static Future<Map<String, dynamic>?> getBestBackdropDetails(
+    String title, {
+    int? year,
+  }) async {
+    await init();
+    final normalizedTitle = _normalizeTitle(title);
+    final cacheKey = _cacheKey('art:bestmeta', normalizedTitle, year: year);
+    final cached = _getFromCache(cacheKey);
+    if (cached != null && cached.containsKey('image')) {
+      return cached;
+    }
+
+    var details = await _resolveTmdbBackdrop(normalizedTitle, year);
+    if (!_hasArtwork(details)) {
+      details ??= await _tryTeamHeuristic(normalizedTitle, year);
+      if (!_hasArtwork(details)) {
+        details ??= await _tryOmdbFallback(normalizedTitle, year);
+      }
+    }
+
+    final image = _extractBackdropUrl(details);
+    final result = {
+      'image': image,
+      'title': details?['title'],
+      'mediaType': details?['mediaType'],
+      'genres': details?['genres'],
+    };
+    _setCache(
+      cacheKey,
+      result,
+      ttl: image == null ? const Duration(hours: 1) : null,
+    );
+    return result;
   }
 
   static Future<Map<String, dynamic>?> _resolveTmdbBackdrop(

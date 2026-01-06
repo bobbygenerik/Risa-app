@@ -1891,6 +1891,8 @@ class ChannelProvider with ChangeNotifier {
             final dir = await getApplicationDocumentsDirectory();
             _moviesCachePath = '${dir.path}/movies_cache.json';
             _seriesCachePath = '${dir.path}/series_cache.json';
+            _moviesCount = parsed['movieCount'] as int? ?? 0;
+            _seriesCount = parsed['seriesCount'] as int? ?? 0;
 
             // If JSON cache only has the preview list, hydrate full channels
             // from the cached JSONL file in the background.
@@ -1906,33 +1908,7 @@ class ChannelProvider with ChangeNotifier {
               ));
             }
 
-            // Asynchronously read counts from VOD cache files without blocking
-            unawaited(Future.microtask(() async {
-              if (_moviesCachePath != null) {
-                final moviesFile = File(_moviesCachePath!);
-                if (await moviesFile.exists()) {
-                  final moviesJson = await moviesFile.readAsString();
-                  if (moviesJson.trim().isNotEmpty) {
-                    _moviesCount = (json.decode(moviesJson) as List).length;
-                  } else {
-                    _moviesCount = 0;
-                  }
-                  if (!_disposed) notifyListeners();
-                }
-              }
-              if (_seriesCachePath != null) {
-                final seriesFile = File(_seriesCachePath!);
-                if (await seriesFile.exists()) {
-                  final seriesJson = await seriesFile.readAsString();
-                  if (seriesJson.trim().isNotEmpty) {
-                    _seriesCount = (json.decode(seriesJson) as List).length;
-                  } else {
-                    _seriesCount = 0;
-                  }
-                  if (!_disposed) notifyListeners();
-                }
-              }
-            }));
+            if (!_disposed) notifyListeners();
 
             _invalidateCategoryCaches();
             unawaited(_computeCategoriesAsync());

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/channel_logo_service.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/utils/logo_image_cache.dart';
 
 /// A widget that displays a channel logo with fallback support
 /// It will try to enrich the logo from known databases if the original is missing
@@ -96,13 +97,19 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         height: tvHeight,
         color: widget.backgroundColor ?? Colors.transparent,
         child: _effectiveLogoUrl != null && _effectiveLogoUrl!.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: _effectiveLogoUrl!,
+            ? Image(
+                image: LogoImageCache.providerFor(
+                  _effectiveLogoUrl!,
+                  headers: HttpClientService().imageHeaders,
+                ),
                 fit: widget.fit,
-                placeholder: (context, url) =>
-                    widget.placeholder ??
-                    Icon(Icons.tv, size: context.tvIconSize(32)),
-                errorWidget: (context, url, error) =>
+                filterQuality: FilterQuality.high,
+                frameBuilder: (context, child, frame, wasSync) {
+                  if (wasSync || frame != null) return child;
+                  return widget.placeholder ??
+                      Icon(Icons.tv, size: context.tvIconSize(32));
+                },
+                errorBuilder: (context, error, stackTrace) =>
                     widget.errorWidget ??
                     Icon(Icons.tv, size: context.tvIconSize(32)),
               )

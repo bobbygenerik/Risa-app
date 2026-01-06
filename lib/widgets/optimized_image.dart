@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 /// Optimized image widget with progressive loading and memory management
 class OptimizedImage extends StatelessWidget {
@@ -43,6 +44,7 @@ class OptimizedImage extends StatelessWidget {
 
     return CachedNetworkImage(
       imageUrl: imageUrl,
+      httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
       fit: fit,
