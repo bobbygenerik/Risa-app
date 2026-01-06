@@ -6,7 +6,9 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.content.res.Configuration
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -127,10 +129,18 @@ class ExoPlayerView(
         // Build ExoPlayer with memory-optimized settings (shared across views)
         if (sharedPlayer == null || sharedTrackSelector == null) {
             trackSelector = DefaultTrackSelector(context.applicationContext)
-            trackSelector.parameters = trackSelector.buildUponParameters()
+            val isAndroidTv =
+                (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
+                    Configuration.UI_MODE_TYPE_TELEVISION
+            val parametersBuilder = trackSelector.buildUponParameters()
                 .setMaxAudioChannelCount(2) // Limit to stereo to save memory
                 .setMaxVideoSizeSd() // Limit video resolution to save memory
-                .build()
+            if (isAndroidTv) {
+                // Prefer SDR H.264 on Android TV to avoid HDR/BT.2020 tint issues.
+                parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
+                parametersBuilder.setAllowedVideoMimeTypes(MimeTypes.VIDEO_H264)
+            }
+            trackSelector.parameters = parametersBuilder.build()
             sharedTrackSelector = trackSelector
 
             try {
