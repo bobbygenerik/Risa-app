@@ -41,6 +41,10 @@ class IncrementalEpgService extends ChangeNotifier {
   Set<String> _allowedChannelIdsNormalized = {};
   int _allowedChannelCount = 0;
   int _epgFutureHours = 8;
+  static const int _initialFutureHours = 6;
+  static const int _fullFutureHours = 24;
+  bool _extendedWindowScheduled = false;
+  bool _extendingWindow = false;
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
   Map<String, int> _catchupHoursByNormalizedId = {};
   String? _xtreamServer;
@@ -84,8 +88,8 @@ class IncrementalEpgService extends ChangeNotifier {
       RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
   static final RegExp _unbrokenEntityRe =
       RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
-  static final RegExp _timeParseRe = RegExp(
-      r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp _timeParseRe =
+      RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
   static final RegExp _trailingSlashRe = RegExp(r'/+$');
   static final RegExp _bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
   static final RegExp _commonPrefixRe =
@@ -105,9 +109,8 @@ class IncrementalEpgService extends ChangeNotifier {
       caseSensitive: false);
   static final RegExp _sepRe = RegExp(r'[|._]+');
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
-  static final RegExp _qualitySufRe = RegExp(
-      r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)',
-      caseSensitive: false);
+  static final RegExp _qualitySufRe =
+      RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false);
   static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
   static final RegExp _techChPrefixRe =
       RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
@@ -124,12 +127,13 @@ class IncrementalEpgService extends ChangeNotifier {
       RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
   static final RegExp _channelEndRe =
       RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
-
+  static const int _fnvOffsetBasis = 0xcbf29ce484222325;
+  static const int _fnvPrime = 0x100000001b3;
 
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
   static const String _epgCacheUrlKey = 'epg_cache_url';
-  static const String _epgCacheBackupFileName = 'epg_cache_backup.xml';
+  static const String _epgCacheBackupFileName = 'epg_cache_backup.xml.gz';
   static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
@@ -232,22 +236,17 @@ class IncrementalEpgService extends ChangeNotifier {
     return bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
   }
 
-  Future<bool> _maybeDecompressGzipFile(File file) async {
-    try {
-      final header = await file.openRead(0, 2).first;
-      if (!_looksLikeGzip(header)) return false;
-      final tempFile = File('${file.path}.xml');
-      final sink = tempFile.openWrite();
-      await file.openRead().transform(gzip.decoder).pipe(sink);
-      if (await file.exists()) {
-        await file.delete();
-      }
-      await tempFile.rename(file.path);
-      return true;
-    } catch (e) {
-      debugLog('EPG: Failed to decompress gzip body: $e');
-      return false;
+  Future<String> _readDecodedPrefix(File file, {int maxBytes = 16384}) async {
+    final buffer = <int>[];
+    final stream = file.openRead();
+    final decoded = file.path.toLowerCase().endsWith('.gz')
+        ? stream.transform(gzip.decoder)
+        : stream;
+    await for (final chunk in decoded) {
+      buffer.addAll(chunk);
+      if (buffer.length >= maxBytes) break;
     }
+    return utf8.decode(buffer, allowMalformed: true).trimLeft().toLowerCase();
   }
 
   void setAllowedChannelIds(Set<String> channelIds,
@@ -317,9 +316,10 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Load user's EPG cache duration preference (defaults to 6 hours)
-      final userCacheHours = prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
+      final userCacheHours =
+          prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
       _cacheDuration = Duration(hours: userCacheHours);
       debugLog('EPG: Using cache duration of $userCacheHours hours');
       // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
@@ -359,7 +359,9 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       await _handleCacheUrlChange(prefs);
-      _epgFutureHours = 24;
+      _epgFutureHours = _initialFutureHours;
+      _extendedWindowScheduled = false;
+      _extendingWindow = false;
 
       if (_epgUrl != null && _epgUrl!.isNotEmpty) {
         debugLog('EPG: Initializing with URL: $_epgUrl');
@@ -429,7 +431,8 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveNormalizedMappingToPrefs(Map<String, List<String>>? map) async {
+  Future<void> _saveNormalizedMappingToPrefs(
+      Map<String, List<String>>? map) async {
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.path}/$_normalizedMapFileName');
@@ -470,8 +473,8 @@ class IncrementalEpgService extends ChangeNotifier {
       final Map<String, dynamic> decoded = jsonDecode(jsonStr);
       _normalizedAvailableChannels = decoded.map((k, v) =>
           MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()));
-      _availableChannels.addAll(
-          _normalizedAvailableChannels!.values.expand((list) => list));
+      _availableChannels
+          .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
       debugLog(
           'EPG: Loaded normalized mapping from file (${_normalizedAvailableChannels!.length} entries)');
     } catch (e) {
@@ -481,7 +484,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<File> _getCacheFile() async {
     final dir = await getTemporaryDirectory();
-    return File('${dir.path}/epg_cache.xml');
+    return File('${dir.path}/epg_cache.xml.gz');
   }
 
   Future<File> _getCacheBackupFile() async {
@@ -631,7 +634,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
       final file = await _getCacheFile();
       var received = 0;
-      var maybeGzipBody = false;
+      var writeRawGzip = false;
 
       // Respect Content-Encoding header and avoid double-decompress.
       final encHeader =
@@ -645,6 +648,7 @@ class IncrementalEpgService extends ChangeNotifier {
           'EPG: Downloading content (Content-Encoding: $encHeader, Ext GZIP: $isGzipExt)...');
 
       final sink = file.openWrite();
+      ByteConversionSink? gzipSink;
 
       try {
         Stream<List<int>> stream = response;
@@ -670,8 +674,11 @@ class IncrementalEpgService extends ChangeNotifier {
               firstBuffer.addAll(data);
               // If we have enough or this is the last chunk, inspect.
               if (firstBuffer.length >= requiredInspectBytes) {
-                if (_looksLikeGzip(firstBuffer)) {
-                  maybeGzipBody = true;
+                if (!isGzipHeader &&
+                    !isGzipExt &&
+                    !isDeflateHeader &&
+                    _looksLikeGzip(firstBuffer)) {
+                  writeRawGzip = true;
                   sink.add(firstBuffer);
                   headerChecked = true;
                   return;
@@ -717,11 +724,17 @@ class IncrementalEpgService extends ChangeNotifier {
                 }
 
                 // Looks like XML — write the buffered bytes and continue
-                sink.add(firstBuffer);
+                gzipSink ??= gzip.encoder.startChunkedConversion(sink);
+                gzipSink!.add(firstBuffer);
                 headerChecked = true;
               }
             } else {
-              sink.add(data);
+              if (writeRawGzip) {
+                sink.add(data);
+              } else {
+                gzipSink ??= gzip.encoder.startChunkedConversion(sink);
+                gzipSink!.add(data);
+              }
             }
 
             received += data.length;
@@ -743,8 +756,11 @@ class IncrementalEpgService extends ChangeNotifier {
         }, onDone: () async {
           // If header wasn't checked yet (small content), check now
           if (!headerChecked) {
-            if (_looksLikeGzip(firstBuffer)) {
-              maybeGzipBody = true;
+            if (!isGzipHeader &&
+                !isGzipExt &&
+                !isDeflateHeader &&
+                _looksLikeGzip(firstBuffer)) {
+              writeRawGzip = true;
               sink.add(firstBuffer);
               headerChecked = true;
               await sink.close();
@@ -787,11 +803,18 @@ class IncrementalEpgService extends ChangeNotifier {
             }
 
             // Looks like XML — write buffer
-            sink.add(firstBuffer);
+            gzipSink ??= gzip.encoder.startChunkedConversion(sink);
+            gzipSink!.add(firstBuffer);
             headerChecked = true;
           }
 
-          await sink.close();
+          if (writeRawGzip) {
+            await sink.close();
+          } else {
+            gzipSink ??= gzip.encoder.startChunkedConversion(sink);
+            gzipSink!.close();
+            await sink.close();
+          }
         });
         await sub.asFuture();
       } catch (e) {
@@ -817,27 +840,9 @@ class IncrementalEpgService extends ChangeNotifier {
         return;
       }
 
-      // If the body looks gzipped but no headers indicated it, decompress now.
-      if (maybeGzipBody) {
-        final decompressed = await _maybeDecompressGzipFile(file);
-        if (!decompressed) {
-          _error = 'EPG response does not start with XML';
-          debugLog('EPG: $_error');
-          try {
-            if (await file.exists()) await file.delete();
-          } catch (_) {}
-          return;
-        }
-      }
-
       // Read a small prefix to validate structure (avoid loading full file)
       try {
-        final prefixBytes =
-            await file.openRead(0, 16384).reduce((a, b) => a + b);
-        final prefix = utf8
-            .decode(prefixBytes, allowMalformed: true)
-            .trimLeft()
-            .toLowerCase();
+        final prefix = await _readDecodedPrefix(file, maxBytes: 16384);
         if (!prefix.startsWith('<')) {
           _error = 'EPG response does not start with XML';
           debugLog('EPG: $_error');
@@ -889,6 +894,7 @@ class IncrementalEpgService extends ChangeNotifier {
     bool forceRefresh = false,
     bool allowStaleCache = false,
     bool fromBackgroundRefresh = false,
+    bool skipDbLoad = false,
   }) async {
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
 
@@ -927,7 +933,7 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         // OPTIMIZATION: Try loading programs from DB before parsing XML
-        if (!forceRefresh && !_dbDisabled) {
+        if (!forceRefresh && !_dbDisabled && !skipDbLoad) {
           final programCount = await _db.programCount();
           if (programCount > 0) {
             debugLog('EPG: Found $programCount programs in DB, loading...');
@@ -942,47 +948,61 @@ class IncrementalEpgService extends ChangeNotifier {
                 _invalidateProgramIndexCache();
                 for (final entry in dbPrograms.entries) {
                   final epgId = entry.key;
-                  final programs = entry.value.map((row) => Program(
-                    id: '${epgId}_${row['startTs']}',
-                    channelId: epgId,
-                    title: row['title'] as String? ?? '',
-                    description: row['description'] as String?,
-                    startTime: DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int),
-                    endTime: DateTime.fromMillisecondsSinceEpoch(row['endTs'] as int),
-                    imageUrl: row['imageUrl'] as String?,
-                  )).toList();
+                  final programs = entry.value
+                      .map((row) => Program(
+                            id: '${epgId}_${row['startTs']}',
+                            channelId: epgId,
+                            title: row['title'] as String? ?? '',
+                            description: row['description'] as String?,
+                            startTime: DateTime.fromMillisecondsSinceEpoch(
+                                row['startTs'] as int),
+                            endTime: DateTime.fromMillisecondsSinceEpoch(
+                                row['endTs'] as int),
+                            imageUrl: row['imageUrl'] as String?,
+                          ))
+                      .toList();
                   _programsByChannel[epgId] = programs;
                 }
-                
+
                 // Also ensure availableChannels is populated
                 _availableChannels.clear();
                 _availableChannels.addAll(_programsByChannel.keys);
                 if (_normalizedAvailableChannels != null) {
-                  _availableChannels.addAll(
-                      _normalizedAvailableChannels!.values.expand((list) => list));
+                  _availableChannels.addAll(_normalizedAvailableChannels!.values
+                      .expand((list) => list));
                 }
                 _internalToEpgIdMapping.clear();
-                
+
                 // CRITICAL: Rebuild normalized mapping from DB keys if missing
-                if (_normalizedAvailableChannels == null || _normalizedAvailableChannels!.isEmpty) {
-                  debugLog('EPG: Rebuilding normalized mapping from DB keys...');
+                if (_normalizedAvailableChannels == null ||
+                    _normalizedAvailableChannels!.isEmpty) {
+                  debugLog(
+                      'EPG: Rebuilding normalized mapping from DB keys...');
                   _normalizedAvailableChannels = {};
                   for (final epgId in _programsByChannel.keys) {
                     final normalized = _normalize(epgId);
                     if (normalized.isNotEmpty) {
-                      _normalizedAvailableChannels!.putIfAbsent(normalized, () => []).add(epgId);
+                      _normalizedAvailableChannels!
+                          .putIfAbsent(normalized, () => [])
+                          .add(epgId);
                     }
                   }
-                  debugLog('EPG: Built normalized mapping with ${_normalizedAvailableChannels!.length} entries from ${_programsByChannel.length} channels');
+                  debugLog(
+                      'EPG: Built normalized mapping with ${_normalizedAvailableChannels!.length} entries from ${_programsByChannel.length} channels');
                 }
-                
-                debugLog('EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
+
+                debugLog(
+                    'EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
                 _hasParsed = true;
                 _isLoading = false;
                 _isParsing = false;
                 _error = null;
                 notifyListeners();
-                
+
+                _scheduleEpgWindowExtension(
+                  fromBackgroundRefresh: fromBackgroundRefresh,
+                );
+
                 // Schedule background refresh if cache is stale
                 if (deferRefresh) {
                   unawaited(_refreshFromNetwork());
@@ -1004,10 +1024,10 @@ class IncrementalEpgService extends ChangeNotifier {
           if (mappingCount > 0 && _programsByChannel.isNotEmpty) {
             debugLog(
                 'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
-            
+
             _availableChannels.addAll(
                 _normalizedAvailableChannels!.values.expand((list) => list));
-            
+
             _hasParsed = true;
             _isLoading = false;
             _isParsing = false;
@@ -1026,6 +1046,10 @@ class IncrementalEpgService extends ChangeNotifier {
           notifyListeners();
           return;
         }
+
+        final existingHashes = (!_dbDisabled && _db.isReady)
+            ? await _db.getEpgChannelHashes()
+            : <String, String>{};
 
         debugLog('EPG: Starting background parsing...');
         _isParsing = true;
@@ -1109,6 +1133,9 @@ class IncrementalEpgService extends ChangeNotifier {
         final parsedProgramCount = parseResult['programCount'] as int? ?? 0;
         final channelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
+        final channelHashes = (parseResult['channelHashes'] as Map?)
+                ?.map((k, v) => MapEntry(k.toString(), v.toString())) ??
+            <String, String>{};
 
         if (programFilePath == null ||
             programFilePath.isEmpty ||
@@ -1145,9 +1172,28 @@ class IncrementalEpgService extends ChangeNotifier {
             .map((k, v) => MapEntry(k.toString(),
                 (v as List<dynamic>).map((e) => e.toString()).toList()));
         final stagedPrograms = <String, List<Program>>{};
+        final skipChannels = <String>{};
+        if (channelHashes.isNotEmpty && existingHashes.isNotEmpty) {
+          for (final entry in channelHashes.entries) {
+            final existingHash = existingHashes[entry.key];
+            if (existingHash != null &&
+                existingHash.isNotEmpty &&
+                existingHash == entry.value) {
+              final existingPrograms = _programsByChannel[entry.key];
+              if (existingPrograms != null && existingPrograms.isNotEmpty) {
+                skipChannels.add(entry.key);
+                stagedPrograms[entry.key] = existingPrograms;
+              }
+            }
+          }
+        }
 
         // Stream programs from the temp file into memory (capped) and DB in batches
-        await _ingestProgramsFromFile(programFilePath, target: stagedPrograms);
+        await _ingestProgramsFromFile(
+          programFilePath,
+          target: stagedPrograms,
+          skipChannels: skipChannels,
+        );
 
         _programsByChannel
           ..clear()
@@ -1172,40 +1218,54 @@ class IncrementalEpgService extends ChangeNotifier {
         }
         // Clear mapping cache on successful fresh parse to allow re-matching with new data
         _internalToEpgIdMapping.clear();
-        
+
         // Persist normalized mapping to file for faster startup
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
         await _backupCacheFile();
 
         debugLog(
             'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs with ~$parsedProgramCount programs');
-        
+
+        if (channelHashes.isNotEmpty && !_dbDisabled) {
+          try {
+            await _db.upsertEpgChannelHashes(channelHashes);
+          } catch (e) {
+            debugLog('EPG: Failed to persist channel hashes: $e');
+          }
+        }
+
         // PERSIST: Save parsed programs to DB for fast future loads
         if (!_dbDisabled && _programsByChannel.isNotEmpty) {
           try {
             debugLog('EPG: Persisting programs to DB...');
             final dbPayload = <String, List<Map<String, dynamic>>>{};
             for (final entry in _programsByChannel.entries) {
-              dbPayload[entry.key] = entry.value.map((p) => {
-                'startTs': p.startTime.millisecondsSinceEpoch,
-                'endTs': p.endTime.millisecondsSinceEpoch,
-                'title': p.title,
-                'description': p.description,
-                'imageUrl': p.imageUrl,
-              }).toList();
+              dbPayload[entry.key] = entry.value
+                  .map((p) => {
+                        'startTs': p.startTime.millisecondsSinceEpoch,
+                        'endTs': p.endTime.millisecondsSinceEpoch,
+                        'title': p.title,
+                        'description': p.description,
+                        'imageUrl': p.imageUrl,
+                      })
+                  .toList();
             }
             await _db.clearPrograms();
             await _db.insertAllPrograms(dbPayload);
-            debugLog('EPG: Persisted ${_programsByChannel.length} channels to DB.');
+            debugLog(
+                'EPG: Persisted ${_programsByChannel.length} channels to DB.');
           } catch (e) {
             debugLog('EPG: Failed to persist programs to DB: $e');
             // Non-fatal, continue
           }
         }
-        
+
         if (deferRefresh && !fromBackgroundRefresh) {
           unawaited(_refreshFromNetwork());
         }
+        _scheduleEpgWindowExtension(
+          fromBackgroundRefresh: fromBackgroundRefresh,
+        );
         break;
       } catch (e, stack) {
         retryCount++;
@@ -1250,6 +1310,30 @@ class IncrementalEpgService extends ChangeNotifier {
     } finally {
       _refreshInFlight = false;
     }
+  }
+
+  void _scheduleEpgWindowExtension({required bool fromBackgroundRefresh}) {
+    if (fromBackgroundRefresh) return;
+    if (_extendedWindowScheduled || _extendingWindow) return;
+    if (_epgFutureHours >= _fullFutureHours) return;
+    _extendedWindowScheduled = true;
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      if (_extendingWindow) return;
+      _extendingWindow = true;
+      try {
+        _epgFutureHours = _fullFutureHours;
+        await _loadChannelList(
+          forceRefresh: false,
+          allowStaleCache: true,
+          fromBackgroundRefresh: true,
+          skipDbLoad: true,
+        );
+      } catch (_) {
+        // Ignore extension failures; keep initial window data.
+      } finally {
+        _extendingWindow = false;
+      }
+    });
   }
 
   // Optimized streaming parser running in an isolate
@@ -1312,6 +1396,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
     final channelIds = <String>{};
     final normalizedChannels = <String, List<String>>{};
+    final channelHashes = <String, int>{};
     var tempFile = File(
         '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}.jsonl');
     int programCount = 0;
@@ -1320,7 +1405,13 @@ class IncrementalEpgService extends ChangeNotifier {
     // contain stray bytes). If that fails with a FormatException from the
     // XML parser, retry with Latin1 which is more permissive for single-byte
     // encodings commonly found in XMLTV feeds.
-    Stream<List<int>> rawStreamProvider() => file.openRead();
+    Stream<List<int>> rawStreamProvider() {
+      final base = file.openRead();
+      if (file.path.toLowerCase().endsWith('.gz')) {
+        return base.transform(gzip.decoder);
+      }
+      return base;
+    }
 
     String sanitizeXmlChunk(String input) {
       // Remove invalid control characters and escape broken entities.
@@ -1407,12 +1498,12 @@ class IncrementalEpgService extends ChangeNotifier {
         }
         final endMatch = endMatches.first;
         final absoluteEnd = endMatch.end;
-        
+
         final block = buffer.substring(absoluteStart, absoluteEnd);
         onBlock(block);
         cursor = absoluteEnd;
       }
-      
+
       var tail = buffer.substring(cursor);
       if (tail.length > 65536) {
         tail = tail.substring(tail.length - 65536);
@@ -1450,6 +1541,7 @@ class IncrementalEpgService extends ChangeNotifier {
             futureEndMs,
             normalizeCached,
             channelIcons: channelIcons,
+            channelHashes: channelHashes,
           );
         } else if (startEvent.name.endsWith('channel')) {
           _processChannel(subtreeEvents, channelIds, normalizedChannels,
@@ -1494,7 +1586,9 @@ class IncrementalEpgService extends ChangeNotifier {
             if (display != null && display.isNotEmpty) {
               final normalizedDisplay = normalizeCached(display);
               if (normalizedDisplay.isNotEmpty) {
-                normalizedChannels.putIfAbsent(normalizedDisplay, () => []).add(id);
+                normalizedChannels
+                    .putIfAbsent(normalizedDisplay, () => [])
+                    .add(id);
               }
             }
             final icon = extractAttribute(block, 'src');
@@ -1528,7 +1622,8 @@ class IncrementalEpgService extends ChangeNotifier {
           final description = extractTagText(block, 'desc');
           final category = extractTagText(block, 'category');
           var icon = extractAttribute(block, 'src');
-          if ((icon == null || icon.isEmpty) && channelIcons.containsKey(channelId)) {
+          if ((icon == null || icon.isEmpty) &&
+              channelIcons.containsKey(channelId)) {
             icon = channelIcons[channelId];
           }
 
@@ -1541,6 +1636,16 @@ class IncrementalEpgService extends ChangeNotifier {
             'imageUrl': icon,
             'category': category,
           };
+          _updateChannelHash(
+            channelHashes,
+            channelId,
+            start,
+            end,
+            title,
+            description,
+            icon,
+            category,
+          );
           sink.writeln(jsonEncode(payload));
           programCount++;
         });
@@ -1577,17 +1682,23 @@ class IncrementalEpgService extends ChangeNotifier {
           'EPG: Low program count ($programCount). Falling back to lenient parser.');
       channelIds.clear();
       normalizedChannels.clear();
+      channelHashes.clear();
       programCount = 0;
       tempFile = File(
           '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
       await runLenientParse();
     }
 
+    final channelHashStrings = channelHashes.map(
+      (key, value) => MapEntry(key, value.toRadixString(16)),
+    );
+
     return {
       'programFilePath': tempFile.path,
       'programCount': programCount,
       'channelIds': channelIds.toList(),
       'normalizedChannels': normalizedChannels,
+      'channelHashes': channelHashStrings,
     };
   }
 
@@ -1753,6 +1864,7 @@ class IncrementalEpgService extends ChangeNotifier {
     int futureEndMs,
     String Function(String input) normalize, {
     Map<String, String>? channelIcons,
+    Map<String, int>? channelHashes,
   }) {
     // Parse programme subtree
     // <programme start="..." stop="..." channel="..."> ... </programme>
@@ -1831,7 +1943,9 @@ class IncrementalEpgService extends ChangeNotifier {
       }
     }
 
-    if ((icon == null || icon.isEmpty) && channelIcons != null && channelIcons.containsKey(channelId)) {
+    if ((icon == null || icon.isEmpty) &&
+        channelIcons != null &&
+        channelIcons.containsKey(channelId)) {
       icon = channelIcons[channelId];
     }
 
@@ -1855,8 +1969,41 @@ class IncrementalEpgService extends ChangeNotifier {
       'imageUrl': icon,
       'category': category,
     };
+    if (channelHashes != null) {
+      _updateChannelHash(
+        channelHashes,
+        channelId,
+        start,
+        end,
+        title,
+        description,
+        icon,
+        category,
+      );
+    }
     sink.writeln(jsonEncode(payload));
     onProgram();
+  }
+
+  static void _updateChannelHash(
+    Map<String, int> hashes,
+    String channelId,
+    int start,
+    int end,
+    String title,
+    String? description,
+    String? icon,
+    String? category,
+  ) {
+    var hash = hashes[channelId] ?? _fnvOffsetBasis;
+    final data =
+        '$start|$end|$title|${description ?? ''}|${icon ?? ''}|${category ?? ''}';
+    final bytes = utf8.encode(data);
+    for (final b in bytes) {
+      hash ^= b;
+      hash = (hash * _fnvPrime) & 0xFFFFFFFFFFFFFFFF;
+    }
+    hashes[channelId] = hash;
   }
 
   static DateTime _staticParseTime(String timeStr) {
@@ -2117,9 +2264,21 @@ class IncrementalEpgService extends ChangeNotifier {
   /// Check if an EPG ID explicitly belongs to a different country than the one requested.
   bool _epgIdDisagreesWithCountry(String epgId, String countryCode) {
     // Only check common IPTV country suffixes
-    final suffixes = ['uk', 'us', 'ca', 'au', 'ie', 'fr', 'de', 'es', 'it', 'br', 'mx'];
+    final suffixes = [
+      'uk',
+      'us',
+      'ca',
+      'au',
+      'ie',
+      'fr',
+      'de',
+      'es',
+      'it',
+      'br',
+      'mx'
+    ];
     final normalizedId = epgId.toLowerCase();
-    
+
     for (final code in suffixes) {
       if (code == countryCode) continue;
       if (_epgIdMatchesCountry(normalizedId, code)) return true;
@@ -2178,7 +2337,8 @@ class IncrementalEpgService extends ChangeNotifier {
     // Full country names
     'australia': 'au', 'australian': 'au',
     'united states': 'us', 'usa': 'us', 'american': 'us', 'america': 'us',
-    'united kingdom': 'uk', 'uk': 'uk', 'british': 'uk', 'britain': 'uk', 'england': 'uk',
+    'united kingdom': 'uk', 'uk': 'uk', 'british': 'uk', 'britain': 'uk',
+    'england': 'uk',
     'canada': 'ca', 'canadian': 'ca',
     'germany': 'de', 'german': 'de', 'deutschland': 'de',
     'france': 'fr', 'french': 'fr',
@@ -2222,28 +2382,29 @@ class IncrementalEpgService extends ChangeNotifier {
   static String? _extractCountryCode(String? groupName) {
     if (groupName == null || groupName.isEmpty) return null;
     final normalized = groupName.toLowerCase().trim();
-    
+
     // Direct lookup
     if (_countryNameToCode.containsKey(normalized)) {
       return _countryNameToCode[normalized];
     }
-    
+
     // Check if group contains a country name
     for (final entry in _countryNameToCode.entries) {
       if (normalized.contains(entry.key)) {
         return entry.value;
       }
     }
-    
+
     // Check for 2-letter codes at end (e.g., "Sports AU", "News UK")
     final parts = normalized.split(RegExp(r'[\s|_-]+'));
     if (parts.isNotEmpty) {
       final lastPart = parts.last;
-      if (lastPart.length == 2 && _countryNameToCode.values.contains(lastPart)) {
+      if (lastPart.length == 2 &&
+          _countryNameToCode.values.contains(lastPart)) {
         return lastPart;
       }
     }
-    
+
     return null;
   }
 
@@ -2252,9 +2413,9 @@ class IncrementalEpgService extends ChangeNotifier {
     final normalizedId = epgId.toLowerCase();
     // Check for .au, _au, -au, or just ending with au
     return normalizedId.contains('.$countryCode') ||
-           normalizedId.contains('_$countryCode') ||
-           normalizedId.contains('-$countryCode') ||
-           normalizedId.endsWith(countryCode);
+        normalizedId.contains('_$countryCode') ||
+        normalizedId.contains('-$countryCode') ||
+        normalizedId.endsWith(countryCode);
   }
 
   // Conservative trigram-based similarity to use as a last-resort fallback.
@@ -2356,10 +2517,10 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     _ensureNormalizedMap();
-    
+
     // Extract country code from hint (e.g., "Australia" -> "au")
     final countryCode = _extractCountryCode(countryHint);
-    
+
     // 1. Exact match
     if (_availableChannels.contains(channelId)) {
       return _cacheResolvedMapping(channelId, channelId);
@@ -2371,11 +2532,13 @@ class IncrementalEpgService extends ChangeNotifier {
         _normalizedAvailableChannels != null &&
         _normalizedAvailableChannels!.containsKey(normalizedId)) {
       final candidates = _normalizedAvailableChannels![normalizedId]!;
-      final best = _selectBestFromCandidates(candidates, countryCode, normalizedId);
+      final best =
+          _selectBestFromCandidates(candidates, countryCode, normalizedId);
       if (best != null) return _cacheResolvedMapping(channelId, best);
     }
 
-    final aliasId = _matchAliasToAvailable(normalizedId, countryCode: countryCode);
+    final aliasId =
+        _matchAliasToAvailable(normalizedId, countryCode: countryCode);
     if (aliasId != null) {
       return _cacheResolvedMapping(channelId, aliasId);
     }
@@ -2387,11 +2550,13 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(withoutDomain)) {
         final candidates = _normalizedAvailableChannels![withoutDomain]!;
-        final best = _selectBestFromCandidates(candidates, countryCode, withoutDomain);
+        final best =
+            _selectBestFromCandidates(candidates, countryCode, withoutDomain);
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 
-      final aliasWithoutDomain = _matchAliasToAvailable(withoutDomain, countryCode: countryCode);
+      final aliasWithoutDomain =
+          _matchAliasToAvailable(withoutDomain, countryCode: countryCode);
       if (aliasWithoutDomain != null) {
         return _cacheResolvedMapping(channelId, aliasWithoutDomain);
       }
@@ -2404,11 +2569,13 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final candidates = _normalizedAvailableChannels![normalizedName]!;
-        final best = _selectBestFromCandidates(candidates, countryCode, normalizedName);
+        final best =
+            _selectBestFromCandidates(candidates, countryCode, normalizedName);
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 
-      final aliasFromName = _matchAliasToAvailable(normalizedName, countryCode: countryCode);
+      final aliasFromName =
+          _matchAliasToAvailable(normalizedName, countryCode: countryCode);
       if (aliasFromName != null) {
         return _cacheResolvedMapping(channelId, aliasFromName);
       }
@@ -2419,11 +2586,13 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(strippedName)) {
         final candidates = _normalizedAvailableChannels![strippedName]!;
-        final best = _selectBestFromCandidates(candidates, countryCode, strippedName);
+        final best =
+            _selectBestFromCandidates(candidates, countryCode, strippedName);
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 
-      final aliasFromStripped = _matchAliasToAvailable(strippedName, countryCode: countryCode);
+      final aliasFromStripped =
+          _matchAliasToAvailable(strippedName, countryCode: countryCode);
       if (aliasFromStripped != null) {
         return _cacheResolvedMapping(channelId, aliasFromStripped);
       }
@@ -2433,10 +2602,11 @@ class IncrementalEpgService extends ChangeNotifier {
         // Prioritize matches that contain our country code
         String? bestMatch;
         double bestScore = -1000.0;
-        
+
         for (final epgId in _availableChannels) {
           final normalizedEpg = _normalize(epgId);
-          if (normalizedEpg == normalizedName || normalizedEpg == strippedName) {
+          if (normalizedEpg == normalizedName ||
+              normalizedEpg == strippedName) {
             double score = 0.0;
             if (countryCode != null) {
               if (_epgIdMatchesCountry(epgId, countryCode)) {
@@ -2452,32 +2622,36 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
         if (bestMatch != null && (countryCode == null || bestScore > 0)) {
-           return _cacheResolvedMapping(channelId, bestMatch);
+          return _cacheResolvedMapping(channelId, bestMatch);
         }
-        
+
         // If we found a match but it had a bad score, don't return it but don't stop searching
 
         // 4. Loose matching (starts with / contains)
         // Collect all potential matches first
-        if (normalizedName.length >= 4 && _normalizedAvailableChannels != null) {
+        if (normalizedName.length >= 4 &&
+            _normalizedAvailableChannels != null) {
           final List<String> candidates = [];
           for (final entry in _normalizedAvailableChannels!.entries) {
             final epgNorm = entry.key;
             // Prefix match or containment
-            if (epgNorm.startsWith(normalizedName) || normalizedName.startsWith(epgNorm)) {
-               // Reject prefix matches that are too short (e.g. "TNT" matching "TNT Sports" is only ok if diff is small)
-               final diff = (epgNorm.length - normalizedName.length).abs();
-               if (diff < 10) {
-                 candidates.addAll(entry.value);
-               }
+            if (epgNorm.startsWith(normalizedName) ||
+                normalizedName.startsWith(epgNorm)) {
+              // Reject prefix matches that are too short (e.g. "TNT" matching "TNT Sports" is only ok if diff is small)
+              final diff = (epgNorm.length - normalizedName.length).abs();
+              if (diff < 10) {
+                candidates.addAll(entry.value);
+              }
             }
           }
-          
+
           if (candidates.isNotEmpty) {
-            final best = _selectBestFromCandidates(candidates, countryCode, normalizedName);
+            final best = _selectBestFromCandidates(
+                candidates, countryCode, normalizedName);
             // Strict check for loose matches: if we have a country code, don't match a disagreeing country
             if (best != null) {
-              if (countryCode != null && _epgIdDisagreesWithCountry(best, countryCode)) {
+              if (countryCode != null &&
+                  _epgIdDisagreesWithCountry(best, countryCode)) {
                 // Reject this loose match as it belongs to another country
               } else {
                 return _cacheResolvedMapping(channelId, best);
@@ -2488,28 +2662,30 @@ class IncrementalEpgService extends ChangeNotifier {
 
         // 5. Conservative fuzzy-match fallback using trigram similarity
         if (channelName.length >= 4 && _normalizedAvailableChannels != null) {
-           final List<String> allCandidates = [];
-           double highestTrigram = 0.0;
-           
-           for (final entry in _normalizedAvailableChannels!.entries) {
-              final score = _trigramSimilarity(normalizedName, entry.key);
-              if (score >= 0.75) {
-                 if (score > highestTrigram) highestTrigram = score;
-                 allCandidates.addAll(entry.value);
+          final List<String> allCandidates = [];
+          double highestTrigram = 0.0;
+
+          for (final entry in _normalizedAvailableChannels!.entries) {
+            final score = _trigramSimilarity(normalizedName, entry.key);
+            if (score >= 0.75) {
+              if (score > highestTrigram) highestTrigram = score;
+              allCandidates.addAll(entry.value);
+            }
+          }
+
+          if (allCandidates.isNotEmpty) {
+            final best = _selectBestFromCandidates(
+                allCandidates, countryCode, normalizedName);
+            if (best != null) {
+              // For fuzzy, be even stricter about country disagreement
+              if (countryCode != null &&
+                  _epgIdDisagreesWithCountry(best, countryCode)) {
+                // Reject
+              } else if (highestTrigram >= 0.85) {
+                return _cacheResolvedMapping(channelId, best);
               }
-           }
-           
-           if (allCandidates.isNotEmpty) {
-              final best = _selectBestFromCandidates(allCandidates, countryCode, normalizedName);
-              if (best != null) {
-                 // For fuzzy, be even stricter about country disagreement
-                 if (countryCode != null && _epgIdDisagreesWithCountry(best, countryCode)) {
-                    // Reject
-                 } else if (highestTrigram >= 0.85) {
-                    return _cacheResolvedMapping(channelId, best);
-                 }
-              }
-           }
+            }
+          }
         }
       }
     }
@@ -2521,7 +2697,8 @@ class IncrementalEpgService extends ChangeNotifier {
     return null;
   }
 
-  List<Program> getProgramsForChannel(String channelId, {String? channelName, String? groupTitle}) {
+  List<Program> getProgramsForChannel(String channelId,
+      {String? channelName, String? groupTitle}) {
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName, countryHint: groupTitle);
     if (epgId != null) {
@@ -2733,9 +2910,9 @@ class IncrementalEpgService extends ChangeNotifier {
     return _findCurrentOrNextProgram(epgId, programs, now);
   }
 
-
   /// Convenience method: resolve a playlist channel to an EPG id and return its current program.
-  Program? getProgramForChannel(String channelId, {String? channelName, String? groupTitle}) {
+  Program? getProgramForChannel(String channelId,
+      {String? channelName, String? groupTitle}) {
     // Try to resolve mapping first
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName, countryHint: groupTitle);
@@ -2909,8 +3086,8 @@ class IncrementalEpgService extends ChangeNotifier {
   String? getManualMapping(String channelId) => null;
   List<String> getEpgChannelIds() => _availableChannels.toList();
   List<MapEntry<String, double>> getSuggestedMatches(
-          String channelId, String? channelName,
-          {int limit = 10}) {
+      String channelId, String? channelName,
+      {int limit = 10}) {
     final allKeys = {..._availableChannels};
     if (allKeys.isEmpty) return [];
     return EPGMatchingUtils.getSuggestedMatches(
@@ -2920,6 +3097,7 @@ class IncrementalEpgService extends ChangeNotifier {
       limit: limit,
     );
   }
+
   String? getChannelPreview(String epgChannelId) => null;
   Future<void> setManualMapping(String channelId, String epgChannelId) async {}
   Future<void> removeManualMapping(String channelId) async {}
@@ -2953,8 +3131,11 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  Future<void> _ingestProgramsFromFile(String? path,
-      {Map<String, List<Program>>? target}) async {
+  Future<void> _ingestProgramsFromFile(
+    String? path, {
+    Map<String, List<Program>>? target,
+    Set<String>? skipChannels,
+  }) async {
     if (path == null || path.isEmpty) {
       debugLog('EPG: No program temp file path provided');
       return;
@@ -2988,6 +3169,9 @@ class IncrementalEpgService extends ChangeNotifier {
         final epgId =
             (data['epgId'] ?? data['channelId'] ?? '')?.toString() ?? '';
         if (epgId.isEmpty) continue;
+        if (skipChannels != null && skipChannels.contains(epgId)) {
+          continue;
+        }
 
         final startTs = data['startTs'] as int? ?? 0;
         final endTs = data['endTs'] as int? ?? 0;

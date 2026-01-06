@@ -274,81 +274,83 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Widget _buildModernControls() {
     final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.transparent,
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.8),
-          ],
-          stops: const [0.0, 0.3, 0.7, 1.0],
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.7),
+              Colors.transparent,
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.8),
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Row(
-                  children: [
-                    _buildControlButton(
-                      icon: Icons.arrow_back,
-                      onPressed: () => Navigator.pop(context),
-                      size: 24,
-                    ),
-                    if (logoUrl != null && logoUrl.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CachedImage(
-                          imageUrl: logoUrl,
-                          fit: BoxFit.contain,
-                          errorWidget: const SizedBox.shrink(),
-                        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      _buildControlButton(
+                        icon: Icons.arrow_back,
+                        onPressed: () => Navigator.pop(context),
+                        size: 24,
                       ),
+                      if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CachedImage(
+                            imageUrl: logoUrl,
+                            fit: BoxFit.contain,
+                            errorWidget: const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (widget.isLive) ...[
+                        IconButton(
+                          onPressed: _toggleGuide,
+                          icon: const Icon(Icons.dvr,
+                              color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          height: 32,
+                          child: Center(
+                            child: const BrandBadge.live(),
+                          ),
+                        ),
+                      ] else
+                        IconButton(
+                          onPressed: _toggleGuide,
+                          icon: const Icon(Icons.dvr,
+                              color: Colors.white, size: 24),
+                        ),
                     ],
-                    const Spacer(),
-                    if (widget.isLive) ...[
-                      IconButton(
-                        onPressed: _toggleGuide,
-                        icon: const Icon(Icons.dvr,
-                            color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        height: 32,
-                        child: Center(
-                          child: const BrandBadge.live(),
-                        ),
-                      ),
-                    ] else
-                      IconButton(
-                        onPressed: _toggleGuide,
-                        icon: const Icon(Icons.dvr,
-                            color: Colors.white, size: 24),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomControls(),
-          ),
-        ],
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildBottomControls(),
+            ),
+          ],
+        ),
       ),
     );
   }

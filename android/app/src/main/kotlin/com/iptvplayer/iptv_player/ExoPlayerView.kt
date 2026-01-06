@@ -138,7 +138,6 @@ class ExoPlayerView(
             if (isAndroidTv) {
                 // Prefer SDR H.264 on Android TV to avoid HDR/BT.2020 tint issues.
                 parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
-                parametersBuilder.setAllowedVideoMimeTypes(MimeTypes.VIDEO_H264)
             }
             trackSelector.parameters = parametersBuilder.build()
             sharedTrackSelector = trackSelector

@@ -46,7 +46,7 @@ class LocalDbService {
       _dbPath = dbPath;
       _db = await openDatabase(
         dbPath,
-        version: 1,
+        version: 2,
         onConfigure: (db) async {
           try {
             // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
@@ -117,6 +117,12 @@ class LocalDbService {
         ''');
           await db.execute(
               'CREATE INDEX IF NOT EXISTS idx_epg_times ON epg_programs(startTs, endTs)');
+          await db.execute('''
+          CREATE TABLE epg_channel_hash(
+            epgId TEXT PRIMARY KEY,
+            hash TEXT
+          )
+        ''');
 
           await db.execute('''
           CREATE TABLE epg_mapping(
@@ -124,6 +130,16 @@ class LocalDbService {
             epgId TEXT
           )
         ''');
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            await db.execute('''
+            CREATE TABLE IF NOT EXISTS epg_channel_hash(
+              epgId TEXT PRIMARY KEY,
+              hash TEXT
+            )
+          ''');
+          }
         },
       );
       _isInit = true;
@@ -482,6 +498,7 @@ class LocalDbService {
     await _queueWrite((db) async {
       await db.delete('epg_programs');
       await db.delete('epg_mapping');
+      await db.delete('epg_channel_hash');
     });
   }
 
@@ -598,6 +615,32 @@ class LocalDbService {
   Future<void> clearPrograms() async {
     await _queueWrite((db) async {
       await db.delete('epg_programs');
+      await db.delete('epg_channel_hash');
+    });
+  }
+
+  Future<Map<String, String>> getEpgChannelHashes() async {
+    final rows = await _withDbRead((db) => db.query('epg_channel_hash'));
+    return {
+      for (final r in rows)
+        r['epgId'] as String: (r['hash'] as String?) ?? ''
+    };
+  }
+
+  Future<void> upsertEpgChannelHashes(Map<String, String> hashes) async {
+    if (hashes.isEmpty) return;
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        hashes.forEach((epgId, hash) {
+          batch.insert(
+            'epg_channel_hash',
+            {'epgId': epgId, 'hash': hash},
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        });
+        await batch.commit(noResult: true);
+      });
     });
   }
 

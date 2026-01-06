@@ -22,11 +22,16 @@ abstract class UniversalPlayerController extends ChangeNotifier {
   static UniversalPlayerController create({
     required String url,
     bool autoPlay = true,
+    bool isLive = false,
+    bool preferStockOnLive = true,
   }) {
     // Use native implementation on all Android devices
     // This provides much better support for IPTV streams (HLS/TS/RTMP)
     // and fixes color tinting issues on newer chipsets.
     if (defaultTargetPlatform == TargetPlatform.android) {
+      if (isLive && preferStockOnLive) {
+        return StockPlayerController(url, autoPlay: autoPlay);
+      }
       return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
     // Use stock implementation on other platforms (iOS/Web/Desktop)

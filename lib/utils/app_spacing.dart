@@ -16,7 +16,7 @@ class AppSpacing {
 
   // Semantic spacing for specific use cases
   static const double cardPadding = lg;
-  static const double sectionSpacing = xl;
+  static const double sectionSpacing = lg;
   static const double screenPadding = xl;
   static const double buttonSpacing = md;
   static const double listItemSpacing = sm;

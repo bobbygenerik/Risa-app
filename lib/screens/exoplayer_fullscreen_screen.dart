@@ -282,157 +282,160 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   }
 
   Widget _buildModernControls(double progressValue) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.transparent,
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.8),
-          ],
-          stops: const [0.0, 0.3, 0.7, 1.0],
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.7),
+              Colors.transparent,
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.8),
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          // Top bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Row(
-                  children: [
-                    // Back button
-                    _buildControlButton(
-                      icon: Icons.arrow_back,
-                      onPressed: () => Navigator.pop(context),
-                      size: 24,
-                    ),
-                    const Spacer(),
-                    // Live badge
-                    if (widget.isLive)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'LIVE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+        child: Stack(
+          children: [
+            // Top bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      // Back button
+                      _buildControlButton(
+                        icon: Icons.arrow_back,
+                        onPressed: () => Navigator.pop(context),
+                        size: 24,
+                      ),
+                      const Spacer(),
+                      // Live badge
+                      if (widget.isLive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                      const SizedBox(width: 16),
+                      // Guide button
+                      IconButton(
+                        onPressed: _toggleGuide,
+                        icon: const Icon(Icons.dvr,
+                            color: Colors.white, size: 24),
                       ),
-                    const SizedBox(width: 16),
-                    // Guide button
-                    IconButton(
-                      onPressed: _toggleGuide,
-                      icon:
-                          const Icon(Icons.dvr, color: Colors.white, size: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom controls
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Control buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                      child: FocusTraversalGroup(
+                        policy: WidgetOrderTraversalPolicy(),
+                        child: Row(
+                          children: [
+                            // Rewind
+                            _buildControlButton(
+                              icon: Icons.replay_10,
+                              onPressed: _rewind,
+                            ),
+                            const SizedBox(width: 12),
+                            // Play/Pause
+                            _buildControlButton(
+                              icon:
+                                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                              onPressed: _togglePlayPause,
+                              focusNode: _playPauseFocus,
+                              autofocus: true,
+                            ),
+                            const SizedBox(width: 12),
+                            // Fast Forward
+                            _buildControlButton(
+                              icon: Icons.forward_10,
+                              onPressed: _fastForward,
+                            ),
+                            const SizedBox(width: 24),
+                            // Audio
+                            _buildControlButton(
+                              icon: Icons.audiotrack,
+                              onPressed: _toggleAudio,
+                            ),
+                            const SizedBox(width: 12),
+                            // Subtitles Menu
+                            _buildControlButton(
+                              icon: _subtitleMode == ExoSubtitleMode.off
+                                  ? Icons.subtitles_outlined
+                                  : Icons.subtitles,
+                              onPressed: _showSubtitleMenu,
+                            ),
+                            const SizedBox(width: 12),
+                            // Multi-view
+                            _buildControlButton(
+                              icon: Icons.grid_view,
+                              onPressed: _toggleMultiView,
+                            ),
+                            const SizedBox(width: 12),
+                            // Aspect Ratio Toggle
+                            _buildControlButton(
+                              icon: Icons.aspect_ratio,
+                              onPressed: _toggleVideoFit,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+                    // Progress bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: SizedBox(
+                        height: 4,
+                        width: double.infinity,
+                        child: LinearProgressIndicator(
+                          value: progressValue.clamp(0.0, 1.0),
+                          backgroundColor: Colors.white.withValues(alpha: 0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppTheme.primaryBlue),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-          ),
-
-          // Bottom controls
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Control buttons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    child: FocusTraversalGroup(
-                      policy: WidgetOrderTraversalPolicy(),
-                      child: Row(
-                        children: [
-                          // Rewind
-                          _buildControlButton(
-                            icon: Icons.replay_10,
-                            onPressed: _rewind,
-                          ),
-                          const SizedBox(width: 12),
-                          // Play/Pause
-                          _buildControlButton(
-                            icon: _isPlaying ? Icons.pause : Icons.play_arrow,
-                            onPressed: _togglePlayPause,
-                            focusNode: _playPauseFocus,
-                            autofocus: true,
-                          ),
-                          const SizedBox(width: 12),
-                          // Fast Forward
-                          _buildControlButton(
-                            icon: Icons.forward_10,
-                            onPressed: _fastForward,
-                          ),
-                          const SizedBox(width: 24),
-                          // Audio
-                          _buildControlButton(
-                            icon: Icons.audiotrack,
-                            onPressed: _toggleAudio,
-                          ),
-                          const SizedBox(width: 12),
-                          // Subtitles Menu
-                          _buildControlButton(
-                            icon: _subtitleMode == ExoSubtitleMode.off
-                                ? Icons.subtitles_outlined
-                                : Icons.subtitles,
-                            onPressed: _showSubtitleMenu,
-                          ),
-                          const SizedBox(width: 12),
-                          // Multi-view
-                          _buildControlButton(
-                            icon: Icons.grid_view,
-                            onPressed: _toggleMultiView,
-                          ),
-                          const SizedBox(width: 12),
-                          // Aspect Ratio Toggle
-                          _buildControlButton(
-                            icon: Icons.aspect_ratio,
-                            onPressed: _toggleVideoFit,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Progress bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: SizedBox(
-                      height: 4,
-                      width: double.infinity,
-                      child: LinearProgressIndicator(
-                        value: progressValue.clamp(0.0, 1.0),
-                        backgroundColor: Colors.white.withValues(alpha: 0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryBlue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

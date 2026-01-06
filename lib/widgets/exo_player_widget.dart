@@ -47,6 +47,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     _controller = UniversalPlayerController.create(
       url: widget.url,
       autoPlay: false,
+      isLive: widget.isLive,
     );
     
     if (widget.controllerNotifier != null) {

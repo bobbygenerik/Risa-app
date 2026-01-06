@@ -25,5 +25,5 @@ class ReusableTCPServer(socketserver.TCPServer):
         super().server_bind()
 
 with ReusableTCPServer(("0.0.0.0", PORT), QuietHandler) as httpd:
-    print(f"Serving APK at http://0.0.0.0:{PORT}/app-debug.apk")
+    print(f"Serving APK at http://0.0.0.0:{PORT}/app-profile.apk")
     httpd.serve_forever()

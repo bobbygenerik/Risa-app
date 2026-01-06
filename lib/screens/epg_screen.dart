@@ -52,6 +52,7 @@ class _EPGScreenState extends State<EPGScreen>
   late final ScrollController _horizontalScrollController;
   late final ScrollController _timeHeaderScrollController;
   late final LinkedScrollControllerGroup _linkedScrollGroup;
+  late final LinkedScrollControllerGroup _horizontalLinkedGroup;
   late final ScrollController _sidebarController;
   late final ScrollController _verticalScrollController; // Grid controller
 
@@ -77,8 +78,9 @@ class _EPGScreenState extends State<EPGScreen>
     );
 
     // Initialize scroll controllers
-    _horizontalScrollController = ScrollController();
-    _timeHeaderScrollController = ScrollController();
+    _horizontalLinkedGroup = LinkedScrollControllerGroup();
+    _horizontalScrollController = _horizontalLinkedGroup.addAndGet();
+    _timeHeaderScrollController = _horizontalLinkedGroup.addAndGet();
     _linkedScrollGroup = LinkedScrollControllerGroup();
     _sidebarController = _linkedScrollGroup.addAndGet();
     _verticalScrollController = _linkedScrollGroup.addAndGet();
@@ -94,8 +96,7 @@ class _EPGScreenState extends State<EPGScreen>
         debugLabel: 'EPG First Program');
 
     // Sync scroll controllers
-    _horizontalScrollController.addListener(_syncHorizontalScroll);
-    _timeHeaderScrollController.addListener(_syncTimeHeaderScroll);
+    // Horizontal controllers are linked via _horizontalLinkedGroup.
 
     // Start EPG auto-refresh timer (check every 30 minutes)
     _startEpgAutoRefresh();
@@ -124,6 +125,9 @@ class _EPGScreenState extends State<EPGScreen>
 
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
+      if (!epgService.hasUsableData) {
+        unawaited(epgService.quickStart());
+      }
       final epgUrl =
           prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
 
@@ -194,29 +198,11 @@ class _EPGScreenState extends State<EPGScreen>
     });
   }
 
-  void _syncHorizontalScroll() {
-    if (!_epgState.syncingScroll && _timeHeaderScrollController.hasClients) {
-      _epgState.setSyncingScroll(true);
-      _timeHeaderScrollController.jumpTo(_horizontalScrollController.offset);
-      _epgState.setSyncingScroll(false);
-    }
-  }
-
-  void _syncTimeHeaderScroll() {
-    if (!_epgState.syncingScroll && _horizontalScrollController.hasClients) {
-      _epgState.setSyncingScroll(true);
-      _horizontalScrollController.jumpTo(_timeHeaderScrollController.offset);
-      _epgState.setSyncingScroll(false);
-    }
-  }
-
   @override
   void dispose() {
     // Restore system UI when leaving
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _refreshAnimationController.dispose();
-    _horizontalScrollController.removeListener(_syncHorizontalScroll);
-    _timeHeaderScrollController.removeListener(_syncTimeHeaderScroll);
     _horizontalScrollController.dispose();
     _timeHeaderScrollController.dispose();
     _verticalScrollController.dispose();

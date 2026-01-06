@@ -1338,7 +1338,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // Side-effect free artwork fetching check
-      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) &&
+      if ((_tmdbEnabled ||
+              _fanartEnabled ||
+              _sportsDbEnabled ||
+              _tvdbEnabled) &&
           allowPrefetch &&
           (!_programArtwork.containsKey(program.id) ||
               _shouldRetryArtwork(program.id))) {
@@ -2116,6 +2119,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         index,
                         filteredChannels.length,
                         allowPrefetch,
+                        rowController,
                         isFirstRow: isFirstRow,
                         rowHeight: rowHeight,
                         focusNode: focusNode,
@@ -2136,7 +2140,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        SizedBox(height: context.spacingMd()), // Increased from 0
+        SizedBox(height: context.spacingSm()),
       ],
     );
   }
@@ -2229,6 +2233,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       int index,
       int totalCount,
       bool allowPrefetch,
+      ScrollController rowScrollController,
       {required bool isFirstRow,
       required double rowHeight,
       FocusNode? focusNode,
@@ -2261,14 +2266,49 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
               if (isFirstRow) {
-                _watchButtonFocus.requestFocus();
+                if (_watchButtonFocus.canRequestFocus) {
+                  _watchButtonFocus.requestFocus();
+                } else {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                    );
+                  }
+                  if (_firstChannelFocus.canRequestFocus) {
+                    _firstChannelFocus.requestFocus();
+                  }
+                }
                 return KeyEventResult.handled;
               }
-              // Return ignored to allow default Focus traversal to the row above
-              return KeyEventResult.ignored;
+              final moved = FocusScope.of(context)
+                  .focusInDirection(TraversalDirection.up);
+              if (!moved && _scrollController.hasClients) {
+                final nextOffset = (_scrollController.offset - rowHeight).clamp(
+                  0.0,
+                  _scrollController.position.maxScrollExtent,
+                );
+                _scrollController.animateTo(
+                  nextOffset,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                );
+              }
+              return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
+              if (rowScrollController.hasClients &&
+                  rowScrollController.offset >
+                      rowScrollController.position.minScrollExtent + 1) {
+                rowScrollController.animateTo(
+                  rowScrollController.position.minScrollExtent,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                );
+                return KeyEventResult.handled;
+              }
               // Only open sidebar if we are at the start of the list
               final moved = requestNavigationFocus();
               return moved ? KeyEventResult.handled : KeyEventResult.ignored;
@@ -2603,6 +2643,67 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  Widget _buildLogoHeroFallback(Channel channel) {
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF1B1E2B),
+        Color(0xFF141722),
+        AppTheme.cardBackground,
+      ],
+    );
+    final logoUrl = channel.logoUrl;
+
+    return Container(
+      decoration: const BoxDecoration(gradient: gradient),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxLogoWidth = constraints.maxWidth * 0.55;
+          final maxLogoHeight = constraints.maxHeight * 0.32;
+          return Stack(
+            children: [
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Opacity(
+                      opacity: 0.22,
+                      child: CachedNetworkImage(
+                        imageUrl: logoUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(gradient: gradient),
+                ),
+              ),
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                Center(
+                  child: CachedNetworkImage(
+                    imageUrl: logoUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.contain,
+                    width: maxLogoWidth,
+                    height: maxLogoHeight,
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.tv,
+                      color: Colors.white70,
+                      size: 64,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildNewsHeroFallback(Channel channel) {
     const gradient = LinearGradient(
       begin: Alignment.topLeft,
@@ -2770,11 +2871,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String? heroImage, // Keep as String? for imageUrl
     double scrollProgress,
   ) {
-    final dpr = MediaQuery.of(context).devicePixelRatio;
-    final heroWidth = MediaQuery.sizeOf(context).width;
-    final heroHeight = context.heroHeight();
-    final heroCacheWidth = (heroWidth * dpr).round();
-    final heroCacheHeight = (heroHeight * dpr).round();
     final heroGradient = BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
@@ -2795,7 +2891,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           decoration: heroGradient,
           child: _isNewsProgram(currentProgram, featuredChannel)
               ? _buildNewsHeroFallback(featuredChannel)
-              : _buildHeroFallback(),
+              : (featuredChannel.logoUrl != null &&
+                      featuredChannel.logoUrl!.isNotEmpty
+                  ? _buildLogoHeroFallback(featuredChannel)
+                  : _buildHeroFallback()),
         ),
       );
     }
@@ -2807,10 +2906,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           imageUrl: heroImage,
           httpHeaders: HttpClientService().imageHeaders,
           fit: BoxFit.cover,
-          width: heroWidth,
-          height: heroHeight,
-          memCacheWidth: heroCacheWidth,
-          memCacheHeight: heroCacheHeight,
           placeholder: (_, __) => _buildHeroFallback(),
           errorWidget: (_, __, ___) => _buildHeroFallback(),
         ),

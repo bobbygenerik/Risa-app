@@ -1383,6 +1383,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
+    const cardPeek = 80.0;
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final heroInfoWidth = min(
       screenSize.width * AppSpacing.heroInfoWidth,
@@ -1437,7 +1438,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             ),
             // Content skeleton
             Positioned(
-              top: heroHeight - 140.0, // Match cardPeek
+              top: heroHeight - cardPeek,
               left: 0,
               right: 0,
               bottom: 0,
