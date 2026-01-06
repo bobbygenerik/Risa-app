@@ -138,6 +138,12 @@ class _MainShellState extends State<MainShell> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           final location = GoRouterState.of(context).uri.path;
+          final lastLocation = _lastLocation;
+          if (location == '/settings' ||
+              (lastLocation != null && lastLocation.startsWith('/settings'))) {
+            context.go('/home');
+            return;
+          }
           if (location != '/home') {
             context.go('/home');
           } else {

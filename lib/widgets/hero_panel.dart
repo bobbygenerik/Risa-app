@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A unified container for Hero information panels.
@@ -48,6 +49,13 @@ class HeroInfoSkeleton extends StatelessWidget {
       padding: EdgeInsets.symmetric(
         vertical: context.spacingMd(),
         horizontal: context.spacingSm(),
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.9 * 255).round()),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

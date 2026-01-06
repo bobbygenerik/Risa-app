@@ -14,6 +14,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
@@ -31,7 +32,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with ContentFocusRegistrant<SettingsScreen> {
   // Navigation State
   int _selectedIndex = 0;
 
@@ -97,6 +99,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   DateTime? _xtreamPanelCountsFetchedAt;
   bool _xtreamPanelCountsInFlight = false;
   FocusNode? _lastGeneralFocusNode;
+  final SettingsLayoutController _layoutController =
+      SettingsLayoutController();
 
   @override
   void initState() {
@@ -243,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
       child: SettingsLayout(
         autoFocusOnShow: true,
+        controller: _layoutController,
         selectedIndex: _selectedIndex,
         onCategorySelected: _handleCategorySelected,
         onBackToHome: () => context.go('/home'),
@@ -289,6 +294,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         break;
     }
     target?.requestFocus();
+  }
+
+  @override
+  bool handleContentFocusRequest() {
+    _layoutController.requestMenuFocus();
+    return true;
   }
 
   Widget _buildActiveContent() {

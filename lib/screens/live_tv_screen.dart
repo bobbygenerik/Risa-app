@@ -2062,8 +2062,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(
-              left: rowInset, bottom: 8), // Added bottom spacing
+          padding: EdgeInsets.only(left: rowInset, bottom: 4),
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -2371,6 +2370,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cacheHeight = (cardHeight * dpr).round();
     final logoCacheWidth = (150 * dpr).round();
     final logoCacheHeight = (80 * dpr).round();
+    final fallback = _buildChannelCardFallback(currentProgram, channel);
 
     // ENHANCEMENT: Ensure we have sufficient data to display a quality card
     final hasMinimumData = currentProgram != null &&
@@ -2407,12 +2407,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       fit: BoxFit.cover,
                       memCacheWidth: cacheWidth,
                       memCacheHeight: cacheHeight,
-                      placeholder: (_, __) => _buildChannelPlaceholder(),
-                      errorWidget: (_, __, ___) => _buildChannelPlaceholder(),
+                      placeholder: (_, __) => fallback,
+                      errorWidget: (_, __, ___) => fallback,
                     ),
                   )
                 else
-                  _buildChannelPlaceholder(),
+                  Positioned.fill(child: fallback),
                 Positioned(
                   top: 8,
                   left: 8,
@@ -2575,6 +2575,156 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           color: AppTheme.primaryBlue.withValues(alpha: 0.4),
           size: 32,
         ),
+      ),
+    );
+  }
+
+  Widget _buildChannelCardFallback(Program? program, Channel channel) {
+    if (_isNewsProgram(program, channel)) {
+      return _buildNewsCardFallback(channel);
+    }
+    if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+      return _buildLogoCardFallback(channel);
+    }
+    return _buildChannelPlaceholder();
+  }
+
+  Widget _buildLogoCardFallback(Channel channel) {
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF1B1E2B),
+        Color(0xFF141722),
+        AppTheme.cardBackground,
+      ],
+    );
+    final logoUrl = channel.logoUrl;
+    return Container(
+      decoration: const BoxDecoration(gradient: gradient),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxLogoWidth = constraints.maxWidth * 0.6;
+          final maxLogoHeight = constraints.maxHeight * 0.45;
+          return Stack(
+            children: [
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Opacity(
+                      opacity: 0.25,
+                      child: CachedNetworkImage(
+                        imageUrl: logoUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(gradient: gradient),
+                ),
+              ),
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                Center(
+                  child: CachedNetworkImage(
+                    imageUrl: logoUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.contain,
+                    width: maxLogoWidth,
+                    height: maxLogoHeight,
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.tv,
+                      color: Colors.white70,
+                      size: 32,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNewsCardFallback(Channel channel) {
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF0B1E3A),
+        Color(0xFF102A4A),
+        Color(0xFF0A1426),
+      ],
+    );
+    final logoUrl = channel.logoUrl;
+    return Container(
+      decoration: const BoxDecoration(gradient: gradient),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxLogoWidth = constraints.maxWidth * 0.6;
+          final maxLogoHeight = constraints.maxHeight * 0.45;
+          return Stack(
+            children: [
+              if (logoUrl != null && logoUrl.isNotEmpty)
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Opacity(
+                      opacity: 0.25,
+                      child: CachedNetworkImage(
+                        imageUrl: logoUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(gradient: gradient),
+                ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (logoUrl != null && logoUrl.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: logoUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.contain,
+                        width: maxLogoWidth,
+                        height: maxLogoHeight,
+                        errorWidget: (_, __, ___) => const Icon(
+                          Icons.newspaper,
+                          color: Colors.white70,
+                          size: 32,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.newspaper,
+                        color: Colors.white70,
+                        size: 32,
+                      ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'NEWS',
+                      style: AppTypography.caption(context).copyWith(
+                        letterSpacing: 4,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -2925,7 +3075,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowInset = contentInset;
     final perRow =
         _initialRowVisibleCount(context, skeletonCardWidth, rowInset);
-    final heroInfoWidth = context.heroInfoWidth();
+    final availableWidth = screenSize.width - contentInset - rightInset;
+    final desiredInfoWidth = screenSize.width < 800
+        ? availableWidth
+        : screenSize.width * AppSpacing.heroInfoWidth;
+    final heroInfoWidth = math.min(
+      desiredInfoWidth,
+      screenSize.width >= 1920 ? 480.0 : 420.0,
+    );
 
     return Focus(
       focusNode: _skeletonFocus,
@@ -3022,7 +3179,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 },
                               ),
                             ),
-                            SizedBox(height: context.spacingLg()),
+                            SizedBox(height: context.spacingSm()),
                           ],
                         ],
                       ),

@@ -17,6 +17,7 @@ class SettingsLayout extends StatefulWidget {
   final Widget content;
   final VoidCallback? onBackToHome;
   final VoidCallback? onRequestContentFocus;
+  final SettingsLayoutController? controller;
   final bool autoFocusOnShow;
   final String headerTitle;
   final bool showHeader;
@@ -29,6 +30,7 @@ class SettingsLayout extends StatefulWidget {
     required this.content,
     this.onBackToHome,
     this.onRequestContentFocus,
+    this.controller,
     this.autoFocusOnShow = false,
     this.headerTitle = 'Settings',
     this.showHeader = true,
@@ -54,6 +56,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
         requestMenuFocus();
       }
     });
+    widget.controller?._bind(requestMenuFocus);
   }
 
   @override
@@ -69,10 +72,15 @@ class _SettingsLayoutState extends State<SettingsLayout> {
         _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu_$i'));
       }
     }
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._unbind(requestMenuFocus);
+      widget.controller?._bind(requestMenuFocus);
+    }
   }
 
   @override
   void dispose() {
+    widget.controller?._unbind(requestMenuFocus);
     for (var node in _menuFocusNodes) {
       node.dispose();
     }
@@ -329,4 +337,22 @@ class SettingsCategory {
     required this.title,
     required this.icon,
   });
+}
+
+class SettingsLayoutController {
+  VoidCallback? _requestMenuFocus;
+
+  void _bind(VoidCallback requestMenuFocus) {
+    _requestMenuFocus = requestMenuFocus;
+  }
+
+  void _unbind(VoidCallback requestMenuFocus) {
+    if (_requestMenuFocus == requestMenuFocus) {
+      _requestMenuFocus = null;
+    }
+  }
+
+  void requestMenuFocus() {
+    _requestMenuFocus?.call();
+  }
 }

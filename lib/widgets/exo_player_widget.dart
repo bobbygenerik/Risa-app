@@ -48,6 +48,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       url: widget.url,
       autoPlay: false,
       isLive: widget.isLive,
+      preferStockOnLive: false,
     );
     
     if (widget.controllerNotifier != null) {
@@ -101,7 +102,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
           return ExoPlayerVideoView(
             controller: _controller! as NativeExoPlayerController,
             fit: widget.fit,
-            surfaceType: widget.isLive ? 'surface' : 'texture',
+            surfaceType: 'texture',
           );
         }
 

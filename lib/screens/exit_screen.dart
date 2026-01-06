@@ -124,7 +124,7 @@ class _ExitScreenState extends State<ExitScreen> {
                   _selectedMessage,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 16,
+                    fontSize: 22,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
