@@ -1655,6 +1655,7 @@ class IncrementalEpgService extends ChangeNotifier {
       await sink.close();
     }
 
+    var usedLenient = false;
     try {
       // First attempt: UTF-8 but be lenient about malformed sequences
       await runParseWithDecoder(const Utf8Decoder(allowMalformed: true));
@@ -1668,16 +1669,22 @@ class IncrementalEpgService extends ChangeNotifier {
       } catch (e2, s2) {
         debugLog('EPG: Latin1 retry also failed: $e2');
         debugLog(s2.toString());
-        // Re-throw the original to preserve context for callers
-        throw FormatException(
-            'EPG parsing failed after UTF8 and Latin1 attempts: $e2');
+        debugLog('EPG: Falling back to lenient parser after XML errors.');
+        channelIds.clear();
+        normalizedChannels.clear();
+        channelHashes.clear();
+        programCount = 0;
+        tempFile = File(
+            '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
+        usedLenient = true;
+        await runLenientParse();
       }
     } catch (e) {
       // Pass through any other failures
       rethrow;
     }
 
-    if (programCount < 1000) {
+    if (!usedLenient && programCount < 1000) {
       debugLog(
           'EPG: Low program count ($programCount). Falling back to lenient parser.');
       channelIds.clear();
