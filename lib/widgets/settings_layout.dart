@@ -92,6 +92,15 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     // Ensure the sidebar grabs focus when this screen is shown or when focus is lost
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final primaryFocus = FocusManager.instance.primaryFocus;
+      if (primaryFocus != null) {
+        final focusContext = primaryFocus.context;
+        if (focusContext != null &&
+            focusContext.findAncestorWidgetOfExactType<SettingsLayout>() ==
+                null) {
+          return;
+        }
+      }
       final node = widget.selectedIndex < _menuFocusNodes.length
           ? _menuFocusNodes[widget.selectedIndex]
           : null;

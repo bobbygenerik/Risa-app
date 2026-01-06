@@ -602,12 +602,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             SettingsActionTile(
-              title: 'Manage per-playlist EPG URLs',
-              subtitle: 'Edit EPG on each playlist in the manager',
-              icon: Icons.settings_input_component,
-              onTap: _showManagePlaylistsDialog,
-            ),
-            SettingsActionTile(
               title: 'Update EPG Now',
               icon: Icons.sync,
               iconColor: AppTheme.primaryBlue,

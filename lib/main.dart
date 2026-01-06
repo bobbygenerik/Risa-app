@@ -428,6 +428,12 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<bool> _shouldInitTranscriptionServices() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getBool('transcription_enabled') ?? false) ||
+        (prefs.getBool('translation_enabled') ?? false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -740,7 +746,11 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final manager = AIModelManager();
-              _runDeferred(manager.initialize);
+              _runDeferred(() async {
+                if (await _shouldInitTranscriptionServices()) {
+                  await manager.initialize();
+                }
+              });
               return manager;
             },
           ),
@@ -748,12 +758,15 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProxyProvider<AIModelManager, WhisperSpeechService>(
             create: (_) {
               final service = WhisperSpeechService();
-              _runDeferred(service.initialize);
+              _runDeferred(() async {
+                if (await _shouldInitTranscriptionServices()) {
+                  await service.initialize();
+                }
+              });
               return service;
             },
             update: (_, modelManager, whisperService) {
-              final service =
-                  whisperService ?? (WhisperSpeechService()..initialize());
+              final service = whisperService ?? WhisperSpeechService();
               service.attachModelManager(modelManager);
               return service;
             },
@@ -762,13 +775,15 @@ class _MyAppState extends State<MyApp> {
               WhisperTranscriptionService>(
             create: (_) {
               final service = WhisperTranscriptionService();
-              _runDeferred(service.initialize);
+              _runDeferred(() async {
+                if (await _shouldInitTranscriptionServices()) {
+                  await service.initialize();
+                }
+              });
               return service;
             },
             update: (_, speechService, transcriptionService) {
-              final service = transcriptionService ??
-                  (WhisperTranscriptionService()..initialize());
-              return service;
+              return transcriptionService ?? WhisperTranscriptionService();
             },
           ),
           ChangeNotifierProvider(
@@ -789,7 +804,11 @@ class _MyAppState extends State<MyApp> {
               IntegratedTranscriptionService>(
             create: (_) {
               final service = IntegratedTranscriptionService();
-              _runDeferred(service.initialize);
+              _runDeferred(() async {
+                if (await _shouldInitTranscriptionServices()) {
+                  await service.initialize();
+                }
+              });
               return service;
             },
             update: (_, whisperService, integratedService) {
@@ -802,7 +821,11 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final service = WhisperModelService();
-              _runDeferred(service.initialize);
+              _runDeferred(() async {
+                if (await _shouldInitTranscriptionServices()) {
+                  await service.initialize();
+                }
+              });
               return service;
             },
           ),
