@@ -87,11 +87,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Queue<String> _programTitleLogoOrder = Queue<String>();
   final Queue<String> _categoryCacheOrder = Queue<String>();
   Timer? _artworkThrottle;
-  Timer? _startupGraceTimer;
   late final bool _tmdbEnabled;
   late final bool _fanartEnabled;
   late final bool _sportsDbEnabled;
-  bool _startupGraceActive = true;
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
   final Map<String, DateTime> _artworkRetryAfter = {};
@@ -139,6 +137,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const Duration _featuredRotationInterval = Duration(minutes: 5);
   List<Channel> _stableFeaturedChannels = [];
   bool _featuredChannelsInitialized = false;
+  bool _isOpeningPlayer = false;
 
   @override
   void initState() {
@@ -146,11 +145,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     _fanartEnabled = true;
     _sportsDbEnabled = true;
-    _startupGraceTimer = Timer(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      setState(() => _startupGraceActive = false);
-    });
-
     // Initialize scroll controller
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScrollPrefetch);
@@ -327,7 +321,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
     _artworkThrottle?.cancel();
-    _startupGraceTimer?.cancel();
     _featuredRotationTimer?.cancel();
     _artworkQueue.clear();
     _artworkRequests.clear();
@@ -602,9 +595,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
           if (!hasChannels) {
             final errorMessage = channelProvider.errorMessage;
-            if (_startupGraceActive &&
-                (errorMessage == null || errorMessage.isEmpty)) {
-              return _buildStartupLoader();
+            if (!channelProvider.hasLoadedPlaylist ||
+                channelProvider.isLoading) {
+              return _buildSkeletonLoader();
             }
             return Center(
               child: SingleChildScrollView(
@@ -829,6 +822,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
       // Stop if we've reached our target count
       if (featuredChannels.length >= targetFeaturedCount) break;
+    }
+
+    if (featuredChannels.length < targetFeaturedCount) {
+      for (final channel in availableChannels) {
+        if (featuredChannels.length >= targetFeaturedCount) break;
+        final channelId = channel.tvgId ?? channel.id;
+        if (addedChannelIds.contains(channelId)) continue;
+        if (epgService.shouldHideChannel(
+          channelId,
+          channelName: channel.name,
+        )) {
+          continue;
+        }
+        featuredChannels.add(channel);
+        addedChannelIds.add(channelId);
+      }
     }
 
     if (featuredChannels.isNotEmpty) {
@@ -1270,27 +1279,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     Size screenSize,
   ) {
     return HeroInfoSkeleton(width: width);
-  }
-
-  Widget _buildStartupLoader() {
-    return Container(
-      color: AppColors.background,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: AppTheme.primaryBlue),
-            const SizedBox(height: 16),
-            Text(
-              'Loading Live TV...',
-              style: AppTypography.heroDescription(context).copyWith(
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
@@ -2743,12 +2731,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return s;
   }
 
-  void _openChannelPlayer(Channel channel) {
+  Future<void> _openChannelPlayer(Channel channel) async {
+    if (_isOpeningPlayer) return;
+    _isOpeningPlayer = true;
     MemoryManager.checkMemoryPressure();
     MemoryManager.clearCaches();
     MemoryManager.forceGarbageCollection();
     if (!mounted) return;
-    context.push('/player', extra: channel);
+    try {
+      await context.push('/player', extra: channel);
+    } finally {
+      if (mounted) {
+        _isOpeningPlayer = false;
+      }
+    }
   }
 
   Widget _buildHeroContent(
