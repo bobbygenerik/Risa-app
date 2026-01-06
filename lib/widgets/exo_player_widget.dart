@@ -100,6 +100,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
           return ExoPlayerVideoView(
             controller: _controller! as NativeExoPlayerController,
             fit: widget.fit,
+            surfaceType: widget.isLive ? 'surface' : 'texture',
           );
         }
 

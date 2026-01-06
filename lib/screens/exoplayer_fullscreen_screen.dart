@@ -267,7 +267,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       'autoPlay': true,
       'muted': false,
       // Prefer texture for overlays; secureSurface helps avoid color-space artifacts on some devices
-      'surfaceType': 'texture',
+      'surfaceType': widget.isLive ? 'surface' : 'texture',
       'secureSurface': true,
       'forceHdr': false,
     };

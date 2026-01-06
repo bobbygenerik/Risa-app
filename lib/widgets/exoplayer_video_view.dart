@@ -6,11 +6,13 @@ import 'package:iptv_player/controllers/universal_player_controller.dart';
 class ExoPlayerVideoView extends StatefulWidget {
   final NativeExoPlayerController controller;
   final BoxFit fit;
+  final String surfaceType;
 
   const ExoPlayerVideoView({
     super.key,
     required this.controller,
     this.fit = BoxFit.contain, // Not fully respected by Native layout yet, but passed for future
+    this.surfaceType = 'texture',
   });
 
   @override
@@ -34,7 +36,7 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
     const String viewType = 'com.streamhub.iptv/exoplayer';
     final Map<String, dynamic> creationParams = <String, dynamic>{
       'muted': false, // Controller handles this
-      'surfaceType': 'texture',
+      'surfaceType': widget.surfaceType,
       'extensionRenderers': 'on',
     };
 

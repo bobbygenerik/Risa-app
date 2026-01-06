@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/config/oauth_config.dart';
+import 'package:iptv_player/config/tvdb_config.dart';
 
 /// Service Validator
 /// Checks which external services are properly configured
@@ -20,11 +21,17 @@ class ServiceValidator {
     return true; // Auto-downloads on first use
   }
 
+  /// Check TVDB availability
+  static bool get isTvdbAvailable {
+    return TvdbConfig.apiKey.isNotEmpty;
+  }
+
   /// Get service status summary
   static Map<String, bool> getServiceStatus() {
     return {
       'opensubtitles': isOpenSubtitlesAvailable,
       'tmdb': isTmdbAvailable,
+      'tvdb': isTvdbAvailable,
       'whisper': isWhisperAvailable,
     };
   }

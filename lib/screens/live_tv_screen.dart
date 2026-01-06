@@ -23,6 +23,7 @@ import 'package:iptv_player/services/omdb_service.dart';
 import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/tvdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -90,6 +91,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final bool _tmdbEnabled;
   late final bool _fanartEnabled;
   late final bool _sportsDbEnabled;
+  late final bool _tvdbEnabled;
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
   final Map<String, DateTime> _artworkRetryAfter = {};
@@ -145,6 +147,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     _fanartEnabled = true;
     _sportsDbEnabled = true;
+    _tvdbEnabled = ServiceValidator.isTvdbAvailable;
     // Initialize scroll controller
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScrollPrefetch);
@@ -1335,7 +1338,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // Side-effect free artwork fetching check
-      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) &&
+      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) &&
           allowPrefetch &&
           (!_programArtwork.containsKey(program.id) ||
               _shouldRetryArtwork(program.id))) {
@@ -1684,7 +1687,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 2. Trigger a fetch if any image service is enabled
-      if (_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) {
+      if (_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) {
         _ensureFreshProgramArtwork(program, channel);
       }
 
@@ -1699,7 +1702,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _ensureFreshProgramArtwork(Program program, Channel channel) {
-    if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled)) return;
+    if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
+      return;
+    }
     if (_artworkRequests.contains(program.id)) return;
     final existing = _programArtwork[program.id];
     if (existing != null &&
@@ -1861,6 +1866,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     } catch (e) {
       debugLog('TMDB failed: $e');
+    }
+
+    if (_tvdbEnabled) {
+      try {
+        final tvdbImage =
+            await TvdbService.getBestImage(program.title).timeout(timeout);
+        if (tvdbImage != null && tvdbImage.isNotEmpty) {
+          return tvdbImage;
+        }
+      } catch (e) {
+        debugLog('TVDB failed: $e');
+      }
     }
 
     if (isNews) {
