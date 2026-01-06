@@ -134,7 +134,6 @@ class ExoPlayerView(
                     Configuration.UI_MODE_TYPE_TELEVISION
             val parametersBuilder = trackSelector.buildUponParameters()
                 .setMaxAudioChannelCount(2) // Limit to stereo to save memory
-                .setMaxVideoSizeSd() // Limit video resolution to save memory
             if (isAndroidTv) {
                 // Prefer SDR H.264 on Android TV to avoid HDR/BT.2020 tint issues.
                 parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)

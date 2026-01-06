@@ -32,7 +32,7 @@ class CachedImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedUrl = normalizeImageUrl(imageUrl);
-    final maxCacheDimension = context.mediaQuerySize.shortestSide >= 800
+    final maxCacheDimension = MediaQuery.of(context).size.shortestSide >= 800
         ? 900
         : 700;
     final maxCacheDimensionDouble = maxCacheDimension.toDouble();

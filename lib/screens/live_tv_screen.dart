@@ -160,6 +160,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   List<Channel> _stableFeaturedChannels = [];
   bool _featuredChannelsInitialized = false;
   bool _isOpeningPlayer = false;
+  bool _pauseArtworkFetching = false;
+  bool _suspendArtworkCaches = false;
+  DateTime? _epgReadySince;
+  static const Duration _epgReadyGrace = Duration(seconds: 2);
 
   @override
   void initState() {
@@ -609,6 +613,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final hasChannels = channelProvider.hasChannels;
           final epgReady =
               !epgService.hasEpgUrl ? true : epgService.isReady;
+          if (epgReady) {
+            _epgReadySince ??= DateTime.now();
+          } else {
+            _epgReadySince = null;
+          }
+          final epgReadyStable = epgReady &&
+              _epgReadySince != null &&
+              DateTime.now().difference(_epgReadySince!) >= _epgReadyGrace;
           // Improved EPG loading detection - only show skeleton if truly loading
           final epgBusy = epgService.hasEpgUrl &&
               (epgService.isDownloading ||
@@ -620,7 +632,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             return _buildSkeletonLoader();
           }
 
-          if (!epgReady) {
+          if (!epgReadyStable || _categoryNames.isEmpty) {
             return _buildSkeletonLoader();
           }
 
@@ -1092,18 +1104,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       if (index == 0) {
-                        return _buildFeaturedRow(context, allChannels);
+                        return KeyedSubtree(
+                          key: const ValueKey<String>('live_tv_featured_row'),
+                          child: _buildFeaturedRow(context, allChannels),
+                        );
                       }
                       final categoryIndex = index - 1;
                       if (categoryIndex < 0 ||
                           categoryIndex >= _categoryNames.length) {
                         return const SizedBox.shrink();
                       }
-                      return _buildCategoryRowWidget(
-                        context,
-                        _categoryNames[categoryIndex],
-                        categoryIndex,
-                        isFirstRow: false,
+                      final categoryName = _categoryNames[categoryIndex];
+                      return KeyedSubtree(
+                        key: ValueKey<String>('live_tv_row_$categoryName'),
+                        child: _buildCategoryRowWidget(
+                          context,
+                          categoryName,
+                          categoryIndex,
+                          isFirstRow: false,
+                        ),
                       );
                     },
                     childCount:
@@ -1781,7 +1800,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _saveProgramArtworkTitleCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final ordered = LinkedHashMap<String, String>();
+      final ordered = <String, String>{};
       for (final key in _programArtworkTitleOrder) {
         final value = _programArtworkByTitle[key];
         if (value != null && value.isNotEmpty) {
@@ -1800,7 +1819,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _saveProgramArtworkNegativeCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final ordered = LinkedHashMap<String, int>();
+      final ordered = <String, int>{};
       for (final key in _programArtworkNegativeTitleOrder) {
         final value = _programArtworkNegativeByTitle[key];
         if (value != null) {
@@ -1846,6 +1865,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _enqueueArtwork(Program program) {
+    if (_pauseArtworkFetching || _suspendArtworkCaches) return;
     if (_artworkRequests.contains(program.id) ||
         _queuedArtworkIds.contains(program.id)) {
       return;
@@ -2077,6 +2097,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return existing ?? '';
     }
 
+    if (_suspendArtworkCaches) return '';
+
     if (!_shouldAttemptArtworkByTitle(
       program,
       _programChannelLookup[program.id],
@@ -2148,7 +2170,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _drainArtworkQueue() async {
     _artworkThrottle?.cancel();
     _artworkThrottle = null;
-    if (_artworkQueue.isEmpty || !mounted) return;
+    if (_artworkQueue.isEmpty ||
+        !mounted ||
+        _pauseArtworkFetching ||
+        _suspendArtworkCaches) {
+      return;
+    }
 
     const int batchSize = 1;
     final batch = <Program>[];
@@ -3521,6 +3548,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _openChannelPlayer(Channel channel) async {
     if (_isOpeningPlayer) return;
     _isOpeningPlayer = true;
+    _pauseArtworkFetching = true;
+    _suspendArtworkCaches = true;
+    _releaseArtworkCachesForPlayback();
     MemoryManager.checkMemoryPressure();
     MemoryManager.clearCaches();
     MemoryManager.forceGarbageCollection();
@@ -3530,8 +3560,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } finally {
       if (mounted) {
         _isOpeningPlayer = false;
+        _pauseArtworkFetching = false;
+        _suspendArtworkCaches = false;
       }
     }
+  }
+
+  void _releaseArtworkCachesForPlayback() {
+    _artworkQueue.clear();
+    _queuedArtworkIds.clear();
+    _artworkRequests.clear();
+    _pendingArtworkRequests.clear();
+    _programArtwork.clear();
+    _programArtworkOrder.clear();
+    _programTitleLogos.clear();
+    _programTitleLogoOrder.clear();
+    _programChannelLookup.clear();
   }
 
   Widget _buildHeroContent(
@@ -3571,14 +3615,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return Positioned.fill(
       child: DecoratedBox(
         decoration: heroGradient,
-        child: CachedNetworkImage(
-          imageUrl: normalizeImageUrl(heroImage),
-          httpHeaders: HttpClientService().imageHeaders,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => _buildHeroFallback(),
-          errorWidget: (_, url, error) {
-            logHandshakeIfNeeded(url, error, context: 'LiveTV hero');
-            return _buildHeroFallback();
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final dpr = MediaQuery.of(context).devicePixelRatio;
+            final cacheWidth =
+                math.min(1600, (constraints.maxWidth * dpr).round());
+            final cacheHeight =
+                math.min(1600, (constraints.maxHeight * dpr).round());
+            return SizedBox.expand(
+              child: CachedNetworkImage(
+                imageUrl: normalizeImageUrl(heroImage),
+                httpHeaders: HttpClientService().imageHeaders,
+                fit: BoxFit.cover,
+                memCacheWidth: cacheWidth,
+                memCacheHeight: cacheHeight,
+                placeholder: (_, __) => _buildHeroFallback(),
+                errorWidget: (_, url, error) {
+                  logHandshakeIfNeeded(url, error, context: 'LiveTV hero');
+                  return _buildHeroFallback();
+                },
+              ),
+            );
           },
         ),
       ),
