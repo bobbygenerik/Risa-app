@@ -390,6 +390,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                             final total = data['total'] ?? 0;
                             final scanned = data['scanned'] ?? 0;
                             final epgChannels = data['epgChannels'] ?? 0;
+                            final matchRate =
+                                total == 0 ? 0.0 : (matched / total) * 100.0;
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -401,7 +403,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Matches: $matched / $total ($scanned scanned, $epgChannels guide entries)',
+                                  'Matches: $matched / $total (${matchRate.toStringAsFixed(1)}%) '
+                                  '($scanned scanned, $epgChannels guide entries)',
                                   style: const TextStyle(
                                       color: Colors.white70, fontSize: 12),
                                 ),

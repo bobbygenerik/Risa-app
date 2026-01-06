@@ -525,6 +525,14 @@ class LocalDbService {
     });
   }
 
+  Future<void> deleteEpgMapping(String channelId) async {
+    if (channelId.isEmpty) return;
+    await _queueWrite((db) async {
+      await db.delete('epg_mapping',
+          where: 'channelId = ?', whereArgs: [channelId]);
+    });
+  }
+
   Future<Map<String, String>> getAllMappings() async {
     final rows = await _withDbRead((db) => db.query('epg_mapping'));
     return {

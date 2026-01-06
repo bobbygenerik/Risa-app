@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -45,6 +46,8 @@ import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _HeroCandidate {
@@ -147,6 +150,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, int> _categoryOffsets = {};
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
+  final Map<String, bool> _heroImageCacheHits = {};
   bool _userHasScrolled = false;
   int _lastCategoryChannelCount = 0;
   int _lastHeroCandidateCount = 0;
@@ -162,6 +166,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _isOpeningPlayer = false;
   bool _pauseArtworkFetching = false;
   bool _suspendArtworkCaches = false;
+  bool _suspendHeroBackground = false;
   DateTime? _epgReadySince;
   static const Duration _epgReadyGrace = Duration(seconds: 2);
 
@@ -387,6 +392,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final categories = await channelProvider.getAllCategoryNamesAsync();
     if (!mounted) return;
     _categoryNames = categories;
+    _categoryNameSet
+      ..clear()
+      ..addAll(_categoryNames);
     _loadingCategories = false;
     _categoryRowNotifiers.clear();
     _rowScrollInitialized.clear();
@@ -623,18 +631,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               DateTime.now().difference(_epgReadySince!) >= _epgReadyGrace;
           final latestCategories = channelProvider.getAllCategoryNames();
           if (latestCategories.isNotEmpty) {
-            final shouldUpdate = _categoryNames.isEmpty ||
-                latestCategories.length > _categoryNames.length;
-            if (shouldUpdate) {
+            final newNames = _categoryNames.isEmpty
+                ? latestCategories
+                : latestCategories
+                    .where((name) => !_categoryNameSet.contains(name))
+                    .toList();
+            if (newNames.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (_categoryNames.isEmpty) {
-                  _categoryNames = List<String>.from(latestCategories);
+                  _categoryNames = List<String>.from(newNames);
                   _categoryNameSet
                     ..clear()
                     ..addAll(_categoryNames);
                 } else {
-                  for (final name in latestCategories) {
+                  for (final name in newNames) {
                     if (_categoryNameSet.add(name)) {
                       _categoryNames.add(name);
                     }
@@ -973,7 +984,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               final scrollPos =
                   _scrollController.hasClients ? _scrollController.offset : 0.0;
               final fadeProgress =
-                  (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                  (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
 
               return Opacity(
                 opacity: 1.0 - fadeProgress,
@@ -1145,7 +1156,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final scrollPos =
                 _scrollController.hasClients ? _scrollController.offset : 0.0;
             final fadeProgress =
-                (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
             return Opacity(
               opacity: 1.0 - fadeProgress,
               child: _buildChannelLogo(context, activeChannel),
@@ -2773,6 +2784,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               final moved = requestNavigationFocus();
               return moved ? KeyEventResult.handled : KeyEventResult.ignored;
             }
+            if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
+                event.logicalKey == LogicalKeyboardKey.info ||
+                event.logicalKey == LogicalKeyboardKey.keyM) {
+              _showEpgChannelSelector(channel);
+              return KeyEventResult.handled;
+            }
           }
           return KeyEventResult.ignored;
         },
@@ -2799,6 +2816,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
             return GestureDetector(
               onTap: () => _openChannelPlayer(channel),
+              onLongPress: () => _showEpgChannelSelector(channel),
               child: AnimatedScale(
                 scale: isFocused ? 1.05 : 1.0,
                 duration: TVFocusStyle.animationDuration,
@@ -2929,6 +2947,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     right: 8,
                     child: BrandBadge.live(fontSize: 8),
                   ),
+                if (isFocused)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Text(
+                        'Fix EPG',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 // Progress bar overlay at bottom
                 if (currentProgram != null)
                   Positioned(
@@ -3021,6 +3064,377 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ],
       ],
     );
+  }
+
+  void _showEpgChannelSelector(Channel channel) {
+    if (!mounted) return;
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgChannelIds = epgService.getEpgChannelIds();
+
+    if (epgChannelIds.isEmpty) {
+      showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text(
+                'No EPG data loaded. Please configure EPG URL in Settings.'),
+            backgroundColor: AppTheme.accentRed,
+          ));
+      return;
+    }
+
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
+    final suggestions = epgService.getSuggestedMatches(
+      channel.tvgId ?? channel.id,
+      channel.name,
+      limit: 15,
+    );
+
+    unawaited(showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          List<String> filteredIds;
+          final showingSuggestions = searchQuery.isEmpty;
+
+          if (searchQuery.isEmpty) {
+            final suggestedIds = suggestions.map((e) => e.key).toSet();
+            final otherIds = epgChannelIds
+                .where((id) => !suggestedIds.contains(id))
+                .toList();
+            filteredIds = [...suggestions.map((e) => e.key), ...otherIds];
+          } else {
+            filteredIds = epgChannelIds.where((id) {
+              final displayName = _getDisplayNameForEpgId(id).toLowerCase();
+              final idLower = id.toLowerCase();
+              final queryLower = searchQuery.toLowerCase();
+              return displayName.contains(queryLower) ||
+                  idLower.contains(queryLower);
+            }).toList();
+          }
+
+          return AlertDialog(
+            backgroundColor: AppTheme.darkBackground,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Match EPG for ${channel.name}',
+                    style: const TextStyle(
+                        fontSize: 18, color: AppTheme.textPrimary)),
+                Text(
+                  'ID: ${channel.tvgId ?? channel.id}',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: searchController,
+                  enableInteractiveSelection: false,
+                  selectionControls: NoTextSelectionControls(),
+                  showCursor: false,
+                  cursorColor: Colors.transparent,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  onTap: () {
+                    final text = searchController.text;
+                    searchController.selection =
+                        TextSelection.collapsed(offset: text.length);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search EPG channels...',
+                    hintStyle:
+                        TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide:
+                          BorderSide(color: AppTheme.primaryBlue, width: 2),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      searchQuery = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: filteredIds.isEmpty
+                  ? Center(
+                      child: Text(
+                        searchQuery.isEmpty
+                            ? 'No EPG channels found'
+                            : 'No matches for "$searchQuery"',
+                        style: TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: filteredIds.length +
+                          (showingSuggestions && suggestions.isNotEmpty
+                              ? 1
+                              : 0),
+                      itemBuilder: (context, index) {
+                        if (showingSuggestions &&
+                            suggestions.isNotEmpty &&
+                            index == 0) {
+                          return Container(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.auto_awesome,
+                                    size: 16, color: AppTheme.primaryBlue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Suggested Matches (${suggestions.length})',
+                                  style: TextStyle(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final adjustedIndex =
+                            showingSuggestions && suggestions.isNotEmpty
+                                ? index - 1
+                                : index;
+                        if (adjustedIndex < 0 ||
+                            adjustedIndex >= filteredIds.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final epgId = filteredIds[adjustedIndex];
+                        final preview = epgService.getChannelPreview(epgId);
+                        final currentMapping = epgService
+                            .getManualMapping(channel.tvgId ?? channel.id);
+                        final isCurrentlyMapped = currentMapping == epgId;
+                        final isSuggested = showingSuggestions &&
+                            adjustedIndex < suggestions.length;
+                        final suggestionScore = isSuggested
+                            ? suggestions[adjustedIndex].value
+                            : 0.0;
+
+                        final showDivider = showingSuggestions &&
+                            suggestions.isNotEmpty &&
+                            adjustedIndex == suggestions.length - 1;
+
+                        return Column(
+                          children: [
+                            FocusableActionDetector(
+                              actions: <Type, Action<Intent>>{
+                                ActivateIntent: CallbackAction<ActivateIntent>(
+                                  onInvoke: (intent) {
+                                    Navigator.pop(dialogContext);
+                                    _setEpgMapping(channel, epgId);
+                                    return null;
+                                  },
+                                ),
+                              },
+                              child: Builder(
+                                builder: (context) {
+                                  final isFocused = Focus.of(context).hasFocus;
+                                  return ListTile(
+                                    dense: true,
+                                    selected: isFocused,
+                                    selectedTileColor:
+                                        AppTheme.primaryBlue.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    leading: isCurrentlyMapped
+                                        ? const Icon(Icons.check_circle,
+                                            color: AppTheme.accentGreen)
+                                        : isSuggested
+                                            ? Icon(
+                                                Icons.stars,
+                                                color: suggestionScore > 0.7
+                                                    ? AppTheme.accentGreen
+                                                    : suggestionScore > 0.4
+                                                        ? AppTheme.primaryBlue
+                                                        : AppTheme
+                                                            .textSecondary,
+                                              )
+                                            : const Icon(Icons.tv_outlined,
+                                                color: AppTheme.textSecondary),
+                                    title: Text(
+                                      _getDisplayNameForEpgId(epgId),
+                                      style: TextStyle(
+                                        fontWeight:
+                                            isCurrentlyMapped || isSuggested
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                        color: isCurrentlyMapped
+                                            ? AppTheme.accentGreen
+                                            : AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (preview != null)
+                                          Text(
+                                            'Now: $preview',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        if (isSuggested)
+                                          Text(
+                                            'Match: ${(suggestionScore * 100).toInt()}%',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: suggestionScore > 0.7
+                                                  ? AppTheme.accentGreen
+                                                  : AppTheme.textSecondary,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      _setEpgMapping(channel, epgId);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                            if (showDivider)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                        child: Divider(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.1))),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                      child: Text(
+                                        'All EPG Channels',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.textSecondary),
+                                      ),
+                                    ),
+                                    Expanded(
+                                        child: Divider(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.1))),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              if (epgService.hasManualMapping(channel.tvgId ?? channel.id))
+                BrandSecondaryButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    _removeEpgMapping(channel);
+                  },
+                  label: 'Remove Mapping',
+                ),
+              BrandSecondaryButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                label: 'Cancel',
+              ),
+            ],
+          );
+        },
+      ),
+    ));
+  }
+
+  Future<void> _setEpgMapping(Channel channel, String epgChannelId) async {
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    await epgService.setManualMapping(
+        channel.tvgId ?? channel.id, epgChannelId);
+
+    if (mounted) {
+      showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('EPG mapped: ${channel.name} → $epgChannelId'),
+            backgroundColor: AppTheme.accentGreen,
+          ));
+      setState(() {});
+    }
+  }
+
+  Future<void> _removeEpgMapping(Channel channel) async {
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    await epgService.removeManualMapping(channel.tvgId ?? channel.id);
+
+    if (mounted) {
+      showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('EPG mapping removed for ${channel.name}'),
+            backgroundColor: AppTheme.primaryBlue,
+          ));
+      setState(() {});
+    }
+  }
+
+  String _getDisplayNameForEpgId(String epgId) {
+    String name = epgId.split('.').first;
+    final patterns = {
+      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) =>
+          'BBC ${m.group(1)}',
+      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) =>
+          'ITV${m.group(1) ?? ''}',
+      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) =>
+          'Channel ${m.group(1)}',
+      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) =>
+          'Sky ${m.group(1)!.toUpperCase()}',
+      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) =>
+          'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) =>
+          'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) =>
+          'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) =>
+          'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) =>
+          'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+    };
+
+    for (final pattern in patterns.entries) {
+      final match = pattern.key.firstMatch(name);
+      if (match != null) {
+        return pattern.value(match);
+      }
+    }
+
+    name = name.replaceAll(RegExp(r'[_-]'), ' ');
+    if (name.isNotEmpty) {
+      name = name[0].toUpperCase() + name.substring(1).toLowerCase();
+    }
+
+    return name.isEmpty ? epgId : name;
   }
 
   Widget _buildChannelPlaceholder() {
@@ -3450,6 +3864,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _isNewsProgram(Program? program, Channel channel) {
     final title = (program?.title ?? '').toLowerCase();
     final category = (program?.category ?? '').toLowerCase();
+    final description = (program?.description ?? '').toLowerCase();
     final channelName = channel.name.toLowerCase();
     final groupTitle = (channel.groupTitle ?? '').toLowerCase();
     const keywords = [
@@ -3488,8 +3903,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return false;
     }
 
-    final titleCategory = '$title $category';
-    if (containsKeyword(titleCategory)) {
+    final titleCategoryDescription = '$title $category $description';
+    if (containsKeyword(titleCategoryDescription)) {
       return true;
     }
 
@@ -3499,6 +3914,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return true;
     }
 
+    return false;
+  }
+
+  bool _isPosterStyleUrl(String? url) {
+    if (url == null || url.isEmpty) return false;
+    final lower = url.toLowerCase();
+    if (lower.contains('poster')) return true;
+    if (lower.contains('._v1_') &&
+        (lower.contains('sx') || lower.contains('sy'))) {
+      return true;
+    }
+    if (lower.contains('tmdb') &&
+        (lower.contains('w342') ||
+            lower.contains('w500') ||
+            lower.contains('w780'))) {
+      return true;
+    }
     return false;
   }
 
@@ -3550,6 +3982,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _isOpeningPlayer = true;
     _pauseArtworkFetching = true;
     _suspendArtworkCaches = true;
+    _suspendHeroBackground = true;
     _releaseArtworkCachesForPlayback();
     MemoryManager.checkMemoryPressure();
     MemoryManager.clearCaches();
@@ -3562,6 +3995,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _isOpeningPlayer = false;
         _pauseArtworkFetching = false;
         _suspendArtworkCaches = false;
+        _suspendHeroBackground = false;
       }
     }
   }
@@ -3597,17 +4031,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
     );
 
-    final hasHeroImage = heroImage != null && heroImage.isNotEmpty;
+    final normalizedHeroUrl = normalizeImageUrl(heroImage ?? '');
+    final hasHeroImage =
+        normalizedHeroUrl.isNotEmpty && !_suspendHeroBackground;
+    if (hasHeroImage && !_heroImageCacheHits.containsKey(normalizedHeroUrl)) {
+      _checkHeroImageCache(normalizedHeroUrl);
+    }
+    final heroFallback = _buildHeroLoadingFallback(
+      featuredChannel,
+      currentProgram,
+    );
+    final isCachedHero = _heroImageCacheHits[normalizedHeroUrl] == true;
+    final heroFit = _isPosterStyleUrl(heroImage) ? BoxFit.contain : BoxFit.cover;
+    final heroAlignment =
+        heroFit == BoxFit.cover ? Alignment.topCenter : Alignment.center;
     if (!hasHeroImage) {
       return Positioned.fill(
         child: DecoratedBox(
           decoration: heroGradient,
-          child: _isNewsProgram(currentProgram, featuredChannel)
-              ? _buildNewsHeroFallback(featuredChannel)
-              : (featuredChannel.logoUrl != null &&
-                      featuredChannel.logoUrl!.isNotEmpty
-                  ? _buildLogoHeroFallback(featuredChannel)
-                  : _buildHeroFallback()),
+          child: heroFallback,
         ),
       );
     }
@@ -3619,20 +4061,59 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           builder: (context, constraints) {
             final dpr = MediaQuery.of(context).devicePixelRatio;
             final cacheWidth =
-                math.min(1600, (constraints.maxWidth * dpr).round());
+                math.min(2000, (constraints.maxWidth * dpr).round());
             final cacheHeight =
-                math.min(1600, (constraints.maxHeight * dpr).round());
+                math.min(2000, (constraints.maxHeight * dpr).round());
             return SizedBox.expand(
               child: CachedNetworkImage(
-                imageUrl: normalizeImageUrl(heroImage),
+                imageUrl: normalizedHeroUrl,
                 httpHeaders: HttpClientService().imageHeaders,
-                fit: BoxFit.cover,
+                fit: heroFit,
+                alignment: heroAlignment,
+                filterQuality: FilterQuality.medium,
                 memCacheWidth: cacheWidth,
                 memCacheHeight: cacheHeight,
-                placeholder: (_, __) => _buildHeroFallback(),
+                placeholder: (_, __) =>
+                    isCachedHero ? const SizedBox.shrink() : heroFallback,
+                imageBuilder: (context, imageProvider) {
+                  _markHeroImageCached(normalizedHeroUrl);
+                  if (heroFit == BoxFit.cover) {
+                    return Image(
+                      image: imageProvider,
+                      fit: heroFit,
+                      alignment: heroAlignment,
+                      filterQuality: FilterQuality.medium,
+                    );
+                  }
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ImageFiltered(
+                        imageFilter:
+                            ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        child: Opacity(
+                          opacity: 0.35,
+                          child: Image(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            filterQuality: FilterQuality.low,
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Image(
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.medium,
+                        ),
+                      ),
+                    ],
+                  );
+                },
                 errorWidget: (_, url, error) {
                   logHandshakeIfNeeded(url, error, context: 'LiveTV hero');
-                  return _buildHeroFallback();
+                  return heroFallback;
                 },
               ),
             );
@@ -3640,6 +4121,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildHeroLoadingFallback(
+      Channel featuredChannel, Program? currentProgram) {
+    if (_isNewsProgram(currentProgram, featuredChannel)) {
+      return _buildNewsHeroFallback(featuredChannel);
+    }
+    if (featuredChannel.logoUrl != null &&
+        featuredChannel.logoUrl!.isNotEmpty) {
+      return _buildLogoHeroFallback(featuredChannel);
+    }
+    return _buildHeroFallback();
+  }
+
+  void _checkHeroImageCache(String url) {
+    if (url.isEmpty) return;
+    unawaited(() async {
+      final cached = await DefaultCacheManager().getFileFromCache(url);
+      if (!mounted) return;
+      final hit = cached != null;
+      if (_heroImageCacheHits[url] == hit) return;
+      setState(() {
+        _heroImageCacheHits[url] = hit;
+      });
+    }());
+  }
+
+  void _markHeroImageCached(String url) {
+    if (url.isEmpty) return;
+    if (_heroImageCacheHits[url] == true) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _heroImageCacheHits[url] = true;
+      });
+    });
   }
 
   Widget _buildSkeletonLoader() {

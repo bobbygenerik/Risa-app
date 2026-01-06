@@ -123,7 +123,7 @@ void main() {
       PaintingBinding.instance.imageCache.maximumSize =
           memoryInfo.isLowMemory ? 80 : 160;
       PaintingBinding.instance.imageCache.maximumSizeBytes =
-          memoryInfo.isLowMemory ? 20 << 20 : 50 << 20;
+          memoryInfo.isLowMemory ? 18 << 20 : 40 << 20;
       StartupProbe.mark('Image cache limits configured');
 
       // Initialize SSL handler for IPTV providers with certificate issues

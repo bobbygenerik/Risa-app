@@ -59,6 +59,8 @@ class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _loggedMissingEpgIds = {};
   final Set<String> _loggedMissingProgramChannels = {};
   final LocalDbService _db = LocalDbService.instance;
+  final Map<String, String> _manualMappings = {};
+  static const String _manualMappingsKey = 'epg_manual_mappings';
   bool get _suspendDbReads => _isParsing || _isDownloading || _isLoading;
 
   // Provider-style alias map (normalized) to bridge common naming drift
@@ -365,6 +367,8 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       await _handleCacheUrlChange(prefs);
+      await _loadManualMappings(prefs);
+      _applyManualMappings();
       _epgFutureHours = _initialFutureHours;
       _extendedWindowScheduled = false;
       _extendingWindow = false;
@@ -435,6 +439,39 @@ class IncrementalEpgService extends ChangeNotifier {
     } else if (cachedUrl.isEmpty) {
       await prefs.setString(_epgCacheUrlKey, currentUrl);
     }
+  }
+
+  Future<void> _loadManualMappings(SharedPreferences prefs) async {
+    try {
+      final jsonStr = prefs.getString(_manualMappingsKey);
+      if (jsonStr == null || jsonStr.trim().isEmpty) return;
+      final Map<String, dynamic> decoded = jsonDecode(jsonStr);
+      _manualMappings
+        ..clear()
+        ..addAll(decoded.map(
+          (key, value) => MapEntry(key, value.toString()),
+        ));
+    } catch (e) {
+      debugLog('EPG: Failed to load manual mappings: $e');
+    }
+  }
+
+  Future<void> _saveManualMappings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_manualMappingsKey, jsonEncode(_manualMappings));
+    } catch (e) {
+      debugLog('EPG: Failed to save manual mappings: $e');
+    }
+  }
+
+  void _applyManualMappings() {
+    if (_manualMappings.isEmpty) return;
+    _manualMappings.forEach((channelId, epgId) {
+      if (channelId.isEmpty || epgId.isEmpty) return;
+      _internalToEpgIdMapping[channelId] = epgId;
+      _availableChannels.add(epgId);
+    });
   }
 
   Future<void> _saveNormalizedMappingToPrefs(
@@ -2518,13 +2555,23 @@ class IncrementalEpgService extends ChangeNotifier {
     bool allowLoose = true,
     String? countryHint,
   }) {
+    final manual = _manualMappings[channelId];
+    if (manual != null && manual.isNotEmpty) {
+      _internalToEpgIdMapping[channelId] = manual;
+      return manual;
+    }
+
     if (_internalToEpgIdMapping.containsKey(channelId)) {
       final cached = _internalToEpgIdMapping[channelId];
       if (cached == null) {
         return null;
       }
       if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
-        return cached;
+        if (allowLoose ||
+            _isStrictMatch(channelId, channelName, cached,
+                countryHint: countryHint)) {
+          return cached;
+        }
       }
       _internalToEpgIdMapping.remove(channelId);
     }
@@ -2710,10 +2757,54 @@ class IncrementalEpgService extends ChangeNotifier {
     return null;
   }
 
+  bool _isStrictMatch(
+    String channelId,
+    String? channelName,
+    String epgId, {
+    String? countryHint,
+  }) {
+    if (channelId.isEmpty) return false;
+    if (channelId == epgId) return true;
+
+    _ensureNormalizedMap();
+    final countryCode = _extractCountryCode(countryHint);
+    final normalizedEpg = _normalize(epgId);
+    if (normalizedEpg.isEmpty) return false;
+
+    bool matchesNormalized(String normalized) {
+      if (normalized.isEmpty) return false;
+      if (normalized == normalizedEpg) return true;
+      final alias = _resolveAliasNormalized(normalized);
+      if (alias != null &&
+          _normalizedAvailableChannels != null &&
+          _normalizedAvailableChannels!.containsKey(alias) &&
+          _normalizedAvailableChannels![alias]!.contains(epgId)) {
+        return countryCode == null ||
+            !_epgIdDisagreesWithCountry(epgId, countryCode);
+      }
+      return false;
+    }
+
+    if (matchesNormalized(_normalize(channelId))) return true;
+    if (channelId.contains('.') &&
+        matchesNormalized(_normalize(channelId.split('.').first))) {
+      return true;
+    }
+
+    if (channelName != null && channelName.trim().isNotEmpty) {
+      if (matchesNormalized(_normalize(channelName))) return true;
+      final stripped = _normalize(_stripSuffixes(channelName));
+      if (stripped.isNotEmpty && matchesNormalized(stripped)) return true;
+    }
+
+    return false;
+  }
+
   List<Program> getProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
     final epgId = _internalToEpgIdMapping[channelId] ??
-        _findBestEpgId(channelId, channelName, countryHint: groupTitle);
+        _findBestEpgId(channelId, channelName,
+            countryHint: groupTitle, allowLoose: false);
     if (epgId != null) {
       return _programsByChannel[epgId] ?? [];
     }
@@ -2743,7 +2834,8 @@ class IncrementalEpgService extends ChangeNotifier {
   bool hasProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
     final epgId = _internalToEpgIdMapping[channelId] ??
-        _findBestEpgId(channelId, channelName, countryHint: groupTitle);
+        _findBestEpgId(channelId, channelName,
+            countryHint: groupTitle, allowLoose: false);
     if (epgId != null) {
       final programs = _programsByChannel[epgId];
       if (programs != null && programs.isNotEmpty) {
@@ -2904,7 +2996,7 @@ class IncrementalEpgService extends ChangeNotifier {
   Program? getCurrentProgram(String channelId,
       {String? channelName, String? groupTitle}) {
     final epgId = _findBestEpgId(channelId, channelName,
-        countryHint: groupTitle, logIfMissing: false);
+        countryHint: groupTitle, logIfMissing: false, allowLoose: false);
     if (epgId == null) {
       _maybeLogMissingEpgId(channelId, channelName);
       _recordChannelFailure(channelId);
@@ -3095,9 +3187,13 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   // Stub methods for EPG screen compatibility
-  bool hasManualMapping(String channelId) => false;
-  String? getManualMapping(String channelId) => null;
-  List<String> getEpgChannelIds() => _availableChannels.toList();
+  bool hasManualMapping(String channelId) => _manualMappings.containsKey(channelId);
+  String? getManualMapping(String channelId) => _manualMappings[channelId];
+  List<String> getEpgChannelIds() {
+    final ids = _availableChannels.toList();
+    ids.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return ids;
+  }
   List<MapEntry<String, double>> getSuggestedMatches(
       String channelId, String? channelName,
       {int limit = 10}) {
@@ -3111,9 +3207,35 @@ class IncrementalEpgService extends ChangeNotifier {
     );
   }
 
-  String? getChannelPreview(String epgChannelId) => null;
-  Future<void> setManualMapping(String channelId, String epgChannelId) async {}
-  Future<void> removeManualMapping(String channelId) async {}
+  String? getChannelPreview(String epgChannelId) {
+    final programs = _programsByChannel[epgChannelId];
+    if (programs == null || programs.isEmpty) return null;
+    final now = DateTime.now();
+    for (final program in programs) {
+      if (program.endTime.isAfter(now)) {
+        return program.title;
+      }
+    }
+    return programs.first.title;
+  }
+
+  Future<void> setManualMapping(String channelId, String epgChannelId) async {
+    if (channelId.isEmpty || epgChannelId.isEmpty) return;
+    _manualMappings[channelId] = epgChannelId;
+    _internalToEpgIdMapping[channelId] = epgChannelId;
+    _queueMappingPersist(channelId, epgChannelId);
+    await _saveManualMappings();
+    notifyListeners();
+  }
+
+  Future<void> removeManualMapping(String channelId) async {
+    if (channelId.isEmpty) return;
+    _manualMappings.remove(channelId);
+    _internalToEpgIdMapping.remove(channelId);
+    unawaited(_db.deleteEpgMapping(channelId));
+    await _saveManualMappings();
+    notifyListeners();
+  }
 
   Future<void> loadMappingsFromDb() async {
     try {
@@ -3135,6 +3257,7 @@ class IncrementalEpgService extends ChangeNotifier {
       final mappings = await _db.getAllMappings();
       _internalToEpgIdMapping.addAll(mappings);
       _availableChannels.addAll(mappings.values);
+      _applyManualMappings();
       _lastMappingsLoad = now;
       debugLog('EPG: Loaded ${mappings.length} mappings from DB');
       notifyListeners();
