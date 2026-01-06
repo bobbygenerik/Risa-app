@@ -28,9 +28,18 @@ class ExoPlayerView(
     creationParams: Map<String, Any>?
 ) : PlatformView, MethodChannel.MethodCallHandler {
 
+    companion object {
+        private var sharedPlayerView: PlayerView? = null
+        private var sharedPlayer: ExoPlayer? = null
+        private var sharedTrackSelector: DefaultTrackSelector? = null
+        private var sharedSurfaceType: String? = null
+        private var activeListener: Player.Listener? = null
+        private var refCount = 0
+    }
+
     private lateinit var playerView: PlayerView
     private val exoPlayer: ExoPlayer
-    private val methodChannel: MethodChannel
+    private lateinit var methodChannel: MethodChannel
     private lateinit var trackSelector: DefaultTrackSelector
     private val mainHandler = Handler(Looper.getMainLooper())
     private var positionUpdateRunnable: Runnable? = null
@@ -43,15 +52,30 @@ class ExoPlayerView(
     private val prefsKey = "exoplayer_force_platform_${Build.MODEL}"
 
     init {
-        // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams
-        val inflater = LayoutInflater.from(context)
+        // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams.
+        // Reuse a shared PlayerView/ExoPlayer to avoid repeated heavy inflations.
         val requestedSurface = (creationParams?.get("surfaceType") as? String)?.lowercase()
-        val layoutId = when (requestedSurface) {
-            "surface" -> R.layout.exo_player_view // Explicit opt-in for SurfaceView
-            else -> R.layout.exo_player_view_texture // Default to TextureView to fix color tinting
+        val surfaceType = if (requestedSurface == "surface") "surface" else "texture"
+        refCount += 1
+        val shouldRecreate = sharedPlayerView == null || sharedSurfaceType != surfaceType
+        if (shouldRecreate) {
+            sharedPlayerView = null
+            sharedPlayer?.release()
+            sharedPlayer = null
+            sharedTrackSelector = null
+            sharedSurfaceType = surfaceType
+            val inflater = LayoutInflater.from(context)
+            val layoutId = if (surfaceType == "surface") {
+                R.layout.exo_player_view
+            } else {
+                R.layout.exo_player_view_texture
+            }
+            val inflated = inflater.inflate(layoutId, null)
+            sharedPlayerView = inflated as PlayerView
         }
-        val inflated = inflater.inflate(layoutId, null)
-        playerView = inflated as PlayerView
+
+        playerView = sharedPlayerView!!
+        (playerView.parent as? android.view.ViewGroup)?.removeView(playerView)
         
         // Prevent the native PlayerView from stealing focus/DPAD events so Flutter widgets can receive input
         try {
@@ -69,6 +93,10 @@ class ExoPlayerView(
         playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
         playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
         
+        // Setup method channel for communication with Flutter
+        methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
+        methodChannel.setMethodCallHandler(this)
+
         // Create ExoPlayer instance with memory-optimized settings
         val dataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
@@ -96,81 +124,89 @@ class ExoPlayerView(
             }
         }
 
-        // Build ExoPlayer with memory-optimized settings
-        trackSelector = DefaultTrackSelector(context)
-        trackSelector.parameters = trackSelector.buildUponParameters()
-            .setMaxAudioChannelCount(2) // Limit to stereo to save memory
-            .setMaxVideoSizeSd() // Limit video resolution to save memory
-            .build()
-
-        try {
-            exoPlayer = ExoPlayer.Builder(context, renderersFactory)
-                .setMediaSourceFactory(
-                    androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
-                        .setDataSourceFactory(dataSourceFactory)
-                )
-                .setTrackSelector(trackSelector)
+        // Build ExoPlayer with memory-optimized settings (shared across views)
+        if (sharedPlayer == null || sharedTrackSelector == null) {
+            trackSelector = DefaultTrackSelector(context.applicationContext)
+            trackSelector.parameters = trackSelector.buildUponParameters()
+                .setMaxAudioChannelCount(2) // Limit to stereo to save memory
+                .setMaxVideoSizeSd() // Limit video resolution to save memory
                 .build()
-                .apply {
-                    playWhenReady = false // Don't auto-play to prevent memory pressure
-                    volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
-                    addListener(object : Player.Listener {
-                        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                            if (!firstFrameRendered) {
-                                firstFrameRendered = true
-                                firstFrameTimestamp = System.currentTimeMillis()
-                                android.util.Log.d("ExoPlayer", "First video frame rendered at $firstFrameTimestamp, size=${videoSize.width}x${videoSize.height}")
-                                fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
-                            }
-                        }
-                        override fun onPlaybackStateChanged(state: Int) {
-                            val stateName = when (state) {
-                                Player.STATE_READY -> "ready"
-                                Player.STATE_BUFFERING -> "buffering"
-                                Player.STATE_ENDED -> "ended"
-                                Player.STATE_IDLE -> "idle"
-                                else -> "unknown"
-                            }
-                            android.util.Log.d("ExoPlayer", "State changed to: $stateName")
-                            if (!isDisposed) {
-                                try {
-                                    methodChannel.invokeMethod("onPlaybackStateChanged", mapOf("state" to stateName))
-                                } catch (e: Exception) {
-                                    android.util.Log.w("ExoPlayer", "Failed to invoke state change: ${e.message}")
-                                }
-                            }
-                        }
-                        
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            if (!isDisposed) {
-                                try {
-                                    methodChannel.invokeMethod("onPlayingChanged", mapOf("isPlaying" to isPlaying))
-                                } catch (e: Exception) {
-                                    android.util.Log.w("ExoPlayer", "Failed to invoke playing change: ${e.message}")
-                                }
-                            }
-                        }
-                        
-                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                            android.util.Log.e("ExoPlayer", "Playback error: ${error.message}")
-                            if (!isDisposed) {
-                                try {
-                                    methodChannel.invokeMethod("onPlayerError", mapOf("error" to error.message))
-                                } catch (e: Exception) {
-                                    android.util.Log.w("ExoPlayer", "Failed to invoke error: ${e.message}")
-                                }
-                            }
-                        }
-                    })
-                }
-        } catch (e: Exception) {
-            android.util.Log.e("ExoPlayer", "Failed to create ExoPlayer: ${e.message}")
-            throw e
+            sharedTrackSelector = trackSelector
+
+            try {
+                sharedPlayer = ExoPlayer.Builder(context.applicationContext, renderersFactory)
+                    .setMediaSourceFactory(
+                        androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context.applicationContext)
+                            .setDataSourceFactory(dataSourceFactory)
+                    )
+                    .setTrackSelector(trackSelector)
+                    .build()
+                    .apply {
+                        playWhenReady = false // Don't auto-play to prevent memory pressure
+                        volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("ExoPlayer", "Failed to create ExoPlayer: ${e.message}")
+                throw e
+            }
+        } else {
+            trackSelector = sharedTrackSelector!!
         }
 
-        // Setup method channel for communication with Flutter
-        methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
-        methodChannel.setMethodCallHandler(this)
+        exoPlayer = sharedPlayer!!
+        exoPlayer.volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
+
+        // Ensure only one active listener to avoid duplicate callbacks.
+        activeListener?.let { exoPlayer.removeListener(it) }
+        activeListener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                if (!firstFrameRendered) {
+                    firstFrameRendered = true
+                    firstFrameTimestamp = System.currentTimeMillis()
+                    android.util.Log.d("ExoPlayer", "First video frame rendered at $firstFrameTimestamp, size=${videoSize.width}x${videoSize.height}")
+                    fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
+                }
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                val stateName = when (state) {
+                    Player.STATE_READY -> "ready"
+                    Player.STATE_BUFFERING -> "buffering"
+                    Player.STATE_ENDED -> "ended"
+                    Player.STATE_IDLE -> "idle"
+                    else -> "unknown"
+                }
+                android.util.Log.d("ExoPlayer", "State changed to: $stateName")
+                if (!isDisposed) {
+                    try {
+                        methodChannel.invokeMethod("onPlaybackStateChanged", mapOf("state" to stateName))
+                    } catch (e: Exception) {
+                        android.util.Log.w("ExoPlayer", "Failed to invoke state change: ${e.message}")
+                    }
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (!isDisposed) {
+                    try {
+                        methodChannel.invokeMethod("onPlayingChanged", mapOf("isPlaying" to isPlaying))
+                    } catch (e: Exception) {
+                        android.util.Log.w("ExoPlayer", "Failed to invoke playing change: ${e.message}")
+                    }
+                }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.e("ExoPlayer", "Playback error: ${error.message}")
+                if (!isDisposed) {
+                    try {
+                        methodChannel.invokeMethod("onPlayerError", mapOf("error" to error.message))
+                    } catch (e: Exception) {
+                        android.util.Log.w("ExoPlayer", "Failed to invoke error: ${e.message}")
+                    }
+                }
+            }
+        }
+        exoPlayer.addListener(activeListener!!)
 
         // Attach player to view
         playerView.player = exoPlayer
@@ -238,10 +274,24 @@ class ExoPlayerView(
         try {
             positionUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
             fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
-            exoPlayer.release()
+            activeListener?.let { exoPlayer.removeListener(it) }
             methodChannel.setMethodCallHandler(null)
         } catch (e: Exception) {
             android.util.Log.w("ExoPlayer", "Error during dispose: ${e.message}")
+        }
+        refCount -= 1
+        if (refCount <= 0) {
+            try {
+                exoPlayer.release()
+            } catch (e: Exception) {
+                android.util.Log.w("ExoPlayer", "Error releasing shared player: ${e.message}")
+            }
+            sharedPlayer = null
+            sharedPlayerView = null
+            sharedTrackSelector = null
+            sharedSurfaceType = null
+            activeListener = null
+            refCount = 0
         }
     }
 
