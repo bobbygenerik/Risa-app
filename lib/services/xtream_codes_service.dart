@@ -265,10 +265,21 @@ class XtreamCodesService {
         return [];
       }
 
-      for (final c in categories) {
-        final id = (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
-        final streams = await getLiveStreams(id);
-        all.addAll(streams);
+      // Parallelize category fetching to speed up metadata priming.
+      // Use batches of 10 to be respectful to the server while still being much faster than sequential.
+      const int batchSize = 10;
+      for (int i = 0; i < categories.length; i += batchSize) {
+        final end = (i + batchSize < categories.length) ? i + batchSize : categories.length;
+        final batch = categories.sublist(i, end);
+        
+        final results = await Future.wait(batch.map((c) {
+          final id = (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
+          return getLiveStreams(id);
+        }));
+        
+        for (final list in results) {
+          all.addAll(list);
+        }
       }
       return all;
     } catch (e) {

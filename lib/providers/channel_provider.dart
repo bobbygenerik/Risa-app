@@ -2189,15 +2189,25 @@ class ChannelProvider with ChangeNotifier {
         _loadingProgress = 0.5 + (count / 20000).clamp(0.0, 0.45);
         notifyListeners();
       }, onChannelsChunk: (chunk) {
-        // Handle chunks progressively
         _channelMaps.addAll(chunk);
         _channelCountDb = _channelMaps.length;
+        
+        // Use a simple modulo check to throttle UI updates during heavy parsing.
+        // This prevents the UI thread from being overwhelmed by rebuilds.
+        final bool isFirstChunk = _isLoading && _channelMaps.length >= 500;
+        if (isFirstChunk) {
+          _isLoading = false;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
+        } else if (_channelMaps.length % 2500 == 0) {
+          notifyListeners();
+        }
+        
         if (_dbReady) {
           unawaited(_db.insertChannels(chunk).catchError((e) {
             debugLog('ChannelProvider: Background chunk insert failed: $e');
           }));
         }
-        notifyListeners();
       });
 
       var channelsFile = parsed['channelsFile'] as String?;
@@ -2257,14 +2267,15 @@ class ChannelProvider with ChangeNotifier {
       _updateEpgAllowedChannels();
       unawaited(_primeXtreamLiveMetadata(url));
 
-      try {
-        final playlistJson = json.encode(_channelMaps);
-        await prefs.setString('flutter.cached_playlist', playlistJson);
-        debugLog(
-            'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
-      } catch (e) {
-        debugLog(
-            'ChannelProvider: Failed to save playlist for Android Auto: $e');
+      // Android Auto Cache: Skip if playlist is massive to avoid UI freezes.
+      // Copying 50k+ items to an isolate or encoding them on the main thread is too expensive.
+      if (_channelMaps.length < 15000) {
+        try {
+          final playlistJson = json.encode(_channelMaps);
+          await prefs.setString('flutter.cached_playlist', playlistJson);
+        } catch (_) {}
+      } else {
+        debugLog('ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
       }
 
       _loadingStatus = 'Saving VOD content...';

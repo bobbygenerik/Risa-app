@@ -55,6 +55,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       isLive: widget.isLive,
       preferStockOnLive: true,
       backend: backend,
+      hardwareAcceleration: settings.hardwareAcceleration,
     );
     
     if (widget.controllerNotifier != null) {

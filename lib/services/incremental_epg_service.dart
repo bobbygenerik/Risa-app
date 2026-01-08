@@ -160,7 +160,7 @@ class IncrementalEpgService extends ChangeNotifier {
       _hasParsed &&
       !_isLoading &&
       !_isDownloading &&
-      !_isParsing &&
+      !(_isParsing && _programsByChannel.isEmpty) &&
       _availableChannels.isNotEmpty;
   String? get currentUrl => _epgUrl;
   int get allowedChannelCount => _allowedChannelCount;
@@ -592,18 +592,18 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   Future<void> _saveNormalizedMappingToPrefs(
-      Map<String, List<String>>? map) async {
+      Map<String, List<String>>? mapping) async {
     try {
-      final dir = await getApplicationSupportDirectory();
+      final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_normalizedMapFileName');
-      if (map == null || map.isEmpty) {
+      if (mapping == null || mapping.isEmpty) {
         if (await file.exists()) await file.delete();
         return;
       }
-      final jsonStr = jsonEncode(map);
+      final jsonStr = await compute(json.encode, mapping);
       await file.writeAsString(jsonStr);
       debugLog(
-          'EPG: Saved normalized mapping (${map.length} entries) to ${file.path}');
+          'EPG: Saved normalized mapping (${mapping.length} entries) to ${file.path}');
     } catch (e) {
       debugLog('EPG: Failed to save normalized mapping: $e');
     }
@@ -625,13 +625,13 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<void> _loadNormalizedMappingFromPrefs() async {
     try {
-      final dir = await getApplicationSupportDirectory();
+      final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_normalizedMapFileName');
       if (!await file.exists()) return;
       final jsonStr = await file.readAsString();
       if (jsonStr.isEmpty) return;
-      final Map<String, dynamic> decoded = jsonDecode(jsonStr);
-      _normalizedAvailableChannels = decoded.map((k, v) =>
+      final data = await compute(json.decode, jsonStr) as Map<String, dynamic>;
+      _normalizedAvailableChannels = data.map((k, v) =>
           MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()));
       _availableChannels
           .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
@@ -3486,8 +3486,8 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         processed++;
-        if (processed == 500 || yieldClock.elapsedMilliseconds >= 100 || processed % 2000 == 0) {
-          // Yield frequently to keep input responsive during large EPG ingests.
+        // Throttle updates: notifying the UI too often during a 100k+ program ingest kills performance.
+        if (processed == 500 || (processed % 5000 == 0 && yieldClock.elapsedMilliseconds >= 200)) {
           await Future.delayed(const Duration(milliseconds: 1));
           notifyListeners();
           yieldClock.reset();

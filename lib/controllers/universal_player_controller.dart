@@ -26,15 +26,15 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     bool isLive = false,
     bool preferStockOnLive = true,
     String? backend, // Optional backend selection
+    bool hardwareAcceleration = true,
   }) {
-    // If backend is specified as ExoPlayer, use the native implementation
-    if (backend == 'ExoPlayer' || (backend == 'Auto' && kIsWeb == false && defaultTargetPlatform == TargetPlatform.android)) {
-       // On Android, Native ExoPlayer with SurfaceView is often the most stable
+    // Default behavior for 'Auto': Prefer MediaKit for stability unless user explicitly picks ExoPlayer.
+    if (backend == 'ExoPlayer') {
        return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
     
-    // Default to MediaKit (mpv)
-    return MediaKitPlayerController(url, autoPlay: autoPlay);
+    // Default to MediaKit (mpv) for maximum codec compatibility and stability
+    return MediaKitPlayerController(url, autoPlay: autoPlay, hardwareAcceleration: hardwareAcceleration);
   }
 }
 
@@ -91,14 +91,21 @@ class MediaKitPlayerController extends UniversalPlayerController {
   bool _isDisposed = false;
   UniversalPlayerValue _value = const UniversalPlayerValue();
 
-  MediaKitPlayerController(String url, {this.autoPlay = true})
+  MediaKitPlayerController(String url, {this.autoPlay = true, bool hardwareAcceleration = true})
       : _player = Player(configuration: PlayerConfiguration(
           title: 'IPTV Player',
         )) {
     
-    // mpv-specific optimizations will be handled by media_kit defaults
+    // Fix for "Black Screen" on some Android devices:
+    // androidAttachSurfaceAfterVideoOutput: true prevents surface race conditions.
+    _videoController = VideoController(
+      _player, 
+      configuration: VideoControllerConfiguration(
+        enableHardwareAcceleration: hardwareAcceleration,
+        androidAttachSurfaceAfterVideoOutput: true, 
+      ),
+    );
 
-    _videoController = VideoController(_player);
     _player.stream.position.listen(_onPositionChanged);
     _player.stream.duration.listen(_onDurationChanged);
     _player.stream.playing.listen(_onPlayingChanged);
