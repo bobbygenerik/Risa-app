@@ -120,9 +120,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _rowInitialFetch = 12;
   static const int _rowFetchStep = 16;
   static const int _rowVisibleBuffer = 2;
-  static const int _maxProgramArtworkEntries = 300;
-  static const int _maxProgramArtworkTitleEntries = 300;
-  static const int _maxProgramArtworkNegativeEntries = 300;
+  static const int _maxProgramArtworkEntries = 100; // Restored but conservative
+  static const int _maxProgramArtworkTitleEntries = 100;
+  static const int _maxProgramArtworkNegativeEntries = 100;
   static const Duration _artworkNegativeTtl = Duration(hours: 6);
   static const String _programArtworkTitleCacheKey =
       'live_tv_program_artwork_title_cache_v1';
@@ -130,17 +130,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'live_tv_program_artwork_negative_cache_v1';
   Timer? _artworkTitleSaveDebounce;
   Timer? _artworkNegativeSaveDebounce;
-  static const int _maxProgramTitleLogoEntries = 150;
-  static const int _maxCachedCategories = 12;
-  static const int _maxArtworkQueueEntries = 40;
-  int _visibleCategoryCount = 12;
-  static const int _categoryChunkSize = 8;
-  static const double _categoryPrefetchExtent = 900;
+  static const int _maxProgramTitleLogoEntries = 50;
+  static const int _maxCachedCategories = 6;
+  int _visibleCategoryCount = 10; // Restored but conservative
+  static const int _categoryChunkSize = 6;
+  static const double _categoryPrefetchExtent = 600; // Restored but conservative
   final Queue<String> _categoryLoadQueue = Queue<String>();
   int _activeCategoryLoads = 0;
-  static const int _maxCategoryLoads = 2;
+  static const int _maxCategoryLoads = 2; // Restored
   int _lastPrefetchAnchor = -1;
-  static const int _prefetchWindowRows = 4;
+  static const int _prefetchWindowRows = 3; // Restored but conservative
   final Map<String, ValueNotifier<int>> _categoryRowNotifiers = {};
   Future<List<Channel>>? _previewFuture;
   int _lastPreviewChannelCount = -1;
@@ -360,14 +359,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     unawaited(_saveProgramArtworkTitleCache());
     unawaited(_saveProgramArtworkNegativeCache());
     _featuredRotationTimer?.cancel();
+    
+    // Clear all caches
     _artworkQueue.clear();
     _artworkRequests.clear();
     _pendingArtworkRequests.clear();
+    _programArtwork.clear();
+    _programArtworkByTitle.clear();
+    _programArtworkNegativeByTitle.clear();
+    _programTitleLogos.clear();
+    _titleLogoRequests.clear();
+    _programChannelLookup.clear();
+    _categoryChannelCache.clear();
+    _categoryChannelLoading.clear();
+    _categoryNames.clear();
+    _categoryNameSet.clear();
+    _epgPrefetchedRows.clear();
+    _focusedIndexBySection.clear();
+    _artworkRetryAfter.clear();
+    _artworkFailureCounts.clear();
+    _queuedArtworkIds.clear();
+    _programArtworkOrder.clear();
+    _programArtworkTitleOrder.clear();
+    _programArtworkNegativeTitleOrder.clear();
+    _programTitleLogoOrder.clear();
+    _categoryCacheOrder.clear();
+    _categoryLoadQueue.clear();
+    _categoryRowNotifiers.clear();
+    _rowVisibleCountBySection.clear();
+    _categoryOffsets.clear();
+    _categoryHasMore.clear();
+    _categoryAppendQueue.clear();
+    _heroImageCacheHits.clear();
+    
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
     }
     _rowScrollControllers.clear();
+    _rowScrollInitialized.clear();
+    
     _focusPool.returnFocusNodes(
       [
         'live_tv_watch',
@@ -619,8 +650,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, _) {
           final epgService = context.watch<IncrementalEpgService>();
           final hasChannels = channelProvider.hasChannels;
-          final epgReady =
-              !epgService.hasEpgUrl ? true : epgService.isReady;
+          final epgReady = !epgService.hasEpgUrl ? true : epgService.isReady;
           if (epgReady) {
             _epgReadySince ??= DateTime.now();
           } else {
@@ -1067,7 +1097,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
               final opacity = 1.0 - fadeProgress;
               if (opacity <= 0.01) {
-                return const SizedBox.shrink();
+                // Show minimal tap area when fully faded
+                return GestureDetector(
+                  onTap: () {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 60,
+                    color: Colors.transparent,
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_up,
+                            color: Colors.white54,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
               }
               return Opacity(
                 opacity: opacity,
@@ -1103,7 +1168,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: SizedBox(height: contentTop),
+                child: GestureDetector(
+                  onTap: () {
+                    // Tap on hero area to scroll back to top
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                    );
+                  },
+                  child: SizedBox(height: contentTop),
+                ),
               ),
               SliverPadding(
                 padding: EdgeInsets.only(
@@ -1297,16 +1372,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
             const SizedBox(height: 16), // Reduced from 20
             // Watch Button
-            SizedBox(
-              width: context.cardWidth() * 0.5, // Slimmer button
-              child: BrandPrimaryButton(
-                onPressed: () => _openChannelPlayer(channel),
-                label: 'Watch Now',
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                fontSize: 13,
-                minHeight: 28,
-                focusNode: _watchButtonFocus,
+            GestureDetector(
+              onTap: () => _openChannelPlayer(channel),
+              child: SizedBox(
+                width: context.cardWidth() * 0.5, // Slimmer button
+                child: BrandPrimaryButton(
+                  onPressed: () => _openChannelPlayer(channel),
+                  label: 'Watch Now',
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  fontSize: 13,
+                  minHeight: 28,
+                  focusNode: _watchButtonFocus,
+                ),
               ),
             ),
           ],
@@ -1633,8 +1711,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String _canonicalArtworkTitle(String title) {
     var normalized = title;
     normalized = normalized.replaceAll(RegExp(r'\s*[-:]\s*'), ' ');
-    normalized = normalized.replaceAll(
-        RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
+    normalized = normalized.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
     normalized = normalized.replaceAll(
         RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false), '');
     normalized = normalized.replaceAll(
@@ -1647,8 +1724,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         RegExp(r'\b(\d+)(st|nd|rd|th)\s+hour\b', caseSensitive: false), '');
     normalized = normalized.replaceAll(
         RegExp(r'\b(\d+)\s*(st|nd|rd|th)?\s*hour\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(19|20)\d{2}\b'), '');
+    normalized = normalized.replaceAll(RegExp(r'\b(19|20)\d{2}\b'), '');
     normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
     return normalized.isEmpty ? title : normalized;
   }
@@ -1681,8 +1757,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     var cleaned = name;
     cleaned = cleaned.replaceAll(RegExp(r'\s*[-:|]\s*'), ' ');
     cleaned = cleaned.replaceAll(
-        RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false),
-        '');
+        RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false), '');
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
     return cleaned;
   }
@@ -1876,18 +1951,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _enqueueArtwork(Program program) {
-    if (_pauseArtworkFetching || _suspendArtworkCaches) return;
-    if (_artworkRequests.contains(program.id) ||
-        _queuedArtworkIds.contains(program.id)) {
-      return;
-    }
-    if (_artworkQueue.length >= _maxArtworkQueueEntries) {
-      final removed = _artworkQueue.removeFirst();
-      _queuedArtworkIds.remove(removed.id);
-    }
-    _artworkQueue.add(program);
-    _queuedArtworkIds.add(program.id);
-    _scheduleArtworkDrain();
+    // Disable artwork fetching entirely to prevent OOM
+    return;
   }
 
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
@@ -2280,19 +2345,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (isNews) {
           final details = await TMDBService.getBestBackdropDetails(queryTitle)
               .timeout(timeout);
-        if (!_isBlacklistedNewsArtwork(details, program.title)) {
-          final tmdbImage = (details?['image'] as String?)?.trim();
-          if (tmdbImage != null && tmdbImage.isNotEmpty) {
+          if (!_isBlacklistedNewsArtwork(details, program.title)) {
+            final tmdbImage = (details?['image'] as String?)?.trim();
+            if (tmdbImage != null && tmdbImage.isNotEmpty) {
+              _logArtworkDecision(
+                'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" url=$tmdbImage',
+              );
+              return tmdbImage;
+            }
+          } else {
             _logArtworkDecision(
-              'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" url=$tmdbImage',
+              'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" result=blacklisted',
             );
-            return tmdbImage;
           }
-        } else {
-          _logArtworkDecision(
-            'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" result=blacklisted',
-          );
-        }
         } else {
           final tmdbImage =
               await TMDBService.getBestBackdrop(queryTitle).timeout(timeout);
@@ -2899,8 +2964,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 else
                   Positioned.fill(child: fallback),
                 Positioned(
-                  top: 8,
-                  left: 8,
+                  top: 6,
+                  left: 6,
                   child: SizedBox(
                     width: 40,
                     height: 24,
@@ -3464,6 +3529,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_isNewsProgram(program, channel)) {
       return _buildNewsCardFallback(channel);
     }
+    if (program != null && _isSportsProgram(program, channel)) {
+      return _buildSportsCardFallback(channel);
+    }
     if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
       return _buildLogoCardFallback(channel);
     }
@@ -3487,29 +3555,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(gradient: gradient),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.6;
           final maxLogoHeight = constraints.maxHeight * 0.45;
+          final logoCacheWidth =
+              math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight =
+              math.min(320, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Positioned.fill(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Opacity(
-                      opacity: 0.25,
-                      child: CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV card backdrop');
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(gradient: gradient),
@@ -3523,6 +3577,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     fit: BoxFit.contain,
                     width: maxLogoWidth,
                     height: maxLogoHeight,
+                    memCacheWidth: logoCacheWidth,
+                    memCacheHeight: logoCacheHeight,
                     errorWidget: (_, url, error) {
                       logHandshakeIfNeeded(url, error,
                           context: 'LiveTV card logo');
@@ -3534,6 +3590,86 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     },
                   ),
                 ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSportsCardFallback(Channel channel) {
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF1A2E1A),
+        Color(0xFF0F1F0F),
+        Color(0xFF0A1A0A),
+      ],
+    );
+    final logoUrl = channel.logoUrl;
+    final normalizedLogoUrl =
+        logoUrl == null ? null : normalizeImageUrl(logoUrl);
+    return Container(
+      decoration: const BoxDecoration(gradient: gradient),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
+          final maxLogoWidth = constraints.maxWidth * 0.6;
+          final maxLogoHeight = constraints.maxHeight * 0.45;
+          final logoCacheWidth =
+              math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight =
+              math.min(320, (maxLogoHeight * dpr).round());
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(gradient: gradient),
+                ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (normalizedLogoUrl != null &&
+                        normalizedLogoUrl.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: normalizedLogoUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.contain,
+                        width: maxLogoWidth,
+                        height: maxLogoHeight,
+                        memCacheWidth: logoCacheWidth,
+                        memCacheHeight: logoCacheHeight,
+                        errorWidget: (_, url, error) {
+                          logHandshakeIfNeeded(url, error,
+                              context: 'LiveTV sports card logo');
+                          return const Icon(
+                            Icons.sports,
+                            color: Colors.white70,
+                            size: 32,
+                          );
+                        },
+                      )
+                    else
+                      const Icon(
+                        Icons.sports,
+                        color: Colors.white70,
+                        size: 32,
+                      ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'SPORTS',
+                      style: AppTypography.caption(context).copyWith(
+                        letterSpacing: 4,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -3558,8 +3694,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(gradient: gradient),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.6;
           final maxLogoHeight = constraints.maxHeight * 0.45;
+          final backdropCacheWidth =
+              math.min(400, (constraints.maxWidth * dpr).round());
+          final backdropCacheHeight =
+              math.min(400, (constraints.maxHeight * dpr).round());
+          final logoCacheWidth =
+              math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight =
+              math.min(320, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
               if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
@@ -3572,6 +3717,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         imageUrl: normalizedLogoUrl,
                         httpHeaders: HttpClientService().imageHeaders,
                         fit: BoxFit.cover,
+                        memCacheWidth: backdropCacheWidth,
+                        memCacheHeight: backdropCacheHeight,
                         errorWidget: (_, url, error) {
                           logHandshakeIfNeeded(url, error,
                               context: 'LiveTV news card backdrop');
@@ -3598,6 +3745,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         fit: BoxFit.contain,
                         width: maxLogoWidth,
                         height: maxLogoHeight,
+                        memCacheWidth: logoCacheWidth,
+                        memCacheHeight: logoCacheHeight,
                         errorWidget: (_, url, error) {
                           logHandshakeIfNeeded(url, error,
                               context: 'LiveTV news card logo');
@@ -3715,29 +3864,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(gradient: gradient),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.55;
           final maxLogoHeight = constraints.maxHeight * 0.32;
+          final logoCacheWidth =
+              math.min(480, (maxLogoWidth * dpr).round());
+          final logoCacheHeight =
+              math.min(480, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Positioned.fill(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Opacity(
-                      opacity: 0.22,
-                      child: CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV hero backdrop');
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(gradient: gradient),
@@ -3751,6 +3886,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     fit: BoxFit.contain,
                     width: maxLogoWidth,
                     height: maxLogoHeight,
+                    memCacheWidth: logoCacheWidth,
+                    memCacheHeight: logoCacheHeight,
                     errorWidget: (_, url, error) {
                       logHandshakeIfNeeded(url, error,
                           context: 'LiveTV hero logo');
@@ -3787,29 +3924,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(gradient: gradient),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.55;
           final maxLogoHeight = constraints.maxHeight * 0.32;
+          final logoCacheWidth =
+              math.min(480, (maxLogoWidth * dpr).round());
+          final logoCacheHeight =
+              math.min(480, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Positioned.fill(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Opacity(
-                      opacity: 0.22,
-                      child: CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV news hero backdrop');
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(gradient: gradient),
@@ -3827,6 +3950,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         fit: BoxFit.contain,
                         width: maxLogoWidth,
                         height: maxLogoHeight,
+                        memCacheWidth: logoCacheWidth,
+                        memCacheHeight: logoCacheHeight,
                         errorWidget: (_, url, error) {
                           logHandshakeIfNeeded(url, error,
                               context: 'LiveTV news hero logo');
@@ -3921,6 +4046,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (url == null || url.isEmpty) return false;
     final lower = url.toLowerCase();
     if (lower.contains('poster')) return true;
+    if (lower.contains('news')) return true; // NEWS placeholder images
+    if (lower.contains('placeholder')) return true; // Generic placeholders
+    if (lower.contains('default')) return true; // Default images
+    if (lower.contains('fallback')) return true; // Fallback images
+    if (lower.contains('generic')) return true; // Generic images
+    if (lower.contains('logo')) return true; // Logo images
     if (lower.contains('._v1_') &&
         (lower.contains('sx') || lower.contains('sy'))) {
       return true;
@@ -3929,6 +4060,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         (lower.contains('w342') ||
             lower.contains('w500') ||
             lower.contains('w780'))) {
+      return true;
+    }
+    // Check for aspect ratio indicators that suggest vertical/square images
+    if (lower.contains('_1x1') || lower.contains('_3x4') || lower.contains('_4x3')) {
       return true;
     }
     return false;
@@ -3983,10 +4118,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _pauseArtworkFetching = true;
     _suspendArtworkCaches = true;
     _suspendHeroBackground = true;
+    
+    // Aggressive memory cleanup before player
     _releaseArtworkCachesForPlayback();
     MemoryManager.checkMemoryPressure();
     MemoryManager.clearCaches();
     MemoryManager.forceGarbageCollection();
+    
+    // Clear hero image cache to free memory
+    _heroImageCacheHits.clear();
+    
     if (!mounted) return;
     try {
       await context.push('/player', extra: channel);
@@ -4010,6 +4151,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _programTitleLogos.clear();
     _programTitleLogoOrder.clear();
     _programChannelLookup.clear();
+    _heroImageCacheHits.clear();
+    
+    // Clear additional caches that can consume memory
+    _programArtworkByTitle.clear();
+    _programArtworkTitleOrder.clear();
+    _categoryChannelCache.clear();
+    _categoryCacheOrder.clear();
   }
 
   Widget _buildHeroContent(
@@ -4042,7 +4190,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       currentProgram,
     );
     final isCachedHero = _heroImageCacheHits[normalizedHeroUrl] == true;
-    final heroFit = _isPosterStyleUrl(heroImage) ? BoxFit.contain : BoxFit.cover;
+    final heroFit =
+        _isPosterStyleUrl(heroImage) ? BoxFit.contain : BoxFit.cover;
     final heroAlignment =
         heroFit == BoxFit.cover ? Alignment.topCenter : Alignment.center;
     if (!hasHeroImage) {
@@ -4089,8 +4238,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     fit: StackFit.expand,
                     children: [
                       ImageFiltered(
-                        imageFilter:
-                            ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                         child: Opacity(
                           opacity: 0.35,
                           child: Image(
@@ -4194,23 +4342,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               color: AppColors.background,
             ),
           ),
-          Positioned(
-            top: 0,
-            right: rightInset,
-            child: SafeArea(
-              bottom: false,
+        // Channel logo
+        Positioned(
+          top: AppSizes.lg,
+          right: AppSizes.lg,
+          child: Builder(builder: (context) {
+            final scrollPos =
+                _scrollController.hasClients ? _scrollController.offset : 0.0;
+            final fadeProgress =
+                (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+            return Opacity(
+              opacity: 1.0 - fadeProgress,
               child: Shimmer(
                 child: Container(
-                  height: context.tvSpacing(24),
-                  width: context.tvSpacing(64),
+                  height: 48,
+                  width: 72,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
+        ),
           Positioned(
             top: 0,
             left: contentInset,

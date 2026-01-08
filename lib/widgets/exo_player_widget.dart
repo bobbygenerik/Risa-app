@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/controllers/universal_player_controller.dart';
-import 'package:iptv_player/widgets/exoplayer_video_view.dart';
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
@@ -44,11 +43,12 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   }
 
   void _initializeController() {
+    // Force stock Flutter video player only to eliminate native memory issues
     _controller = UniversalPlayerController.create(
       url: widget.url,
       autoPlay: false,
       isLive: widget.isLive,
-      preferStockOnLive: false,
+      preferStockOnLive: true, // Force stock player
     );
     
     if (widget.controllerNotifier != null) {
@@ -95,24 +95,8 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return AnimatedBuilder(
-      animation: _controller!,
-      builder: (context, child) {
-        if (_controller is NativeExoPlayerController) {
-          return ExoPlayerVideoView(
-            controller: _controller! as NativeExoPlayerController,
-            fit: widget.fit,
-            surfaceType: 'texture',
-          );
-        }
-
-        final stockCtrl = _controller! as StockPlayerController;
-        if (!stockCtrl.rawController.value.isInitialized) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return VideoPlayer(stockCtrl.rawController);
-      },
-    );
+    // Always use Flutter VideoPlayer - controller is guaranteed to be StockPlayerController
+    final stockController = _controller as StockPlayerController;
+    return VideoPlayer(stockController.rawController);
   }
 }

@@ -34,6 +34,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _realDebridForVod = true;
   bool _heroVideoPreview = false;
   String _videoPlayerBackend = 'Auto'; // Auto, ExoPlayer, MediaKit
+  String _exoPlayerSurfaceType = 'surface'; // surface, texture
 
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
@@ -65,6 +66,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get realDebridForVod => _realDebridForVod;
   bool get heroVideoPreview => _heroVideoPreview;
   String get videoPlayerBackend => _videoPlayerBackend;
+  String get exoPlayerSurfaceType => _exoPlayerSurfaceType;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -113,6 +115,8 @@ class SettingsProvider extends ChangeNotifier {
     _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
     _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
     _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
+    _exoPlayerSurfaceType =
+        prefs.getString('exo_player_surface_type') ?? 'surface';
   }
 
   Future<void> setHardwareAcceleration(bool value) async {
@@ -281,6 +285,13 @@ class SettingsProvider extends ChangeNotifier {
     if (_videoPlayerBackend == value) return;
     _videoPlayerBackend = value;
     await _prefs?.setString('video_player_backend', value);
+    notifyListeners();
+  }
+
+  Future<void> setExoPlayerSurfaceType(String value) async {
+    if (_exoPlayerSurfaceType == value) return;
+    _exoPlayerSurfaceType = value;
+    await _prefs?.setString('exo_player_surface_type', value);
     notifyListeners();
   }
 

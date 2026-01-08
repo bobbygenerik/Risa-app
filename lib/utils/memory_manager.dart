@@ -1,18 +1,18 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 
 class MemoryManager {
   static const int _maxMemoryThresholdMB = 200; // Conservative threshold
   static bool _isLowMemory = false;
+  static bool _cleanupScheduled = false;
   
   static bool get isLowMemory => _isLowMemory;
   
   /// Check if we're approaching memory limits
   static void checkMemoryPressure() {
-    if (!kDebugMode) return; // Only check in debug mode for now
-    
     try {
       // This is a simplified check - in production you'd want more sophisticated monitoring
       final info = ProcessInfo.currentRss;
@@ -22,6 +22,8 @@ class MemoryManager {
       
       if (_isLowMemory) {
         debugPrint('Memory pressure detected: ${memoryMB}MB used');
+        // Clear caches when memory pressure is detected
+        clearCaches();
       }
     } catch (e) {
       debugPrint('Failed to check memory pressure: $e');
@@ -30,13 +32,19 @@ class MemoryManager {
   
   /// Force garbage collection if memory pressure is high
   static void forceGarbageCollection() {
-    if (_isLowMemory) {
-      debugPrint('Forcing garbage collection due to memory pressure');
-      // Force GC - this is a hint to the VM
-      for (int i = 0; i < 3; i++) {
-        List.generate(1000, (index) => index).clear();
+    _hintGcIfNeeded();
+  }
+
+  static void scheduleCleanup({bool aggressive = false}) {
+    if (_cleanupScheduled) return;
+    _cleanupScheduled = true;
+    SchedulerBinding.instance.scheduleTask(() {
+      _cleanupScheduled = false;
+      if (aggressive || _isLowMemory) {
+        clearCaches();
+        _hintGcIfNeeded();
       }
-    }
+    }, Priority.idle);
   }
   
   /// Clear caches and free memory
@@ -45,11 +53,25 @@ class MemoryManager {
       // Clear image cache
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
+      
+      // Set conservative cache limits
+      PaintingBinding.instance.imageCache.maximumSize = 50;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 8 * 1024 * 1024; // 8MB max
+      
       LogoImageCache.clear();
       
-      debugPrint('Cleared image caches');
+      debugPrint('Cleared image caches and set conservative limits');
     } catch (e) {
       debugPrint('Failed to clear caches: $e');
     }
+  }
+
+  static void _hintGcIfNeeded() {
+    debugPrint('Requesting garbage collection due to memory pressure');
+    // Conservative GC hint
+    final tmp1 = List<int>.generate(1024, (index) => index);
+    tmp1.clear();
+    final tmp2 = List<String>.generate(512, (index) => 'gc_hint_$index');
+    tmp2.clear();
   }
 }

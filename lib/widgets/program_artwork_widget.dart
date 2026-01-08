@@ -1,4 +1,5 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
@@ -197,6 +198,13 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         widget.width != null ? context.tvSpacing(widget.width!) : null;
     final tvHeight =
         widget.height != null ? context.tvSpacing(widget.height!) : null;
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final cacheWidth = tvWidth == null
+        ? null
+        : math.min(600, (tvWidth * dpr).round());
+    final cacheHeight = tvHeight == null
+        ? null
+        : math.min(600, (tvHeight * dpr).round());
     return ClipRRect(
       borderRadius:
           widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
@@ -208,6 +216,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
                 imageUrl: _artworkUrl!,
                 httpHeaders: HttpClientService().imageHeaders,
                 fit: widget.fit,
+                memCacheWidth: cacheWidth,
+                memCacheHeight: cacheHeight,
                 placeholder: (context, url) =>
                     widget.placeholder ??
                     Icon(Icons.tv, size: context.tvIconSize(32)),

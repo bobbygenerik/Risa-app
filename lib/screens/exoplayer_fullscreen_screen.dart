@@ -213,6 +213,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
         widget.streamUrl ??
         widget.channel?.url ??
         '';
+    final surfaceType =
+        Provider.of<SettingsProvider>(context).exoPlayerSurfaceType;
     final progressValue = widget.isLive ? _liveProgress : _progress;
 
     return Scaffold(
@@ -231,7 +233,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
             children: [
               // Native ExoPlayer view
               Positioned.fill(
-                child: _buildExoPlayerView(url),
+                child: _buildExoPlayerView(url, surfaceType),
               ),
 
               if (_isLoading)
@@ -260,14 +262,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     );
   }
 
-  Widget _buildExoPlayerView(String url) {
+  Widget _buildExoPlayerView(String url, dynamic surfaceType) {
     const String viewType = 'com.streamhub.iptv/exoplayer';
     final Map<String, dynamic> creationParams = <String, dynamic>{
       'videoUrl': url,
       'autoPlay': true,
       'muted': false,
-      // Prefer texture for overlays; secureSurface helps avoid color-space artifacts on some devices
-      'surfaceType': widget.isLive ? 'surface' : 'texture',
+      'surfaceType': surfaceType,
       'secureSurface': true,
       'forceHdr': false,
     };

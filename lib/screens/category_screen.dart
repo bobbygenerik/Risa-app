@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -11,12 +10,23 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
-import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/memory_manager.dart';
 
-class CategoryScreen extends StatelessWidget {
+class CategoryScreen extends StatefulWidget {
   final String category;
 
   const CategoryScreen({super.key, required this.category});
+
+  @override
+  State<CategoryScreen> createState() => _CategoryScreenState();
+}
+
+class _CategoryScreenState extends State<CategoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    MemoryManager.checkMemoryPressure();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +34,14 @@ class CategoryScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Consumer<ChannelProvider>(
         builder: (context, channelProvider, child) {
-          // Get total count without converting all channels
           final totalCount =
-              channelProvider.getChannelCountForCategory(category);
+              channelProvider.getChannelCountForCategory(widget.category);
 
           return Padding(
             padding: context.screenPaddingInsets,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     IconButton(
@@ -42,7 +50,7 @@ class CategoryScreen extends StatelessWidget {
                     ),
                     context.spacingSmBox,
                     Text(
-                      category,
+                      widget.category,
                       style: AppTypography.screenTitle(context),
                     ),
                     const Spacer(),
@@ -53,32 +61,26 @@ class CategoryScreen extends StatelessWidget {
                   ],
                 ),
                 context.spacingXlBox,
-
-                // Channels Grid - lazy loading with GridView.builder
                 Expanded(
                   child: totalCount == 0
                       ? _buildEmptyState()
                       : GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 6,
+                            crossAxisCount: 4,
                             crossAxisSpacing: AppSpacing.gridSpacing,
                             mainAxisSpacing: AppSpacing.gridSpacing,
-                            childAspectRatio: 0.85,
+                            childAspectRatio: 0.8, // Taller cards to prevent horizontal stretching
                           ),
+                          cacheExtent: 0,
                           itemCount: totalCount,
                           itemBuilder: (context, index) {
-                            // Lazy load channel at this index
                             final channel = channelProvider
-                                .getChannelInCategoryAtIndex(category, index);
+                                .getChannelInCategoryAtIndex(widget.category, index);
                             if (channel == null) {
                               return const SizedBox.shrink();
                             }
-                            return _buildChannelCard(
-                              context,
-                              channel,
-                              channelProvider,
-                            );
+                            return _buildChannelCard(context, channel, channelProvider);
                           },
                         ),
                 ),
@@ -91,26 +93,22 @@ class CategoryScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
-    return Builder(
-      builder: (context) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                AppIcons.tvOff,
-                size: context.tvIconSize(80),
-                color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-              ),
-              context.spacingXxlBox,
-              Text(
-                'No channels in this category',
-                style: AppTypography.sectionHeader(context),
-              ),
-            ],
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            AppIcons.tvOff,
+            size: context.tvIconSize(80),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
-        );
-      },
+          context.spacingXxlBox,
+          Text(
+            'No channels in this category',
+            style: AppTypography.sectionHeader(context),
+          ),
+        ],
+      ),
     );
   }
 
@@ -121,151 +119,110 @@ class CategoryScreen extends StatelessWidget {
   ) {
     final isFavorite = channelProvider.isFavorite(channel);
 
-    return Builder(
-      builder: (context) {
-        return InkWell(
-          onTap: () {
-            context.push('/player', extra: channel);
-          },
-          child: Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Channel Logo/Thumbnail
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context
-                            .tvSpacing(12)), // AppSizes.radiusMd assumed 12
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        // Logo
-                        if (channel.logoUrl != null &&
-                            channel.logoUrl!.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(context.scale(12)),
-                            ),
-                            child: Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(context
-                                    .tvSpacing(8)), // AppSizes.sm assumed 8
-                                child: CachedNetworkImage(
-                                  imageUrl: channel.logoUrl!,
-                                  httpHeaders: {
-                                    ...HttpClientService().imageHeaders,
-                                    'User-Agent':
-                                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                  },
-                                  fit: BoxFit.contain,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  placeholder: (context, url) =>
-                                      _buildChannelPlaceholder(channel.name),
-                                  errorWidget: (context, url, error) =>
-                                      _buildChannelPlaceholder(channel.name),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          _buildChannelPlaceholder(channel.name),
-
-                        // Live badge
-                        Positioned(
-                          top: context.tvSpacing(4),
-                          left: context.tvSpacing(4),
-                          child: BrandBadge.live(
-                            fontSize: context.tvTextSize(8),
-                          ),
-                        ),
-
-                        // Favorite button
-                        Positioned(
-                          top: context.vScale(4),
-                          right: context.scale(4),
-                          child: IconButton(
-                            icon: Icon(
-                              isFavorite
-                                  ? AppIcons.favorite
-                                  : AppIcons.favoriteOutline,
-                              size: context.tvIconSize(16),
-                              color: isFavorite
-                                  ? AppTheme.accentRed
-                                  : AppColors.textPrimary,
-                            ),
-                            onPressed: () {
-                              if (isFavorite) {
-                                channelProvider.removeFromFavorites(channel);
-                              } else {
-                                channelProvider.addToFavorites(channel);
-                              }
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
+    return InkWell(
+      onTap: () => context.push('/player', extra: channel),
+      child: Card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(context.tvSpacing(12)),
                   ),
                 ),
-
-                // Channel Info
-                Padding(
-                  padding: EdgeInsets.all(
-                      context.tvSpacing(4)), // AppSizes.xs assumed 4
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        channel.name,
-                        style: AppTypography.caption(context).copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                child: Stack(
+                  children: [
+                    _buildChannelPlaceholder(channel.name),
+                    Positioned(
+                      top: context.tvSpacing(4),
+                      left: context.tvSpacing(4),
+                      child: BrandBadge.live(fontSize: context.tvTextSize(8)),
+                    ),
+                    Positioned(
+                      top: context.vScale(4),
+                      right: context.scale(4),
+                      child: IconButton(
+                        icon: Icon(
+                          isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
+                          size: context.tvIconSize(16),
+                          color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        onPressed: () {
+                          if (isFavorite) {
+                            channelProvider.removeFromFavorites(channel);
+                          } else {
+                            channelProvider.addToFavorites(channel);
+                          }
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+            Padding(
+              padding: EdgeInsets.all(context.tvSpacing(4)),
+              child: Text(
+                channel.name,
+                style: AppTypography.caption(context).copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildChannelPlaceholder(String name) {
-    return Builder(
-      builder: (context) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                AppIcons.liveTV,
-                size: context.tvIconSize(40),
-                color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+  Widget _buildChannelPlaceholder(String channelName) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.cardBackground,
+            AppTheme.cardBackground.withAlpha((0.8 * 255).round()),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              AppIcons.liveTV,
+              size: 32,
+              color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              channelName.length > 10 
+                  ? '${channelName.substring(0, 10)}...'
+                  : channelName,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
-              SizedBox(height: context.tvSpacing(8)),
-              Text(
-                name.substring(0, name.length > 15 ? 15 : name.length),
-                style: AppTypography.caption(context),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        );
-      },
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

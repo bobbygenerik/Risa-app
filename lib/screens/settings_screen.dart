@@ -66,6 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _heroVideoPreview = false;
+  String _exoPlayerSurfaceType = 'surface';
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -157,6 +158,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           prefs.getBool('remember_playback_position') ?? true;
       _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
+      _exoPlayerSurfaceType =
+          prefs.getString('exo_player_surface_type') ?? 'surface';
     });
   }
 
@@ -749,6 +752,20 @@ class _SettingsScreenState extends State<SettingsScreen>
               value: _hardwareDecoding,
               onChanged: (v) => _handleSwitchTileChange('Hardware Decoding', v),
             ),
+            SettingsActionTile(
+              title: 'ExoPlayer Surface',
+              subtitle: 'SurfaceView reduces tinting; TextureView for overlays',
+              trailing: Text(
+                _exoPlayerSurfaceType == 'texture'
+                    ? 'TextureView'
+                    : 'SurfaceView',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              onTap: _cycleExoPlayerSurfaceType,
+            ),
           ],
         ),
         SettingsGroup(
@@ -1241,6 +1258,20 @@ class _SettingsScreenState extends State<SettingsScreen>
         }
         break;
     }
+  }
+
+  Future<void> _cycleExoPlayerSurfaceType() async {
+    final nextValue =
+        _exoPlayerSurfaceType == 'texture' ? 'surface' : 'texture';
+    setState(() => _exoPlayerSurfaceType = nextValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('exo_player_surface_type', nextValue);
+    if (mounted) {
+      unawaited(Provider.of<SettingsProvider>(context, listen: false)
+          .setExoPlayerSurfaceType(nextValue));
+    }
+    _showMessage(
+        'ExoPlayer surface set to ${nextValue == 'texture' ? 'TextureView' : 'SurfaceView'}.');
   }
 
   Future<void> _savePlaylistToLibrary(SavedPlaylist playlist) async {

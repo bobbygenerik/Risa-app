@@ -9,7 +9,7 @@ class _LogoCacheEntry {
 
 /// Small in-memory cache for logo ImageProviders to reduce repeat loads.
 class LogoImageCache {
-  static const int _maxEntries = 200;
+  static const int _maxEntries = 80;
   static final Map<String, _LogoCacheEntry> _cache = {};
   static final List<String> _order = [];
 
@@ -27,7 +27,8 @@ class LogoImageCache {
 
     final provider =
         CachedNetworkImageProvider(normalizedUrl, headers: headers);
-    _cache[key] = _LogoCacheEntry(provider);
+    final resized = ResizeImage(provider, width: 256, height: 256);
+    _cache[key] = _LogoCacheEntry(resized);
     _order.add(key);
     _trim();
     return provider;

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -221,22 +222,38 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                     borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(AppSizes.radiusMd),
                                     ),
-                                    child: CachedNetworkImage(
-                                      imageUrl: channel.logoUrl!,
-                                      httpHeaders: {
-                                        ...HttpClientService().imageHeaders,
-                                        'User-Agent':
-                                            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final dpr =
+                                            MediaQuery.of(context).devicePixelRatio;
+                                        final cacheWidth = math.min(
+                                          400,
+                                          (constraints.maxWidth * dpr).round(),
+                                        );
+                                        final cacheHeight = math.min(
+                                          300,
+                                          (constraints.maxHeight * dpr).round(),
+                                        );
+                                        return CachedNetworkImage(
+                                          imageUrl: channel.logoUrl!,
+                                          httpHeaders: {
+                                            ...HttpClientService().imageHeaders,
+                                            'User-Agent':
+                                                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                          },
+                                          fit: BoxFit.contain,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          memCacheWidth: cacheWidth,
+                                          memCacheHeight: cacheHeight,
+                                          placeholder: (context, url) =>
+                                              _buildChannelPlaceholder(
+                                                  channel.name),
+                                          errorWidget: (context, url, error) =>
+                                              _buildChannelPlaceholder(
+                                                  channel.name),
+                                        );
                                       },
-                                      fit: BoxFit.contain,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      placeholder: (context, url) =>
-                                          _buildChannelPlaceholder(
-                                              channel.name),
-                                      errorWidget: (context, url, error) =>
-                                          _buildChannelPlaceholder(
-                                              channel.name),
                                     ),
                                   )
                                 : _buildChannelPlaceholder(channel.name),

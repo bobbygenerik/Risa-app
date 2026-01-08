@@ -18,6 +18,8 @@ import 'package:iptv_player/utils/crash_logger.dart';
 // import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
+import 'package:iptv_player/services/fast_startup_service.dart';
+import 'package:iptv_player/widgets/startup_progress_widget.dart';
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -97,6 +99,13 @@ final _suppressedErrorPatterns = {
   'ClientException',
   'RenderFlex overflowed',
   'overflowed by',
+  'Invalid image data',
+  'Image data',
+  'Failed to load network image',
+  'NetworkImageLoadException',
+  'HandshakeException',
+  'Connection closed',
+  'Connection reset',
 };
 
 bool _shouldSuppressError(String errorStr) {
@@ -118,13 +127,22 @@ void main() {
       // MediaKit.ensureInitialized(); // REMOVED: switching to alternative video player
       StartupProbe.mark('MediaKit initialized (REMOVED)');
 
-      // Optimize image cache for IPTV with many channel logos
+      // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
-      PaintingBinding.instance.imageCache.maximumSize =
-          memoryInfo.isLowMemory ? 80 : 160;
-      PaintingBinding.instance.imageCache.maximumSizeBytes =
-          memoryInfo.isLowMemory ? 18 << 20 : 40 << 20;
-      StartupProbe.mark('Image cache limits configured');
+      if (memoryInfo.isLowMemory) {
+        // Reduce cache sizes on low-memory devices
+        PaintingBinding.instance.imageCache.maximumSize = 20;
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 4 << 20; // 4MB max
+        StartupProbe.mark('Image cache limits configured (LOW MEMORY)');
+      } else {
+        PaintingBinding.instance.imageCache.maximumSize = 50; // Conservative but functional
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 8 << 20; // 8MB max
+        StartupProbe.mark('Image cache limits configured (CONSERVATIVE)');
+      }
+      
+      // Force immediate garbage collection
+      final tmp = List<int>.generate(1024, (index) => index);
+      tmp.clear();
 
       // Initialize SSL handler for IPTV providers with certificate issues
       await SSLHandler.init();
@@ -195,9 +213,14 @@ void main() {
         return true;
       };
 
-      // Show a short startup loader while TMDB disk cache loads
-      StartupProbe.mark('Launching StartupLoader');
-      runApp(const StartupLoader());
+      // Show fast startup progress widget while optimization services load
+      StartupProbe.mark('Launching StartupProgressWidget');
+      runApp(StartupProgressWidget(
+        onComplete: () {
+          // Launch main app after fast startup completes
+          runApp(const StartupLoader());
+        },
+      ));
     },
     (error, stack) {
       // Optionally log error to a service
@@ -230,6 +253,11 @@ class _StartupLoaderState extends State<StartupLoader> {
 
   Future<void> _initialize() async {
     StartupProbe.mark('StartupLoader: background TMDB init start');
+    
+    // Initialize fast startup service first
+    await FastStartupService.instance.initialize();
+    StartupProbe.mark('FastStartup service initialized');
+    
     // Initialize TMDB in background without blocking startup
     unawaited(TMDBService.init().then((_) {
       StartupProbe.mark('StartupLoader: background TMDB init finished');

@@ -21,6 +21,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import androidx.media3.common.C
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.DefaultLoadControl
 
 @UnstableApi
 class ExoPlayerView(
@@ -31,11 +32,7 @@ class ExoPlayerView(
 ) : PlatformView, MethodChannel.MethodCallHandler {
 
     companion object {
-        private var sharedPlayerView: PlayerView? = null
-        private var sharedPlayer: ExoPlayer? = null
-        private var sharedTrackSelector: DefaultTrackSelector? = null
-        private var sharedSurfaceType: String? = null
-        private var activeListener: Player.Listener? = null
+        // Disable shared instances to prevent memory accumulation
         private var refCount = 0
     }
 
@@ -54,30 +51,19 @@ class ExoPlayerView(
     private val prefsKey = "exoplayer_force_platform_${Build.MODEL}"
 
     init {
-        // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams.
-        // Reuse a shared PlayerView/ExoPlayer to avoid repeated heavy inflations.
+        // Create individual PlayerView for each instance to prevent memory sharing issues
         val requestedSurface = (creationParams?.get("surfaceType") as? String)?.lowercase()
-        val surfaceType = if (requestedSurface == "surface") "surface" else "texture"
+        val surfaceType = if (requestedSurface == "texture") "texture" else "surface"
         refCount += 1
-        val shouldRecreate = sharedPlayerView == null || sharedSurfaceType != surfaceType
-        if (shouldRecreate) {
-            sharedPlayerView = null
-            sharedPlayer?.release()
-            sharedPlayer = null
-            sharedTrackSelector = null
-            sharedSurfaceType = surfaceType
-            val inflater = LayoutInflater.from(context)
-            val layoutId = if (surfaceType == "surface") {
-                R.layout.exo_player_view
-            } else {
-                R.layout.exo_player_view_texture
-            }
-            val inflated = inflater.inflate(layoutId, null)
-            sharedPlayerView = inflated as PlayerView
+        
+        val inflater = LayoutInflater.from(context)
+        val layoutId = if (surfaceType == "surface") {
+            R.layout.exo_player_view
+        } else {
+            R.layout.exo_player_view_texture
         }
-
-        playerView = sharedPlayerView!!
-        (playerView.parent as? android.view.ViewGroup)?.removeView(playerView)
+        val inflated = inflater.inflate(layoutId, null)
+        playerView = inflated as PlayerView
         
         // Prevent the native PlayerView from stealing focus/DPAD events so Flutter widgets can receive input
         try {
@@ -111,62 +97,64 @@ class ExoPlayerView(
         val forcePlatform = shared.getBoolean(prefsKey, false)
         val requestedExtensionMode = (creationParams?.get("extensionRenderers") as? String)?.lowercase()
 
-        val extensionMode = when {
-            forcePlatform -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            requestedExtensionMode == "on" -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-            requestedExtensionMode == "off" -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            else -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-        }
+        // Force platform decoders to reduce memory usage
+        val extensionMode = androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
 
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
             init {
                 setExtensionRendererMode(extensionMode)
-                setEnableDecoderFallback(true)
-                android.util.Log.d("ExoPlayer", "RenderersFactory configured: extensionMode=$extensionMode, decoderFallback=true")
+                setEnableDecoderFallback(false) // Disable fallback to save memory
+                setEnableAudioFloatOutput(false) // Disable float audio to save memory
+                android.util.Log.d("ExoPlayer", "RenderersFactory configured: extensionMode=OFF, decoderFallback=false, floatAudio=false")
             }
         }
 
-        // Build ExoPlayer with memory-optimized settings (shared across views)
-        if (sharedPlayer == null || sharedTrackSelector == null) {
-            trackSelector = DefaultTrackSelector(context.applicationContext)
-            val isAndroidTv =
-                (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
-                    Configuration.UI_MODE_TYPE_TELEVISION
-            val parametersBuilder = trackSelector.buildUponParameters()
-                .setMaxAudioChannelCount(2) // Limit to stereo to save memory
-            if (isAndroidTv) {
-                // Prefer SDR H.264 on Android TV to avoid HDR/BT.2020 tint issues.
-                parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
-            }
-            trackSelector.parameters = parametersBuilder.build()
-            sharedTrackSelector = trackSelector
-
-            try {
-                sharedPlayer = ExoPlayer.Builder(context.applicationContext, renderersFactory)
-                    .setMediaSourceFactory(
-                        androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context.applicationContext)
-                            .setDataSourceFactory(dataSourceFactory)
-                    )
-                    .setTrackSelector(trackSelector)
-                    .build()
-                    .apply {
-                        playWhenReady = false // Don't auto-play to prevent memory pressure
-                        volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
-                    }
-            } catch (e: Exception) {
-                android.util.Log.e("ExoPlayer", "Failed to create ExoPlayer: ${e.message}")
-                throw e
-            }
-        } else {
-            trackSelector = sharedTrackSelector!!
+        // Build ExoPlayer with memory-optimized settings (individual instance)
+        trackSelector = DefaultTrackSelector(context.applicationContext)
+        val isAndroidTv =
+            (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
+                Configuration.UI_MODE_TYPE_TELEVISION
+        val parametersBuilder = trackSelector.buildUponParameters()
+            .setMaxAudioChannelCount(2) // Limit to stereo to save memory
+            .setMaxVideoSizeSd() // Force SD resolution to save memory
+            .setMaxVideoBitrate(2000000) // Limit to 2Mbps
+        if (isAndroidTv) {
+            // Prefer SDR H.264 on Android TV to avoid HDR/BT.2020 tint issues.
+            parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
         }
+        trackSelector.parameters = parametersBuilder.build()
 
-        exoPlayer = sharedPlayer!!
-        exoPlayer.volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
+        try {
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    2000,  // min buffer - drastically reduced
+                    4000,  // max buffer - drastically reduced
+                    500,   // playback start - reduced
+                    1000   // rebuffer - reduced
+                )
+                .setTargetBufferBytes(4 * 1024 * 1024) // 4MB instead of 24MB
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+
+            exoPlayer = ExoPlayer.Builder(context.applicationContext, renderersFactory)
+                .setMediaSourceFactory(
+                    androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context.applicationContext)
+                        .setDataSourceFactory(dataSourceFactory)
+                )
+                .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
+                .build()
+                .apply {
+                    playWhenReady = false // Don't auto-play to prevent memory pressure
+                    volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
+                }
+        } catch (e: Exception) {
+            android.util.Log.e("ExoPlayer", "Failed to create ExoPlayer: ${e.message}")
+            throw e
+        }
 
         // Ensure only one active listener to avoid duplicate callbacks.
-        activeListener?.let { exoPlayer.removeListener(it) }
-        activeListener = object : Player.Listener {
+        val playerListener = object : Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (!firstFrameRendered) {
                     firstFrameRendered = true
@@ -214,7 +202,7 @@ class ExoPlayerView(
                 }
             }
         }
-        exoPlayer.addListener(activeListener!!)
+        exoPlayer.addListener(playerListener)
 
         // Attach player to view
         playerView.player = exoPlayer
@@ -270,7 +258,15 @@ class ExoPlayerView(
         }
         // Use DefaultMediaSourceFactory (configured on the player) to infer
         // the correct MediaSource (HLS, progressive, etc.) from the MediaItem.
-        val mediaItem = MediaItem.fromUri(Uri.parse(url))
+        val normalizedUrl = url.lowercase()
+        val mediaItem = if (normalizedUrl.endsWith(".ts")) {
+            MediaItem.Builder()
+                .setUri(Uri.parse(url))
+                .setMimeType(MimeTypes.VIDEO_MP2T)
+                .build()
+        } else {
+            MediaItem.fromUri(Uri.parse(url))
+        }
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
     }
@@ -282,25 +278,12 @@ class ExoPlayerView(
         try {
             positionUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
             fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
-            activeListener?.let { exoPlayer.removeListener(it) }
             methodChannel.setMethodCallHandler(null)
+            exoPlayer.release() // Always release individual instance
         } catch (e: Exception) {
             android.util.Log.w("ExoPlayer", "Error during dispose: ${e.message}")
         }
         refCount -= 1
-        if (refCount <= 0) {
-            try {
-                exoPlayer.release()
-            } catch (e: Exception) {
-                android.util.Log.w("ExoPlayer", "Error releasing shared player: ${e.message}")
-            }
-            sharedPlayer = null
-            sharedPlayerView = null
-            sharedTrackSelector = null
-            sharedSurfaceType = null
-            activeListener = null
-            refCount = 0
-        }
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {

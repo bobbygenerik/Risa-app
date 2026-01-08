@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
@@ -8,7 +9,6 @@ import '../utils/debug_helper.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
-import '../widgets/cached_image.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
@@ -176,8 +176,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       MemoryManager.checkMemoryPressure();
-      MemoryManager.clearCaches();
-      MemoryManager.forceGarbageCollection();
+      MemoryManager.scheduleCleanup();
       setState(() => _playerReady = true);
     });
   }
@@ -210,7 +209,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       body: Focus(
         autofocus: true,
         onKeyEvent: (node, event) {
-          // Show controls on any key event (avoid referencing undefined KeyDownEvent)
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space) {
+              _showControlsAndAutoHide();
+              return KeyEventResult.handled;
+            }
+          }
+          // Show controls on any key event
           _showControlsAndAutoHide();
           return KeyEventResult.ignored;
         },
@@ -273,7 +280,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildModernControls() {
-    final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
@@ -281,12 +287,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withValues(alpha: 0.7),
+              Colors.black.withValues(alpha: 0.8),
               Colors.transparent,
               Colors.transparent,
               Colors.black.withValues(alpha: 0.8),
             ],
-            stops: const [0.0, 0.3, 0.7, 1.0],
+            stops: const [0.0, 0.2, 0.8, 1.0], // Adjusted stops
           ),
         ),
         child: Stack(
@@ -295,51 +301,36 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               top: 0,
               left: 0,
               right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  child: Row(
-                    children: [
+              child: Container(
+                padding: const EdgeInsets.only(
+                  top: 8,
+                  left: 8,
+                  right: 24,
+                  bottom: 16,
+                ),
+                child: Row(
+                  children: [
+                    _buildControlButton(
+                      icon: Icons.arrow_back,
+                      onPressed: () => Navigator.pop(context),
+                      size: 28,
+                    ),
+                    const Spacer(),
+                    if (widget.isLive) ...[
                       _buildControlButton(
-                        icon: Icons.arrow_back,
-                        onPressed: () => Navigator.pop(context),
+                        icon: Icons.dvr,
+                        onPressed: _toggleGuide,
                         size: 24,
                       ),
-                      if (logoUrl != null && logoUrl.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CachedImage(
-                            imageUrl: logoUrl,
-                            fit: BoxFit.contain,
-                            errorWidget: const SizedBox.shrink(),
-                          ),
-                        ),
-                      ],
-                      const Spacer(),
-                      if (widget.isLive) ...[
-                        IconButton(
-                          onPressed: _toggleGuide,
-                          icon: const Icon(Icons.dvr,
-                              color: Colors.white, size: 24),
-                        ),
-                        const SizedBox(width: 16),
-                        SizedBox(
-                          height: 32,
-                          child: Center(
-                            child: const BrandBadge.live(),
-                          ),
-                        ),
-                      ] else
-                        IconButton(
-                          onPressed: _toggleGuide,
-                          icon: const Icon(Icons.dvr,
-                              color: Colors.white, size: 24),
-                        ),
-                    ],
-                  ),
+                      const SizedBox(width: 12),
+                      const BrandBadge.live(),
+                    ] else
+                      _buildControlButton(
+                        icon: Icons.dvr,
+                        onPressed: _toggleGuide,
+                        size: 24,
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -540,14 +531,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _showControlsAndAutoHide() {
-    if (mounted && !_showControls) {
+    if (mounted) {
       setState(() => _showControls = true);
     }
     _hideControlsAfterDelay();
   }
 
   void _toggleControls() {
-    setState(() => _showControls = !_showControls);
+    if (mounted) {
+      setState(() => _showControls = !_showControls);
+    }
     if (_showControls) {
       _hideControlsAfterDelay();
     }

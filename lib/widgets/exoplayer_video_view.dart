@@ -12,7 +12,7 @@ class ExoPlayerVideoView extends StatefulWidget {
     super.key,
     required this.controller,
     this.fit = BoxFit.contain, // Not fully respected by Native layout yet, but passed for future
-    this.surfaceType = 'texture',
+    this.surfaceType = 'surface',
   });
 
   @override
