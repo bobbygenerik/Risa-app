@@ -67,6 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _translationEnabled = false;
   bool _heroVideoPreview = false;
   String _exoPlayerSurfaceType = 'surface';
+  String _videoPlayerBackend = 'Auto';
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -160,6 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
       _exoPlayerSurfaceType =
           prefs.getString('exo_player_surface_type') ?? 'surface';
+      _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
     });
   }
 
@@ -753,6 +755,18 @@ class _SettingsScreenState extends State<SettingsScreen>
               onChanged: (v) => _handleSwitchTileChange('Hardware Decoding', v),
             ),
             SettingsActionTile(
+              title: 'Player Engine',
+              subtitle: 'Select underlying video player backend',
+              trailing: Text(
+                _videoPlayerBackend,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.primaryBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              onTap: _cycleVideoPlayerBackend,
+            ),
+            SettingsActionTile(
               title: 'ExoPlayer Surface',
               subtitle: 'SurfaceView reduces tinting; TextureView for overlays',
               trailing: Text(
@@ -1272,6 +1286,22 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
     _showMessage(
         'ExoPlayer surface set to ${nextValue == 'texture' ? 'TextureView' : 'SurfaceView'}.');
+  }
+
+  Future<void> _cycleVideoPlayerBackend() async {
+    final backends = ['Auto', 'MediaKit', 'ExoPlayer'];
+    final currentIndex = backends.indexOf(_videoPlayerBackend);
+    final nextIndex = (currentIndex + 1) % backends.length;
+    final nextValue = backends[nextIndex];
+    
+    setState(() => _videoPlayerBackend = nextValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('video_player_backend', nextValue);
+    if (mounted) {
+      unawaited(Provider.of<SettingsProvider>(context, listen: false)
+          .setVideoPlayerBackend(nextValue));
+    }
+    _showMessage('Video player engine set to $nextValue.');
   }
 
   Future<void> _savePlaylistToLibrary(SavedPlaylist playlist) async {

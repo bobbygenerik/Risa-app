@@ -591,6 +591,21 @@ class M3UParserService {
       await seriesSink.close();
     }
 
+    final List<Map<String, dynamic>> channelBuffer = [];
+
+    Future<void> flushChannelBuffer() async {
+      if (channelBuffer.isEmpty) return;
+      if (progressPort != null) {
+        try {
+          progressPort.send({
+            'type': 'channels_chunk',
+            'channels': List<Map<String, dynamic>>.from(channelBuffer)
+          });
+        } catch (_) {}
+      }
+      channelBuffer.clear();
+    }
+
     try {
       void processLogicalLine(String line) {
         if (line.isEmpty) return;
@@ -679,17 +694,24 @@ class M3UParserService {
                   'groupTitle': groupTitle,
                   'tvgId': currentAttributes['tvg-id'],
                   'attributes': currentAttributes,
-                  'sortOrder': channelCount,
+                  'sortOrder': logicalIndex, // Use logicalIndex for sortOrder here
                   'isFavorite': false,
                   'isHidden': false,
                 };
                 channelCount++;
                 channelSink.writeln(json.encode(map));
-                if (progressPort != null && channelCount % 50 == 0) {
-                  try {
-                    progressPort
-                        .send({'type': 'progress', 'channels': channelCount});
-                  } catch (_) {}
+                channelBuffer.add(map);
+
+                if (progressPort != null) {
+                  // Send first 50 channels immediately for ultra-fast startup
+                  if (channelCount == 50) {
+                    flushChannelBuffer();
+                  } else if (channelCount % 500 == 0) {
+                    flushChannelBuffer();
+                    try {
+                      progressPort.send({'type': 'progress', 'channels': channelCount});
+                    } catch (_) {}
+                  }
                 }
               }
               currentInfo = null;
@@ -771,17 +793,23 @@ class M3UParserService {
               'groupTitle': groupTitle,
               'tvgId': currentAttributes['tvg-id'],
               'attributes': currentAttributes,
-              'sortOrder': channelCount,
+              'sortOrder': logicalIndex, // Use logicalIndex for sortOrder here
               'isFavorite': false,
               'isHidden': false,
             };
             channelCount++;
             channelSink.writeln(json.encode(map));
-            if (progressPort != null && channelCount % 50 == 0) {
-              try {
-                progressPort
-                    .send({'type': 'progress', 'channels': channelCount});
-              } catch (_) {}
+            channelBuffer.add(map);
+
+            if (progressPort != null) {
+              if (channelCount == 50) {
+                flushChannelBuffer();
+              } else if (channelCount % 500 == 0) {
+                flushChannelBuffer();
+                try {
+                  progressPort.send({'type': 'progress', 'channels': channelCount});
+                } catch (_) {}
+              }
             }
           }
           currentInfo = null;
@@ -822,6 +850,9 @@ class M3UParserService {
           processLogicalLine(trimmed);
         }
       }
+
+      // Final flush
+      await flushChannelBuffer();
 
       await closeSinks();
       return {

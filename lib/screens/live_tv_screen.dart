@@ -1480,7 +1480,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Strictly prefer program artwork when it's not a poster/portrait image.
     if (program != null) {
       final cached = _programArtwork[program.id];
-      if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
+      if (cached != null && cached.isNotEmpty) {
         _logArtworkDecision(
           'LiveTV artwork: card source=cached program="${program.title}" url=$cached',
         );
@@ -1488,9 +1488,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       final byTitle = _getProgramArtworkByTitle(program, channel);
-      if (byTitle != null &&
-          byTitle.isNotEmpty &&
-          !_isLikelyPosterUrl(byTitle)) {
+      if (byTitle != null && byTitle.isNotEmpty) {
         _logArtworkDecision(
           'LiveTV artwork: card source=title_cache program="${program.title}" url=$byTitle',
         );
@@ -1529,49 +1527,39 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   bool _isLikelyPosterUrl(String url) {
+    if (url.isEmpty) return false;
     final lower = url.toLowerCase();
-    final path = Uri.tryParse(url)?.path.toLowerCase() ?? lower;
-
-    // Block all poster-style content
-    if (path.contains('/poster') ||
-        path.contains('/portrait') ||
-        path.contains('/cover') ||
-        path.contains('/artwork') ||
-        path.contains('/thumb') ||
-        path.contains('/logo') ||
-        path.endsWith('_poster.jpg') ||
-        path.endsWith('_poster.png') ||
-        path.endsWith('_cover.jpg') ||
-        path.endsWith('_cover.png') ||
-        path.endsWith('_thumb.jpg') ||
-        path.endsWith('_thumb.png')) {
+    
+    // Explicit keywords in path or query
+    if (lower.contains('/poster') ||
+        lower.contains('/portrait') ||
+        lower.contains('/cover') ||
+        lower.contains('/thumb') ||
+        lower.contains('/logo') ||
+        lower.contains('type=poster') ||
+        lower.contains('format=portrait')) {
       return true;
     }
 
-    // Block TMDB poster and logo sizes (all sizes)
+    // Standard OMDb posters
+    if (lower.contains('omdbapi.com')) return true;
+
+    // TMDB poster/logo sizes
     if (lower.contains('tmdb.org') &&
-        (lower.contains('/w92') ||
-            lower.contains('/w154') ||
-            lower.contains('/w185') ||
-            lower.contains('/w342') ||
-            lower.contains('/w500') ||
-            lower.contains('/w780') ||
-            lower.contains('/original'))) {
+        (lower.contains('/w92/') ||
+         lower.contains('/w154/') ||
+         lower.contains('/w185/') ||
+         lower.contains('/w342/') ||
+         lower.contains('/w500/') ||
+         lower.contains('/w780/'))) {
       return true;
     }
 
-    // Block other poster/logo indicators
-    if (lower.contains('poster') ||
-        lower.contains('portrait') ||
-        lower.contains('cover') ||
-        lower.contains('artwork') ||
-        lower.contains('thumb') ||
-        lower.contains('logo')) {
-      return true;
-    }
-
-    // Block aspect ratio indicators that suggest portrait/poster
-    if (lower.contains('2_3') || lower.contains('3_4')) {
+    // Common file naming patterns
+    if (lower.endsWith('_poster.jpg') ||
+        lower.endsWith('_poster.png') ||
+        lower.endsWith('_cover.jpg') ||
+        lower.endsWith('_cover.png')) {
       return true;
     }
 
@@ -1580,7 +1568,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   bool _isValidProgramArtwork(String? url, Channel channel) {
     if (url == null || url.isEmpty) return false;
-    if (_isLikelyPosterUrl(url) || _isLikelyTitleLogoUrl(url)) {
+    // We now allow posters because _buildAdaptiveImage handles them well.
+    // However, we still avoid title logos (clearart) for backgrounds.
+    if (_isLikelyTitleLogoUrl(url)) {
       return false;
     }
     final channelLogo = channel.logoUrl;
@@ -2996,18 +2986,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               children: [
                 if (normalizedImageUrl != null)
                   Positioned.fill(
-                    child: CachedNetworkImage(
-                      imageUrl: normalizedImageUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.cover,
-                      memCacheWidth: cacheWidth,
-                      memCacheHeight: cacheHeight,
-                      placeholder: (_, __) => fallback,
-                      errorWidget: (_, url, error) {
-                        logHandshakeIfNeeded(url, error,
-                            context: 'LiveTV card');
-                        return fallback;
-                      },
+                    child: _buildAdaptiveImage(
+                      context,
+                      normalizedImageUrl,
+                      BoxFit.cover,
+                      cacheWidth,
+                      cacheHeight,
+                      fallback,
                     ),
                   )
                 else
@@ -4297,10 +4282,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final dpr = MediaQuery.of(context).devicePixelRatio;
+            // Increase cache limits for better 4K support
             final cacheWidth =
-                math.min(2000, (constraints.maxWidth * dpr).round());
+                math.min(2500, (constraints.maxWidth * dpr).round());
             final cacheHeight =
-                math.min(2000, (constraints.maxHeight * dpr).round());
+                math.min(1500, (constraints.maxHeight * dpr).round());
 
             if (isChannelLogoFallback) {
               // Special handling for channel logo fallback with blurred background
@@ -4386,13 +4372,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       filterQuality: FilterQuality.medium,
                     );
                   }
-                  // For poster-style images, show them centered without blurred background
-                  return Center(
-                    child: Image(
-                      image: imageProvider,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.medium,
-                    ),
+                  // For poster-style images, show them centered with a blurred background for premium "full-bleed" look
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Blurred background
+                      ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                        child: Image(
+                          image: imageProvider,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                      Container(color: Colors.black.withValues(alpha: 0.3)),
+                      // Centered poster
+                      Center(
+                        child: Image(
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        ),
+                      ),
+                    ],
                   );
                 },
                 errorWidget: (_, url, error) {
@@ -4578,6 +4580,71 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdaptiveImage(BuildContext context, String url, BoxFit defaultFit,
+      int? cacheWidth, int? cacheHeight, Widget fallback) {
+    final isPoster = _isLikelyPosterUrl(url);
+
+    if (isPoster) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          // Blurred background
+          CachedNetworkImage(
+            imageUrl: url,
+            httpHeaders: HttpClientService().imageHeaders,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            memCacheWidth: (cacheWidth ?? 400) ~/ 4,
+            memCacheHeight: (cacheHeight ?? 240) ~/ 4,
+            imageBuilder: (context, imageProvider) {
+              return ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                    ),
+                  ),
+                  foregroundDecoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.4),
+                  ),
+                ),
+              );
+            },
+            placeholder: (context, url) => Container(color: Colors.black12),
+            errorWidget: (context, url, err) => fallback,
+          ),
+          // Centered image content (Contain)
+          CachedNetworkImage(
+            imageUrl: url,
+            httpHeaders: HttpClientService().imageHeaders,
+            fit: BoxFit.contain,
+            memCacheWidth: cacheWidth,
+            memCacheHeight: cacheHeight,
+            placeholder: (context, url) => const SizedBox.shrink(),
+            errorWidget: (context, url, err) => fallback,
+          ),
+        ],
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      httpHeaders: HttpClientService().imageHeaders,
+      fit: defaultFit,
+      memCacheWidth: cacheWidth,
+      memCacheHeight: cacheHeight,
+      placeholder: (context, url) => fallback,
+      errorWidget: (context, url, err) {
+        logHandshakeIfNeeded(url, err, context: 'LiveTV Adaptive');
+        return fallback;
+      },
+      fadeInDuration: const Duration(milliseconds: 240),
     );
   }
 }

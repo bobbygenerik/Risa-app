@@ -25,8 +25,15 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     bool autoPlay = true,
     bool isLive = false,
     bool preferStockOnLive = true,
+    String? backend, // Optional backend selection
   }) {
-    // Use media_kit only - no ExoPlayer fallback
+    // If backend is specified as ExoPlayer, use the native implementation
+    if (backend == 'ExoPlayer' || (backend == 'Auto' && kIsWeb == false && defaultTargetPlatform == TargetPlatform.android)) {
+       // On Android, Native ExoPlayer with SurfaceView is often the most stable
+       return NativeExoPlayerController(url, autoPlay: autoPlay);
+    }
+    
+    // Default to MediaKit (mpv)
     return MediaKitPlayerController(url, autoPlay: autoPlay);
   }
 }
@@ -88,6 +95,9 @@ class MediaKitPlayerController extends UniversalPlayerController {
       : _player = Player(configuration: PlayerConfiguration(
           title: 'IPTV Player',
         )) {
+    
+    // mpv-specific optimizations will be handled by media_kit defaults
+
     _videoController = VideoController(_player);
     _player.stream.position.listen(_onPositionChanged);
     _player.stream.duration.listen(_onDurationChanged);

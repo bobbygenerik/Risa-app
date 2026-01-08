@@ -3486,9 +3486,10 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         processed++;
-        if (yieldClock.elapsedMilliseconds >= 50 || processed % 1000 == 0) {
+        if (processed == 500 || yieldClock.elapsedMilliseconds >= 100 || processed % 2000 == 0) {
           // Yield frequently to keep input responsive during large EPG ingests.
           await Future.delayed(const Duration(milliseconds: 1));
+          notifyListeners();
           yieldClock.reset();
         }
       }

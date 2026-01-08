@@ -210,7 +210,6 @@ class ChannelProvider with ChangeNotifier {
   bool _xtreamLiveMetadataLoaded = false;
   String? _xtreamLiveMetadataKey;
   bool _epgRefreshPending = false;
-  String? _channelsJsonlPath;
   bool _epgAllowedChannelsFromDbInFlight = false;
   final LocalDbService _db = LocalDbService.instance;
   String? _extractStreamIdFromUrl(String url) {
@@ -351,15 +350,27 @@ class ChannelProvider with ChangeNotifier {
     _contentProvider = provider;
   }
 
-  void _updateEpgAllowedChannels() {
+  void _updateEpgAllowedChannels() async {
     final service = _epgService;
     if (service == null) return;
     if (_channelMaps.isEmpty) {
       unawaited(_loadAllowedChannelsFromDb());
       return;
     }
+
+    // Capture maps for thread safety
+    final mapsSubset = _channelMaps.length > 50000 
+        ? _channelMaps.sublist(0, 50000) 
+        : List<Map<String, dynamic>>.from(_channelMaps);
+
+    // Offload heavy string normalization to isolate
+    final allowed = await compute(_buildAllowedSet, mapsSubset);
+    service.setAllowedChannelIds(allowed, triggerRefresh: true);
+  }
+
+  static Set<String> _buildAllowedSet(List<Map<String, dynamic>> maps) {
     final allowed = <String>{};
-    for (final map in _channelMaps) {
+    for (final map in maps) {
       final tvgId = (map['tvgId'] as String?) ?? '';
       final id = (map['id'] as String?) ?? '';
       final name = (map['name'] as String?) ?? '';
@@ -373,7 +384,7 @@ class ChannelProvider with ChangeNotifier {
         allowed.add(IncrementalEpgService.normalizeForFilter(name));
       }
     }
-    service.setAllowedChannelIds(allowed, triggerRefresh: true);
+    return allowed;
   }
 
   Future<void> _loadAllowedChannelsFromDb() async {
@@ -1822,7 +1833,46 @@ class ChannelProvider with ChangeNotifier {
           ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
           : null;
 
-      // First, try to load from pre-parsed JSON cache (much faster!)
+      // First, try to load from SQLite DB (the fastest for large playlists)
+      if (_dbReady) {
+        final count = await _db.channelCount();
+        if (count > 0) {
+          debugLog('ChannelProvider: Found $count channels in DB, loading first chunk...');
+          // Load first few thousand immediately for instant UI
+          final initialLimit = 2000;
+          final channels = await _db.getChannelsPage(offset: 0, limit: initialLimit);
+          
+          if (channels.isNotEmpty) {
+            _channelMaps = channels;
+            _channelCountDb = count;
+            _rebuildChannelCaches();
+            _isLoading = false;
+            _hasLoadedPlaylist = true;
+            notifyListeners();
+            StartupProbe.mark('ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
+            
+            // Load remaining channels in background
+            if (count > initialLimit) {
+              unawaited(() async {
+                final more = await _db.getChannelsPage(
+                  offset: initialLimit, 
+                  limit: count - initialLimit
+                );
+                _channelMaps.addAll(more);
+                _rebuildChannelCaches();
+                _updateEpgAllowedChannels();
+                notifyListeners();
+                debugLog('ChannelProvider: Background load of ${more.length} remaining channels complete');
+              }());
+            } else {
+              _updateEpgAllowedChannels();
+            }
+            return;
+          }
+        }
+      }
+
+      // Fallback: try to load from pre-parsed JSON cache
       if (cacheAge != null && cacheAge < 21600000) {
         final dir = await getApplicationDocumentsDirectory();
         final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
@@ -1830,110 +1880,25 @@ class ChannelProvider with ChangeNotifier {
         if (await jsonCacheFile.exists()) {
           try {
             debugLog('ChannelProvider: Loading from pre-parsed JSON cache...');
-            final cacheLoadStart = DateTime.now();
-
+            // Optimization: read in chunks or use stream if possible, 
+            // but for now let's at least handle the failure gracefully.
             final jsonString = await jsonCacheFile.readAsString();
-            if (jsonString.trim().isEmpty) {
-              await jsonCacheFile.delete();
-              throw const FormatException('Cached playlist JSON is empty');
-            }
             final parsed = json.decode(jsonString) as Map<String, dynamic>;
-
             final cachedChannels = (parsed['channels'] as List<dynamic>)
                 .map((c) => Map<String, dynamic>.from(c as Map))
                 .toList();
-            if (cachedChannels.isEmpty) {
-              debugLog(
-                  'ChannelProvider: JSON cache contains metadata only; falling back to M3U cache');
-              throw const FormatException('JSON cache metadata only');
+            
+            if (cachedChannels.isNotEmpty) {
+              _channelMaps = cachedChannels;
+              _channelCountDb = _channelMaps.length;
+              _rebuildChannelCaches();
+              _isLoading = false;
+              _hasLoadedPlaylist = true;
+              notifyListeners();
+              return;
             }
-            final totalChannels =
-                parsed['channelCount'] as int? ?? cachedChannels.length;
-            final channelsFile = parsed['channelsFile'] as String?;
-            if (totalChannels > cachedChannels.length) {
-              if (channelsFile == null ||
-                  channelsFile.isEmpty ||
-                  !await File(channelsFile).exists()) {
-                debugLog(
-                    'ChannelProvider: JSON cache missing channel file; falling back to M3U cache');
-                throw const FormatException('JSON cache missing channel file');
-              }
-            }
-            _channelMaps = cachedChannels;
-            _vodHydrated = false;
-            _channelCache.clear();
-            _rebuildChannelCaches();
-            _channelCountDb = _channelMaps.length;
-            _invalidateCategoryCaches();
-        _rebuildChannelCaches();
-        await _applyXtreamEpgMapFromCache();
-            _updateEpgAllowedChannels();
-            await _setCurrentEpgMapSignature(
-              prefs: prefs,
-              playlistUrl: _lastPlaylistUrl,
-              epgUrl: parsed['epgUrl'] as String?,
-              channelCount: totalChannels,
-              channelsFile: channelsFile,
-            );
-
-            // Extract and save EPG URL from JSON cache
-            final epgUrl = parsed['epgUrl'] as String?;
-            if (epgUrl != null && epgUrl.isNotEmpty) {
-              final prefs = await SharedPreferences.getInstance();
-              final oldUrl = prefs.getString('epg_url');
-              final urlChanged = oldUrl != epgUrl;
-
-              await prefs.setString('epg_url', epgUrl);
-              // Ensure EPG service is initialized
-              if (_epgService != null) {
-                debugLog(
-                    'ChannelProvider: Initializing EPG service with URL from cache');
-                _scheduleEpgRefresh(forceRefresh: urlChanged);
-              }
-            }
-
-            // VOD content is now loaded on demand, so just set the cache paths
-            final dir = await getApplicationDocumentsDirectory();
-            _moviesCachePath = '${dir.path}/movies_cache.json';
-            _seriesCachePath = '${dir.path}/series_cache.json';
-            _moviesCount = parsed['movieCount'] as int? ?? 0;
-            _seriesCount = parsed['seriesCount'] as int? ?? 0;
-
-            // If JSON cache only has the preview list, hydrate full channels
-            // from the cached JSONL file in the background.
-            if (channelsFile != null && channelsFile.isNotEmpty) {
-              _channelsJsonlPath = channelsFile;
-            }
-            if (channelsFile != null &&
-                channelsFile.isNotEmpty &&
-                totalChannels > _channelMaps.length) {
-              unawaited(_hydrateChannelsFromCacheFile(
-                channelsFile,
-                totalChannels: totalChannels,
-              ));
-            }
-
-            if (!_disposed) notifyListeners();
-
-            _invalidateCategoryCaches();
-            unawaited(_computeCategoriesAsync());
-
-            // VOD is loaded on demand by UI, no need to preload here
-
-            _isLoading = false;
-            _hasLoadedPlaylist = true;
-            notifyListeners();
-
-            final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
-            debugLog(
-                'ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
-            StartupProbe.mark(
-                'ChannelProvider.autoLoadPlaylist: JSON cache load finished');
-            _scheduleEpgRefresh(forceRefresh: false);
-            return;
           } catch (e) {
-            debugLog(
-                'ChannelProvider: JSON cache load failed: $e, trying M3U cache');
+             debugLog('ChannelProvider: JSON cache failed: $e');
           }
         }
       }
@@ -2210,12 +2175,28 @@ class ChannelProvider with ChangeNotifier {
       _loadingProgress = 0.0;
       notifyListeners();
 
+      _channelMaps.clear();
+      _channelCache.clear();
+      _invalidateCategoryCaches();
+      if (_dbReady) {
+        await _db.clearChannels();
+      }
+      _channelCountDb = 0;
+
       final parsed =
           await _playlistLoader.loadFromUrl(url, onProgress: (count) {
-        // Emit progressive parsing progress
         _loadingStatus = 'Parsing playlist: $count channels';
-        // Rough normalized progress: parsing dominates after download
         _loadingProgress = 0.5 + (count / 20000).clamp(0.0, 0.45);
+        notifyListeners();
+      }, onChannelsChunk: (chunk) {
+        // Handle chunks progressively
+        _channelMaps.addAll(chunk);
+        _channelCountDb = _channelMaps.length;
+        if (_dbReady) {
+          unawaited(_db.insertChannels(chunk).catchError((e) {
+            debugLog('ChannelProvider: Background chunk insert failed: $e');
+          }));
+        }
         notifyListeners();
       });
 
@@ -2259,115 +2240,19 @@ class ChannelProvider with ChangeNotifier {
         }
       }
 
-      _loadingStatus = 'Processing channels...';
-      _loadingProgress = 0.7;
+      _loadingStatus = 'Finishing up...';
+      _loadingProgress = 0.8;
       notifyListeners();
 
-      final mapStart = DateTime.now();
-      _channelMaps.clear();
-      _channelCache.clear();
-      _invalidateCategoryCaches();
-      if (_dbReady) {
-        await _db.clearChannels();
-      }
-      _channelCountDb = 0;
-
-      if (channelsFile != null && channelsFile.isNotEmpty) {
-        final file = File(channelsFile);
-        if (await file.exists()) {
-          final stream = file
-              .openRead()
-              .transform(utf8.decoder)
-              .transform(const LineSplitter());
-          final List<Map<String, dynamic>> batch = [];
-          int processed = 0;
-          await for (final line in stream) {
-            if (line.trim().isEmpty) continue;
-            final map = Map<String, dynamic>.from(json.decode(line));
-            _channelMaps.add(map);
-            batch.add(map);
-            processed++;
-            if (batch.length >= 500) {
-              if (_dbReady) {
-                try {
-                  await _db.insertChannels(
-                      batch.map((e) => Map<String, dynamic>.from(e)).toList());
-                } catch (e) {
-                  debugLog(
-                      'ChannelProvider: DB channel batch insert failed: $e');
-                }
-              }
-              batch.clear();
-            }
-            if (processed % 2000 == 0) {
-              _loadingStatus = 'Processing channels... $processed';
-              _loadingProgress = 0.7 +
-                  (0.1 *
-                      (processed.toDouble() /
-                          (parsed['channelCount'] as int? ?? processed)));
-              notifyListeners();
-              await Future.delayed(Duration(milliseconds: 1));
-            }
-          }
-          if (batch.isNotEmpty && _dbReady) {
-            try {
-              await _db.insertChannels(
-                  batch.map((e) => Map<String, dynamic>.from(e)).toList());
-            } catch (e) {
-              debugLog('ChannelProvider: DB channel batch insert failed: $e');
-            }
-          }
-          _channelCountDb = _channelMaps.length;
-          await _setCurrentEpgMapSignature(
-            prefs: prefs,
-            playlistUrl: url,
-            epgUrl: epgUrl,
-            channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
-            channelsFile: channelsFile,
-          );
-          if (_channelsJsonlPath == null || file.path != _channelsJsonlPath) {
-            try {
-              await file.delete();
-            } catch (_) {}
-          }
-        }
-      } else {
-        final rawChannels = parsed['channels'] as List<dynamic>;
-        const chunkSize = 1000;
-        for (int i = 0; i < rawChannels.length; i += chunkSize) {
-          final end = (i + chunkSize).clamp(0, rawChannels.length);
-          final chunk = rawChannels.sublist(i, end);
-
-          for (final c in chunk) {
-            _channelMaps.add(Map<String, dynamic>.from(c));
-          }
-
-          if (_dbReady) {
-            try {
-              await _db.insertChannels(
-                  chunk.map((e) => Map<String, dynamic>.from(e)).toList());
-            } catch (e) {
-              debugLog('ChannelProvider: DB channel batch insert failed: $e');
-            }
-          }
-
-          if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
-            _loadingStatus =
-                'Processing channels... ${i + end}/${rawChannels.length}';
-            _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
-            notifyListeners();
-            await Future.delayed(Duration.zero);
-          }
-        }
-        _channelCountDb = _channelMaps.length;
-        await _setCurrentEpgMapSignature(
-          prefs: prefs,
-          playlistUrl: url,
-          epgUrl: epgUrl,
-          channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
-          channelsFile: channelsFile,
-        );
-      }
+      // M3U channels are already loaded via onChannelsChunk
+      // Just ensure DB is up to date and set the signature
+      await _setCurrentEpgMapSignature(
+        prefs: prefs,
+        playlistUrl: url,
+        epgUrl: epgUrl,
+        channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
+        channelsFile: channelsFile,
+      );
       await _applyXtreamEpgMapFromCache();
       _updateEpgAllowedChannels();
       unawaited(_primeXtreamLiveMetadata(url));
@@ -2386,6 +2271,7 @@ class ChannelProvider with ChangeNotifier {
       _loadingProgress = 0.8;
       notifyListeners();
 
+      final mapStart = DateTime.now();
       final List<Content> moviesPreview = [];
       final List<Content> seriesPreview = [];
       _moviesCount = 0;
@@ -2917,38 +2803,6 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _hydrateChannelsFromCacheFile(String channelsFile,
-      {required int totalChannels}) async {
-    final file = File(channelsFile);
-    if (!await file.exists()) return;
-    debugLog(
-        'ChannelProvider: Hydrating full channel list from cache file ($totalChannels)');
-    final List<Map<String, dynamic>> hydrated = [];
-    try {
-      final stream = file
-          .openRead()
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-      await for (final line in stream) {
-        if (line.trim().isEmpty) continue;
-        hydrated.add(Map<String, dynamic>.from(json.decode(line)));
-      }
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to hydrate channels from cache: $e');
-      return;
-    }
-    if (hydrated.isEmpty) return;
-    _channelMaps = hydrated;
-    _channelCache.clear();
-    _rebuildChannelCaches();
-    _channelCountDb = _channelMaps.length;
-    _invalidateCategoryCaches();
-    _updateEpgAllowedChannels();
-    _scheduleEpgRefresh(forceRefresh: true);
-    unawaited(_computeCategoriesAsync());
-    if (!_disposed) notifyListeners();
-  }
-
   Future<String?> _stageChannelsJsonl(String source) async {
     final dir = await getApplicationDocumentsDirectory();
     final target = File('${dir.path}/channels_cache.jsonl');
@@ -2965,7 +2819,6 @@ class ChannelProvider with ChangeNotifier {
         await sourceFile.delete();
       } catch (_) {}
     }
-    _channelsJsonlPath = target.path;
     return target.path;
   }
 

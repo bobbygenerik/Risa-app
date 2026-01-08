@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/controllers/universal_player_controller.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
+import 'package:iptv_player/widgets/exoplayer_video_view.dart';
+import 'package:provider/provider.dart';
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
@@ -43,17 +46,20 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   }
 
   void _initializeController() {
-    // Force stock Flutter video player only to eliminate native memory issues
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final backend = settings.videoPlayerBackend;
+
     _controller = UniversalPlayerController.create(
       url: widget.url,
       autoPlay: false,
       isLive: widget.isLive,
-      preferStockOnLive: true, // Force stock player
+      preferStockOnLive: true,
+      backend: backend,
     );
     
     if (widget.controllerNotifier != null) {
       Future.microtask(() {
-         widget.controllerNotifier!.value = _controller;
+         if (mounted) widget.controllerNotifier!.value = _controller;
       });
     }
 
@@ -95,11 +101,21 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Use MediaKit only
-    final mediaKitController = _controller as MediaKitPlayerController;
-    return Video(
-      controller: mediaKitController.videoController,
-      fit: widget.fit,
-    );
+    final controller = _controller;
+    if (controller is MediaKitPlayerController) {
+      return Video(
+        controller: controller.videoController,
+        fit: widget.fit,
+      );
+    } else if (controller is NativeExoPlayerController) {
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      return ExoPlayerVideoView(
+        controller: controller,
+        fit: widget.fit,
+        surfaceType: settings.exoPlayerSurfaceType,
+      );
+    }
+
+    return const Center(child: Text('Unsupported player controller'));
   }
 }

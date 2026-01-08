@@ -11,7 +11,8 @@ class PlaylistLoader {
   /// Load playlist from URL, streaming to temporary file to avoid OOM.
   /// onProgress receives parsed channel counts as they arrive from parser.
   Future<Map<String, dynamic>> loadFromUrl(String url,
-      {void Function(int parsedChannels)? onProgress}) async {
+      {void Function(int parsedChannels)? onProgress,
+      void Function(List<Map<String, dynamic>> chunk)? onChannelsChunk}) async {
     // Cancel previous load if running
     cancelCurrent();
     final token = CancelToken();
@@ -45,7 +46,6 @@ class PlaylistLoader {
       }
       await sink.close();
 
-      // Parse file in isolate with progress forwarding
       final result = await parsePlaylistCancelable(
           filePath: tmpFile.path,
           onProgress: (count) {
@@ -53,6 +53,7 @@ class PlaylistLoader {
               onProgress(count);
             }
           },
+          onChannelsChunk: onChannelsChunk,
           cancelToken: token);
 
       // Clean up temporary file

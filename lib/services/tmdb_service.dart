@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
 import 'package:iptv_player/services/fanart_service.dart';
@@ -285,35 +286,49 @@ class TMDBService {
         final results = data['results'] as List;
 
         if (results.isNotEmpty) {
-          final movie = results.first;
+          // Find the best match by title similarity
+          Map<String, dynamic>? bestMatch;
+          double bestScore = -1.0;
 
-          // Map genre IDs to genre names
-          final genreIds = movie['genre_ids'] as List?;
-          final List<String> genres = [];
-          if (genreIds != null) {
-            for (final id in genreIds) {
-              final genreName = _movieGenres[id as int];
-              if (genreName != null) genres.add(genreName);
+          for (final candidate in results.take(5)) {
+            final candTitle = (candidate['title'] ?? candidate['original_title'] ?? '').toString();
+            final score = _titleSimilarity(candTitle, normalizedTitle);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = candidate as Map<String, dynamic>;
             }
           }
 
-          final result = {
-            'rating': movie['vote_average'] as double?,
-            'poster': movie['poster_path'] != null
-                ? '$_imageBaseUrl${movie['poster_path']}'
-                : null,
-            'backdrop': movie['backdrop_path'] != null
-                ? '$_imageBaseUrl${movie['backdrop_path']}'
-                : null,
-            'title': movie['title'] ?? movie['original_title'],
-            'overview': movie['overview'] as String?,
-            'release_date': movie['release_date'] as String?,
-            'genres': genres.isNotEmpty ? genres : null,
-            'tmdbId': movie['id'],
-            'mediaType': 'movie',
-          };
-          _setCache(cacheKey, result);
-          return result;
+          if (bestMatch != null && bestScore > 0.4) {
+            final movie = bestMatch;
+            // Map genre IDs to genre names
+            final genreIds = movie['genre_ids'] as List?;
+            final List<String> genres = [];
+            if (genreIds != null) {
+              for (final id in genreIds) {
+                final genreName = _movieGenres[id as int];
+                if (genreName != null) genres.add(genreName);
+              }
+            }
+
+            final result = {
+              'rating': movie['vote_average'] as double?,
+              'poster': movie['poster_path'] != null
+                  ? '$_imageBaseUrl${movie['poster_path']}'
+                  : null,
+              'backdrop': movie['backdrop_path'] != null
+                  ? '$_imageBaseUrl${movie['backdrop_path']}'
+                  : null,
+              'title': movie['title'] ?? movie['original_title'],
+              'overview': movie['overview'] as String?,
+              'release_date': movie['release_date'] as String?,
+              'genres': genres.isNotEmpty ? genres : null,
+              'tmdbId': movie['id'],
+              'mediaType': 'movie',
+            };
+            _setCache(cacheKey, result);
+            return result;
+          }
         }
       }
     } catch (e) {
@@ -389,35 +404,49 @@ class TMDBService {
         final results = data['results'] as List;
 
         if (results.isNotEmpty) {
-          final show = results.first;
+          // Find the best match by title similarity
+          Map<String, dynamic>? bestMatch;
+          double bestScore = -1.0;
 
-          // Map genre IDs to genre names
-          final genreIds = show['genre_ids'] as List?;
-          final List<String> genres = [];
-          if (genreIds != null) {
-            for (final id in genreIds) {
-              final genreName = _tvGenres[id as int];
-              if (genreName != null) genres.add(genreName);
+          for (final candidate in results.take(5)) {
+            final candTitle = (candidate['name'] ?? candidate['original_name'] ?? '').toString();
+            final score = _titleSimilarity(candTitle, normalizedTitle);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = candidate as Map<String, dynamic>;
             }
           }
 
-          final result = {
-            'rating': show['vote_average'] as double?,
-            'poster': show['poster_path'] != null
-                ? '$_imageBaseUrl${show['poster_path']}'
-                : null,
-            'backdrop': show['backdrop_path'] != null
-                ? '$_imageBaseUrl${show['backdrop_path']}'
-                : null,
-            'title': show['name'] ?? show['original_name'],
-            'overview': show['overview'] as String?,
-            'first_air_date': show['first_air_date'] as String?,
-            'genres': genres.isNotEmpty ? genres : null,
-            'tmdbId': show['id'],
-            'mediaType': 'tv',
-          };
-          _setCache(cacheKey, result);
-          return result;
+          if (bestMatch != null && bestScore > 0.4) {
+            final show = bestMatch;
+            // Map genre IDs to genre names
+            final genreIds = show['genre_ids'] as List?;
+            final List<String> genres = [];
+            if (genreIds != null) {
+              for (final id in genreIds) {
+                final genreName = _tvGenres[id as int];
+                if (genreName != null) genres.add(genreName);
+              }
+            }
+
+            final result = {
+              'rating': show['vote_average'] as double?,
+              'poster': show['poster_path'] != null
+                  ? '$_imageBaseUrl${show['poster_path']}'
+                  : null,
+              'backdrop': show['backdrop_path'] != null
+                  ? '$_imageBaseUrl${show['backdrop_path']}'
+                  : null,
+              'title': show['name'] ?? show['original_name'],
+              'overview': show['overview'] as String?,
+              'first_air_date': show['first_air_date'] as String?,
+              'genres': genres.isNotEmpty ? genres : null,
+              'tmdbId': show['id'],
+              'mediaType': 'tv',
+            };
+            _setCache(cacheKey, result);
+            return result;
+          }
         }
       }
     } catch (e) {
@@ -585,18 +614,40 @@ class TMDBService {
   }
 
   static bool _hasArtwork(Map<String, dynamic>? details) {
-    final backdrop = (details?['backdrop'] as String?)?.trim();
-    if (backdrop?.isNotEmpty == true) return true;
-    final poster = (details?['poster'] as String?)?.trim();
-    return poster?.isNotEmpty == true;
+    if (details == null) return false;
+    final backdrop = (details['backdrop'] as String?)?.trim();
+    if (backdrop != null && backdrop.isNotEmpty) return true;
+    final poster = (details['poster'] as String?)?.trim();
+    return poster != null && poster.isNotEmpty;
   }
 
   static String? _extractBackdropUrl(Map<String, dynamic>? details) {
-    final backdrop = (details?['backdrop'] as String?)?.trim();
-    if (backdrop?.isNotEmpty == true) return backdrop;
-    final poster = (details?['poster'] as String?)?.trim();
-    if (poster?.isNotEmpty == true) return poster;
+    if (details == null) return null;
+    final backdrop = (details['backdrop'] as String?)?.trim();
+    if (backdrop != null && backdrop.isNotEmpty) return backdrop;
+    
+    // Only return poster if it's explicitly allowed or high-quality.
+    // We append a hint so the UI knows it's a poster.
+    final poster = (details['poster'] as String?)?.trim();
+    if (poster != null && poster.isNotEmpty) {
+       // If it contains "poster" or common OMDb patterns, let's keep it but 
+       // the UI will handle it via _isLikelyPosterUrl.
+       return poster;
+    }
     return null;
+  }
+
+  static double _titleSimilarity(String s1, String s2) {
+    final t1 = s1.toLowerCase().trim();
+    final t2 = s2.toLowerCase().trim();
+    if (t1 == t2) return 1.0;
+    if (t1.contains(t2) || t2.contains(t1)) return 0.8;
+    // Simple word match ratio
+    final words1 = t1.split(RegExp(r'\s+')).toSet();
+    final words2 = t2.split(RegExp(r'\s+')).toSet();
+    if (words1.isEmpty || words2.isEmpty) return 0.0;
+    final intersection = words1.intersection(words2);
+    return intersection.length / math.max(words1.length, words2.length);
   }
 
   static Future<String?> _getHighResBackdrop(

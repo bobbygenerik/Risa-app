@@ -46,11 +46,13 @@ void _isolateEntry(_IsolateRequest request) async {
 
 /// Parse playlist in a spawned isolate with progress messages and cancellation support.
 /// Returns a map with keys: 'result' (parsed maps) or 'error'.
-Future<Map<String, dynamic>> parsePlaylistCancelable(
-    {String? filePath,
-    List<int>? bytes,
-    void Function(int parsedChannels)? onProgress,
-    CancelToken? cancelToken}) async {
+Future<Map<String, dynamic>> parsePlaylistCancelable({
+  String? filePath,
+  List<int>? bytes,
+  void Function(int parsedChannels)? onProgress,
+  void Function(List<Map<String, dynamic>> chunk)? onChannelsChunk,
+  CancelToken? cancelToken,
+}) async {
   final receivePort = ReceivePort();
   final errorPort = ReceivePort();
 
@@ -84,6 +86,14 @@ Future<Map<String, dynamic>> parsePlaylistCancelable(
         if (onProgress != null) {
           try {
             onProgress(channels);
+          } catch (_) {}
+        }
+      } else if (t == 'channels_chunk') {
+        final chunk = (message['channels'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>();
+        if (chunk != null && onChannelsChunk != null) {
+          try {
+            onChannelsChunk(chunk);
           } catch (_) {}
         }
       }

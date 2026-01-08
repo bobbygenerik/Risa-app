@@ -589,25 +589,50 @@ class LocalDbService {
   Future<Map<String, List<Map<String, dynamic>>>> getAllProgramsByChannel({
     int pastHours = 24,
     int futureHours = 24,
+    List<String>? epgIds,
   }) async {
     final now = DateTime.now();
     final startMs = now.subtract(Duration(hours: pastHours)).millisecondsSinceEpoch;
     final endMs = now.add(Duration(hours: futureHours)).millisecondsSinceEpoch;
     
-    final rows = await _withDbRead((db) {
-      return db.query(
-        'epg_programs',
-        where: 'endTs >= ? AND startTs <= ?',
-        whereArgs: [startMs, endMs],
-        orderBy: 'epgId, startTs',
-      );
+    final Map<String, List<Map<String, dynamic>>> result = {};
+
+    await _withDbRead((db) async {
+      if (epgIds == null || epgIds.isEmpty) {
+        // Fetch all programs for time window
+        final rows = await db.query(
+          'epg_programs',
+          where: 'endTs >= ? AND startTs <= ?',
+          whereArgs: [startMs, endMs],
+          orderBy: 'epgId, startTs',
+        );
+        for (final row in rows) {
+          final epgId = row['epgId'] as String;
+          result.putIfAbsent(epgId, () => []).add(row);
+        }
+      } else {
+        // Fetch only for specific epgIds in batches to avoid parameter limits
+        const int batchSize = 500;
+        for (int i = 0; i < epgIds.length; i += batchSize) {
+          final end = (i + batchSize).clamp(0, epgIds.length);
+          final batchIds = epgIds.sublist(i, end);
+          final placeholders = List.filled(batchIds.length, '?').join(',');
+          
+          final rows = await db.query(
+            'epg_programs',
+            where: 'epgId IN ($placeholders) AND endTs >= ? AND startTs <= ?',
+            whereArgs: [...batchIds, startMs, endMs],
+            orderBy: 'epgId, startTs',
+          );
+          
+          for (final row in rows) {
+            final epgId = row['epgId'] as String;
+            result.putIfAbsent(epgId, () => []).add(row);
+          }
+        }
+      }
     });
     
-    final Map<String, List<Map<String, dynamic>>> result = {};
-    for (final row in rows) {
-      final epgId = row['epgId'] as String;
-      result.putIfAbsent(epgId, () => []).add(row);
-    }
     return result;
   }
 
