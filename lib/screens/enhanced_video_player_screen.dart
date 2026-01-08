@@ -14,7 +14,6 @@ import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:video_player/video_player.dart'; // Keep for type if needed, but prefer Universal
 import '../controllers/universal_player_controller.dart';
 import '../widgets/exo_player_widget.dart';
 import '../utils/memory_manager.dart';
@@ -772,15 +771,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _showRegularSubtitlePicker() async {
     Navigator.pop(context);
     String captionText = '';
-    final controller = _playerController;
-    // Only StockPlayerController exposes embedded caption text via its rawController.
-    if (controller is StockPlayerController) {
-      try {
-        captionText = controller.rawController.value.caption.text;
-      } catch (_) {
-        captionText = '';
-      }
-    }
+    // MediaKit doesn't expose embedded captions the same way
     if (captionText.isEmpty) {
       showAppSnackBar(
         context,
@@ -826,27 +817,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildRegularSubtitleOverlay() {
-    String captionText = '';
-    final controller = _playerController;
-    if (controller is StockPlayerController) {
-      captionText = controller.rawController.value.caption.text;
-    }
-    // Universal doesn't support subtitles for Native yet, handled by Native view?
-    // Actually NativeExoPlayer has its own subtitle tracks, but we haven't bridged text rendering to Flutter
-    // apart from 'listSubtitleTracks'.
-    // Use ClosedCaption only for stock for now.
-
-    if (captionText.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClosedCaption(text: captionText),
-    );
+    // MediaKit handles subtitles internally
+    return const SizedBox.shrink();
   }
 
   // Manual SRT loading removed per user preference; VOD subtitles are automatically

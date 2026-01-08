@@ -15,11 +15,10 @@ import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/crash_logger.dart';
-// import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
+import 'package:media_kit/media_kit.dart';
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/fast_startup_service.dart';
-import 'package:iptv_player/widgets/startup_progress_widget.dart';
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -124,22 +123,25 @@ void main() {
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
 
-      // MediaKit.ensureInitialized(); // REMOVED: switching to alternative video player
-      StartupProbe.mark('MediaKit initialized (REMOVED)');
+      MediaKit.ensureInitialized();
+      StartupProbe.mark('MediaKit initialized');
 
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
       if (memoryInfo.isLowMemory) {
         // Reduce cache sizes on low-memory devices
         PaintingBinding.instance.imageCache.maximumSize = 20;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 4 << 20; // 4MB max
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            4 << 20; // 4MB max
         StartupProbe.mark('Image cache limits configured (LOW MEMORY)');
       } else {
-        PaintingBinding.instance.imageCache.maximumSize = 50; // Conservative but functional
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 8 << 20; // 8MB max
+        PaintingBinding.instance.imageCache.maximumSize =
+            50; // Conservative but functional
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            8 << 20; // 8MB max
         StartupProbe.mark('Image cache limits configured (CONSERVATIVE)');
       }
-      
+
       // Force immediate garbage collection
       final tmp = List<int>.generate(1024, (index) => index);
       tmp.clear();
@@ -162,14 +164,15 @@ void main() {
           final model = await Process.run('getprop', ['ro.product.model']);
           final characteristics = result.stdout.toString().toLowerCase();
           final modelName = model.stdout.toString();
-          
-          final isTv = characteristics.contains('tv') || 
-                      modelName.contains('Shield') ||
-                      modelName.contains('Android TV');
-          
+
+          final isTv = characteristics.contains('tv') ||
+              modelName.contains('Shield') ||
+              modelName.contains('Android TV');
+
           TVFocusHelper.setIsAndroidTV(isTv);
-          debugLog('Device Detection: isTV=$isTv (chars=$characteristics, model=$modelName)');
-          
+          debugLog(
+              'Device Detection: isTV=$isTv (chars=$characteristics, model=$modelName)');
+
           if (isTv) {
             await SystemChrome.setPreferredOrientations([
               DeviceOrientation.landscapeLeft,
@@ -177,7 +180,7 @@ void main() {
             ]);
             StartupProbe.mark('Preferred orientations locked (Android TV)');
           } else {
-             StartupProbe.mark('Mobile device detected - orientations unlocked');
+            StartupProbe.mark('Mobile device detected - orientations unlocked');
           }
         } catch (e) {
           debugLog('Error detecting device type: $e');
@@ -213,14 +216,9 @@ void main() {
         return true;
       };
 
-      // Show fast startup progress widget while optimization services load
-      StartupProbe.mark('Launching StartupProgressWidget');
-      runApp(StartupProgressWidget(
-        onComplete: () {
-          // Launch main app after fast startup completes
-          runApp(const StartupLoader());
-        },
-      ));
+      // Launch main app directly without startup progress widget
+      StartupProbe.mark('Launching main app directly');
+      runApp(const StartupLoader());
     },
     (error, stack) {
       // Optionally log error to a service
@@ -253,11 +251,11 @@ class _StartupLoaderState extends State<StartupLoader> {
 
   Future<void> _initialize() async {
     StartupProbe.mark('StartupLoader: background TMDB init start');
-    
+
     // Initialize fast startup service first
     await FastStartupService.instance.initialize();
     StartupProbe.mark('FastStartup service initialized');
-    
+
     // Initialize TMDB in background without blocking startup
     unawaited(TMDBService.init().then((_) {
       StartupProbe.mark('StartupLoader: background TMDB init finished');
@@ -740,8 +738,8 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = IncrementalEpgService();
-              // Defer EPG initialization until the user opens EPG screens to
-              // avoid large memory spikes during playback.
+              // Start EPG initialization immediately for fast startup
+              Future.microtask(() => service.quickStart());
               return service;
             },
           ),
@@ -1042,8 +1040,7 @@ final _router = GoRouter(
     GoRoute(
       path: '/debug',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: DebugScreen())),
+          key: state.pageKey, child: const SafePopScope(child: DebugScreen())),
     ),
     GoRoute(
       path: '/exit',

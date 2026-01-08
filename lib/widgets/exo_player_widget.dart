@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/controllers/universal_player_controller.dart';
 
@@ -95,8 +95,11 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Always use Flutter VideoPlayer - controller is guaranteed to be StockPlayerController
-    final stockController = _controller as StockPlayerController;
-    return VideoPlayer(stockController.rawController);
+    // Use MediaKit only
+    final mediaKitController = _controller as MediaKitPlayerController;
+    return Video(
+      controller: mediaKitController.videoController,
+      fit: widget.fit,
+    );
   }
 }

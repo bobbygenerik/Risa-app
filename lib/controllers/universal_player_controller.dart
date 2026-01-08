@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 /// Abstract interface for a video player controller.
 /// This allows switching between the stock `video_player` (Texture-based)
@@ -25,8 +26,8 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     bool isLive = false,
     bool preferStockOnLive = true,
   }) {
-    // Use stock Flutter video_player only to prevent crashes
-    return StockPlayerController(url, autoPlay: autoPlay);
+    // Use media_kit only - no ExoPlayer fallback
+    return MediaKitPlayerController(url, autoPlay: autoPlay);
   }
 }
 
@@ -75,74 +76,91 @@ class UniversalPlayerValue {
   }
 }
 
-/// Implementation wrapping the standard `video_player` package
-class StockPlayerController extends UniversalPlayerController {
-  final VideoPlayerController _controller;
+/// Implementation wrapping media_kit (libmpv)
+class MediaKitPlayerController extends UniversalPlayerController {
+  final Player _player;
+  late final VideoController _videoController;
   final bool autoPlay;
   bool _isDisposed = false;
+  UniversalPlayerValue _value = const UniversalPlayerValue();
 
-  StockPlayerController(String url, {this.autoPlay = true})
-      : _controller = VideoPlayerController.networkUrl(
-          Uri.parse(url),
-          videoPlayerOptions: VideoPlayerOptions(
-            mixWithOthers: true,
-            allowBackgroundPlayback: true,
-          ),
-        );
+  MediaKitPlayerController(String url, {this.autoPlay = true})
+      : _player = Player(configuration: PlayerConfiguration(
+          title: 'IPTV Player',
+        )) {
+    _videoController = VideoController(_player);
+    _player.stream.position.listen(_onPositionChanged);
+    _player.stream.duration.listen(_onDurationChanged);
+    _player.stream.playing.listen(_onPlayingChanged);
+    _player.stream.buffering.listen(_onBufferingChanged);
+    _player.stream.error.listen(_onError);
+    
+    // Load the media
+    _player.open(Media(url), play: autoPlay);
+  }
 
-  /// Expose the underlying controller if needed (e.g. for VideoPlayer widget)
-  VideoPlayerController get rawController => _controller;
+  /// Expose the video controller for Video widget
+  VideoController get videoController => _videoController;
+
+  void _onPositionChanged(Duration position) {
+    if (_isDisposed) return;
+    _value = _value.copyWith(position: position);
+    notifyListeners();
+  }
+
+  void _onDurationChanged(Duration duration) {
+    if (_isDisposed) return;
+    _value = _value.copyWith(duration: duration);
+    notifyListeners();
+  }
+
+  void _onPlayingChanged(bool isPlaying) {
+    if (_isDisposed) return;
+    _value = _value.copyWith(isPlaying: isPlaying);
+    notifyListeners();
+  }
+
+  void _onBufferingChanged(bool isBuffering) {
+    if (_isDisposed) return;
+    _value = _value.copyWith(isBuffering: isBuffering);
+    notifyListeners();
+  }
+
+  void _onError(String error) {
+    if (_isDisposed) return;
+    _value = _value.copyWith(errorDescription: error);
+    notifyListeners();
+  }
 
   @override
-  UniversalPlayerValue get value {
-    final v = _controller.value;
-    return UniversalPlayerValue(
-      duration: v.duration,
-      position: v.position,
-      buffered: v.buffered.isNotEmpty ? v.buffered.last.end : Duration.zero,
-      isPlaying: v.isPlaying,
-      isBuffering: v.isBuffering,
-      isInitialized: v.isInitialized,
-      errorDescription: v.errorDescription,
-      size: v.size,
-    );
-  }
+  UniversalPlayerValue get value => _value;
 
   @override
   Future<void> initialize() async {
-    await _controller.initialize();
-    _controller.addListener(_listener);
-    if (autoPlay) {
-      await _controller.play();
-    }
-    notifyListeners();
-  }
-
-  void _listener() {
-    if (_isDisposed) return;
+    // Media kit initializes automatically
+    _value = _value.copyWith(isInitialized: true);
     notifyListeners();
   }
 
   @override
-  Future<void> play() => _controller.play();
+  Future<void> play() => _player.play();
 
   @override
-  Future<void> pause() => _controller.pause();
+  Future<void> pause() => _player.pause();
 
   @override
-  Future<void> seekTo(Duration position) => _controller.seekTo(position);
+  Future<void> seekTo(Duration position) => _player.seek(position);
 
   @override
-  Future<void> setVolume(double volume) => _controller.setVolume(volume);
+  Future<void> setVolume(double volume) => _player.setVolume(volume * 100);
   
   @override
-  Future<void> setMuted(bool muted) => _controller.setVolume(muted ? 0 : 1);
+  Future<void> setMuted(bool muted) => _player.setVolume(muted ? 0 : 100);
 
   @override
   Future<void> dispose() async {
     _isDisposed = true;
-    _controller.removeListener(_listener);
-    await _controller.dispose();
+    await _player.dispose();
     super.dispose();
   }
 }

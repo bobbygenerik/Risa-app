@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
-// app_theme not required here
+import '../controllers/universal_player_controller.dart';
 import 'enhanced_video_player_screen.dart';
 
-/// A simple 2x2 multi-view implementation using `video_player` controllers.
+/// A simple 2x2 multi-view implementation using universal controllers.
 class MultiViewScreen extends StatefulWidget {
   final List<Channel>? channels;
   final Channel? initialChannel;
@@ -21,7 +20,7 @@ class MultiViewScreen extends StatefulWidget {
 enum IndexDirection { left, right, up, down }
 
 class _MultiViewScreenState extends State<MultiViewScreen> {
-  final List<VideoPlayerController?> _controllers = List.filled(4, null);
+  final List<UniversalPlayerController?> _controllers = List.filled(4, null);
   final List<Future<void>?> _inits = List.filled(4, null);
   final List<bool> _muted = List.filled(4, true);
   int _focusedIndex = -1;
@@ -62,11 +61,12 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     final channels = _channelsLocal;
     for (var i = 0; i < 4; i++) {
       if (i < channels.length && channels[i].url.isNotEmpty) {
-        final controller =
-            VideoPlayerController.networkUrl(Uri.parse(channels[i].url));
+        final controller = UniversalPlayerController.create(
+          url: channels[i].url,
+          autoPlay: true,
+        );
         _controllers[i] = controller;
         _inits[i] = controller.initialize().then((_) {
-          controller.setLooping(true);
           // Start according to persisted mute state
           try {
             controller.setVolume(_muted[i] ? 0 : 1);
@@ -215,9 +215,13 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                     if (snap.connectionState != ConnectionState.done) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    return AspectRatio(
-                        aspectRatio: controller.value.aspectRatio,
-                        child: VideoPlayer(controller));
+                    return Container(
+                      color: Colors.black,
+                      child: const Center(
+                        child: Text('Multi-view not supported with media_kit',
+                            style: TextStyle(color: Colors.white54)),
+                      ),
+                    );
                   },
                 )
               else

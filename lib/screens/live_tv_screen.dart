@@ -134,7 +134,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _maxCachedCategories = 6;
   int _visibleCategoryCount = 10; // Restored but conservative
   static const int _categoryChunkSize = 6;
-  static const double _categoryPrefetchExtent = 600; // Restored but conservative
+  static const double _categoryPrefetchExtent =
+      600; // Restored but conservative
   final Queue<String> _categoryLoadQueue = Queue<String>();
   int _activeCategoryLoads = 0;
   static const int _maxCategoryLoads = 2; // Restored
@@ -359,7 +360,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     unawaited(_saveProgramArtworkTitleCache());
     unawaited(_saveProgramArtworkNegativeCache());
     _featuredRotationTimer?.cancel();
-    
+
     // Clear all caches
     _artworkQueue.clear();
     _artworkRequests.clear();
@@ -391,14 +392,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _categoryHasMore.clear();
     _categoryAppendQueue.clear();
     _heroImageCacheHits.clear();
-    
+
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
     }
     _rowScrollControllers.clear();
     _rowScrollInitialized.clear();
-    
+
     _focusPool.returnFocusNodes(
       [
         'live_tv_watch',
@@ -698,21 +699,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
 
           // Improved EPG loading detection - only show skeleton if truly loading
-          final epgBusy = epgService.hasEpgUrl &&
-              (epgService.isDownloading ||
-                  epgService.isParsing ||
-                  epgService.isLoading) &&
-              epgService.loadedChannelCount == 0;
 
           if (!hasChannels && channelProvider.isLoading) {
             return _buildSkeletonLoader();
           }
 
           if (!epgReadyStable || _categoryNames.isEmpty) {
-            return _buildSkeletonLoader();
-          }
-
-          if (epgBusy) {
             return _buildSkeletonLoader();
           }
 
@@ -1094,42 +1086,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               final scrollPos =
                   _scrollController.hasClients ? _scrollController.offset : 0.0;
               final fadeProgress =
-                  (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
+                  (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
               final opacity = 1.0 - fadeProgress;
               if (opacity <= 0.01) {
-                // Show minimal tap area when fully faded
-                return GestureDetector(
-                  onTap: () {
-                    _scrollController.animateTo(
-                      0.0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                    );
+                // Always show focusable tap area when fully faded
+                return Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter ||
+                          event.logicalKey == LogicalKeyboardKey.space) {
+                        _scrollController.animateTo(
+                          0.0,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                        );
+                        return KeyEventResult.handled;
+                      }
+                    }
+                    return KeyEventResult.ignored;
                   },
-                  child: Container(
-                    width: double.infinity,
-                    height: 60,
-                    color: Colors.transparent,
-                    child: Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.keyboard_arrow_up,
-                            color: Colors.white54,
-                            size: 16,
-                          ),
-                        ),
-                      ),
+                  child: GestureDetector(
+                    onTap: () {
+                      _scrollController.animateTo(
+                        0.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: contentTop,
+                      color: Colors.transparent,
                     ),
                   ),
                 );
@@ -1544,17 +1532,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final lower = url.toLowerCase();
     final path = Uri.tryParse(url)?.path.toLowerCase() ?? lower;
 
-    // Poster assets often live in dedicated directories or include "poster" in the filename.
-    if (path.contains('/poster/') ||
+    // Block all poster-style content
+    if (path.contains('/poster') ||
+        path.contains('/portrait') ||
+        path.contains('/cover') ||
+        path.contains('/artwork') ||
+        path.contains('/thumb') ||
+        path.contains('/logo') ||
         path.endsWith('_poster.jpg') ||
         path.endsWith('_poster.png') ||
-        path.contains('/portrait/')) {
+        path.endsWith('_cover.jpg') ||
+        path.endsWith('_cover.png') ||
+        path.endsWith('_thumb.jpg') ||
+        path.endsWith('_thumb.png')) {
       return true;
     }
 
-    // TMDB portrait/backdrop size hints that usually represent poster art only.
+    // Block TMDB poster and logo sizes (all sizes)
     if (lower.contains('tmdb.org') &&
-        (lower.contains('/w342') || lower.contains('/w185'))) {
+        (lower.contains('/w92') ||
+            lower.contains('/w154') ||
+            lower.contains('/w185') ||
+            lower.contains('/w342') ||
+            lower.contains('/w500') ||
+            lower.contains('/w780') ||
+            lower.contains('/original'))) {
+      return true;
+    }
+
+    // Block other poster/logo indicators
+    if (lower.contains('poster') ||
+        lower.contains('portrait') ||
+        lower.contains('cover') ||
+        lower.contains('artwork') ||
+        lower.contains('thumb') ||
+        lower.contains('logo')) {
+      return true;
+    }
+
+    // Block aspect ratio indicators that suggest portrait/poster
+    if (lower.contains('2_3') || lower.contains('3_4')) {
       return true;
     }
 
@@ -1571,6 +1588,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return false;
     }
     if (_matchesChannelLogo(url, channel)) {
+      return false;
+    }
+    // Block small images that would look bad when scaled up
+    if (_isLikelySmallImage(url)) {
       return false;
     }
     return true;
@@ -1599,6 +1620,34 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     return lower.endsWith('.svg');
+  }
+
+  bool _isLikelySmallImage(String url) {
+    final lower = url.toLowerCase();
+    
+    // Check for small size indicators in URL
+    if (lower.contains('_small') ||
+        lower.contains('_thumb') ||
+        lower.contains('_icon') ||
+        lower.contains('/small/') ||
+        lower.contains('/thumb/') ||
+        lower.contains('/icon/')) {
+      return true;
+    }
+    
+    // Check for specific small dimensions in URL
+    final dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
+    final match = dimensionPattern.firstMatch(lower);
+    if (match != null) {
+      final width = int.tryParse(match.group(1) ?? '') ?? 0;
+      final height = int.tryParse(match.group(2) ?? '') ?? 0;
+      // Block images smaller than 400x300
+      if (width > 0 && height > 0 && (width < 400 || height < 300)) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
@@ -1951,8 +2000,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _enqueueArtwork(Program program) {
-    // Disable artwork fetching entirely to prevent OOM
-    return;
+    if (_pauseArtworkFetching || _suspendArtworkCaches) return;
+    if (_queuedArtworkIds.contains(program.id)) return;
+    _queuedArtworkIds.add(program.id);
+    _artworkQueue.add(program);
+    _scheduleArtworkDrain();
   }
 
   Future<void> _fetchTitleLogo(Program program, Channel channel) async {
@@ -2225,7 +2277,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
       return result ?? '';
     } finally {
-      unawaited(_pendingArtworkRequests.remove(program.id));
+      // Removing the stored future object is synchronous; don't pass it to unawaited
+      await _pendingArtworkRequests.remove(program.id);
       _artworkRequests.remove(program.id);
     }
   }
@@ -2802,19 +2855,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
               if (isFirstRow) {
+                if (_scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    0.0,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                  );
+                }
                 if (_watchButtonFocus.canRequestFocus) {
                   _watchButtonFocus.requestFocus();
-                } else {
-                  if (_scrollController.hasClients) {
-                    _scrollController.animateTo(
-                      0.0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                    );
-                  }
-                  if (_firstChannelFocus.canRequestFocus) {
-                    _firstChannelFocus.requestFocus();
-                  }
                 }
                 return KeyEventResult.handled;
               }
@@ -3012,31 +3061,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     right: 8,
                     child: BrandBadge.live(fontSize: 8),
                   ),
-                if (isFocused)
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Text(
-                        'Fix EPG',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+
                 // Progress bar overlay at bottom
                 if (currentProgram != null)
                   Positioned(
@@ -3558,10 +3583,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.6;
           final maxLogoHeight = constraints.maxHeight * 0.45;
-          final logoCacheWidth =
-              math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight =
-              math.min(320, (maxLogoHeight * dpr).round());
+          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
               Positioned.fill(
@@ -3617,10 +3640,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.6;
           final maxLogoHeight = constraints.maxHeight * 0.45;
-          final logoCacheWidth =
-              math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight =
-              math.min(320, (maxLogoHeight * dpr).round());
+          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
               Positioned.fill(
@@ -3697,37 +3718,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.6;
           final maxLogoHeight = constraints.maxHeight * 0.45;
-          final backdropCacheWidth =
-              math.min(400, (constraints.maxWidth * dpr).round());
-          final backdropCacheHeight =
-              math.min(400, (constraints.maxHeight * dpr).round());
-          final logoCacheWidth =
-              math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight =
-              math.min(320, (maxLogoHeight * dpr).round());
+          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
           return Stack(
             children: [
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Positioned.fill(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Opacity(
-                      opacity: 0.25,
-                      child: CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.cover,
-                        memCacheWidth: backdropCacheWidth,
-                        memCacheHeight: backdropCacheHeight,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV news card backdrop');
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(gradient: gradient),
@@ -3829,22 +3823,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildHeroFallback() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2a2a3e),
-            Color(0xFF1a1a2e),
-            AppTheme.cardBackground,
-          ],
-        ),
-      ),
-      child: const SizedBox.shrink(),
-    );
-  }
+  // Removed unused _buildLogoHeroFallbackWithBlur to avoid analyzer unused_element warning.
 
   Widget _buildLogoHeroFallback(Channel channel) {
     const gradient = LinearGradient(
@@ -3867,39 +3846,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.55;
           final maxLogoHeight = constraints.maxHeight * 0.32;
-          final logoCacheWidth =
-              math.min(480, (maxLogoWidth * dpr).round());
-          final logoCacheHeight =
-              math.min(480, (maxLogoHeight * dpr).round());
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(gradient: gradient),
-                ),
+          final logoCacheWidth = math.min(480, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(480, (maxLogoHeight * dpr).round());
+
+          final fallbackIcon = Container(
+            decoration: const BoxDecoration(gradient: gradient),
+            child: const Center(
+              child: Icon(
+                Icons.tv,
+                color: Colors.white70,
+                size: 64,
               ),
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Center(
-                  child: CachedNetworkImage(
-                    imageUrl: normalizedLogoUrl,
-                    httpHeaders: HttpClientService().imageHeaders,
+            ),
+          );
+
+          if (normalizedLogoUrl == null || normalizedLogoUrl.isEmpty) {
+            return fallbackIcon;
+          }
+
+          return CachedNetworkImage(
+            imageUrl: normalizedLogoUrl,
+            httpHeaders: HttpClientService().imageHeaders,
+            fit: BoxFit.contain,
+            width: maxLogoWidth,
+            height: maxLogoHeight,
+            memCacheWidth: logoCacheWidth,
+            memCacheHeight: logoCacheHeight,
+            imageBuilder: (context, imageProvider) {
+              return Container(
+                decoration: const BoxDecoration(gradient: gradient),
+                child: Center(
+                  child: Image(
+                    image: imageProvider,
                     fit: BoxFit.contain,
                     width: maxLogoWidth,
                     height: maxLogoHeight,
-                    memCacheWidth: logoCacheWidth,
-                    memCacheHeight: logoCacheHeight,
-                    errorWidget: (_, url, error) {
-                      logHandshakeIfNeeded(url, error,
-                          context: 'LiveTV hero logo');
-                      return const Icon(
-                        Icons.tv,
-                        color: Colors.white70,
-                        size: 64,
-                      );
-                    },
                   ),
                 ),
-            ],
+              );
+            },
+            placeholder: (_, __) => fallbackIcon,
+            errorWidget: (_, url, error) {
+              logHandshakeIfNeeded(url, error, context: 'LiveTV hero logo');
+              return fallbackIcon;
+            },
           );
         },
       ),
@@ -3927,59 +3917,175 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final maxLogoWidth = constraints.maxWidth * 0.55;
           final maxLogoHeight = constraints.maxHeight * 0.32;
-          final logoCacheWidth =
-              math.min(480, (maxLogoWidth * dpr).round());
-          final logoCacheHeight =
-              math.min(480, (maxLogoHeight * dpr).round());
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(gradient: gradient),
-                ),
+          final logoCacheWidth = math.min(480, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(480, (maxLogoHeight * dpr).round());
+
+          final fallbackContent = Container(
+            decoration: const BoxDecoration(gradient: gradient),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.newspaper,
+                    color: Colors.white70,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'NEWS',
+                    style: AppTypography.heroTitle(context).copyWith(
+                      letterSpacing: 6,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
               ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (normalizedLogoUrl != null &&
-                        normalizedLogoUrl.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
+            ),
+          );
+
+          if (normalizedLogoUrl == null || normalizedLogoUrl.isEmpty) {
+            return fallbackContent;
+          }
+
+          return CachedNetworkImage(
+            imageUrl: normalizedLogoUrl,
+            httpHeaders: HttpClientService().imageHeaders,
+            fit: BoxFit.contain,
+            width: maxLogoWidth,
+            height: maxLogoHeight,
+            memCacheWidth: logoCacheWidth,
+            memCacheHeight: logoCacheHeight,
+            imageBuilder: (context, imageProvider) {
+              return Container(
+                decoration: const BoxDecoration(gradient: gradient),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image(
+                        image: imageProvider,
                         fit: BoxFit.contain,
                         width: maxLogoWidth,
                         height: maxLogoHeight,
-                        memCacheWidth: logoCacheWidth,
-                        memCacheHeight: logoCacheHeight,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV news hero logo');
-                          return const Icon(
-                            Icons.newspaper,
-                            color: Colors.white70,
-                            size: 64,
-                          );
-                        },
-                      )
-                    else
-                      const Icon(
-                        Icons.newspaper,
-                        color: Colors.white70,
-                        size: 64,
                       ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'NEWS',
-                      style: AppTypography.heroTitle(context).copyWith(
-                        letterSpacing: 6,
-                        color: Colors.white70,
+                      const SizedBox(height: 12),
+                      Text(
+                        'NEWS',
+                        style: AppTypography.heroTitle(context).copyWith(
+                          letterSpacing: 6,
+                          color: Colors.white70,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              );
+            },
+            placeholder: (_, __) => fallbackContent,
+            errorWidget: (_, url, error) {
+              logHandshakeIfNeeded(url, error,
+                  context: 'LiveTV news hero logo');
+              return fallbackContent;
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSportsHeroFallback(Channel channel) {
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF1A2E1A),
+        Color(0xFF0F1F0F),
+        Color(0xFF0A1A0A),
+      ],
+    );
+    final logoUrl = channel.logoUrl;
+    final normalizedLogoUrl =
+        logoUrl == null ? null : normalizeImageUrl(logoUrl);
+
+    return Container(
+      decoration: const BoxDecoration(gradient: gradient),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final dpr = MediaQuery.of(context).devicePixelRatio;
+          final maxLogoWidth = constraints.maxWidth * 0.55;
+          final maxLogoHeight = constraints.maxHeight * 0.32;
+          final logoCacheWidth = math.min(480, (maxLogoWidth * dpr).round());
+          final logoCacheHeight = math.min(480, (maxLogoHeight * dpr).round());
+
+          final fallbackContent = Container(
+            decoration: const BoxDecoration(gradient: gradient),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.sports,
+                    color: Colors.white70,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'SPORTS',
+                    style: AppTypography.heroTitle(context).copyWith(
+                      letterSpacing: 6,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          );
+
+          if (normalizedLogoUrl == null || normalizedLogoUrl.isEmpty) {
+            return fallbackContent;
+          }
+
+          return CachedNetworkImage(
+            imageUrl: normalizedLogoUrl,
+            httpHeaders: HttpClientService().imageHeaders,
+            fit: BoxFit.contain,
+            width: maxLogoWidth,
+            height: maxLogoHeight,
+            memCacheWidth: logoCacheWidth,
+            memCacheHeight: logoCacheHeight,
+            imageBuilder: (context, imageProvider) {
+              return Container(
+                decoration: const BoxDecoration(gradient: gradient),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image(
+                        image: imageProvider,
+                        fit: BoxFit.contain,
+                        width: maxLogoWidth,
+                        height: maxLogoHeight,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'SPORTS',
+                        style: AppTypography.heroTitle(context).copyWith(
+                          letterSpacing: 6,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            placeholder: (_, __) => fallbackContent,
+            errorWidget: (_, url, error) {
+              logHandshakeIfNeeded(url, error,
+                  context: 'LiveTV sports hero logo');
+              return fallbackContent;
+            },
           );
         },
       ),
@@ -4044,29 +4150,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   bool _isPosterStyleUrl(String? url) {
     if (url == null || url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('poster')) return true;
-    if (lower.contains('news')) return true; // NEWS placeholder images
-    if (lower.contains('placeholder')) return true; // Generic placeholders
-    if (lower.contains('default')) return true; // Default images
-    if (lower.contains('fallback')) return true; // Fallback images
-    if (lower.contains('generic')) return true; // Generic images
-    if (lower.contains('logo')) return true; // Logo images
-    if (lower.contains('._v1_') &&
-        (lower.contains('sx') || lower.contains('sy'))) {
-      return true;
-    }
-    if (lower.contains('tmdb') &&
-        (lower.contains('w342') ||
-            lower.contains('w500') ||
-            lower.contains('w780'))) {
-      return true;
-    }
-    // Check for aspect ratio indicators that suggest vertical/square images
-    if (lower.contains('_1x1') || lower.contains('_3x4') || lower.contains('_4x3')) {
-      return true;
-    }
-    return false;
+    return _isLikelyPosterUrl(url);
   }
 
   bool _isBlacklistedNewsArtwork(
@@ -4118,16 +4202,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _pauseArtworkFetching = true;
     _suspendArtworkCaches = true;
     _suspendHeroBackground = true;
-    
+
     // Aggressive memory cleanup before player
     _releaseArtworkCachesForPlayback();
     MemoryManager.checkMemoryPressure();
     MemoryManager.clearCaches();
     MemoryManager.forceGarbageCollection();
-    
+
     // Clear hero image cache to free memory
     _heroImageCacheHits.clear();
-    
+
     if (!mounted) return;
     try {
       await context.push('/player', extra: channel);
@@ -4152,7 +4236,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _programTitleLogoOrder.clear();
     _programChannelLookup.clear();
     _heroImageCacheHits.clear();
-    
+
     // Clear additional caches that can consume memory
     _programArtworkByTitle.clear();
     _programArtworkTitleOrder.clear();
@@ -4194,6 +4278,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _isPosterStyleUrl(heroImage) ? BoxFit.contain : BoxFit.cover;
     final heroAlignment =
         heroFit == BoxFit.cover ? Alignment.topCenter : Alignment.center;
+
+    // Check if this is a channel logo fallback
+    final isChannelLogoFallback = heroImage == featuredChannel.logoUrl;
+
     if (!hasHeroImage) {
       return Positioned.fill(
         child: DecoratedBox(
@@ -4213,6 +4301,70 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 math.min(2000, (constraints.maxWidth * dpr).round());
             final cacheHeight =
                 math.min(2000, (constraints.maxHeight * dpr).round());
+
+            if (isChannelLogoFallback) {
+              // Special handling for channel logo fallback with blurred background
+              return Stack(
+                children: [
+                  // Blurred background
+                  Positioned.fill(
+                    child: CachedNetworkImage(
+                      imageUrl: normalizedHeroUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.low,
+                      memCacheWidth: cacheWidth ~/ 2,
+                      memCacheHeight: cacheHeight ~/ 2,
+                      imageBuilder: (context, imageProvider) {
+                        return ImageFiltered(
+                          imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: imageProvider,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.center,
+                              ),
+                            ),
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        );
+                      },
+                      placeholder: (_, __) => Container(
+                        color: AppTheme.darkBackground,
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppTheme.darkBackground,
+                      ),
+                    ),
+                  ),
+                  // Centered logo
+                  Center(
+                    child: CachedNetworkImage(
+                      imageUrl: normalizedHeroUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      width: constraints.maxWidth * 0.3,
+                      height: constraints.maxHeight * 0.25,
+                      memCacheWidth: (constraints.maxWidth * 0.3 * dpr).round(),
+                      memCacheHeight:
+                          (constraints.maxHeight * 0.25 * dpr).round(),
+                      placeholder: (_, __) => const SizedBox.shrink(),
+                      errorWidget: (_, url, error) {
+                        logHandshakeIfNeeded(url, error,
+                            context: 'LiveTV hero logo');
+                        return heroFallback;
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+
             return SizedBox.expand(
               child: CachedNetworkImage(
                 imageUrl: normalizedHeroUrl,
@@ -4234,29 +4386,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       filterQuality: FilterQuality.medium,
                     );
                   }
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                        child: Opacity(
-                          opacity: 0.35,
-                          child: Image(
-                            image: imageProvider,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                            filterQuality: FilterQuality.low,
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Image(
-                          image: imageProvider,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.medium,
-                        ),
-                      ),
-                    ],
+                  // For poster-style images, show them centered without blurred background
+                  return Center(
+                    child: Image(
+                      image: imageProvider,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.medium,
+                    ),
                   );
                 },
                 errorWidget: (_, url, error) {
@@ -4276,11 +4412,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_isNewsProgram(currentProgram, featuredChannel)) {
       return _buildNewsHeroFallback(featuredChannel);
     }
-    if (featuredChannel.logoUrl != null &&
-        featuredChannel.logoUrl!.isNotEmpty) {
-      return _buildLogoHeroFallback(featuredChannel);
+    if (currentProgram != null &&
+        _isSportsProgram(currentProgram, featuredChannel)) {
+      return _buildSportsHeroFallback(featuredChannel);
     }
-    return _buildHeroFallback();
+    return _buildLogoHeroFallback(featuredChannel);
   }
 
   void _checkHeroImageCache(String url) {
@@ -4342,30 +4478,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               color: AppColors.background,
             ),
           ),
-        // Channel logo
-        Positioned(
-          top: AppSizes.lg,
-          right: AppSizes.lg,
-          child: Builder(builder: (context) {
-            final scrollPos =
-                _scrollController.hasClients ? _scrollController.offset : 0.0;
-            final fadeProgress =
-                (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-            return Opacity(
-              opacity: 1.0 - fadeProgress,
-              child: Shimmer(
-                child: Container(
-                  height: 48,
-                  width: 72,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+          // Channel logo
+          Positioned(
+            top: AppSizes.lg,
+            right: AppSizes.lg,
+            child: Builder(builder: (context) {
+              final scrollPos =
+                  _scrollController.hasClients ? _scrollController.offset : 0.0;
+              final fadeProgress =
+                  (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+              return Opacity(
+                opacity: 1.0 - fadeProgress,
+                child: Shimmer(
+                  child: Container(
+                    height: 48,
+                    width: 72,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
-        ),
+              );
+            }),
+          ),
           Positioned(
             top: 0,
             left: contentInset,

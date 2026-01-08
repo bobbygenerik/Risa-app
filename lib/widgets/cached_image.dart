@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -24,17 +25,33 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Disable all image loading for instant UI
-    Widget image = placeholder ??
-        Container(
-          width: width,
-          height: height,
-          color: Colors.grey.withAlpha((0.1 * 255).round()),
-          child: const Icon(
-            Icons.image,
-            color: Colors.white24,
+    // Re-enable image loading with conservative caching
+    Widget image = CachedNetworkImage(
+      imageUrl: imageUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      placeholder: (context, url) => placeholder ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey.withAlpha((0.1 * 255).round()),
+            child: const Icon(
+              Icons.image,
+              color: Colors.white24,
+            ),
           ),
-        );
+      errorWidget: (context, url, error) => errorWidget ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey.withAlpha((0.1 * 255).round()),
+            child: const Icon(
+              Icons.broken_image,
+              color: Colors.white24,
+            ),
+          ),
+    );
 
     if (borderRadius != null) {
       image = ClipRRect(
@@ -66,8 +83,20 @@ class CachedChannelLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Always show placeholder for instant UI
-    return _buildLogoPlaceholder(size, fallbackIcon);
+    if (logoUrl == null || logoUrl!.isEmpty) {
+      return _buildLogoPlaceholder(size, fallbackIcon);
+    }
+    
+    return CachedNetworkImage(
+      imageUrl: logoUrl!,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      memCacheWidth: cacheWidth,
+      memCacheHeight: cacheHeight,
+      placeholder: (context, url) => _buildLogoPlaceholder(size, fallbackIcon),
+      errorWidget: (context, url, error) => _buildLogoPlaceholder(size, fallbackIcon),
+    );
   }
 }
 

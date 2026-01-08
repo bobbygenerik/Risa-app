@@ -35,6 +35,7 @@ import com.risa.iptv.WhisperPlugin
 import com.iptvplayer.iptv_player.ExoPlayerAudioCapturer
 import com.iptvplayer.iptv_player.ExoPlayerViewFactory
 import com.risa.app.NativeCrashHandler
+import com.risa.app.VideoPlayerConfig
 
 @UnstableApi
 class MainActivity : FlutterActivity() {
@@ -67,6 +68,18 @@ class MainActivity : FlutterActivity() {
             .platformViewsController
             .registry
             .registerViewFactory("com.streamhub.iptv/exoplayer", ExoPlayerViewFactory(flutterEngine.dartExecutor.binaryMessenger))
+
+        // Video configuration channel for SurfaceView/TextureView control
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.risa.app/video_config")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "forceSurfaceView" -> {
+                        val success = VideoPlayerConfig.configureSurfaceView(this@MainActivity)
+                        result.success(success)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         // Native capabilities channel for checking ExoPlayer availability
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NATIVE_CAPABILITIES_CHANNEL)

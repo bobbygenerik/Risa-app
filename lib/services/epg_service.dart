@@ -13,6 +13,13 @@ import 'package:iptv_player/utils/performance_monitor.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/provider_normalizer.dart';
 
+// Helper to fire and forget futures
+void unawaited(Future<void> future) {
+  future.catchError((error) {
+    debugLog('Unawaited future error: $error');
+  });
+}
+
 // Top-level function for isolate parsing with chunked processing
 Map<String, dynamic> parseEpgInIsolate(String xmlData) {
   try {
@@ -77,6 +84,93 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
   } catch (e) {
     throw Exception('Failed to parse EPG XML: ${e.toString()}');
   }
+}
+
+// Top-level function for parsing EPG data within a specific date range
+Map<String, List<Map<String, dynamic>>> _parseEpgForDateRange(
+    Map<String, Object> args) {
+  final xmlData = args['xmlData'] as String;
+  final startTime =
+      DateTime.fromMillisecondsSinceEpoch(args['startTime'] as int);
+  final endTime = DateTime.fromMillisecondsSinceEpoch(args['endTime'] as int);
+
+  try {
+    final document = XmlDocument.parse(xmlData);
+    final programmes = document.findAllElements('programme');
+    final epgData = <String, List<Map<String, dynamic>>>{};
+
+    for (final programme in programmes) {
+      try {
+        final channelId = programme.getAttribute('channel');
+        if (channelId == null || channelId.isEmpty) continue;
+
+        final startStr = programme.getAttribute('start');
+        final stopStr = programme.getAttribute('stop');
+        if (startStr == null || stopStr == null) continue;
+
+        // Parse program time and check if it's in our date range
+        final programStart = _parseEpgTimeInIsolate(startStr);
+        final programEnd = _parseEpgTimeInIsolate(stopStr);
+
+        // Skip programs outside our date range
+        if (programEnd.isBefore(startTime) || programStart.isAfter(endTime)) {
+          continue;
+        }
+
+        final title = programme.findElements('title').firstOrNull?.innerText ??
+            'Unknown Program';
+        final description =
+            programme.findElements('desc').firstOrNull?.innerText;
+        final category =
+            programme.findElements('category').firstOrNull?.innerText;
+        final icon =
+            programme.findElements('icon').firstOrNull?.getAttribute('src');
+
+        final programMap = {
+          'id': '${channelId}_$startStr',
+          'channelId': channelId,
+          'title': title,
+          'description': description,
+          'startTime': startStr,
+          'endTime': stopStr,
+          'imageUrl': icon,
+          'category': category,
+          'isLive': false,
+          'canRecord': true,
+        };
+
+        if (!epgData.containsKey(channelId)) {
+          epgData[channelId] = [];
+        }
+        epgData[channelId]!.add(programMap);
+      } catch (e) {
+        continue; // Skip invalid programs
+      }
+    }
+
+    return epgData;
+  } catch (e) {
+    throw Exception('Failed to parse EPG XML for date range: ${e.toString()}');
+  }
+}
+
+// Helper function for parsing EPG time in isolate
+DateTime _parseEpgTimeInIsolate(String timeStr) {
+  try {
+    final cleanTime = timeStr.replaceAll(RegExp(r'\s+\+\d{4}'), '');
+    if (cleanTime.length >= 14) {
+      final year = int.parse(cleanTime.substring(0, 4));
+      final month = int.parse(cleanTime.substring(4, 6));
+      final day = int.parse(cleanTime.substring(6, 8));
+      final hour = int.parse(cleanTime.substring(8, 10));
+      final minute = int.parse(cleanTime.substring(10, 12));
+      final second = int.parse(cleanTime.substring(12, 14));
+      return DateTime(year, month, day, hour, minute, second);
+    }
+  } catch (e) {
+    // Return current time as fallback
+  }
+  return DateTime.now();
 }
 
 class EpgService with ChangeNotifier {
@@ -168,8 +262,8 @@ class EpgService with ChangeNotifier {
 
       debugLog('EpgService: Total channels loaded: $totalChannelCount');
 
-      // Refresh in background if needed
-      _refreshInBackground();
+      // Progressive refresh: current day first, then background
+      _progressiveRefreshInBackground();
     } catch (e) {
       debugLog('EpgService: Initialization error: $e');
       _error = 'Failed to initialize EPG service: $e';
@@ -187,8 +281,8 @@ class EpgService with ChangeNotifier {
 
     if (epgUrl != null && epgUrl.isNotEmpty) {
       debugLog(
-          'EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
-      await loadEpgFromUrl(epgUrl, forceRefresh: true);
+          'EpgService: Triggering progressive EPG load from public loadEpg() method.');
+      await _loadEpgProgressively(epgUrl, forceRefresh: true);
     } else {
       debugLog('EpgService: No EPG URL found in SharedPreferences.');
       _error = 'No EPG URL configured.';
@@ -204,8 +298,8 @@ class EpgService with ChangeNotifier {
     }
   }
 
-  /// Refresh EPG data in background without blocking initialization
-  void _refreshInBackground() async {
+  /// Progressive refresh: load current day first, then remaining days in background
+  void _progressiveRefreshInBackground() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -216,7 +310,7 @@ class EpgService with ChangeNotifier {
         needsRefresh = age > _cacheValidity;
         if (needsRefresh) {
           debugLog(
-              'EpgService: Cache is ${age.inHours}h old, refreshing in background');
+              'EpgService: Cache is ${age.inHours}h old, refreshing progressively');
         }
       }
 
@@ -224,8 +318,8 @@ class EpgService with ChangeNotifier {
         final epgUrl =
             prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugLog('EpgService: Starting background EPG refresh...');
-          await loadEpgFromUrl(epgUrl, forceRefresh: true);
+          debugLog('EpgService: Starting progressive EPG refresh...');
+          await _loadEpgProgressively(epgUrl, forceRefresh: true);
         }
 
         final secondaryUrl = prefs.getString('secondary_epg_url');
@@ -234,7 +328,202 @@ class EpgService with ChangeNotifier {
         }
       }
     } catch (e) {
-      debugLog('EpgService: Background refresh error: $e');
+      debugLog('EpgService: Progressive refresh error: $e');
+    }
+  }
+
+  /// Load EPG progressively: cache first, then simple download and parse
+  Future<void> _loadEpgProgressively(String url,
+      {bool forceRefresh = false}) async {
+    if (url.isEmpty) {
+      _error = 'EPG URL is empty';
+      notifyListeners();
+      return;
+    }
+
+    // Normalize EPG URL
+    try {
+      url = normalizeEpgUrl(url);
+    } catch (e) {
+      if (e is NormalizationError) {
+        _error = e.message;
+      } else {
+        _error = 'EPG URL invalid';
+      }
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      debugLog('EpgService: Starting EPG load from: $url');
+
+      // Load from cache first for instant startup
+      if (!forceRefresh) {
+        final cacheLoaded = await _loadFromCache();
+        if (cacheLoaded) {
+          debugLog(
+              'EpgService: ✓ Loaded from cache: ${_epgData.length} channels');
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+      }
+
+      // Simple download without parsing during stream
+      final xmlData = await _downloadEpgData(url);
+      if (xmlData == null) return;
+
+      // Parse today's data first
+      debugLog('EpgService: Parsing today\'s EPG data...');
+      final todayData = await _parseCurrentDayEpg(xmlData);
+
+      if (todayData.isNotEmpty) {
+        // Convert today's raw program maps into Program objects and merge into _epgData
+        for (final channelId in todayData.keys) {
+          final programMaps = todayData[channelId]!;
+          final programs = programMaps.map((map) {
+            final m = Map<String, dynamic>.from(map);
+            return Program(
+              id: m['id'],
+              channelId: m['channelId'],
+              title: m['title'],
+              description: m['description'],
+              startTime: _parseEpgTime(m['startTime']),
+              endTime: _parseEpgTime(m['endTime']),
+              imageUrl: m['imageUrl'],
+              category: m['category'],
+              isLive: m['isLive'] ?? false,
+              canRecord: m['canRecord'] ?? true,
+            );
+          }).toList();
+
+          programs.sort((a, b) => a.startTime.compareTo(b.startTime));
+          _epgData[channelId] = programs;
+        }
+
+        debugLog(
+            'EpgService: ✓ Today\'s EPG loaded: ${_epgData.length} channels');
+        notifyListeners();
+      }
+
+      // Save to cache
+      await _saveToCache(xmlData);
+
+      // Parse remaining days in background
+      debugLog('EpgService: Parsing remaining EPG days in background...');
+      unawaited(_parseRemainingDaysInBackground(xmlData));
+    } catch (e) {
+      debugLog('EpgService: EPG load error: $e');
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Simple EPG download without parsing
+  Future<String?> _downloadEpgData(String url) async {
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 30)
+        ..badCertificateCallback = (cert, host, port) => true;
+
+      final request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 30));
+      final response =
+          await request.close().timeout(const Duration(seconds: 60));
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final chunks = <List<int>>[];
+      int totalBytes = 0;
+
+      await for (final chunk in response) {
+        totalBytes += chunk.length;
+        chunks.add(chunk);
+      }
+
+      client.close();
+      debugLog(
+          'EpgService: Downloaded ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+
+      final epgBytes = <int>[];
+      for (final chunk in chunks) {
+        epgBytes.addAll(chunk);
+      }
+      chunks.clear();
+
+      return utf8.decode(epgBytes, allowMalformed: true);
+    } catch (e) {
+      debugLog('EpgService: Download error: $e');
+      _error = 'Failed to download EPG: $e';
+      return null;
+    }
+  }
+
+  /// Parse current day EPG data only (fast startup)
+  Future<Map<String, List<Map<String, dynamic>>>> _parseCurrentDayEpg(
+      String xmlData) async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return compute<Map<String, Object>,
+        Map<String, List<Map<String, dynamic>>>>(
+      _parseEpgForDateRange,
+      {
+        'xmlData': xmlData,
+        'startTime': startOfDay.millisecondsSinceEpoch,
+        'endTime': endOfDay.millisecondsSinceEpoch,
+      },
+    );
+  }
+
+  /// Parse remaining days in background (non-blocking)
+  Future<void> _parseRemainingDaysInBackground(String xmlData) async {
+    try {
+      // Parse all data in isolate
+      final parsed = await compute(parseEpgInIsolate, xmlData);
+      final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
+
+      // Convert and merge with existing current day data
+      for (final channelId in rawEpgData.keys) {
+        final programMaps = rawEpgData[channelId] as List<dynamic>;
+        final programs = <Program>[];
+
+        for (final p in programMaps) {
+          final map = Map<String, dynamic>.from(p);
+          programs.add(Program(
+            id: map['id'],
+            channelId: map['channelId'],
+            title: map['title'],
+            description: map['description'],
+            startTime: _parseEpgTime(map['startTime']),
+            endTime: _parseEpgTime(map['endTime']),
+            imageUrl: map['imageUrl'],
+            category: map['category'],
+            isLive: map['isLive'] ?? false,
+            canRecord: map['canRecord'] ?? true,
+          ));
+        }
+
+        programs.sort((a, b) => a.startTime.compareTo(b.startTime));
+        _epgData[channelId] = programs;
+      }
+
+      EPGMatchingUtils.clearCache();
+      debugLog('EpgService: ✓ Full EPG loaded: ${_epgData.length} channels');
+      notifyListeners();
+    } catch (e) {
+      debugLog('EpgService: Background parsing error: $e');
     }
   }
 

@@ -966,6 +966,11 @@ class ChannelProvider with ChangeNotifier {
   void setEpgService(IncrementalEpgService service) {
     if (_epgService == service) return;
     _epgService = service;
+    // Trigger EPG initialization when service is set
+    if (_channelMaps.isNotEmpty) {
+      _updateEpgAllowedChannels();
+      _scheduleEpgRefresh(forceRefresh: false);
+    }
   }
 
   void _scheduleEpgRefresh({bool forceRefresh = false}) {

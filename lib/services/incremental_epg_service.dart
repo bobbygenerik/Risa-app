@@ -10,6 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
 
+// Helper to fire and forget futures
+void unawaited(Future<void> future) {
+  future.catchError((error) {
+    debugLog('Unawaited future error: $error');
+  });
+}
+
 // Provider-block exception type removed — provider HTML cases are handled
 // via graceful aborts and user-facing `_error` messages to preserve
 // last-known-good EPG state.
@@ -198,8 +205,8 @@ class IncrementalEpgService extends ChangeNotifier {
       // Try to load cached normalized mapping immediately for fast channel matching
       await _loadNormalizedMappingFromPrefs();
 
-      // Initialize with force refresh to get fresh data, but allow stale cache usage
-      await initialize(forceRefresh: false);
+      // Initialize with progressive loading for fast startup
+      await _initializeProgressively(forceRefresh: false);
     } catch (e) {
       debugLog('EPG: Quick start failed: $e');
     }
@@ -208,7 +215,230 @@ class IncrementalEpgService extends ChangeNotifier {
   /// Force refresh EPG data with improved error handling
   Future<void> forceRefresh() async {
     debugLog('EPG: Force refresh requested');
-    await initialize(forceRefresh: true);
+    await _initializeProgressively(forceRefresh: true);
+  }
+
+  /// Progressive initialization: load current day first, then remaining days in background
+  Future<void> _initializeProgressively({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        (_isLoading || _isDownloading || _isParsing || _initInFlight)) {
+      debugLog('EPG: Progressive init skipped (already loading or in flight)');
+      return;
+    }
+
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _lastInitAttempt != null &&
+        now.difference(_lastInitAttempt!).inSeconds < 3) {
+      debugLog('EPG: Progressive init skipped (throttled)');
+      return;
+    }
+    _lastInitAttempt = now;
+    _initInFlight = true;
+
+    try {
+      debugLog('EPG: Starting progressive EPG initialization...');
+      
+      // Initialize DB with timeout
+      try {
+        await _db.init().timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugLog('EPG: DB init failed (continuing without DB cache): $e');
+        _handleDbError(e);
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // Load user's EPG cache duration preference
+      final userCacheHours =
+          prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
+      _cacheDuration = Duration(hours: userCacheHours);
+      debugLog('EPG: Using cache duration of $userCacheHours hours');
+      
+      // Get EPG URL
+      final customEpgUrl = prefs.getString('custom_epg_url');
+      final storedEpgUrl = prefs.getString('epg_url');
+      _epgUrl = customEpgUrl;
+      if (_epgUrl == null || _epgUrl!.isEmpty) {
+        _epgUrl = storedEpgUrl;
+      }
+      _epgUrl = _epgUrl?.trim();
+
+      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+        final normalized = _normalizeEpgUrl(_epgUrl!);
+        if (normalized != _epgUrl) {
+          _epgUrl = normalized;
+          if (customEpgUrl != null && customEpgUrl.isNotEmpty) {
+            await prefs.setString('custom_epg_url', normalized);
+          } else if (storedEpgUrl != null && storedEpgUrl.isNotEmpty) {
+            await prefs.setString('epg_url', normalized);
+          }
+        }
+
+        final uri = Uri.tryParse(_epgUrl!);
+        final scheme = uri?.scheme ?? '';
+        final schemeValid =
+            scheme.isNotEmpty && _schemeValidRe.hasMatch(scheme);
+        if (uri == null || !schemeValid) {
+          _error = 'Invalid EPG URL';
+          debugLog('EPG: Invalid URL configured: $_epgUrl');
+          _resetLoadingState();
+          notifyListeners();
+          return;
+        }
+      }
+
+      await _handleCacheUrlChange(prefs);
+      await _loadManualMappings(prefs);
+      _applyManualMappings();
+      _epgFutureHours = _initialFutureHours;
+      _extendedWindowScheduled = false;
+      _extendingWindow = false;
+
+      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+        debugLog('EPG: Progressive initialization with URL: $_epgUrl');
+        
+        // Try loading persisted normalized mapping early
+        await _loadNormalizedMappingFromPrefs();
+        await loadMappingsFromDb();
+
+        // Load current day first for fast UI response
+        await _loadCurrentDayPrograms(forceRefresh: forceRefresh);
+        
+        // Load remaining days in background
+        unawaited(_loadRemainingDaysInBackground());
+        
+      } else {
+        debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
+        _error = 'No EPG URL configured';
+        _resetLoadingState();
+        notifyListeners();
+      }
+
+      debugLog(
+          'EPG: Progressive init complete - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
+    } catch (e) {
+      debugLog('EPG: Progressive initialization error: $e');
+      _error = 'Failed to initialize EPG service: $e';
+      _resetLoadingState();
+      notifyListeners();
+    } finally {
+      _initInFlight = false;
+      if (_pendingAllowedRefresh &&
+          _allowedChannelIdsNormalized.isNotEmpty &&
+          !_isLoading &&
+          !_isDownloading &&
+          !_isParsing) {
+        _pendingAllowedRefresh = false;
+        unawaited(_initializeProgressively(forceRefresh: false));
+      }
+    }
+  }
+
+  /// Load current day programs for immediate UI response
+  Future<void> _loadCurrentDayPrograms({bool forceRefresh = false}) async {
+    if (_epgUrl == null || _epgUrl!.isEmpty) return;
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Check if we have valid cache for current day
+      if (!forceRefresh) {
+        final programCount = await _db.programCount();
+        if (programCount > 0) {
+          debugLog('EPG: Loading current day from DB cache...');
+          final now = DateTime.now();
+          final startOfDay = DateTime(now.year, now.month, now.day);
+          final endOfDay = startOfDay.add(const Duration(days: 1));
+          
+          final dbPrograms = await _db.getAllProgramsByChannel(
+            pastHours: 12,
+            futureHours: 24, // Current day + some buffer
+          );
+          
+          if (dbPrograms.isNotEmpty) {
+            // Filter for current day programs
+            final currentDayPrograms = <String, List<Program>>{};
+            for (final entry in dbPrograms.entries) {
+              final epgId = entry.key;
+              final programs = entry.value
+                  .where((row) {
+                    final startTime = DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int);
+                    return startTime.isAfter(startOfDay) && startTime.isBefore(endOfDay);
+                  })
+                  .map((row) => Program(
+                        id: '${epgId}_${row['startTs']}',
+                        channelId: epgId,
+                        title: row['title'] as String? ?? '',
+                        description: row['description'] as String?,
+                        startTime: DateTime.fromMillisecondsSinceEpoch(
+                            row['startTs'] as int),
+                        endTime: DateTime.fromMillisecondsSinceEpoch(
+                            row['endTs'] as int),
+                        imageUrl: row['imageUrl'] as String?,
+                      ))
+                  .toList();
+              
+              if (programs.isNotEmpty) {
+                currentDayPrograms[epgId] = programs;
+              }
+            }
+
+            if (currentDayPrograms.isNotEmpty) {
+              _programsByChannel.clear();
+              _programsByChannel.addAll(currentDayPrograms);
+              _availableChannels.clear();
+              _availableChannels.addAll(currentDayPrograms.keys);
+              _hasParsed = true;
+              _isLoading = false;
+              _error = null;
+              notifyListeners();
+              
+              debugLog('EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
+              return;
+            }
+          }
+        }
+      }
+
+      // Fallback to network loading with current day focus
+      await _loadChannelList(
+        forceRefresh: forceRefresh,
+        allowStaleCache: !forceRefresh,
+        currentDayOnly: true,
+      );
+      
+    } catch (e) {
+      debugLog('EPG: Current day loading error: $e');
+      _error = 'Failed to load current day EPG: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load remaining days in background (non-blocking)
+  Future<void> _loadRemainingDaysInBackground() async {
+    try {
+      debugLog('EPG: Loading remaining EPG days in background...');
+      
+      // Small delay to let current day render first
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      await _loadChannelList(
+        forceRefresh: false,
+        allowStaleCache: true,
+        fromBackgroundRefresh: true,
+        currentDayOnly: false,
+      );
+      
+      debugLog('EPG: ✓ Full EPG loaded in background');
+    } catch (e) {
+      debugLog('EPG: Background EPG loading error: $e');
+      // Don't update error state as current day is already loaded
+    }
   }
 
   /// Check if EPG service has usable data available
@@ -297,121 +527,8 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   Future<void> initialize({bool forceRefresh = false}) async {
-    // Allow multiple initialization attempts but prevent overlapping ones
-    if (!forceRefresh &&
-        (_isLoading || _isDownloading || _isParsing || _initInFlight)) {
-      debugLog('EPG: Init skipped (already loading or in flight)');
-      return;
-    }
-
-    final now = DateTime.now();
-    if (!forceRefresh &&
-        _lastInitAttempt != null &&
-        now.difference(_lastInitAttempt!).inSeconds < 3) {
-      debugLog('EPG: Init skipped (throttled)');
-      return;
-    }
-    _lastInitAttempt = now;
-    _initInFlight = true;
-
-    try {
-      debugLog('EPG: Initializing...');
-      try {
-        await _db.init();
-      } catch (e) {
-        debugLog('EPG: DB init failed (continuing without DB cache): $e');
-        _handleDbError(e);
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // Load user's EPG cache duration preference (defaults to 6 hours)
-      final userCacheHours =
-          prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
-      _cacheDuration = Duration(hours: userCacheHours);
-      debugLog('EPG: Using cache duration of $userCacheHours hours');
-      // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
-      // custom_epg_url takes precedence
-      final customEpgUrl = prefs.getString('custom_epg_url');
-      final storedEpgUrl = prefs.getString('epg_url');
-      _epgUrl = customEpgUrl;
-      if (_epgUrl == null || _epgUrl!.isEmpty) {
-        _epgUrl = storedEpgUrl;
-      }
-      _epgUrl = _epgUrl?.trim();
-
-      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
-        final normalized = _normalizeEpgUrl(_epgUrl!);
-        if (normalized != _epgUrl) {
-          _epgUrl = normalized;
-          if (customEpgUrl != null && customEpgUrl.isNotEmpty) {
-            await prefs.setString('custom_epg_url', normalized);
-          } else if (storedEpgUrl != null && storedEpgUrl.isNotEmpty) {
-            await prefs.setString('epg_url', normalized);
-          }
-        } else {
-          _epgUrl = normalized;
-        }
-
-        final uri = Uri.tryParse(_epgUrl!);
-        final scheme = uri?.scheme ?? '';
-        final schemeValid =
-            scheme.isNotEmpty && _schemeValidRe.hasMatch(scheme);
-        if (uri == null || !schemeValid) {
-          _error = 'Invalid EPG URL';
-          debugLog('EPG: Invalid URL configured: $_epgUrl');
-          _resetLoadingState();
-          notifyListeners();
-          return;
-        }
-      }
-
-      await _handleCacheUrlChange(prefs);
-      await _loadManualMappings(prefs);
-      _applyManualMappings();
-      _epgFutureHours = _initialFutureHours;
-      _extendedWindowScheduled = false;
-      _extendingWindow = false;
-
-      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
-        debugLog('EPG: Initializing with URL: $_epgUrl');
-        // Try loading persisted normalized mapping early to speed up matches
-        await _loadNormalizedMappingFromPrefs();
-        await loadMappingsFromDb();
-
-        // CRITICAL FIX: Don't defer parse when no allowed channels are set.
-        // Instead, load EPG data for all available channels and filter later.
-
-        await _loadChannelList(
-          forceRefresh: forceRefresh,
-          allowStaleCache: !forceRefresh,
-        );
-      } else {
-        debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
-        _error = 'No EPG URL configured';
-        _resetLoadingState();
-        notifyListeners();
-      }
-
-      // Debug: Log current state
-      debugLog(
-          'EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
-    } catch (e) {
-      debugLog('EPG: Initialization error: $e');
-      _error = 'Failed to initialize EPG service: $e';
-      _resetLoadingState();
-      notifyListeners();
-    } finally {
-      _initInFlight = false;
-      if (_pendingAllowedRefresh &&
-          _allowedChannelIdsNormalized.isNotEmpty &&
-          !_isLoading &&
-          !_isDownloading &&
-          !_isParsing) {
-        _pendingAllowedRefresh = false;
-        unawaited(initialize(forceRefresh: false));
-      }
-    }
+    // Use progressive initialization for better startup performance
+    await _initializeProgressively(forceRefresh: forceRefresh);
   }
 
   Future<void> _handleCacheUrlChange(SharedPreferences prefs) async {
@@ -938,6 +1055,7 @@ class IncrementalEpgService extends ChangeNotifier {
     bool allowStaleCache = false,
     bool fromBackgroundRefresh = false,
     bool skipDbLoad = false,
+    bool currentDayOnly = false,
   }) async {
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
 
@@ -1108,13 +1226,20 @@ class IncrementalEpgService extends ChangeNotifier {
         Future<Map<String, dynamic>> parseEpg(
             Set<String> allowedChannels) async {
           final now = DateTime.now();
-          final windowEnd = now.add(Duration(hours: _epgFutureHours));
+          final windowStart = currentDayOnly 
+              ? DateTime(now.year, now.month, now.day)
+              : now.subtract(const Duration(hours: 12));
+          final windowEnd = currentDayOnly
+              ? DateTime(now.year, now.month, now.day).add(const Duration(days: 1))
+              : now.add(Duration(hours: _epgFutureHours));
+          
           return compute(_parseEpgInIsolate, {
             'filePath': file.path,
             'allowedChannels': allowedChannels.toList(),
-            'nowMs': now.millisecondsSinceEpoch,
+            'nowMs': windowStart.millisecondsSinceEpoch,
             'futureEndMs': windowEnd.millisecondsSinceEpoch,
             'catchupHoursByChannel': _catchupHoursByNormalizedId,
+            'currentDayOnly': currentDayOnly,
           });
         }
 
@@ -1416,6 +1541,7 @@ class IncrementalEpgService extends ChangeNotifier {
         .toSet();
     final nowMs = args['nowMs'] as int? ?? 0;
     final futureEndMs = args['futureEndMs'] as int? ?? 0;
+    final currentDayOnly = args['currentDayOnly'] as bool? ?? false;
     final catchupMapRaw =
         (args['catchupHoursByChannel'] as Map<String, dynamic>? ?? {});
     final catchupHoursByChannel = catchupMapRaw
@@ -1443,6 +1569,11 @@ class IncrementalEpgService extends ChangeNotifier {
     var tempFile = File(
         '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}.jsonl');
     int programCount = 0;
+
+    // Log the time window being processed
+    final startTime = DateTime.fromMillisecondsSinceEpoch(nowMs);
+    final endTime = DateTime.fromMillisecondsSinceEpoch(futureEndMs);
+    debugLog('EPG: Parsing ${currentDayOnly ? "current day" : "full"} programs from ${startTime.toString()} to ${endTime.toString()}');
 
     // Try parsing using UTF-8 but allow malformed sequences (many EPGs
     // contain stray bytes). If that fails with a FormatException from the
