@@ -167,8 +167,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _pauseArtworkFetching = false;
   bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
-  DateTime? _epgReadySince;
-  static const Duration _epgReadyGrace = Duration(seconds: 2);
+
 
   @override
   void initState() {
@@ -649,17 +648,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
-          final epgService = context.watch<IncrementalEpgService>();
+
           final hasChannels = channelProvider.hasChannels;
-          final epgReady = !epgService.hasEpgUrl ? true : epgService.isReady;
-          if (epgReady) {
-            _epgReadySince ??= DateTime.now();
-          } else {
-            _epgReadySince = null;
-          }
-          final epgReadyStable = epgReady &&
-              _epgReadySince != null &&
-              DateTime.now().difference(_epgReadySince!) >= _epgReadyGrace;
+
+
           final latestCategories = channelProvider.getAllCategoryNames();
           if (latestCategories.isNotEmpty) {
             final newNames = _categoryNames.isEmpty
@@ -705,9 +697,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             return _buildSkeletonLoader();
           }
 
-          // Show skeleton only if we have NO categories AND (loading OR (waiting for EPG while having no content))
+          // Only show skeleton if we have NO categories AND (loading OR (waiting for EPG while having no content))
           // If we have categories (data), SHOW THE UI! The EPG can populate later.
-          if (_categoryNames.isEmpty && (channelProvider.isLoading || !epgReadyStable)) {
+          if (_categoryNames.isEmpty && channelProvider.isLoading) {
             return _buildSkeletonLoader();
           }
 
@@ -1210,7 +1202,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           context,
                           categoryName,
                           categoryIndex,
-                          isFirstRow: false,
+                          isFirstRow: categoryIndex == 0,
                         ),
                       );
                     },
@@ -2572,7 +2564,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           channelId,
           channelName: channel.name,
         ));
-        continue;
+        // Only skip channels without program data in the featured row (Hero section)
+        // For regular rows, show the channel card with "No Information" instead of hiding it
+        if (isFirstRow) {
+            continue;
+        }
       }
 
       if (epgService.shouldHideChannel(
@@ -2581,7 +2577,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       )) {
         continue;
       }
-      if (isFirstRow) {
+      if (isFirstRow && program != null) {
         if (program.title.isNotEmpty) {
           final normalizedTitle = normalizeForFilter(program.title);
           // More aggressive deduplication: prevent any duplicate program titles

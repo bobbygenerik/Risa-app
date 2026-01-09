@@ -1140,7 +1140,7 @@ class ChannelProvider with ChangeNotifier {
     }
 
     const int batchSize = 500;
-    const int yieldEvery = 1000;
+    const int yieldEvery = 50; // Increased frequency to prevent UI jank
     final Map<String, String> batch = {};
 
     for (int i = 0; i < _channelMaps.length; i++) {
