@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:path/path.dart' as p;
 import 'package:iptv_player/providers/playlist_isolate.dart';
 
 /// PlaylistLoader: downloads playlist to a temp file (streaming), then

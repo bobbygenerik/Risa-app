@@ -772,27 +772,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
               final epgService =
                   Provider.of<IncrementalEpgService>(context, listen: false);
-              final readyChannels =
-                  _filterChannelsWithLoadedEpg(previewList, epgService);
-
-              if (readyChannels.isEmpty) {
-                return _buildSkeletonLoader();
+              // Just start with whatever channels we have, don't block UI on EPG readiness filter
+              // This is critical for "progressive loading" perception
+              final displayChannels = readyChannels.isNotEmpty ? readyChannels : previewList;
+              
+              if (displayChannels.isEmpty) {
+                // If even the raw preview list is empty, keep showing skeleton
+                 return _buildSkeletonLoader();
               }
 
-              if (_featuredIndex >= readyChannels.length) _featuredIndex = 0;
-              if (_featuredIndex == 0 && readyChannels.isNotEmpty) {
-                _featuredIndex = math.Random().nextInt(readyChannels.length);
+              if (_featuredIndex >= displayChannels.length) _featuredIndex = 0;
+              if (_featuredIndex == 0 && displayChannels.isNotEmpty) {
+                _featuredIndex = math.Random().nextInt(displayChannels.length);
               }
-              final featuredChannel = readyChannels[_featuredIndex];
+              final featuredChannel = displayChannels[_featuredIndex];
+              
+              // Try to load EPG for featured channel in background
               final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-              unawaited(Future.microtask(() => epgService.ensureChannelLoaded(
-                  channelId,
-                  channelName: featuredChannel.name)));
+              if (channelId.isNotEmpty) {
+                 unawaited(Future.microtask(() => epgService.ensureChannelLoaded(
+                    channelId,
+                    channelName: featuredChannel.name)));
+              }
 
               return _buildFullScreenHero(
                 context,
                 featuredChannel,
-                readyChannels,
+                displayChannels,
               );
             },
           );

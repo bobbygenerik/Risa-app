@@ -2196,33 +2196,36 @@ class ChannelProvider with ChangeNotifier {
            notifyListeners();
         }
       }, onChannelsChunk: (chunk) {
+        // Use a new list to avoid concurrent modification issues if UI is reading _channelMaps
         _channelMaps.addAll(chunk);
         _channelCountDb = _channelMaps.length;
         
         // Critical: Update UI immediately if this is the first "page" of content
-        final bool isFirstChunk = _isLoading && _channelMaps.length >= 500;
-        
+        // But do NOT set _isLoading=false yet, or the UI might think we are fully done!
+        // We only start showing content, but keep the loading spinner/progress bar active if desired.
+        // Actually, for "progressive loading", we want to switch to the main view but keep a small indicator.
+        // For now, let's just notify.
+
         // Timer-based throttling for subsequent updates to prevent UI freezing
         // Updates at most twice per second
         final now = DateTime.now();
         final bool shouldUpdate = now.difference(lastUiUpdate).inMilliseconds > 500;
         
-        if (isFirstChunk || shouldUpdate) {
-          if (isFirstChunk) {
-             _isLoading = false;
-             _hasLoadedPlaylist = true;
-          }
-          lastUiUpdate = now;
-          notifyListeners();
-        } else if (_channelMaps.length % 5000 == 0) {
-           // Backup trigger for very fast devices
+        if (_channelMaps.length >= 200 && (shouldUpdate || _channelMaps.length % 2000 == 0)) {
+           // If we have enough channels to show SOMETHING, we can let the UI render
+           if (_isLoading && _channelMaps.length > 500) {
+              // If we want to show the list strictly while loading continues, we can flip a flag
+              // _hasLoadedPlaylist = true; // This allows the UI to switch from "Full Loading Screen" to "List View"
+           }
+           lastUiUpdate = now;
            notifyListeners();
         }
         
         if (_dbReady) {
-          unawaited(_db.insertChannels(chunk).catchError((e) {
+          // Offload to DB in background, catch errors silently
+          _db.insertChannels(chunk).catchError((e) {
             debugLog('ChannelProvider: Background chunk insert failed: $e');
-          }));
+          });
         }
       });
 
