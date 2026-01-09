@@ -4365,57 +4365,65 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }
 
-            return SizedBox.expand(
-              child: CachedNetworkImage(
-                imageUrl: normalizedHeroUrl,
-                httpHeaders: HttpClientService().imageHeaders,
-                fit: heroFit,
-                alignment: heroAlignment,
-                filterQuality: FilterQuality.medium,
-                memCacheWidth: cacheWidth,
-                memCacheHeight: cacheHeight,
-                placeholder: (_, __) =>
-                    isCachedHero ? const SizedBox.shrink() : heroFallback,
-                imageBuilder: (context, imageProvider) {
-                  _markHeroImageCached(normalizedHeroUrl);
-                  if (heroFit == BoxFit.cover) {
-                    return Image(
-                      image: imageProvider,
-                      fit: heroFit,
-                      alignment: heroAlignment,
-                      filterQuality: FilterQuality.medium,
+            // Adaptive handling for ALL hero images (Posters, Backdrops, etc.)
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Blurred background (fills screen)
+                CachedNetworkImage(
+                  imageUrl: normalizedHeroUrl,
+                  httpHeaders: HttpClientService().imageHeaders,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.low,
+                  memCacheWidth: cacheWidth ~/ 4,
+                  memCacheHeight: cacheHeight ~/ 4,
+                  imageBuilder: (context, imageProvider) {
+                    return ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                          ),
+                        ),
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.5),
+                        ),
+                      ),
                     );
-                  }
-                  // For poster-style images, show them centered with a blurred background for premium "full-bleed" look
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Blurred background
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                        child: Image(
-                          image: imageProvider,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                        ),
-                      ),
-                      Container(color: Colors.black.withValues(alpha: 0.3)),
-                      // Centered poster
-                      Center(
-                        child: Image(
-                          image: imageProvider,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-                errorWidget: (_, url, error) {
-                  logHandshakeIfNeeded(url, error, context: 'LiveTV hero');
-                  return heroFallback;
-                },
-              ),
+                  },
+                  placeholder: (_, __) => Container(color: AppTheme.darkBackground),
+                  errorWidget: (_, __, ___) => Container(color: AppTheme.darkBackground),
+                ),
+                // Main Image (Contained - shows full content)
+                Center(
+                  child: CachedNetworkImage(
+                    imageUrl: normalizedHeroUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    memCacheWidth: cacheWidth,
+                    memCacheHeight: cacheHeight,
+                    imageBuilder: (context, imageProvider) {
+                      _markHeroImageCached(normalizedHeroUrl);
+                      return Image(
+                        image: imageProvider,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      );
+                    },
+                    placeholder: (_, __) => const SizedBox.shrink(),
+                    errorWidget: (_, url, error) {
+                      logHandshakeIfNeeded(url, error, context: 'LiveTV hero main');
+                      return heroFallback;
+                    },
+                    fadeInDuration: const Duration(milliseconds: 300),
+                  ),
+                ),
+              ],
             );
           },
         ),
