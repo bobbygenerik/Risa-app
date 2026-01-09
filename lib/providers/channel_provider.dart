@@ -2212,6 +2212,9 @@ class ChannelProvider with ChangeNotifier {
         final bool shouldUpdate = now.difference(lastUiUpdate).inMilliseconds > 500;
         
         if (_channelMaps.length >= 200 && (shouldUpdate || _channelMaps.length % 2000 == 0)) {
+           // Invalidating caches ensures getAllCategoryNames() sees new groups from this chunk
+           _invalidateCategoryCaches();
+           
            // If we have enough channels to show SOMETHING, we can let the UI render
            if (_isLoading && _channelMaps.length > 500) {
               // If we want to show the list strictly while loading continues, we can flip a flag
