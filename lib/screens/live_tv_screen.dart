@@ -704,7 +704,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             return _buildSkeletonLoader();
           }
 
-          if (!epgReadyStable || _categoryNames.isEmpty) {
+          // Show skeleton only if we have NO categories AND (loading OR (waiting for EPG while having no content))
+          // If we have categories (data), SHOW THE UI! The EPG can populate later.
+          if (_categoryNames.isEmpty && (channelProvider.isLoading || !epgReadyStable)) {
             return _buildSkeletonLoader();
           }
 
