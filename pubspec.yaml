@@ -13,6 +13,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Local persistence for large playlists/EPG (DB-backed paging)
   sqflite: ^2.3.3
@@ -80,6 +82,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
 
 flutter:
+  generate: true
   uses-material-design: true
 
   assets:

@@ -1,4 +1,5 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -709,14 +710,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                     SizedBox(height: context.tvSpacing(24)),
                     Text(
-                      'No Live TV Available',
+                      AppLocalizations.of(context)!.noLiveTvAvailable,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     SizedBox(height: context.tvSpacing(8)),
                     Text(
                       errorMessage != null && errorMessage.isNotEmpty
                           ? errorMessage
-                          : 'Load a playlist with Live TV channels from Settings',
+                          : AppLocalizations.of(context)!.loadPlaylistMessage,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppTheme.textSecondary,
                           ),

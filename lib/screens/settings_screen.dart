@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -328,9 +329,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       controller: _contentScrollController,
       padding: EdgeInsets.fromLTRB(48, 24, 48, 24 + bottomInset),
       children: [
-        const SettingsSectionHeader(
-          title: 'General Settings',
-          subtitle: 'Manage your playlists and program guide',
+        SettingsSectionHeader(
+          title: AppLocalizations.of(context)!.generalSettings,
+          subtitle: AppLocalizations.of(context)!.generalSettingsSubtitle,
         ),
 
         // Playlist Status
@@ -396,11 +397,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                           children: [
                             Text(
                               hasContent
-                                  ? '$totalContent items loaded'
+                                  ? AppLocalizations.of(context)!.itemsLoaded(totalContent)
                                   : (errorMessage != null &&
                                           errorMessage.isNotEmpty
-                                      ? 'Playlist error'
-                                      : 'No playlist loaded'),
+                                      ? AppLocalizations.of(context)!.playlistError
+                                      : AppLocalizations.of(context)!.noPlaylistLoaded),
                               style: TextStyle(
                                 color: hasContent
                                     ? AppTheme.accentGreen
@@ -425,7 +426,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 responsePreview.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               BrandSecondaryButton(
-                                label: 'View Response',
+                                label: AppLocalizations.of(context)!.viewResponse,
                                 onPressed: () => _showPlaylistResponsePreview(
                                     responsePreview),
                                 padding: const EdgeInsets.symmetric(
@@ -437,7 +438,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             if (hasContent) ...[
                               const SizedBox(height: 4),
                               Text(
-                                '$channels channels • $movies movies • $series series',
+                                '${AppLocalizations.of(context)!.channelsCount(channels)} • ${AppLocalizations.of(context)!.moviesCount(movies)} • ${AppLocalizations.of(context)!.seriesCount(series)}',
                                 style: TextStyle(
                                   color: hasContent
                                       ? AppTheme.accentGreen
@@ -458,12 +459,12 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
 
         SettingsGroup(
-          title: 'Playlists',
+          title: AppLocalizations.of(context)!.playlists,
           children: [
             SettingsActionTile(
               title: _playlistInputMethod == 0
-                  ? 'Input Method: M3U URL'
-                  : 'Input Method: Xtream Codes',
+                  ? AppLocalizations.of(context)!.inputMethodM3u
+                  : AppLocalizations.of(context)!.inputMethodXtream,
               icon: Icons.swap_horiz,
               focusNode: _inputMethodFocusNode,
               onTap: () {
@@ -478,7 +479,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             if (_playlistInputMethod == 0) ...[
               SettingsInputTile(
-                label: 'M3U Playlist URL',
+                label: AppLocalizations.of(context)!.m3uPlaylistUrl,
                 hint: 'http://example.com/playlist.m3u',
                 icon: Icons.link,
                 controller: _m3uUrlController,
@@ -490,9 +491,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     (cp.loadingProgress * 100).clamp(0, 100).round();
                 final statusText = cp.loadingStatus.isNotEmpty
                     ? cp.loadingStatus
-                    : 'Loading...';
+                    : AppLocalizations.of(context)!.loading;
                 return SettingsActionTile(
-                  title: 'Load Playlist',
+                  title: AppLocalizations.of(context)!.loadPlaylist,
                   icon: Icons.download,
                   iconColor: AppTheme.primaryBlue,
                   titleColor: AppTheme.primaryBlue,
@@ -504,44 +505,44 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? IconButton(
                           icon: const Icon(Icons.cancel),
                           color: Colors.white70,
-                          tooltip: 'Cancel load',
+                          tooltip: AppLocalizations.of(context)!.cancelLoad,
                           onPressed: () {
                             cp.cancelPlaylistLoad();
-                            _showMessage('Playlist load cancelled');
+                            _showMessage(AppLocalizations.of(context)!.playlistLoadCancelled);
                           },
                         )
                       : null,
                 );
               }),
               SettingsActionTile(
-                title: 'Clear URL',
+                title: AppLocalizations.of(context)!.clearUrl,
                 icon: Icons.clear,
                 focusNode: _clearM3uButtonFocusNode,
                 onTap: () => _m3uUrlController.clear(),
               ),
               SettingsActionTile(
-                title: 'Manage Playlists',
+                title: AppLocalizations.of(context)!.managePlaylists,
                 icon: Icons.playlist_add_check,
                 onTap: _showManagePlaylistsDialog,
               ),
             ] else ...[
               SettingsInputTile(
-                label: 'Server URL',
+                label: AppLocalizations.of(context)!.serverUrl,
                 hint: 'http://example.com:8080',
                 icon: Icons.dns,
                 controller: _xtreamServerController,
                 focusNode: _xtreamServerFocusNode,
               ),
               SettingsInputTile(
-                label: 'Username',
-                hint: 'Username',
+                label: AppLocalizations.of(context)!.username,
+                hint: AppLocalizations.of(context)!.username,
                 icon: Icons.person,
                 controller: _xtreamUsernameController,
                 focusNode: _xtreamUsernameFocusNode,
               ),
               SettingsInputTile(
-                label: 'Password',
-                hint: 'Password',
+                label: AppLocalizations.of(context)!.password,
+                hint: AppLocalizations.of(context)!.password,
                 icon: Icons.lock,
                 obscureText: true,
                 controller: _xtreamPasswordController,
@@ -553,9 +554,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     (cp.loadingProgress * 100).clamp(0, 100).round();
                 final statusText = cp.loadingStatus.isNotEmpty
                     ? cp.loadingStatus
-                    : 'Loading...';
+                    : AppLocalizations.of(context)!.loading;
                 return SettingsActionTile(
-                  title: 'Load Xtream Playlist',
+                  title: AppLocalizations.of(context)!.loadXtreamPlaylist,
                   icon: Icons.download,
                   iconColor: AppTheme.primaryBlue,
                   titleColor: AppTheme.primaryBlue,
@@ -567,23 +568,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? IconButton(
                           icon: const Icon(Icons.cancel),
                           color: Colors.white70,
-                          tooltip: 'Cancel load',
+                          tooltip: AppLocalizations.of(context)!.cancelLoad,
                           onPressed: () {
                             cp.cancelPlaylistLoad();
-                            _showMessage('Playlist load cancelled');
+                            _showMessage(AppLocalizations.of(context)!.playlistLoadCancelled);
                           },
                         )
                       : null,
                 );
               }),
               SettingsActionTile(
-                title: 'Clear Fields',
+                title: AppLocalizations.of(context)!.clearFields,
                 icon: Icons.clear,
                 focusNode: _clearXtreamButtonFocusNode,
                 onTap: _clearXtreamFields,
               ),
               SettingsActionTile(
-                title: 'Manage Playlists',
+                title: AppLocalizations.of(context)!.managePlaylists,
                 icon: Icons.playlist_add_check,
                 onTap: _showManagePlaylistsDialog,
               ),
@@ -592,21 +593,21 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
 
         SettingsGroup(
-          title: 'EPG Preferences',
+          title: AppLocalizations.of(context)!.epgPreferences,
           children: [
             Consumer<IncrementalEpgService>(
               builder: (context, epgService, _) {
                 final detected = epgService.currentUrl ?? _detectedEpgUrl;
                 return SettingsActionTile(
-                  title: 'Detected EPG URL (from playlist)',
-                  subtitle: detected.isNotEmpty ? detected : 'None detected',
+                  title: AppLocalizations.of(context)!.detectedEpgUrl,
+                  subtitle: detected.isNotEmpty ? detected : AppLocalizations.of(context)!.noneDetected,
                   icon: Icons.link,
                   onTap: null,
                 );
               },
             ),
             SettingsActionTile(
-              title: 'Update EPG Now',
+              title: AppLocalizations.of(context)!.updateEpgNow,
               icon: Icons.sync,
               iconColor: AppTheme.primaryBlue,
               titleColor: AppTheme.primaryBlue,
@@ -614,14 +615,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               onTap: _handleUpdateEpg,
             ),
             SettingsActionTile(
-              title: 'Clear EPG Data',
+              title: AppLocalizations.of(context)!.clearEpgData,
               icon: Icons.delete_outline,
               focusNode: _clearEpgButtonFocusNode,
               onTap: _handleClearEpg,
             ),
             SettingsActionTile(
-              title: 'Auto-refresh Interval',
-              subtitle: 'Refresh every $_epgCacheDuration hours',
+              title: AppLocalizations.of(context)!.autoRefreshInterval,
+              subtitle: AppLocalizations.of(context)!.refreshEveryHours(_epgCacheDuration),
               icon: Icons.timer,
               trailing: Row(
                 children: [
@@ -636,8 +637,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             SettingsActionTile(
-              title: 'Data Retention',
-              subtitle: 'Keep data for $_epgRetentionDays days',
+              title: AppLocalizations.of(context)!.dataRetention,
+              subtitle: AppLocalizations.of(context)!.keepDataForDays(_epgRetentionDays),
               icon: Icons.calendar_today,
               trailing: Row(
                 children: [
@@ -655,25 +656,25 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
 
         SettingsGroup(
-          title: 'System',
+          title: AppLocalizations.of(context)!.system,
           children: [
             SettingsActionTile(
-              title: 'EPG Diagnostic Tool',
+              title: AppLocalizations.of(context)!.epgDiagnosticTool,
               icon: Icons.bug_report,
               onTap: () => context.push('/epg-diagnostic'),
             ),
             SettingsActionTile(
-              title: 'Export Backup',
+              title: AppLocalizations.of(context)!.exportBackup,
               icon: Icons.upload_file,
               onTap: _exportBackup,
             ),
             SettingsActionTile(
-              title: 'Import Backup',
+              title: AppLocalizations.of(context)!.importBackup,
               icon: Icons.file_download,
               onTap: _importBackup,
             ),
             SettingsActionTile(
-              title: 'Debug Performance',
+              title: AppLocalizations.of(context)!.debugPerformance,
               icon: Icons.speed,
               onTap: () => context.push('/debug'),
             ),
@@ -724,27 +725,27 @@ class _SettingsScreenState extends State<SettingsScreen>
       controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-        const SettingsSectionHeader(
-            title: 'Playback', subtitle: 'Video player configuration'),
+        SettingsSectionHeader(
+            title: AppLocalizations.of(context)!.playback, subtitle: AppLocalizations.of(context)!.videoPlayerConfiguration),
         SettingsGroup(
-          title: 'Performance',
+          title: AppLocalizations.of(context)!.performance,
           children: [
             SettingsSwitchTile(
-              title: 'Hardware Acceleration',
-              subtitle: 'Use GPU for better performance',
+              title: AppLocalizations.of(context)!.hardwareAcceleration,
+              subtitle: AppLocalizations.of(context)!.useGpuForBetterPerformance,
               value: _hardwareAcceleration,
               onChanged: (v) =>
                   _handleSwitchTileChange('Hardware Acceleration', v),
               focusNode: _playbackFirstFocusNode,
             ),
             SettingsSwitchTile(
-              title: 'Hardware Decoding',
+              title: AppLocalizations.of(context)!.hardwareDecoding,
               value: _hardwareDecoding,
               onChanged: (v) => _handleSwitchTileChange('Hardware Decoding', v),
             ),
             SettingsActionTile(
-              title: 'Player Engine',
-              subtitle: 'Select underlying video player backend',
+              title: AppLocalizations.of(context)!.playerEngine,
+              subtitle: AppLocalizations.of(context)!.selectPlayerBackend,
               trailing: Text(
                 _videoPlayerBackend,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -755,8 +756,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               onTap: _cycleVideoPlayerBackend,
             ),
             SettingsActionTile(
-              title: 'ExoPlayer Surface',
-              subtitle: 'SurfaceView reduces tinting; TextureView for overlays',
+              title: AppLocalizations.of(context)!.exoPlayerSurface,
+              subtitle: AppLocalizations.of(context)!.surfaceViewDescription,
               trailing: Text(
                 _exoPlayerSurfaceType == 'texture'
                     ? 'TextureView'
@@ -771,24 +772,24 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         SettingsGroup(
-          title: 'Behavior',
+          title: AppLocalizations.of(context)!.behavior,
           children: [
             SettingsSwitchTile(
-              title: 'Auto-play Next Episode',
+              title: AppLocalizations.of(context)!.autoPlayNextEpisode,
               value: _autoPlayNextEpisode,
               onChanged: (v) =>
                   _handleSwitchTileChange('Auto-play Next Episode', v),
             ),
             SettingsSwitchTile(
-              title: 'Hero Video Preview',
-              subtitle: 'Show video preview in the hero banner',
+              title: AppLocalizations.of(context)!.heroVideoPreview,
+              subtitle: AppLocalizations.of(context)!.showVideoPreviewInHero,
               value: _heroVideoPreview,
               onChanged: (v) =>
                   _handleSwitchTileChange('Hero Video Preview', v),
             ),
             SettingsSwitchTile(
-              title: 'Remember Position',
-              subtitle: 'Resume VODs where you left off',
+              title: AppLocalizations.of(context)!.rememberPosition,
+              subtitle: AppLocalizations.of(context)!.resumeVods,
               value: _rememberPlaybackPosition,
               onChanged: (v) =>
                   _handleSwitchTileChange('Remember Position VOD', v),
@@ -804,65 +805,65 @@ class _SettingsScreenState extends State<SettingsScreen>
       controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-        const SettingsSectionHeader(
-            title: 'AI Features',
-            subtitle: 'Transcription, Translation & Subtitles'),
+        SettingsSectionHeader(
+            title: AppLocalizations.of(context)!.aiFeatures,
+            subtitle: AppLocalizations.of(context)!.transcriptionTranslationSubtitles),
         SettingsGroup(
-          title: 'Live Services',
+          title: AppLocalizations.of(context)!.liveServices,
           children: [
             SettingsSwitchTile(
-              title: 'Live Transcription',
-              subtitle: 'Generate subtitles from audio in real-time',
+              title: AppLocalizations.of(context)!.liveTranscription,
+              subtitle: AppLocalizations.of(context)!.generateSubtitlesRealTime,
               value: _transcriptionEnabled,
               onChanged: (v) =>
                   _handleSwitchTileChange('Enable Live Transcription', v),
               focusNode: _aiFirstFocusNode,
             ),
             SettingsSwitchTile(
-              title: 'Real-time Translation',
-              subtitle: 'Translate transcription to your language',
+              title: AppLocalizations.of(context)!.realTimeTranslation,
+              subtitle: AppLocalizations.of(context)!.translateTranscription,
               value: _translationEnabled,
               onChanged: (v) =>
                   _handleSwitchTileChange('Enable Translation', v),
             ),
             SettingsActionTile(
-              title: 'Manage Speech Models',
+              title: AppLocalizations.of(context)!.manageSpeechModels,
               icon: Icons.mic,
               onTap: _showSpeechModelsDialog,
             ),
             SettingsActionTile(
-              title: 'Manage Translation Models',
+              title: AppLocalizations.of(context)!.manageTranslationModels,
               icon: Icons.translate,
               onTap: _showLanguageModelsDialog,
             ),
           ],
         ),
         SettingsGroup(
-          title: 'Integration',
+          title: AppLocalizations.of(context)!.integration,
           children: [
             SettingsSwitchTile(
-              title: 'OpenSubtitles',
-              subtitle: 'Auto-download VOD subtitles',
+              title: AppLocalizations.of(context)!.openSubtitles,
+              subtitle: AppLocalizations.of(context)!.autoDownloadSubtitles,
               value: _openSubtitlesEnabled,
               onChanged: (v) =>
                   _handleSwitchTileChange('Enable OpenSubtitles', v),
             ),
             if (_openSubtitlesEnabled) ...[
               SettingsInputTile(
-                label: 'Username',
+                label: AppLocalizations.of(context)!.username,
                 controller: _openSubtitlesUsernameController,
                 focusNode: _openSubtitlesUsernameFocusNode,
                 icon: Icons.person,
               ),
               SettingsInputTile(
-                label: 'Password',
+                label: AppLocalizations.of(context)!.password,
                 controller: _openSubtitlesPasswordController,
                 focusNode: _openSubtitlesPasswordFocusNode,
                 icon: Icons.lock,
                 obscureText: true,
               ),
               SettingsActionTile(
-                title: 'Test Connection',
+                title: AppLocalizations.of(context)!.testConnection,
                 icon: Icons.check_circle_outline,
                 onTap: _testOpenSubtitlesConnection,
               ),
@@ -870,11 +871,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         SettingsGroup(
-          title: 'Streaming Sources',
+          title: AppLocalizations.of(context)!.streamingSources,
           children: [
             SettingsSwitchTile(
-              title: 'Real-Debrid',
-              subtitle: 'High-speed premium streaming',
+              title: AppLocalizations.of(context)!.realDebrid,
+              subtitle: AppLocalizations.of(context)!.highSpeedStreaming,
               value: _realDebridEnabled,
               onChanged: (v) =>
                   _handleSwitchTileChange('Enable Real-Debrid', v),
@@ -887,7 +888,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 icon: Icons.vpn_key,
               ),
               SettingsActionTile(
-                title: 'Validate API Key',
+                title: AppLocalizations.of(context)!.validateApiKey,
                 icon: Icons.check_circle_outline,
                 onTap: _testRealDebridConnection,
               ),
@@ -903,16 +904,16 @@ class _SettingsScreenState extends State<SettingsScreen>
       controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-        const SettingsSectionHeader(
-            title: 'Recordings', subtitle: 'Manage DVR storage'),
+        SettingsSectionHeader(
+            title: AppLocalizations.of(context)!.recordings, subtitle: AppLocalizations.of(context)!.manageDvrStorage),
         SettingsGroup(
           children: [
             FutureBuilder<String>(
               future: _getStoragePath(),
               builder: (context, snapshot) {
                 return SettingsActionTile(
-                  title: 'Storage Path',
-                  subtitle: snapshot.data ?? 'Loading...',
+                  title: AppLocalizations.of(context)!.storagePath,
+                  subtitle: snapshot.data ?? AppLocalizations.of(context)!.loading,
                   icon: Icons.folder,
                   trailing: const Icon(Icons.edit, color: Colors.white54),
                   focusNode: _browseStorageButtonFocusNode,
@@ -979,10 +980,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _loadM3uPlaylist() async {
     final url = _normalizeHttpUrl(_m3uUrlController.text);
     if (url.isEmpty) {
-      _showMessage('Please enter a playlist URL');
+      _showMessage(AppLocalizations.of(context)!.pleaseEnterPlaylistUrl);
       return;
     }
-    _showMessage('Loading playlist...');
+    _showMessage(AppLocalizations.of(context)!.loadingPlaylist);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('m3u_url', url);
     await prefs.setString('playlist_type', 'm3u');

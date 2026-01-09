@@ -1,0 +1,187 @@
+{
+  "noLiveTvAvailable": "No Live TV Available",
+  "loadPlaylistMessage": "Load a playlist with Live TV channels from Settings",
+  "generalSettings": "General Settings",
+  "generalSettingsSubtitle": "Manage your playlists and program guide",
+  "itemsLoaded": "{count} items loaded",
+  "@itemsLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlistError": "Playlist error",
+  "noPlaylistLoaded": "No playlist loaded",
+  "viewResponse": "View Response",
+  "channelsCount": "{count} channels",
+  "@channelsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "moviesCount": "{count} movies",
+  "@moviesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesCount": "{count} series",
+  "@seriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playlists": "Playlists",
+  "inputMethodM3u": "Input Method: M3U URL",
+  "inputMethodXtream": "Input Method: Xtream Codes",
+  "m3uPlaylistUrl": "M3U Playlist URL",
+  "loadPlaylist": "Load Playlist",
+  "loading": "Loading...",
+  "cancelLoad": "Cancel load",
+  "playlistLoadCancelled": "Playlist load cancelled",
+  "clearUrl": "Clear URL",
+  "managePlaylists": "Manage Playlists",
+  "serverUrl": "Server URL",
+  "username": "Username",
+  "password": "Password",
+  "loadXtreamPlaylist": "Load Xtream Playlist",
+  "clearFields": "Clear Fields",
+  "epgPreferences": "EPG Preferences",
+  "detectedEpgUrl": "Detected EPG URL (from playlist)",
+  "noneDetected": "None detected",
+  "updateEpgNow": "Update EPG Now",
+  "clearEpgData": "Clear EPG Data",
+  "autoRefreshInterval": "Auto-refresh Interval",
+  "refreshEveryHours": "Refresh every {hours} hours",
+  "@refreshEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "dataRetention": "Data Retention",
+  "keepDataForDays": "Keep data for {days} days",
+  "@keepDataForDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "system": "System",
+  "epgDiagnosticTool": "EPG Diagnostic Tool",
+  "exportBackup": "Export Backup",
+  "importBackup": "Import Backup",
+  "debugPerformance": "Debug Performance",
+  "playback": "Playback",
+  "videoPlayerConfiguration": "Video player configuration",
+  "performance": "Performance",
+  "hardwareAcceleration": "Hardware Acceleration",
+  "useGpuForBetterPerformance": "Use GPU for better performance",
+  "hardwareDecoding": "Hardware Decoding",
+  "playerEngine": "Player Engine",
+  "selectPlayerBackend": "Select underlying video player backend",
+  "exoPlayerSurface": "ExoPlayer Surface",
+  "surfaceViewDescription": "SurfaceView reduces tinting; TextureView for overlays",
+  "behavior": "Behavior",
+  "autoPlayNextEpisode": "Auto-play Next Episode",
+  "heroVideoPreview": "Hero Video Preview",
+  "showVideoPreviewInHero": "Show video preview in the hero banner",
+  "rememberPosition": "Remember Position",
+  "resumeVods": "Resume VODs where you left off",
+  "aiFeatures": "AI Features",
+  "transcriptionTranslationSubtitles": "Transcription, Translation & Subtitles",
+  "liveServices": "Live Services",
+  "liveTranscription": "Live Transcription",
+  "generateSubtitlesRealTime": "Generate subtitles from audio in real-time",
+  "realTimeTranslation": "Real-time Translation",
+  "translateTranscription": "Translate transcription to your language",
+  "manageSpeechModels": "Manage Speech Models",
+  "manageTranslationModels": "Manage Translation Models",
+  "integration": "Integration",
+  "openSubtitles": "OpenSubtitles",
+  "autoDownloadSubtitles": "Auto-download VOD subtitles",
+  "streamingSources": "Streaming Sources",
+  "realDebrid": "Real-Debrid",
+  "highSpeedStreaming": "High-speed premium streaming",
+  "validateApiKey": "Validate API Key",
+  "recordings": "Recordings",
+  "manageDvrStorage": "Manage DVR storage",
+  "storagePath": "Storage Path",
+  "playlistResponsePreview": "Playlist Response Preview",
+  "diagnostics": "Diagnostics",
+  "responseSummary": "Response summary and raw preview",
+  "preview": "Preview",
+  "firstPartOfResponse": "First part of the response payload",
+  "testConnection": "Test Connection",
+  "pleaseEnterPlaylistUrl": "Please enter a playlist URL",
+  "loadingPlaylist": "Loading playlist...",
+  "noChannelsFound": "No channels found in this playlist.",
+  "playlistLoadedSuccessfully": "Playlist loaded successfully!",
+  "pleaseFillAllFields": "Please fill in all fields.",
+  "loadingXtreamPlaylist": "Loading Xtream playlist...",
+  "xtreamPlaylistLoaded": "Xtream playlist loaded successfully!",
+  "updatingEpg": "Updating EPG...",
+  "epgUpdateTriggered": "EPG update triggered.",
+  "epgCleared": "EPG cleared.",
+  "backupExported": "Backup exported!",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importSuccessful": "Import successful! Restarting...",
+  "importFailed": "Import failed: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "Testing connection...",
+  "testingApiKey": "Testing API Key...",
+  "exoPlayerSurfaceSetTo": "ExoPlayer surface set to {type}.",
+  "@exoPlayerSurfaceSetTo": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "videoPlayerEngineSetTo": "Video player engine set to {engine}.",
+  "@videoPlayerEngineSetTo": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "storagePathUpdated": "Storage path updated: {path}",
+  "@storagePathUpdated": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSelectDirectory": "Failed to select directory: {error}",
+  "@failedToSelectDirectory": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}
