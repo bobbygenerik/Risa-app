@@ -304,7 +304,7 @@ class LocalDbService {
 
   Future<List<String>> getCategories({int? limit}) async {
     final query = StringBuffer(
-        'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle');
+        'SELECT groupTitle FROM channels WHERE groupTitle IS NOT NULL GROUP BY groupTitle ORDER BY MIN(idx)');
     final args = <Object>[];
     if (limit != null && limit > 0) {
       query.write(' LIMIT ?');
