@@ -2183,24 +2183,40 @@ class ChannelProvider with ChangeNotifier {
       }
       _channelCountDb = 0;
 
+      DateTime lastUiUpdate = DateTime.now();
+      
       final parsed =
           await _playlistLoader.loadFromUrl(url, onProgress: (count) {
         _loadingStatus = 'Parsing playlist: $count channels';
         _loadingProgress = 0.5 + (count / 20000).clamp(0.0, 0.45);
-        notifyListeners();
+        // Progress updates also throttle
+        final now = DateTime.now();
+        if (now.difference(lastUiUpdate).inMilliseconds > 500) {
+           lastUiUpdate = now;
+           notifyListeners();
+        }
       }, onChannelsChunk: (chunk) {
         _channelMaps.addAll(chunk);
         _channelCountDb = _channelMaps.length;
         
-        // Use a simple modulo check to throttle UI updates during heavy parsing.
-        // This prevents the UI thread from being overwhelmed by rebuilds.
+        // Critical: Update UI immediately if this is the first "page" of content
         final bool isFirstChunk = _isLoading && _channelMaps.length >= 500;
-        if (isFirstChunk) {
-          _isLoading = false;
-          _hasLoadedPlaylist = true;
+        
+        // Timer-based throttling for subsequent updates to prevent UI freezing
+        // Updates at most twice per second
+        final now = DateTime.now();
+        final bool shouldUpdate = now.difference(lastUiUpdate).inMilliseconds > 500;
+        
+        if (isFirstChunk || shouldUpdate) {
+          if (isFirstChunk) {
+             _isLoading = false;
+             _hasLoadedPlaylist = true;
+          }
+          lastUiUpdate = now;
           notifyListeners();
-        } else if (_channelMaps.length % 2500 == 0) {
-          notifyListeners();
+        } else if (_channelMaps.length % 5000 == 0) {
+           // Backup trigger for very fast devices
+           notifyListeners();
         }
         
         if (_dbReady) {

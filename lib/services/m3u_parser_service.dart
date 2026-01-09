@@ -721,6 +721,13 @@ class M3UParserService {
           }
         }
 
+        // Send final progress update
+        if (progressPort != null && channelCount > 0) {
+           try {
+              progressPort.send({'type': 'progress', 'channels': channelCount});
+           } catch (_) {}
+        }
+
         if (line.contains('EXTINF:')) {
           for (final segment in _splitExtinfSegments(line)) {
             processExtinfSegment(segment);

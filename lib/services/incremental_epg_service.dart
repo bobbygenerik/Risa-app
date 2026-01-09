@@ -1356,20 +1356,27 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
 
-        // Stream programs from the temp file into memory (capped) and DB in batches
-        await _ingestProgramsFromFile(
-          programFilePath,
-          target: stagedPrograms,
-          skipChannels: skipChannels,
-        );
-
-        _programsByChannel
-          ..clear()
-          ..addAll(stagedPrograms);
+        // Update mapping index immediately so UI can match incoming programs
         _availableChannels
           ..clear()
           ..addAll(channelIds);
         _normalizedAvailableChannels = normalizedChannels;
+
+        // Stream programs from the temp file into memory (capped) and DB in batches
+        // For background refresh, use double-buffering (stagedPrograms) to avoid UI flicker.
+        // For foreground load, write directly to _programsByChannel so UI updates live.
+        await _ingestProgramsFromFile(
+          programFilePath,
+          target: fromBackgroundRefresh ? stagedPrograms : _programsByChannel,
+          skipChannels: skipChannels,
+        );
+
+        // Only swap if we used a staging buffer (Double Buffering)
+        if (fromBackgroundRefresh) {
+          _programsByChannel
+            ..clear()
+            ..addAll(stagedPrograms);
+        }
 
         _hasParsed = true;
         _isParsing = false;
@@ -2973,7 +2980,7 @@ class IncrementalEpgService extends ChangeNotifier {
         _clearChannelFailures(channelId);
         return true;
       }
-      _recordChannelFailure(channelId);
+      // Don't record failure here; data might just be loading
       _maybeLogMissingPrograms(channelId, epgId: epgId);
       return false;
     }
@@ -2997,7 +3004,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
     }
 
-    _recordChannelFailure(channelId);
+    // Don't record failure here; data might just be loading
     _maybeLogMissingEpgId(channelId, channelName);
     return false;
   }
@@ -3417,6 +3424,8 @@ class IncrementalEpgService extends ChangeNotifier {
     final Map<String, List<Map<String, dynamic>>> buffer = {};
     final Map<String, bool> cleared = {};
 
+    // We use the class-level map by default to ensure UI updates during ingest
+    // If target is provided, we respect it (e.g. for background double-buffering)
     final programsByChannel = target ?? _programsByChannel;
     try {
       int processed = 0;
@@ -3461,6 +3470,7 @@ class IncrementalEpgService extends ChangeNotifier {
           catchupUrl: catchupUrl,
         );
 
+        // Add to chosen target map (class-level or staging) so UI/staging is consistent
         final list = programsByChannel.putIfAbsent(epgId, () => []);
         if (list.length < 80) {
           list.add(program);
@@ -3486,9 +3496,12 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         processed++;
-        // Throttle updates: notifying the UI too often during a 100k+ program ingest kills performance.
-        if (processed == 500 || (processed % 5000 == 0 && yieldClock.elapsedMilliseconds >= 200)) {
-          await Future.delayed(const Duration(milliseconds: 1));
+        // Optimized throttling: Notify early for initial view, then throttle heavily.
+        // Notify at 500 (initial screen population), then every 10k items or 500ms.
+        if (processed == 500 || 
+            (processed > 500 && processed % 10000 == 0 && yieldClock.elapsedMilliseconds >= 500)) {
+          // Brief yield to allow UI frame rendering
+          await Future.delayed(const Duration(milliseconds: 0));
           notifyListeners();
           yieldClock.reset();
         }

@@ -15,16 +15,29 @@ class _IsolateRequest {
   final SendPort replyPort;
   final String? filePath;
   final List<int>? bytes;
-  _IsolateRequest({required this.replyPort, this.filePath, this.bytes});
+  final String? url;
+  _IsolateRequest({required this.replyPort, this.filePath, this.bytes, this.url});
 }
 
 /// Top-level entrypoint for spawned isolate
 void _isolateEntry(_IsolateRequest request) async {
   final SendPort reply = request.replyPort;
+  HttpClient? client;
   try {
     final parser = M3UParserService();
     Stream<List<int>> stream;
-    if (request.filePath != null) {
+    
+    if (request.url != null) {
+       client = HttpClient();
+       // Auto-decompression
+       client.autoUncompress = true;
+       final req = await client.getUrl(Uri.parse(request.url!));
+       final resp = await req.close();
+       if (resp.statusCode != 200) {
+         throw Exception('HTTP ${resp.statusCode}');
+       }
+       stream = resp;
+    } else if (request.filePath != null) {
       final file = File(request.filePath!);
       stream = file.openRead();
     } else if (request.bytes != null) {
@@ -41,6 +54,8 @@ void _isolateEntry(_IsolateRequest request) async {
   } catch (e, st) {
     reply
         .send({'type': 'error', 'error': e.toString(), 'stack': st.toString()});
+  } finally {
+    client?.close(force: true);
   }
 }
 
@@ -49,6 +64,7 @@ void _isolateEntry(_IsolateRequest request) async {
 Future<Map<String, dynamic>> parsePlaylistCancelable({
   String? filePath,
   List<int>? bytes,
+  String? url,
   void Function(int parsedChannels)? onProgress,
   void Function(List<Map<String, dynamic>> chunk)? onChannelsChunk,
   CancelToken? cancelToken,
@@ -60,7 +76,7 @@ Future<Map<String, dynamic>> parsePlaylistCancelable({
   final isolate = await Isolate.spawn<_IsolateRequest>(
       _isolateEntry,
       _IsolateRequest(
-          replyPort: receivePort.sendPort, filePath: filePath, bytes: bytes),
+          replyPort: receivePort.sendPort, filePath: filePath, bytes: bytes, url: url),
       onError: errorPort.sendPort);
 
   final completer = Completer<Map<String, dynamic>>();

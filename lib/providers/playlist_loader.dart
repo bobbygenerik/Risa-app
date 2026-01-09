@@ -18,36 +18,9 @@ class PlaylistLoader {
     final token = CancelToken();
     _currentToken = token;
 
-    final tmpDir = Directory.systemTemp;
-    final tmpFile = File(p.join(tmpDir.path,
-        'risa_playlist_${DateTime.now().millisecondsSinceEpoch}.m3u'));
-    final client = HttpClient();
     try {
-      final req = await client.getUrl(Uri.parse(url));
-      final resp = await req.close();
-      if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
-
-      final sink = tmpFile.openWrite();
-      int totalBytes = 0;
-      await for (final chunk in resp) {
-        if (token.isCancelled) {
-          await sink.close();
-          try {
-            await tmpFile.delete();
-          } catch (_) {}
-          throw Exception('Cancelled');
-        }
-        totalBytes += chunk.length;
-        sink.add(chunk);
-        // Yield periodically
-        if (totalBytes % (1024 * 64) == 0) {
-          await Future.delayed(Duration(milliseconds: 1));
-        }
-      }
-      await sink.close();
-
       final result = await parsePlaylistCancelable(
-          filePath: tmpFile.path,
+          url: url,
           onProgress: (count) {
             if (onProgress != null) {
               onProgress(count);
@@ -56,14 +29,8 @@ class PlaylistLoader {
           onChannelsChunk: onChannelsChunk,
           cancelToken: token);
 
-      // Clean up temporary file
-      try {
-        await tmpFile.delete();
-      } catch (_) {}
-
       return result;
     } finally {
-      client.close(force: true);
       if (_currentToken == token) {
         _currentToken = null;
       }

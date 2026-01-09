@@ -102,7 +102,6 @@ class MediaKitPlayerController extends UniversalPlayerController {
       _player, 
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: hardwareAcceleration,
-        androidAttachSurfaceAfterVideoOutput: true, 
       ),
     );
 

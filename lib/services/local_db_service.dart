@@ -182,10 +182,8 @@ class LocalDbService {
     if (!_isInit) {
       await init();
     }
-    // Avoid read/write contention during long write transactions.
-    // Explicitly waiting for the write queue prevents flooding the DB connection 
-    // during massive playlist/EPG imports, which can cause UI unresponsiveness.
-    await _writeQueue;
+    // With WAL enabled, multiple readers can proceed while a writer is active.
+    // Removed wait for _writeQueue to keep the UI snappy during large EPG/playlist imports.
     return _withDb(action);
   }
 

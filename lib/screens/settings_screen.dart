@@ -466,25 +466,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   : 'Input Method: Xtream Codes',
               icon: Icons.swap_horiz,
               focusNode: _inputMethodFocusNode,
-              onArrowDown: () {
-                (_playlistInputMethod == 0
-                        ? _m3uUrlFocusNode
-                        : _xtreamServerFocusNode)
-                    .requestFocus();
-              },
-              onArrowRight: () {
-                (_playlistInputMethod == 0
-                        ? _m3uUrlFocusNode
-                        : _xtreamServerFocusNode)
-                    .requestFocus();
-              },
               onTap: () {
                 setState(
                   () =>
                       _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0,
                 );
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _requestContentFocus();
+                  if (mounted) _inputMethodFocusNode.requestFocus();
                 });
               },
             ),

@@ -774,9 +774,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   Provider.of<IncrementalEpgService>(context, listen: false);
               final readyChannels =
                   _filterChannelsWithLoadedEpg(previewList, epgService);
+
               if (readyChannels.isEmpty) {
                 return _buildSkeletonLoader();
               }
+
               if (_featuredIndex >= readyChannels.length) _featuredIndex = 0;
               if (_featuredIndex == 0 && readyChannels.isNotEmpty) {
                 _featuredIndex = math.Random().nextInt(readyChannels.length);

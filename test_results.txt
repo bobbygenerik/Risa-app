@@ -1,0 +1,71 @@
+00:00 +0: loading /home/ubuntu/projects/Risa-app/test/widget_test.dart                                                                                                                                 00:01 +0: loading /home/ubuntu/projects/Risa-app/test/widget_test.dart                                                                                                                                 00:01 +0: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:01 +1: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:01 +2: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:01 +3: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:01 +4: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:02 +4: /home/ubuntu/projects/Risa-app/test/widget_test.dart: smoke test builds a simple widget                                                                                                      00:02 +4: loading /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart                                                                                                                        00:02 +4: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader reports progress and parses full playlist                                                                      Shell: M3UParser: (files) EPG URL not found in header line.
+00:02 +4 -1: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader reports progress and parses full playlist [E]                                                               
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/playlist_loader_test.dart 49:7                 main.<fn>.<fn>
+  
+
+To run this test again: /home/ubuntu/flutter/bin/cache/dart-sdk/bin/dart test /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart -p vm --plain-name 'PlaylistLoader reports progress and parses full playlist'
+00:02 +4 -1: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:02 +5 -1: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:02 +6 -1: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:03 +6 -1: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:03 +6 -2: /home/ubuntu/projects/Risa-app/test/navigation_test.dart: Router configuration contains primary navigation routes [E]                                                                     
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/navigation_test.dart 12:5                      main.<fn>
+  
+
+To run this test again: /home/ubuntu/flutter/bin/cache/dart-sdk/bin/dart test /home/ubuntu/projects/Risa-app/test/navigation_test.dart -p vm --plain-name 'Router configuration contains primary navigation routes'
+00:03 +7 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:03 +7 -2: /home/ubuntu/projects/Risa-app/test/performance_benchmark_test.dart: M3U Parsing Benchmark (10k channels)                                                                                 
+M3UParser: Parsing 20002 raw lines
+M3UParser: First line: #EXTM3U x-tvg-url="http://epg.com/guide.xml"
+M3UParser: Captured EPG URL: http://epg.com/guide.xml
+M3UParser: Processed 1000/20002 raw lines
+M3UParser: Processed 6000/20002 raw lines
+M3UParser: Processed 11000/20002 raw lines
+M3UParser: Processed 16000/20002 raw lines
+M3UParser: Processed 20002/20002 raw lines
+M3UParser: Reassembled into 20001 logical lines
+M3UParser: Found EPG URL in logical line 1: http://epg.com/guide.xml
+M3UParser: Found EXTINF: -1 tvg-id="channel0" tvg-logo="http://logo.com/0.png" group-title="Benchmark", Channel 0
+M3UParser: Added channel #1: Channel 0
+M3UParser: Channel URL: http://stream.com/live/0.m3u8
+M3UParser: URL valid: true
+M3UParser: Found EXTINF: -1 tvg-id="channel1" tvg-logo="http://logo.com/1.png" group-title="Benchmark", Channel 1
+M3UParser: Added channel #2: Channel 1
+M3UParser: Channel URL: http://stream.com/live/1.m3u8
+M3UParser: URL valid: true
+M3UParser: Found EXTINF: -1 tvg-id="channel2" tvg-logo="http://logo.com/2.png" group-title="Benchmark", Channel 2
+M3UParser: Added channel #3: Channel 2
+M3UParser: Channel URL: http://stream.com/live/2.m3u8
+M3UParser: URL valid: true
+M3UParser: Added channel #4: Channel 3
+M3UParser: Channel URL: http://stream.com/live/3.m3u8
+M3UParser: URL valid: true
+M3UParser: Added channel #5: Channel 4
+M3UParser: Channel URL: http://stream.com/live/4.m3u8
+M3UParser: URL valid: true
+M3UParser: Parsed 499 channels so far...
+M3UParser: Parsed 1499 channels so far...
+M3UParser: Parsed 2499 channels so far...
+M3UParser: Parsed 3499 channels so far...
+M3UParser: Parsed 4499 channels so far...
+M3UParser: Parsed 5499 channels so far...
+M3UParser: Parsed 6499 channels so far...
+M3UParser: Parsed 7499 channels so far...
+M3UParser: Parsed 8499 channels so far...
+M3UParser: Parsed 9499 channels so far...
+M3UParser: Parsed 10000 channels so far...
+M3UParser: Total channels parsed: 10000
+
+🚀 BENCHMARK RESULTS 🚀
+==========================
+Items parsed: 10000
+Time taken:   114ms
+Avg per item: 11.40µs
+==========================
+
+00:03 +8 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:03 +9 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                     00:03 +10 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +11 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +12 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +13 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +14 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +15 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +16 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +17 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +18 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +19 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +20 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:03 +21 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:04 +21 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:04 +22 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:04 +23 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:04 +24 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:05 +24 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:05 +25 -2: /home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart: PlaylistLoader cancels during download                                                                                    00:05 +25 -2: Some tests failed.                                                                                                                                                                       

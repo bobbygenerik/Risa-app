@@ -54,6 +54,30 @@ class XtreamCodesService {
       debugLog('XtreamCodes: Response status ${response.statusCode}');
       return response;
     } catch (e) {
+      // Auto-downgrade HTTPS to HTTP on handshake errors
+      // This fixes 'WRONG_VERSION_NUMBER' when server is actually HTTP
+      if (url.startsWith('https://') &&
+          (e.toString().contains('HandshakeException') ||
+              e.toString().contains('WRONG_VERSION_NUMBER') ||
+              e.toString().contains('OS Error') ||
+              e.toString().contains('badd certificate'))) {
+        final httpUrl = url.replaceFirst('https://', 'http://');
+        debugLog(
+            'XtreamCodes: SSL/Handshake failed. Retrying with HTTP: $httpUrl');
+        try {
+          final response = await _client.get(Uri.parse(httpUrl)).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw TimeoutException('Request timeout after 20 seconds');
+            },
+          );
+          debugLog('XtreamCodes: Retry Response status ${response.statusCode}');
+          return response;
+        } catch (e2) {
+          debugLog('XtreamCodes: HTTP retry failed: $e2');
+          // Fall through to rethrow original
+        }
+      }
       debugLog('XtreamCodes: Request failed: $e');
       rethrow;
     }
@@ -77,6 +101,8 @@ class XtreamCodesService {
       final url = '$_apiBase?username=$username&password=$password';
       final response = await _makeRequest(url);
       if (response.statusCode != 200) return null;
+      debugLog(
+          'XtreamCodes: Panel Info Body: ${response.body.length > 500 ? response.body.substring(0, 500) : response.body}');
       final data = json.decode(response.body) as Map<String, dynamic>;
 
       final userInfo = data['user_info'] as Map<String, dynamic>? ?? {};

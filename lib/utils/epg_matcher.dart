@@ -138,9 +138,55 @@ class EpgMatcher {
 
       // Rule 1: direct epg_id match
       if (rawEpgId != null && rawEpgId.isNotEmpty) {
-        matches[streamId] = rawEpgId;
-        result.matched++;
-        continue;
+        // 1a. Check for exact match
+        if (epgChannelIds.contains(rawEpgId)) {
+          matches[streamId] = rawEpgId;
+          result.matched++;
+          continue;
+        }
+
+        // 1b. Check for case-insensitive/normalized match of the ID
+        final normId = normalize(rawEpgId);
+        if (normalizedEpgMap.containsKey(normId)) {
+          final candidates = normalizedEpgMap[normId]!;
+           // Determine best candidate (exact case preference?)
+           String? best;
+           for (final c in candidates) {
+             if (c.toLowerCase() == rawEpgId.toLowerCase()) {
+               best = c;
+               break;
+             }
+           }
+           matches[streamId] = best ?? candidates.first;
+           result.matched++;
+           continue;
+        }
+        
+        // 1c. Try fuzzy ID matching (prefix/suffix)
+        // Check if the provided ID is a prefix of a known EPG ID (e.g. "nova" -> "nova.gr")
+        String? bestIdMatch;
+        double maxIdScore = 0.0;
+        
+        // Only attempt if ID is significant
+        if (normId.length >= 3) {
+           for (final key in normalizedEpgMap.keys) {
+             // Check for containment/prefix
+             // "novasports2" (len 11) in "novasports2gr" (len 13) -> good match
+             if (key.startsWith(normId) || (key.contains(normId) && key.length - normId.length < 5)) {
+                double score = normId.length / key.length;
+                if (score > maxIdScore && score > 0.7) {
+                   maxIdScore = score;
+                   bestIdMatch = normalizedEpgMap[key]!.first;
+                }
+             }
+           }
+        }
+        
+        if (bestIdMatch != null) {
+           matches[streamId] = bestIdMatch;
+           result.matched++;
+           continue;
+        }
       }
 
       // Rule 2: Normalization
