@@ -774,6 +774,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   Provider.of<IncrementalEpgService>(context, listen: false);
               // Just start with whatever channels we have, don't block UI on EPG readiness filter
               // This is critical for "progressive loading" perception
+              // Try to find channels with EPG data ready, but don't block if none are ready
+              final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
+              
+              // Use ready channels if available, otherwise show whatever we have (progressive loading)
               final displayChannels = readyChannels.isNotEmpty ? readyChannels : previewList;
               
               if (displayChannels.isEmpty) {
