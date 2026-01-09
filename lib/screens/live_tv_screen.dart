@@ -2752,7 +2752,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) {
           _enqueueCategoryLoad(category);
-          return const SizedBox.shrink();
+          // Show a loading placeholder row instead of nothing
+          return _buildCategoryRowLoading(context, category);
         }
         _prefetchEpgForRow(category, channels);
         return _buildChannelSection(
@@ -2762,6 +2763,68 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           isFirstRow: isFirstRow,
         );
       },
+    );
+  }
+
+  /// Build a skeleton placeholder row while channel data loads
+  Widget _buildCategoryRowLoading(BuildContext context, String category) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxCardWidth =
+        screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
+    final cardWidth = math.min(context.cardWidth(), maxCardWidth);
+    final cardHeight = cardWidth * 0.6;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: context.spacingSm() + AppSpacing.sidebarCollapsedWidth,
+        bottom: context.spacingMd(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Category header
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              category,
+              style: AppTypography.caption(context).copyWith(
+                color: Colors.white.withAlpha((0.9 * 255).round()),
+              ),
+            ),
+          ),
+          // Skeleton cards row
+          SizedBox(
+            height: cardHeight + 40, // Card + info area
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 5,
+              separatorBuilder: (_, __) => SizedBox(width: context.spacingSm()),
+              itemBuilder: (context, index) {
+                return Container(
+                  width: cardWidth,
+                  height: cardHeight,
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground.withAlpha((0.5 * 255).round()),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white24,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
