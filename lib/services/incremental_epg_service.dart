@@ -3133,10 +3133,9 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Program? getCurrentProgram(String channelId,
       {String? channelName, String? groupTitle}) {
-    // Should not punish channels for missing data while we are still loading/parsing
-    if (_isLoading || _isParsing || _initInFlight) {
-        return null;
-    }
+    // Do not return null just because we are loading/parsing.
+    // Return potentially stale data if available to prevent UI flickering.
+
 
     final epgId = _findBestEpgId(channelId, channelName,
         countryHint: groupTitle, logIfMissing: false, allowLoose: false);

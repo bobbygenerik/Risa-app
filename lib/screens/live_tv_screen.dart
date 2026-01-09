@@ -18,6 +18,8 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/horizontal_channel_row.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/fanart_service.dart';
@@ -30,7 +32,7 @@ import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
-import 'package:iptv_player/widgets/brand_button.dart';
+
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
@@ -146,7 +148,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   int _lastPreviewChannelCount = -1;
   final Map<String, ScrollController> _rowScrollControllers = {};
   final Set<String> _rowScrollInitialized = {};
-  final Map<String, int> _rowVisibleCountBySection = {};
+  // _rowVisibleCountBySection removed
   final Map<String, int> _categoryOffsets = {};
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
@@ -292,24 +294,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return (perRow + _rowVisibleBuffer).clamp(6, 12);
   }
 
-  int _rowVisibleCountFor(BuildContext context, String sectionKey,
-      double cardWidth, double rowInset) {
-    return _rowVisibleCountBySection.putIfAbsent(
-      sectionKey,
-      () => _initialRowVisibleCount(context, cardWidth, rowInset),
-    );
-  }
+  // Removed _rowVisibleCountFor and _bumpRowVisibleCount as logic is now handled in HorizontalChannelRow widget
 
-  void _bumpRowVisibleCount(String sectionKey, int totalCount, int index,
-      double cardWidth, double rowInset) {
-    final current =
-        _rowVisibleCountFor(context, sectionKey, cardWidth, rowInset);
-    if (index < current - 2) return;
-    final next = (current + _rowVisibleBuffer).clamp(0, totalCount);
-    if (next != current && mounted) {
-      setState(() => _rowVisibleCountBySection[sectionKey] = next);
-    }
-  }
 
   void _requestMoreCategoryChannels(String category) {
     final hasMore = _categoryHasMore[category] ?? true;
@@ -386,7 +372,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _categoryCacheOrder.clear();
     _categoryLoadQueue.clear();
     _categoryRowNotifiers.clear();
-    _rowVisibleCountBySection.clear();
+    // _rowVisibleCountBySection removed
     _categoryOffsets.clear();
     _categoryHasMore.clear();
     _categoryAppendQueue.clear();
@@ -2571,12 +2557,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
       }
 
-      if (epgService.shouldHideChannel(
-        channelId,
-        channelName: channel.name,
-      )) {
-        continue;
-      }
+      // Removed shouldHideChannel check strictly hiding channels. 
+      // We always show available channels, even if EPG is missing or failed.
+
       if (isFirstRow && program != null) {
         if (program.title.isNotEmpty) {
           final normalizedTitle = normalizeForFilter(program.title);
@@ -2618,10 +2601,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
-    final visibleCount =
-        _rowVisibleCountFor(context, sectionKey, cardWidth, rowInset);
+    // Visible count logic moved to HorizontalChannelRow widget
+
     if (allowCategoryPaging) {
-      if (filteredChannels.length <= visibleCount &&
+      final initialVisible = _initialRowVisibleCount(context, cardWidth, rowInset);
+      if (filteredChannels.length <= initialVisible &&
           (_categoryHasMore[sectionKey] ?? true)) {
         _requestMoreCategoryChannels(sectionKey);
       }
@@ -2665,67 +2649,40 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
         SizedBox(
           height: rowHeight,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SizedBox(
-                width: constraints.maxWidth,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.maxScrollExtent <= 0) {
-                      return false;
-                    }
-                    final remaining = notification.metrics.maxScrollExtent -
-                        notification.metrics.pixels;
-                    if (remaining < context.cardGap() * 6) {
-                      _requestMoreCategoryChannels(sectionKey);
-                      _bumpRowVisibleCount(sectionKey, filteredChannels.length,
-                          filteredChannels.length - 1, cardWidth, rowInset);
-                    }
-                    return false;
-                  },
-                  child: ListView.separated(
-                    controller: rowController,
-                    key: ValueKey<String>('live_tv_row_$sectionKey'),
-                    scrollDirection: Axis.horizontal,
-                    physics: const ClampingScrollPhysics(),
-                    cacheExtent: 800,
-                    padding: EdgeInsets.only(
-                      left: rowInset,
-                      right: context.spacingLg(),
-                    ),
-                    clipBehavior: Clip.none,
-                    itemCount: math.min(filteredChannels.length, visibleCount),
-                    itemBuilder: (context, index) {
-                      final focusNode =
-                          isFirstRow && index == 0 ? _firstChannelFocus : null;
-                      final allowPrefetch =
-                          _shouldPrefetchArt(sectionKey, index);
-                      return _buildChannelCard(
-                        context,
-                        filteredChannels[index],
-                        cardWidth,
-                        cardHeight,
-                        sectionKey,
-                        index,
-                        filteredChannels.length,
-                        allowPrefetch,
-                        rowController,
-                        isFirstRow: isFirstRow,
-                        rowHeight: rowHeight,
-                        focusNode: focusNode,
-                        onItemFocus: () => _bumpRowVisibleCount(
-                          sectionKey,
-                          filteredChannels.length,
-                          index,
-                          cardWidth,
-                          rowInset,
-                        ),
-                      );
-                    },
-                    separatorBuilder: (context, index) =>
-                        SizedBox(width: context.cardGap()),
-                  ),
-                ),
+          child: HorizontalChannelRow(
+            sectionKey: sectionKey,
+            controller: rowController,
+            itemCount: filteredChannels.length,
+            cardWidth: cardWidth,
+            cardGap: context.cardGap(),
+            padding: EdgeInsets.only(
+              left: rowInset,
+              right: context.spacingLg(),
+            ),
+            onLoadMore: allowCategoryPaging
+              ? () => _requestMoreCategoryChannels(sectionKey)
+              : null,
+            itemBuilder: (context, index) {
+              final focusNode =
+                  isFirstRow && index == 0 ? _firstChannelFocus : null;
+              final allowPrefetch =
+                  _shouldPrefetchArt(sectionKey, index);
+              return _buildChannelCard(
+                context,
+                filteredChannels[index],
+                cardWidth,
+                cardHeight,
+                sectionKey,
+                index,
+                filteredChannels.length,
+                allowPrefetch,
+                rowController,
+                isFirstRow: isFirstRow,
+                rowHeight: rowHeight,
+                focusNode: focusNode,
+                // onItemFocus is no longer needed for rendering optimization
+                // as HorizontalChannelRow handles it internally.
+                onItemFocus: null,
               );
             },
           ),
@@ -4415,7 +4372,39 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }
 
-            // Adaptive handling for ALL hero images (Posters, Backdrops, etc.)
+            // Adaptive handling: Check if it is likely a poster (portrait) or backdrop (landscape)
+            final isLikelyPoster = _isLikelyPosterUrl(normalizedHeroUrl);
+
+            if (!isLikelyPoster) {
+              // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
+              return CachedNetworkImage(
+                imageUrl: normalizedHeroUrl,
+                httpHeaders: HttpClientService().imageHeaders,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                memCacheWidth: cacheWidth,
+                memCacheHeight: cacheHeight,
+                imageBuilder: (context, imageProvider) {
+                  _markHeroImageCached(normalizedHeroUrl);
+                  return Image(
+                    image: imageProvider,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.high,
+                  );
+                },
+                placeholder: (_, __) => Container(
+                  color: AppTheme.darkBackground,
+                ),
+                errorWidget: (_, url, error) {
+                  logHandshakeIfNeeded(url, error,
+                      context: 'LiveTV hero backdrop');
+                  return heroFallback;
+                },
+                fadeInDuration: const Duration(milliseconds: 300),
+              );
+            }
+
+            // It's a Poster/Portrait image -> Use Blurred Background + Contained Image
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -4445,8 +4434,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                     );
                   },
-                  placeholder: (_, __) => Container(color: AppTheme.darkBackground),
-                  errorWidget: (_, __, ___) => Container(color: AppTheme.darkBackground),
+                  placeholder: (_, __) => Container(
+                    color: AppTheme.darkBackground,
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    color: AppTheme.darkBackground,
+                  ),
                 ),
                 // Main Image (Contained - shows full content)
                 Center(
@@ -4467,7 +4460,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     },
                     placeholder: (_, __) => const SizedBox.shrink(),
                     errorWidget: (_, url, error) {
-                      logHandshakeIfNeeded(url, error, context: 'LiveTV hero main');
+                      logHandshakeIfNeeded(url, error,
+                          context: 'LiveTV hero main');
                       return heroFallback;
                     },
                     fadeInDuration: const Duration(milliseconds: 300),
