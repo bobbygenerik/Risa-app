@@ -6,6 +6,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../utils/debug_helper.dart';
+
 /// Lightweight SQLite wrapper for channels/VOD/EPG data.
 /// Keeps UI responsive on huge playlists by paging from disk.
 class LocalDbService {
@@ -145,8 +147,7 @@ class LocalDbService {
       _isInit = true;
     } catch (e) {
       // Fail softly; fall back to in-memory providers if DB unavailable.
-      // ignore: avoid_print
-      print('LocalDbService: init failed, continuing without DB: $e');
+      debugLog('LocalDbService: init failed, continuing without DB: $e');
       _isInit = false;
       rethrow;
     }
@@ -221,8 +222,7 @@ class LocalDbService {
     if (_resetting) return;
     _resetting = true;
     try {
-      // ignore: avoid_print
-      print('LocalDbService: resetting read-only database');
+      debugLog('LocalDbService: resetting read-only database');
       final db = _db;
       _db = null;
       _isInit = false;
