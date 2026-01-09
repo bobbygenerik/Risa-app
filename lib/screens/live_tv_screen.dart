@@ -688,8 +688,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     _categoryNames.length,
                   );
                 } else {
-                  _visibleCategoryCount =
-                      math.min(_visibleCategoryCount, _categoryNames.length);
+                  // While scrolling/parsing, ensure we are showing up to the full available list
+                  // This is crucial for progressive update - as new categories come in, extend visibility!
+                  _visibleCategoryCount = _categoryNames.length;
                 }
                 _lastPrefetchAnchor = -1;
                 setState(() {});
