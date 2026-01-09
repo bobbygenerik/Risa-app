@@ -3781,8 +3781,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     int cacheHeight,
   ) {
     if (channel.logoUrl != null &&
-        channel.logoUrl!.isNotEmpty &&
-        !_isLikelyPosterUrl(channel.logoUrl!)) {
+        channel.logoUrl!.isNotEmpty) {
       final provider = LogoImageCache.providerFor(
         channel.logoUrl!,
         headers: HttpClientService().imageHeaders,
