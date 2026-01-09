@@ -2064,7 +2064,6 @@ class ChannelProvider with ChangeNotifier {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
                   'type': 'm3u_plus',
-                  'output': 'ts'
                 },
               );
               playlistUrl = playlistUri.toString();

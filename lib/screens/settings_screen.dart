@@ -1089,14 +1089,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
             'type': 'm3u_plus',
-            'output': 'ts'
           },
         );
         playlistUrlUsed = playlistUri.toString();
         await provider.loadPlaylistFromUrl(playlistUrlUsed);
       } catch (e) {
         playlistUrlUsed =
-            '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts';
+            '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus';
         await provider.loadPlaylistFromUrl(playlistUrlUsed);
       }
       final hasContent = provider.channelCount > 0 ||

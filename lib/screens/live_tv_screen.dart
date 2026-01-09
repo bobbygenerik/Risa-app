@@ -245,14 +245,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
-  void _maybeRefreshCategories(int channelCount) {
+
+  Future<void> _maybeRefreshCategories(int channelCount) async {
     if (channelCount <= 0) return;
     if (_categoryNames.isNotEmpty) return;
     if (_loadingCategories) return;
-    if (_categoryPrefetchRequested &&
-        channelCount == _lastCategoryChannelCount) {
-      return;
-    }
+    // Removed strict check on _categoryPrefetchRequested to allow retries if failed
+    
     _lastCategoryChannelCount = channelCount;
     _categoryPrefetchRequested = false;
     _requestCategoryPrefetch();
@@ -522,6 +521,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final provider = Provider.of<ChannelProvider>(context);
+    _maybeRefreshCategories(provider.channelCount);
+
     final routePath = GoRouterState.of(context).uri.path;
     if (_lastRoutePath == routePath) return;
     _lastRoutePath = routePath;
@@ -4372,10 +4374,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }
 
-            // Adaptive handling: Check if it is likely a poster (portrait) or backdrop (landscape)
-            final isLikelyPoster = _isLikelyPosterUrl(normalizedHeroUrl);
+            // Adaptive handling:
+            // Default to "Poster Mode" (Blur + Contain) unless we are SURE it's a backdrop.
+            // This prevents zooming in on posters or generic images, which looks broken.
+            final lower = normalizedHeroUrl.toLowerCase();
+            final isExplicitBackdrop = lower.contains('backdrop') || 
+                                     lower.contains('landscape') ||
+                                     lower.contains('fanart') ||
+                                     lower.contains('/bg/');
 
-            if (!isLikelyPoster) {
+            if (isExplicitBackdrop) {
               // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
               return CachedNetworkImage(
                 imageUrl: normalizedHeroUrl,
