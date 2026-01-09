@@ -559,9 +559,11 @@ class ChannelProvider with ChangeNotifier {
     final creds = await _resolveXtreamCredentials(m3uUrl);
     if (creds == null) return;
 
-    final serverUrl = creds['serverUrl']!;
-    final username = creds['username']!;
-    final password = creds['password']!;
+    final serverUrl = creds['serverUrl'];
+    final username = creds['username'];
+    final password = creds['password'];
+
+    if (serverUrl == null || username == null || password == null) return;
     final metadataKey = '$serverUrl|$username';
 
     if (_xtreamLiveMetadataLoaded && _xtreamLiveMetadataKey == metadataKey) {
@@ -1005,7 +1007,7 @@ class ChannelProvider with ChangeNotifier {
     }
 
     _hydratingVod = true;
-    _contentProvider!.setLoading(true);
+    _contentProvider?.setLoading(true);
     try {
       // Use DB paging when available to avoid massive JSON loads
       List<Content> movies = [];
@@ -1102,8 +1104,8 @@ class ChannelProvider with ChangeNotifier {
       }
 
       if (_disposed) return;
-      _contentProvider!.loadMovies(movies);
-      _contentProvider!.loadSeries(series);
+      _contentProvider?.loadMovies(movies);
+      _contentProvider?.loadSeries(series);
       final moviesComplete = _moviesCount <= 0 || movies.length >= _moviesCount;
       final seriesComplete = _seriesCount <= 0 || series.length >= _seriesCount;
       _vodHydrated = moviesComplete && seriesComplete;
@@ -1113,7 +1115,7 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Failed to hydrate VOD cache: $e');
     } finally {
       _hydratingVod = false;
-      _contentProvider!.setLoading(false);
+      _contentProvider?.setLoading(false);
     }
   }
 
@@ -2004,8 +2006,8 @@ class ChannelProvider with ChangeNotifier {
             unawaited(_computeCategoriesAsync());
 
             if (_contentProvider != null && !_vodLazyStartup) {
-              _contentProvider!.loadMovies(movies.take(100).toList());
-              _contentProvider!.loadSeries(series.take(100).toList());
+              _contentProvider?.loadMovies(movies.take(100).toList());
+              _contentProvider?.loadSeries(series.take(100).toList());
               unawaited(_hydrateContentProviderFromCache());
             }
 
@@ -2368,8 +2370,8 @@ class ChannelProvider with ChangeNotifier {
       notifyListeners();
 
       if (_contentProvider != null && !_vodLazyStartup) {
-        _contentProvider!.loadMovies(moviesPreview);
-        _contentProvider!.loadSeries(seriesPreview);
+        _contentProvider?.loadMovies(moviesPreview);
+        _contentProvider?.loadSeries(seriesPreview);
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -2584,8 +2586,8 @@ class ChannelProvider with ChangeNotifier {
       _updateEpgAllowedChannels();
 
       if (_contentProvider != null && !_vodLazyStartup) {
-        _contentProvider!.loadMovies(movies.take(100).toList());
-        _contentProvider!.loadSeries(series.take(100).toList());
+        _contentProvider?.loadMovies(movies.take(100).toList());
+        _contentProvider?.loadSeries(series.take(100).toList());
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -2709,8 +2711,8 @@ class ChannelProvider with ChangeNotifier {
 
       // Sync VOD content to ContentProvider (first batch only)
       if (_contentProvider != null && !_vodLazyStartup) {
-        _contentProvider!.loadMovies(movies.take(100).toList());
-        _contentProvider!.loadSeries(series.take(100).toList());
+        _contentProvider?.loadMovies(movies.take(100).toList());
+        _contentProvider?.loadSeries(series.take(100).toList());
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -2908,8 +2910,8 @@ class ChannelProvider with ChangeNotifier {
       final seriesPreview = _seriesJsonlPath == null
           ? <Content>[]
           : await _loadJsonlPage(_seriesJsonlPath!, 0, 100);
-      _contentProvider!.loadMovies(moviesPreview);
-      _contentProvider!.loadSeries(seriesPreview);
+      _contentProvider?.loadMovies(moviesPreview);
+      _contentProvider?.loadSeries(seriesPreview);
     }
   }
 
@@ -3159,7 +3161,7 @@ class ChannelProvider with ChangeNotifier {
     try {
       _vodHydrated = false;
       if (_contentProvider != null) {
-        _contentProvider!.setLoading(true);
+        _contentProvider?.setLoading(true);
       }
       unawaited(_primeXtreamLiveMetadata(m3uUrl));
 
@@ -3235,8 +3237,8 @@ class ChannelProvider with ChangeNotifier {
 
       // Sync only first batch to ContentProvider
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(xtreamMovies.take(100).toList());
-        _contentProvider!.loadSeries(xtreamSeries.take(100).toList());
+        _contentProvider?.loadMovies(xtreamMovies.take(100).toList());
+        _contentProvider?.loadSeries(xtreamSeries.take(100).toList());
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -3246,7 +3248,7 @@ class ChannelProvider with ChangeNotifier {
       // Don't fail the whole playlist load if VOD fails
     } finally {
       if (_contentProvider != null) {
-        _contentProvider!.setLoading(false);
+        _contentProvider?.setLoading(false);
       }
     }
   }
@@ -3439,8 +3441,8 @@ class ChannelProvider with ChangeNotifier {
 
         // Update ContentProvider with enriched data (first 100 for UI)
         if (_contentProvider != null) {
-          _contentProvider!.loadMovies(enrichedMovies.take(100).toList());
-          _contentProvider!.loadSeries(enrichedSeries.take(100).toList());
+          _contentProvider?.loadMovies(enrichedMovies.take(100).toList());
+          _contentProvider?.loadSeries(enrichedSeries.take(100).toList());
           unawaited(_hydrateContentProviderFromCache());
         }
 

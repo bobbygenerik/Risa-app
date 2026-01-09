@@ -154,7 +154,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Set<String> _categoryAppendQueue = {};
   final Map<String, bool> _heroImageCacheHits = {};
   bool _userHasScrolled = false;
-  int _lastCategoryChannelCount = 0;
+
   int _lastHeroCandidateCount = 0;
 
   bool _categoryPrefetchRequested = false;
@@ -252,7 +252,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_loadingCategories) return;
     // Removed strict check on _categoryPrefetchRequested to allow retries if failed
     
-    _lastCategoryChannelCount = channelCount;
+
     _categoryPrefetchRequested = false;
     _requestCategoryPrefetch();
   }
@@ -471,7 +471,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (channels.isNotEmpty) {
         if (append && _categoryChannelCache.containsKey(category)) {
           _categoryChannelCache[category] = [
-            ..._categoryChannelCache[category]!,
+            ..._categoryChannelCache[category] ?? [],
             ...channels
           ];
         } else {
@@ -2230,7 +2230,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Check for pending request
     if (_pendingArtworkRequests.containsKey(program.id)) {
-      return _pendingArtworkRequests[program.id]!;
+      return _pendingArtworkRequests[program.id] ?? Future.value(null);
     }
 
     if (!_shouldAttemptArtwork(program.id)) return '';
