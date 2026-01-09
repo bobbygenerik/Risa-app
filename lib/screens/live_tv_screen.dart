@@ -1096,15 +1096,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           height: contentTop, // Limit height to visible area above channels
           child: AnimatedBuilder(
             animation: _scrollController,
-            child: Builder(builder: (context) {
+            builder: (context, _) {
               final scrollPos =
                   _scrollController.hasClients ? _scrollController.offset : 0.0;
               final fadeProgress =
                   (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
               final opacity = 1.0 - fadeProgress;
+
+              Widget content;
               if (opacity <= 0.01) {
                 // Always show focusable tap area when fully faded
-                return Focus(
+                content = Focus(
                   onKeyEvent: (node, event) {
                     if (event is KeyDownEvent) {
                       if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -1135,29 +1137,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                   ),
                 );
-              }
-              return Opacity(
-                opacity: opacity,
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: _buildHeroInfoPanel(
-                      context,
-                      heroInfoWidth,
-                      _buildFeaturedInfoWithFocus(
-                          context, activeChannel, currentProgram),
+              } else {
+                content = Opacity(
+                  opacity: opacity,
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: _buildHeroInfoPanel(
+                        context,
+                        heroInfoWidth,
+                        _buildFeaturedInfoWithFocus(
+                            context, activeChannel, currentProgram),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
-            builder: (context, child) {
-              final scrollPos =
-                  _scrollController.hasClients ? _scrollController.offset : 0.0;
+                );
+              }
+
               return Transform.translate(
                 offset: Offset(0, -scrollPos),
-                child: child,
+                child: content,
               );
             },
           ),
