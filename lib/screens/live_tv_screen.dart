@@ -4147,10 +4147,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
-  bool _isPosterStyleUrl(String? url) {
-    if (url == null || url.isEmpty) return false;
-    return _isLikelyPosterUrl(url);
-  }
+
 
   bool _isBlacklistedNewsArtwork(
     Map<String, dynamic>? details,
@@ -4272,12 +4269,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       featuredChannel,
       currentProgram,
     );
-    final isCachedHero = _heroImageCacheHits[normalizedHeroUrl] == true;
-    final heroFit =
-        _isPosterStyleUrl(heroImage) ? BoxFit.contain : BoxFit.cover;
-    final heroAlignment =
-        heroFit == BoxFit.cover ? Alignment.topCenter : Alignment.center;
-
     // Check if this is a channel logo fallback
     final isChannelLogoFallback = heroImage == featuredChannel.logoUrl;
 
