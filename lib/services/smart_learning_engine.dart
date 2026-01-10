@@ -98,21 +98,25 @@ class SmartLearningEngine extends ChangeNotifier {
 
     // 1. Check for exact user corrections
     if (_userCorrections.containsKey(channelId)) {
-      final correction = _userCorrections[channelId]!;
-      suggestions.add(LearningMatchSuggestion(
-        epgId: correction.correctedEpgId,
-        confidence: 1.0,
-        source: MatchSource.userCorrection,
-        reason: 'Previously corrected by user',
-      ));
+      final correction = _userCorrections[channelId];
+      if (correction != null) {
+        suggestions.add(LearningMatchSuggestion(
+          epgId: correction.correctedEpgId,
+          confidence: 1.0,
+          source: MatchSource.userCorrection,
+          reason: 'Previously corrected by user',
+        ));
+      }
     }
 
     // 2. Check provider-specific patterns
     if (providerId != null && _providerPatterns.containsKey(providerId)) {
-      final pattern = _providerPatterns[providerId]!;
-      final providerMatches =
-          _getProviderMatches(pattern, channelName, groupTitle);
-      suggestions.addAll(providerMatches);
+      final pattern = _providerPatterns[providerId];
+      if (pattern != null) {
+        final providerMatches =
+            _getProviderMatches(pattern, channelName, groupTitle);
+        suggestions.addAll(providerMatches);
+      }
     }
 
     // 3. Apply learning-based confidence boost to base suggestions
@@ -142,9 +146,8 @@ class SmartLearningEngine extends ChangeNotifier {
     // Sort by confidence and remove duplicates
     final uniqueSuggestions = <String, LearningMatchSuggestion>{};
     for (final suggestion in suggestions) {
-      if (!uniqueSuggestions.containsKey(suggestion.epgId) ||
-          suggestion.confidence >
-              uniqueSuggestions[suggestion.epgId]!.confidence) {
+      final existing = uniqueSuggestions[suggestion.epgId];
+      if (existing == null || suggestion.confidence > existing.confidence) {
         uniqueSuggestions[suggestion.epgId] = suggestion;
       }
     }
@@ -167,19 +170,23 @@ class SmartLearningEngine extends ChangeNotifier {
 
     // Boost for user corrections
     if (_userCorrections.containsKey(channelId)) {
-      final correction = _userCorrections[channelId]!;
-      if (correction.correctedEpgId == epgId) {
-        confidence = 1.0;
-      } else {
-        confidence *= 0.1; // Penalize different from user correction
+      final correction = _userCorrections[channelId];
+      if (correction != null) {
+        if (correction.correctedEpgId == epgId) {
+          confidence = 1.0;
+        } else {
+          confidence *= 0.1; // Penalize different from user correction
+        }
       }
     }
 
     // Boost for provider patterns
     if (providerId != null && _providerPatterns.containsKey(providerId)) {
-      final pattern = _providerPatterns[providerId]!;
-      final patternBoost = _getPatternBoost(pattern, channelName, epgId);
-      confidence = (confidence + patternBoost).clamp(0.0, 1.0);
+      final pattern = _providerPatterns[providerId];
+      if (pattern != null) {
+        final patternBoost = _getPatternBoost(pattern, channelName, epgId);
+        confidence = (confidence + patternBoost).clamp(0.0, 1.0);
+      }
     }
 
     // Learning-based adjustments
@@ -290,14 +297,15 @@ class SmartLearningEngine extends ChangeNotifier {
       );
     }
 
-    final pattern = _providerPatterns[providerId]!;
+    final pattern = _providerPatterns[providerId];
+    if (pattern == null) return;
 
     // Update channel patterns
     final channelKey = _normalizeForPattern(correction.channelName);
     if (!pattern.channelPatterns.containsKey(channelKey)) {
       pattern.channelPatterns[channelKey] = [];
     }
-    pattern.channelPatterns[channelKey]!.add(correction.correctedEpgId);
+    pattern.channelPatterns[channelKey]?.add(correction.correctedEpgId);
 
     // Update group patterns
     if (correction.groupTitle != null) {
@@ -305,7 +313,7 @@ class SmartLearningEngine extends ChangeNotifier {
       if (!pattern.groupPatterns.containsKey(groupKey)) {
         pattern.groupPatterns[groupKey] = [];
       }
-      pattern.groupPatterns[groupKey]!.add(correction.correctedEpgId);
+      pattern.groupPatterns[groupKey]?.add(correction.correctedEpgId);
     }
 
     // Update statistics
@@ -344,13 +352,16 @@ class SmartLearningEngine extends ChangeNotifier {
     // Check channel name patterns
     final channelKey = _normalizeForPattern(channelName);
     if (pattern.channelPatterns.containsKey(channelKey)) {
-      for (final epgId in pattern.channelPatterns[channelKey]!) {
-        suggestions.add(LearningMatchSuggestion(
-          epgId: epgId,
-          confidence: 0.8,
-          source: MatchSource.providerPattern,
-          reason: 'Matches provider channel pattern',
-        ));
+      final epgIds = pattern.channelPatterns[channelKey];
+      if (epgIds != null) {
+        for (final epgId in epgIds) {
+          suggestions.add(LearningMatchSuggestion(
+            epgId: epgId,
+            confidence: 0.8,
+            source: MatchSource.providerPattern,
+            reason: 'Matches provider channel pattern',
+          ));
+        }
       }
     }
 
@@ -358,13 +369,16 @@ class SmartLearningEngine extends ChangeNotifier {
     if (groupTitle != null) {
       final groupKey = _normalizeForPattern(groupTitle);
       if (pattern.groupPatterns.containsKey(groupKey)) {
-        for (final epgId in pattern.groupPatterns[groupKey]!) {
-          suggestions.add(LearningMatchSuggestion(
-            epgId: epgId,
-            confidence: 0.7,
-            source: MatchSource.providerPattern,
-            reason: 'Matches provider group pattern',
-          ));
+        final epgIds = pattern.groupPatterns[groupKey];
+        if (epgIds != null) {
+          for (final epgId in epgIds) {
+            suggestions.add(LearningMatchSuggestion(
+              epgId: epgId,
+              confidence: 0.7,
+              source: MatchSource.providerPattern,
+              reason: 'Matches provider group pattern',
+            ));
+          }
         }
       }
     }
@@ -386,11 +400,13 @@ class SmartLearningEngine extends ChangeNotifier {
 
     // Provider-specific boost
     if (providerId != null && _providerPatterns.containsKey(providerId)) {
-      final pattern = _providerPatterns[providerId]!;
-      final channelKey = _normalizeForPattern(channelId);
-      if (pattern.channelPatterns.containsKey(channelKey) &&
-          pattern.channelPatterns[channelKey]!.contains(epgId)) {
-        boost += 0.15;
+      final pattern = _providerPatterns[providerId];
+      if (pattern != null) {
+        final channelKey = _normalizeForPattern(channelId);
+        final channelPatterns = pattern.channelPatterns[channelKey];
+        if (channelPatterns != null && channelPatterns.contains(epgId)) {
+          boost += 0.15;
+        }
       }
     }
 
@@ -447,8 +463,8 @@ class SmartLearningEngine extends ChangeNotifier {
   double _getPatternBoost(
       ProviderPattern pattern, String channelName, String epgId) {
     final channelKey = _normalizeForPattern(channelName);
-    if (pattern.channelPatterns.containsKey(channelKey) &&
-        pattern.channelPatterns[channelKey]!.contains(epgId)) {
+    final channelPatterns = pattern.channelPatterns[channelKey];
+    if (channelPatterns != null && channelPatterns.contains(epgId)) {
       return 0.2;
     }
     return 0.0;

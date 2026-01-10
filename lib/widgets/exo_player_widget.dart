@@ -5,6 +5,7 @@ import 'package:iptv_player/controllers/universal_player_controller.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/widgets/exoplayer_video_view.dart';
 import 'package:provider/provider.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
@@ -72,7 +73,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
         _controller?.play();
       }
     }).catchError((error) {
-      debugPrint('Player initialization failed: $error');
+      debugLog('Player initialization failed: $error');
       if (mounted) {
         setState(() {
           _isInitialized = false;

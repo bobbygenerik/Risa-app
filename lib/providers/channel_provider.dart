@@ -808,6 +808,8 @@ class ChannelProvider with ChangeNotifier {
                   final streamed = await client
                       .send(req)
                       .timeout(const Duration(seconds: 15));
+
+
                   if (streamed.statusCode == 200) {
                     final preview = <int>[];
                     await for (final chunk in streamed.stream) {
@@ -1894,10 +1896,15 @@ class ChannelProvider with ChangeNotifier {
               _channelMaps = cachedChannels;
               _channelCountDb = _channelMaps.length;
               _rebuildChannelCaches();
-              _isLoading = false;
+              
+              // We've loaded the preview, let's let the UI show SOMETHING
               _hasLoadedPlaylist = true;
               notifyListeners();
-              return;
+              
+              // CRITICAL: Do NOT return early. We want to fall through to load the FULL list
+              // if it exists, or just let the background DB load (started above) finish.
+              // Actually, if we have just 200 from JSON, we should probably try the M3U cache if fresh.
+              debugLog('ChannelProvider: Loaded ${cachedChannels.length} channels from JSON preview, continuing to load full list...');
             }
           } catch (e) {
              debugLog('ChannelProvider: JSON cache failed: $e');
@@ -1916,11 +1923,14 @@ class ChannelProvider with ChangeNotifier {
 
             // Parse from file in isolate to avoid blocking main thread and OOM
             final parseStart = DateTime.now();
-            final parsed =
-                await parsePlaylistCancelable(filePath: cacheFilePath);
+            final List<Map<String, dynamic>> allChannels = [];
+            final parsed = await parsePlaylistCancelable(
+              filePath: cacheFilePath,
+              onChannelsChunk: (chunk) => allChannels.addAll(chunk),
+            );
             final parseDuration = DateTime.now().difference(parseStart);
             debugLog(
-                'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
+                'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms. Found ${allChannels.length} channels.');
 
             // Extract and save EPG URL from cache if found
             final epgUrl = parsed['epgUrl'] as String?;
@@ -1936,12 +1946,10 @@ class ChannelProvider with ChangeNotifier {
               }
             }
 
-            // Store raw maps - already in map format from optimized parser
+            // Store raw maps
             final mapStart = DateTime.now();
             _vodHydrated = false;
-            _channelMaps = (parsed['channels'] as List<dynamic>)
-                .map((c) => Map<String, dynamic>.from(c))
-                .toList();
+            _channelMaps = allChannels;
             _channelCache.clear();
             _rebuildChannelCaches();
             _channelCountDb = _channelMaps.length;
@@ -2524,12 +2532,14 @@ class ChannelProvider with ChangeNotifier {
           'ChannelProvider: Downloaded $totalBytes bytes to temp file (direct client)');
 
       // Parse from file in background isolate (memory efficient)
-      final parsed = await parsePlaylistCancelable(filePath: tempFile.path);
+      final List<Map<String, dynamic>> allChannels = [];
+      final parsed = await parsePlaylistCancelable(
+        filePath: tempFile.path,
+        onChannelsChunk: (chunk) => allChannels.addAll(chunk),
+      );
 
       // Store raw maps - don't convert to Channel objects on main thread!
-      _channelMaps = (parsed['channels'] as List<dynamic>)
-          .map((c) => Map<String, dynamic>.from(c))
-          .toList();
+      _channelMaps = allChannels;
       _channelCache.clear();
       _rebuildChannelCaches();
       _channelCountDb = _channelMaps.length;

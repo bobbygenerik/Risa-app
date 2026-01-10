@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+// ignore_for_file: avoid_print
 import 'package:iptv_player/services/m3u_parser_service.dart';
 
 void main() {

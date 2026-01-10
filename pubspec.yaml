@@ -18,7 +18,6 @@ dependencies:
 
   # Local persistence for large playlists/EPG (DB-backed paging)
   sqflite: ^2.3.3
-  # sqflite_common_ffi: ^2.3.3  # desktop/test fallback (removed for Android-only build)
 
   cupertino_icons: ^1.0.8
   http: ^1.2.0
@@ -46,33 +45,10 @@ dependencies:
   file_picker: ^10.3.7
   flutter_svg: ^2.0.7
 
-  
-  # Cloud sync dependencies removed (Drive integration omitted)
-  
-
-
-  # Optional/native media plugins referenced in codebase
-  # media_kit_video: ^1.2.4  # REMOVED: switching to alternative video player
-  # media_kit_libs_android_video: ^1.2.0  # REMOVED: switching to alternative video player
-  # video_player: ^2.7.2  # DISABLED: switched to VLC for better IPTV support
-  # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
-  
-  # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)
-  # subtitle_wrapper_package: ^2.0.2  # DISABLED - use native video_player subtitles instead
-  
-  # Picture-in-Picture (Android native implementation)
-  # Will use platform channels for Android PiP
-  
-  # On-Device Transcription & Translation
-  # NOTE: speech_to_text uses platform APIs (requires internet, may incur costs)
-  # For TRUE on-device: manually add vosk_flutter (requires downgrading dependencies)
-
   google_mlkit_translation: ^0.13.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
   google_mlkit_language_id: ^0.13.0  # On-device text language identification
   record: ^6.1.2  # Audio recording for transcription
   linked_scroll_controller: ^0.2.0
-  # flutter_tts: ^4.0.2  # REMOVED: Text-to-speech not used, was causing plugin errors
-  # No stable whisper Flutter packages available - keeping manual implementation
 
 dev_dependencies:
   flutter_test:
@@ -89,8 +65,6 @@ flutter:
     - assets/images/
     - assets/models/
 
-
-
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
@@ -103,7 +77,3 @@ flutter_launcher_icons:
     image_path: "assets/images/lonelogo (1).png"
     background_color: "#1C1C1E"
     theme_color: "#1C1C1E"
-
-# Note: dependency_overrides previously pinning `permission_handler` and `http`
-# for `vosk_flutter` have been removed. If you need Vosk, re-add it and reintroduce
-# appropriate overrides or prefer to add a guarded adapter implementation.

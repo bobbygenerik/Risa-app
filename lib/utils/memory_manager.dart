@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 class MemoryManager {
   static const int _maxMemoryThresholdMB = 200; // Conservative threshold
@@ -21,14 +22,14 @@ class MemoryManager {
       _isLowMemory = memoryMB > _maxMemoryThresholdMB;
       
       if (_isLowMemory) {
-        debugPrint('Memory pressure detected: ${memoryMB}MB used');
-        // Clear caches when memory pressure is detected
-        clearCaches();
-      }
-    } catch (e) {
-      debugPrint('Failed to check memory pressure: $e');
+      debugLog('Memory pressure detected: ${memoryMB}MB used');
+      // Clear caches when memory pressure is detected
+      clearCaches();
     }
+  } catch (e) {
+    debugLog('Failed to check memory pressure: $e');
   }
+}
   
   /// Force garbage collection if memory pressure is high
   static void forceGarbageCollection() {
@@ -60,14 +61,14 @@ class MemoryManager {
       
       LogoImageCache.clear();
       
-      debugPrint('Cleared image caches and set conservative limits');
+      debugLog('Cleared image caches and set conservative limits');
     } catch (e) {
-      debugPrint('Failed to clear caches: $e');
+      debugLog('Failed to clear caches: $e');
     }
   }
 
   static void _hintGcIfNeeded() {
-    debugPrint('Requesting garbage collection due to memory pressure');
+    debugLog('Requesting garbage collection due to memory pressure');
     // Conservative GC hint
     final tmp1 = List<int>.generate(1024, (index) => index);
     tmp1.clear();

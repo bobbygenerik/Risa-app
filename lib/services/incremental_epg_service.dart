@@ -2201,12 +2201,23 @@ class IncrementalEpgService extends ChangeNotifier {
       final m = _timeParseRe.firstMatch(trimmed);
       if (m == null) return DateTime.now();
 
-      final year = int.parse(m.group(1)!);
-      final month = int.parse(m.group(2)!);
-      final day = int.parse(m.group(3)!);
-      final hour = int.parse(m.group(4)!);
-      final minute = int.parse(m.group(5)!);
-      final second = int.parse(m.group(6)!);
+      final g1 = m.group(1);
+      final g2 = m.group(2);
+      final g3 = m.group(3);
+      final g4 = m.group(4);
+      final g5 = m.group(5);
+      final g6 = m.group(6);
+
+      if (g1 == null || g2 == null || g3 == null || g4 == null || g5 == null || g6 == null) {
+        return DateTime.now();
+      }
+
+      final year = int.parse(g1);
+      final month = int.parse(g2);
+      final day = int.parse(g3);
+      final hour = int.parse(g4);
+      final minute = int.parse(g5);
+      final second = int.parse(g6);
 
       DateTime dt = DateTime.utc(year, month, day, hour, minute, second);
 
@@ -2397,8 +2408,10 @@ class IncrementalEpgService extends ChangeNotifier {
     if (alias != null &&
         _normalizedAvailableChannels != null &&
         _normalizedAvailableChannels!.containsKey(alias)) {
-      final candidates = _normalizedAvailableChannels![alias]!;
-      return _selectBestFromCandidates(candidates, countryCode, alias);
+      final candidates = _normalizedAvailableChannels![alias];
+      if (candidates != null) {
+        return _selectBestFromCandidates(candidates, countryCode, alias);
+      }
     }
     return null;
   }
@@ -2729,9 +2742,10 @@ class IncrementalEpgService extends ChangeNotifier {
     if (normalizedId.isNotEmpty &&
         _normalizedAvailableChannels != null &&
         _normalizedAvailableChannels!.containsKey(normalizedId)) {
-      final candidates = _normalizedAvailableChannels![normalizedId]!;
-      final best =
-          _selectBestFromCandidates(candidates, countryCode, normalizedId);
+      final candidates = _normalizedAvailableChannels![normalizedId];
+      final best = candidates != null
+          ? _selectBestFromCandidates(candidates, countryCode, normalizedId)
+          : null;
       if (best != null) return _cacheResolvedMapping(channelId, best);
     }
 
@@ -2747,9 +2761,10 @@ class IncrementalEpgService extends ChangeNotifier {
       if (withoutDomain.isNotEmpty &&
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(withoutDomain)) {
-        final candidates = _normalizedAvailableChannels![withoutDomain]!;
-        final best =
-            _selectBestFromCandidates(candidates, countryCode, withoutDomain);
+        final candidates = _normalizedAvailableChannels![withoutDomain];
+        final best = candidates != null
+            ? _selectBestFromCandidates(candidates, countryCode, withoutDomain)
+            : null;
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 
@@ -2766,9 +2781,10 @@ class IncrementalEpgService extends ChangeNotifier {
       if (normalizedName.isNotEmpty &&
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
-        final candidates = _normalizedAvailableChannels![normalizedName]!;
-        final best =
-            _selectBestFromCandidates(candidates, countryCode, normalizedName);
+        final candidates = _normalizedAvailableChannels![normalizedName];
+        final best = candidates != null
+            ? _selectBestFromCandidates(candidates, countryCode, normalizedName)
+            : null;
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 
@@ -2783,9 +2799,10 @@ class IncrementalEpgService extends ChangeNotifier {
           strippedName != normalizedName &&
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(strippedName)) {
-        final candidates = _normalizedAvailableChannels![strippedName]!;
-        final best =
-            _selectBestFromCandidates(candidates, countryCode, strippedName);
+        final candidates = _normalizedAvailableChannels![strippedName];
+        final best = candidates != null
+            ? _selectBestFromCandidates(candidates, countryCode, strippedName)
+            : null;
         if (best != null) return _cacheResolvedMapping(channelId, best);
       }
 

@@ -147,7 +147,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
   Future<void> _onWhisperUpdate() async {
     if (_whisperService == null) return;
-    final newText = _whisperService!.currentText;
+    final whisper = _whisperService;
+    if (whisper == null) return;
+    final newText = whisper.currentText;
     if (newText.isNotEmpty && newText != _currentText) {
       _currentText = newText;
       // Estimate playback position at arrival time using smoothed last sample + elapsed
@@ -214,8 +216,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Future<void> _startLiveWhisperTranscription() async {
     debugLog('Delegating live transcription to WhisperTranscriptionService');
 
-    if (_whisperService != null && _lastVideoUrl != null) {
-      await _whisperService!.startTranscription(streamUrl: _lastVideoUrl!);
+    final whisper = _whisperService;
+    final url = _lastVideoUrl;
+    if (whisper != null && url != null) {
+      await whisper.startTranscription(streamUrl: url);
     } else {
       debugLog(
           '⚠️ Cannot start live transcription: Whisper service or Video URL missing');
@@ -269,8 +273,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
     try {
       await _speech?.stop();
-      if (_whisperService != null) {
-        await _whisperService!.stopTranscription();
+      final whisper = _whisperService;
+      if (whisper != null) {
+        await whisper.stopTranscription();
       }
       _isTranscribing = false;
       _currentText = '';

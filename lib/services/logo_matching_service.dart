@@ -43,8 +43,9 @@ class LogoMatchingService extends ChangeNotifier {
       final directory = await getApplicationDocumentsDirectory();
       _cacheDirectory = Directory('${directory.path}/$_logoCacheDir');
 
-      if (!await _cacheDirectory!.exists()) {
-        await _cacheDirectory!.create(recursive: true);
+      final cacheDir = _cacheDirectory;
+      if (cacheDir != null && !await cacheDir.exists()) {
+        await cacheDir.create(recursive: true);
       }
 
       await _loadLogoIndex();
@@ -181,7 +182,7 @@ class LogoMatchingService extends ChangeNotifier {
   Future<LogoData?> getLogoForChannel(
       String channelId, String channelName) async {
     if (_logoCache.containsKey(channelId)) {
-      return _logoCache[channelId]!;
+    return _logoCache[channelId];
     }
 
     // Try to download if not cached
@@ -370,13 +371,17 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<Uint8List> _imageToBytes(ui.Image image) async {
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData!.buffer.asUint8List();
+    final data = byteData;
+    if (data == null) throw Exception('Failed to convert image to bytes');
+    return data.buffer.asUint8List();
   }
 
   Future<void> _saveLogoToCache(String channelId, LogoData logo) async {
     try {
       final fileName = '${channelId}_${logo.hash.substring(0, 8)}.png';
-      final file = File('${_cacheDirectory!.path}/$fileName');
+      final directory = _cacheDirectory;
+      if (directory == null) return;
+      final file = File('${directory.path}/$fileName');
 
       await file.writeAsBytes(logo.bytes);
 
@@ -594,14 +599,15 @@ class LogoMatchingService extends ChangeNotifier {
       LogoFeatures query, String targetChannelId) async {
     final cacheKey = '${query.hashCode}_$targetChannelId';
     if (_similarityCache.containsKey(cacheKey)) {
-      return _similarityCache[cacheKey]!;
+      return _similarityCache[cacheKey] ?? 0.0;
     }
 
     if (!_logoFeatures.containsKey(targetChannelId)) {
       return 0.0;
     }
 
-    final target = _logoFeatures[targetChannelId]!;
+    final target = _logoFeatures[targetChannelId];
+    if (target == null) return 0.0;
 
     // Calculate similarity using multiple features
     final colorSimilarity = _calculateHistogramSimilarity(
@@ -627,7 +633,8 @@ class LogoMatchingService extends ChangeNotifier {
       return 0.0;
     }
 
-    final features1 = _logoFeatures[channelId1]!;
+    final features1 = _logoFeatures[channelId1];
+    if (features1 == null) return 0.0;
     return await _calculateLogoSimilarity(features1, channelId2);
   }
 

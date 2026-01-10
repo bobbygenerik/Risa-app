@@ -21,7 +21,7 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    avoid_print: false  # Disable avoid_print to reduce noisy info-level issues
+    avoid_print: true  # Enable avoid_print to clear noisy info-level issues
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
     # Error handling lints
     unawaited_futures: true

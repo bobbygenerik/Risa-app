@@ -94,7 +94,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     final signature = '$channelCount|$epgCount|${_matchFilter.name}';
     if (_pageSignature == signature) return;
     _pageSignature = signature;
-    setState(_resetPagedMatches);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(_resetPagedMatches);
+      }
+    });
   }
 
   Future<void> _loadNextMatchPage() async {
@@ -156,7 +160,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     }
     _lastChannelCount = channelCount;
     _lastEpgCount = epgCount;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    
+    // Defer state update to post-frame to avoid setState during build
+    Future.microtask(() {
       if (mounted) _refreshStats();
     });
   }
@@ -263,7 +269,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               _pageHasMore &&
               !isEpgBusy &&
               !channelProvider.isLoading) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+            // Defer loading to avoid build phase conflicts
+            Future.microtask(() {
               if (mounted) {
                 _loadNextMatchPage();
               }

@@ -636,10 +636,10 @@ class _MyAppState extends State<MyApp> {
               },
             );
             await prefs.setString('epg_url', epgUri.toString());
-            debugPrint(
+            debugLog(
                 'Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
           } catch (e) {
-            debugPrint('Main: Could not compute/save epg_url: $e');
+            debugLog('Main: Could not compute/save epg_url: $e');
             try {
               final cleaned2 = server.trim();
               Uri fallbackBase = Uri.parse(cleaned2);

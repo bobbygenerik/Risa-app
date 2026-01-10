@@ -164,6 +164,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Featured content rotation
   Timer? _featuredRotationTimer;
   static const Duration _featuredRotationInterval = Duration(minutes: 5);
+  bool _heroIndexInitialized = false;
+  String? _featuredChannelId;
   List<Channel> _stableFeaturedChannels = [];
   bool _featuredChannelsInitialized = false;
   bool _isOpeningPlayer = false;
@@ -251,10 +253,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channelCount <= 0) return;
     if (_categoryNames.isNotEmpty) return;
     if (_loadingCategories) return;
-    // Removed strict check on _categoryPrefetchRequested to allow retries if failed
     
-
-    _categoryPrefetchRequested = false;
+    debugLog('LiveTV: Categories empty but channels present ($channelCount), requesting prefetch...');
     _requestCategoryPrefetch();
   }
 
@@ -404,22 +404,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _prefetchInitialRows() async {
     if (_loadingCategories || _categoryNames.isNotEmpty) return;
     _loadingCategories = true;
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    final categories = await channelProvider.getAllCategoryNamesAsync();
-    if (!mounted) return;
-    _categoryNames = categories;
-    _categoryNameSet
-      ..clear()
-      ..addAll(_categoryNames);
-    _loadingCategories = false;
-    _categoryRowNotifiers.clear();
-    _rowScrollInitialized.clear();
-    _lastPrefetchAnchor = -1;
-    _visibleCategoryCount =
-        math.min(_initialCategoryPrefetchCount, _categoryNames.length);
-    setState(() {});
-    await _prefetchInitialCategoryRows();
+    try {
+      final channelProvider =
+          Provider.of<ChannelProvider>(context, listen: false);
+      final categories = await channelProvider.getAllCategoryNamesAsync();
+      debugLog('LiveTV: Fetched ${categories.length} categories');
+      if (!mounted) return;
+      _categoryNames = categories;
+      _categoryNameSet
+        ..clear()
+        ..addAll(_categoryNames);
+      
+      // Initialize random featured index/ID for cold start variety
+      if (!_heroIndexInitialized) {
+        final channelCount = channelProvider.channelCount;
+        if (channelCount > 0) {
+          // If we don't have an ID yet, pick a random index
+          if (_featuredIndex == 0) {
+            _featuredIndex = math.Random().nextInt(channelCount);
+          }
+          _heroIndexInitialized = true;
+          debugLog('LiveTV: Initialized featured index to $_featuredIndex');
+        }
+      }
+      
+      _categoryRowNotifiers.clear();
+      _rowScrollInitialized.clear();
+      _lastPrefetchAnchor = -1;
+      _visibleCategoryCount =
+          math.min(_initialCategoryPrefetchCount, _categoryNames.length);
+      setState(() {});
+      await _prefetchInitialCategoryRows();
+    } catch (e) {
+      debugLog('LiveTV: Error prefetching rows: $e');
+    } finally {
+      _loadingCategories = false;
+    }
   }
 
   Future<void> _prefetchInitialCategoryRows() async {
@@ -754,39 +774,48 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               if (previewList.isEmpty) {
                 return _buildSkeletonLoader();
               }
-              final epgService =
-                  Provider.of<IncrementalEpgService>(context, listen: false);
-              // Just start with whatever channels we have, don't block UI on EPG readiness filter
-              // This is critical for "progressive loading" perception
-              // Try to find channels with EPG data ready, but don't block if none are ready
-              final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
               
-              // Use ready channels if available, otherwise show whatever we have (progressive loading)
-              final displayChannels = readyChannels.isNotEmpty ? readyChannels : previewList;
-              
-              if (displayChannels.isEmpty) {
-                // If even the raw preview list is empty, keep showing skeleton
-                 return _buildSkeletonLoader();
-              }
+              // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
+              return Consumer<IncrementalEpgService>(
+                builder: (context, epgService, _) {
+                  // Try to find channels with EPG data ready
+                  final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
+                  
+                  // USER REQUEST: Show skeletons until Hero and Featured row have EPG data
+                  // This ensures a "premium" first impression.
+                  if (readyChannels.isEmpty) {
+                     return _buildSkeletonLoader();
+                  }
 
-              if (_featuredIndex >= displayChannels.length) _featuredIndex = 0;
-              if (_featuredIndex == 0 && displayChannels.isNotEmpty) {
-                _featuredIndex = math.Random().nextInt(displayChannels.length);
-              }
-              final featuredChannel = displayChannels[_featuredIndex];
-              
-              // Try to load EPG for featured channel in background
-              final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-              if (channelId.isNotEmpty) {
-                 unawaited(Future.microtask(() => epgService.ensureChannelLoaded(
-                    channelId,
-                    channelName: featuredChannel.name)));
-              }
+                  final displayChannels = readyChannels;
+                  
+                  // Handle Stable ID vs Index
+                  if (_featuredChannelId != null) {
+                    final idx = displayChannels.indexWhere((c) => (c.tvgId ?? c.id) == _featuredChannelId);
+                    if (idx != -1) {
+                      _featuredIndex = idx;
+                    }
+                  }
 
-              return _buildFullScreenHero(
-                context,
-                featuredChannel,
-                displayChannels,
+                  final safeFeaturedIndex = _featuredIndex % displayChannels.length;
+                  final featuredChannel = displayChannels[safeFeaturedIndex];
+                  
+                  // Update current ID for stability
+                  _featuredChannelId = featuredChannel.tvgId ?? featuredChannel.id;
+                  
+                  // Ensure EPG is triggered for the selected hero
+                  if (_featuredChannelId != null && _featuredChannelId!.isNotEmpty) {
+                    unawaited(epgService.ensureChannelLoaded(
+                        _featuredChannelId!,
+                        channelName: featuredChannel.name));
+                  }
+                  
+                  return _buildFullScreenHero(
+                    context,
+                    featuredChannel,
+                    displayChannels,
+                  );
+                },
               );
             },
           );
@@ -976,11 +1005,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgService = context.watch<IncrementalEpgService>();
     final heroCandidates = _buildHeroCandidates(allChannels, epgService);
     _lastHeroCandidateCount = heroCandidates.length;
-    if (_lastHeroCandidateCount == 0) {
-      _featuredIndex = 0;
-    } else if (_featuredIndex >= _lastHeroCandidateCount) {
-      _featuredIndex = 0;
-    }
+    // Removed state mutation of _featuredIndex from build method to avoid infinite loops
+    // Safe indexing is handled below with modulo operator
     final selectedHero = _lastHeroCandidateCount == 0
         ? null
         : heroCandidates[_featuredIndex % _lastHeroCandidateCount];
@@ -2098,6 +2124,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channels.isEmpty) return [];
 
     final candidates = <_HeroCandidate>[];
+    // Scan all channels in the preview list (usually 60) to find the best heroes
     for (final channel in channels) {
       final channelId = channel.tvgId ?? channel.id;
       final program = epgService.getCurrentProgram(
@@ -2113,8 +2140,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         continue;
       }
 
-      // If no program, still consider as candidate but with null program
-      // This ensures we always have something to show in the Hero section
       final heroImage = _resolveHeroImage(program, channel);
 
       candidates.add(_HeroCandidate(
@@ -2122,19 +2147,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         program: program,
         heroImage: heroImage ?? '',
       ));
-
-      // Limit to 15 candidates for performance
-      if (candidates.length >= 15) break;
     }
 
-    // Sort: channels with programs first
+    // Sort: candidates with programs first for a professional look
     candidates.sort((a, b) {
       if (a.program != null && b.program == null) return -1;
       if (a.program == null && b.program != null) return 1;
       return 0;
     });
 
-    return candidates;
+    // Limit to top 15 after sorting
+    return candidates.take(15).toList();
   }
 
   String? _resolveHeroImage(Program? program, Channel channel) {
