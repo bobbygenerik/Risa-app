@@ -1046,12 +1046,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final epgService = context.watch<IncrementalEpgService>();
     final heroCandidates = _buildHeroCandidates(allChannels, epgService);
-    _lastHeroCandidateCount = heroCandidates.length;
+    final epgHeroCandidates =
+        heroCandidates.where((candidate) => candidate.program != null).toList();
+    if (epgHeroCandidates.isEmpty) {
+      final isEpgLoading = epgService.isLoading ||
+          epgService.isParsing ||
+          epgService.isDownloading;
+      final timeSinceInit = DateTime.now().difference(_initTime);
+      if (isEpgLoading && timeSinceInit < _epgLoadingTimeout) {
+        debugLog(
+            'LiveTV: Hero waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
+        return _buildSkeletonLoader();
+      }
+    }
+
+    final selectionPool =
+        epgHeroCandidates.isNotEmpty ? epgHeroCandidates : heroCandidates;
+    _lastHeroCandidateCount = selectionPool.length;
     // Removed state mutation of _featuredIndex from build method to avoid infinite loops
     // Safe indexing is handled below with modulo operator
     final selectedHero = _lastHeroCandidateCount == 0
         ? null
-        : heroCandidates[_featuredIndex % _lastHeroCandidateCount];
+        : selectionPool[_featuredIndex % _lastHeroCandidateCount];
     final activeChannel = selectedHero?.channel ?? featuredChannel;
     final currentProgram = selectedHero?.program;
     final heroImage = selectedHero?.heroImage;
