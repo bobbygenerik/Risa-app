@@ -117,8 +117,10 @@ class _MoviesScreenState extends State<MoviesScreen>
   static const int _rowVisibleBuffer = 2;
   static const int _itemsPerPage = 12;
   static const int _vodPageSize = 200;
+  static const int _initialPrefetchTarget = 1200;
   bool _isLoadingMore = false;
   bool _vodRetryRequested = false;
+  bool _initialVodPrefetchTriggered = false;
   int _heroImageSkipCount = 0;
   bool _heroSkipScheduled = false;
   final Map<String, FocusNode> _sectionFirstCardFocusNodes = {};
@@ -347,6 +349,25 @@ class _MoviesScreenState extends State<MoviesScreen>
     }
   }
 
+  Future<void> _prefetchInitialMovies() async {
+    if (_isLoadingMore || !mounted) return;
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
+    final total = channelProvider.moviesCount;
+    while (mounted && contentProvider.movies.length < _initialPrefetchTarget) {
+      final offset = contentProvider.movies.length;
+      if (total > 0 && offset >= total) return;
+      final page = await channelProvider.getMovies(
+        offset: offset,
+        limit: _vodPageSize,
+      );
+      if (page.isEmpty) return;
+      contentProvider.appendMovies(page);
+    }
+  }
+
   void _maybePrefetchGenre({
     required String genre,
     required int index,
@@ -452,6 +473,11 @@ class _MoviesScreenState extends State<MoviesScreen>
         final totalMovies = channelProvider.moviesCount;
         final hasMoreOverall =
             totalMovies > 0 && movies.length < totalMovies;
+        final noPlaylist = channelProvider.noPlaylistConfigured;
+
+        if (noPlaylist) {
+          return _wrapWithDirectionalFocus(_buildEmptyState(context));
+        }
 
         if (movies.isEmpty && contentProvider.isLoading) {
           return _buildSkeletonLoader();
@@ -474,6 +500,16 @@ class _MoviesScreenState extends State<MoviesScreen>
             return _buildStartupLoader();
           }
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
+        }
+
+        if (hasMoreOverall &&
+            !_initialVodPrefetchTriggered &&
+            movies.length < _initialPrefetchTarget) {
+          _initialVodPrefetchTriggered = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(_prefetchInitialMovies());
+          });
         }
 
         final displayMovies =

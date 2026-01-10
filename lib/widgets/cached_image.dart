@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -31,6 +32,15 @@ class CachedImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      imageBuilder: (context, imageProvider) {
+        ImageLoadProbe.recordSuccess(imageUrl, 'cached_image');
+        return Image(
+          image: imageProvider,
+          width: width,
+          height: height,
+          fit: fit,
+        );
+      },
       placeholder: (context, url) => placeholder ??
           Container(
             width: width,
@@ -41,16 +51,19 @@ class CachedImage extends StatelessWidget {
               color: Colors.white24,
             ),
           ),
-      errorWidget: (context, url, error) => errorWidget ??
-          Container(
-            width: width,
-            height: height,
-            color: Colors.grey.withAlpha((0.1 * 255).round()),
-            child: const Icon(
-              Icons.broken_image,
-              color: Colors.white24,
-            ),
-          ),
+      errorWidget: (context, url, error) {
+        ImageLoadProbe.recordFailure(url, 'cached_image', error);
+        return errorWidget ??
+            Container(
+              width: width,
+              height: height,
+              color: Colors.grey.withAlpha((0.1 * 255).round()),
+              child: const Icon(
+                Icons.broken_image,
+                color: Colors.white24,
+              ),
+            );
+      },
     );
 
     if (borderRadius != null) {
@@ -94,8 +107,20 @@ class CachedChannelLogo extends StatelessWidget {
       fit: BoxFit.contain,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
+      imageBuilder: (context, imageProvider) {
+        ImageLoadProbe.recordSuccess(logoUrl!, 'channel_logo');
+        return Image(
+          image: imageProvider,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        );
+      },
       placeholder: (context, url) => _buildLogoPlaceholder(size, fallbackIcon),
-      errorWidget: (context, url, error) => _buildLogoPlaceholder(size, fallbackIcon),
+      errorWidget: (context, url, error) {
+        ImageLoadProbe.recordFailure(url, 'channel_logo', error);
+        return _buildLogoPlaceholder(size, fallbackIcon);
+      },
     );
   }
 }

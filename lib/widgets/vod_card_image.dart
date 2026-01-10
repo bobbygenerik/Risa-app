@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 
 /// Widget that displays VOD card image with TMDB fallback
 /// If imageUrl is missing/invalid, fetches poster from TMDB
@@ -102,8 +103,20 @@ class _VodCardImageState extends State<VodCardImage> {
             height: double.infinity,
             memCacheWidth: cacheSize.width,
             memCacheHeight: cacheSize.height,
+            imageBuilder: (context, imageProvider) {
+              ImageLoadProbe.recordSuccess(tmdbUrl, 'vod_tmdb');
+              return Image(
+                image: imageProvider,
+                width: double.infinity,
+                height: double.infinity,
+                fit: widget.fit,
+              );
+            },
             placeholder: (context, url) => widget.placeholder,
-            errorWidget: (context, url, error) => _buildOriginalImageFallback(),
+            errorWidget: (context, url, error) {
+              ImageLoadProbe.recordFailure(url, 'vod_tmdb', error);
+              return _buildOriginalImageFallback();
+            },
           );
         }
 
@@ -124,8 +137,20 @@ class _VodCardImageState extends State<VodCardImage> {
         height: double.infinity,
         memCacheWidth: cacheSize?.width,
         memCacheHeight: cacheSize?.height,
+        imageBuilder: (context, imageProvider) {
+          ImageLoadProbe.recordSuccess(originalUrl, 'vod_original');
+          return Image(
+            image: imageProvider,
+            width: double.infinity,
+            height: double.infinity,
+            fit: widget.fit,
+          );
+        },
         placeholder: (context, url) => widget.placeholder,
-        errorWidget: (context, url, error) => widget.placeholder,
+        errorWidget: (context, url, error) {
+          ImageLoadProbe.recordFailure(url, 'vod_original', error);
+          return widget.placeholder;
+        },
       );
     }
     return widget.placeholder;

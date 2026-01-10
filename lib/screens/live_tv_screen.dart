@@ -49,6 +49,7 @@ import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -259,6 +260,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_loadingCategories) return;
     
     debugLog('LiveTV: Categories empty but channels present ($channelCount), requesting prefetch...');
+    _categoryPrefetchRequested = false;
     _requestCategoryPrefetch();
   }
 
@@ -559,6 +561,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
         _resetRowScrollOffsets();
         _requestInitialFocus();
+        if (_categoryNames.isEmpty) {
+          _categoryPrefetchRequested = false;
+          _requestCategoryPrefetch();
+        }
       });
     }
   }
@@ -706,20 +712,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
           // Improved EPG loading detection - only show skeleton if truly loading
 
-          if (!hasChannels && channelProvider.isLoading) {
+          if (!hasChannels &&
+              channelProvider.isLoading &&
+              !channelProvider.noPlaylistConfigured) {
             return _buildSkeletonLoader();
           }
 
           // Only show skeleton if we have NO categories AND (loading OR (waiting for EPG while having no content))
           // If we have categories (data), SHOW THE UI! The EPG can populate later.
-          if (_categoryNames.isEmpty && channelProvider.isLoading) {
+          if (_categoryNames.isEmpty &&
+              channelProvider.isLoading &&
+              !channelProvider.noPlaylistConfigured) {
             return _buildSkeletonLoader();
           }
 
           if (!hasChannels) {
             final errorMessage = channelProvider.errorMessage;
-            if (!channelProvider.hasLoadedPlaylist ||
-                channelProvider.isLoading) {
+            if (!channelProvider.noPlaylistConfigured &&
+                (!channelProvider.hasLoadedPlaylist ||
+                    channelProvider.isLoading)) {
               return _buildSkeletonLoader();
             }
             return Center(
@@ -1556,8 +1567,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               if (wasSync || frame != null) return child;
               return const SizedBox.shrink();
             },
-            errorBuilder: (context, error, stackTrace) =>
-                const SizedBox.shrink(),
+            errorBuilder: (context, error, stackTrace) {
+              ImageLoadProbe.recordFailure(url, 'channel_logo', error);
+              return const SizedBox.shrink();
+            },
           );
         }),
       ),
@@ -4417,6 +4430,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       memCacheWidth: cacheWidth ~/ 2,
                       memCacheHeight: cacheHeight ~/ 2,
                       imageBuilder: (context, imageProvider) {
+                        ImageLoadProbe.recordSuccess(
+                            normalizedHeroUrl, 'hero_logo_bg');
                         return ImageFiltered(
                           imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                           child: Container(
@@ -4436,9 +4451,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       placeholder: (_, __) => Container(
                         color: AppTheme.darkBackground,
                       ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: AppTheme.darkBackground,
-                      ),
+                      errorWidget: (_, url, error) {
+                        ImageLoadProbe.recordFailure(
+                            url, 'hero_logo_bg', error);
+                        return Container(
+                          color: AppTheme.darkBackground,
+                        );
+                      },
                     ),
                   ),
                   // Centered logo
@@ -4453,8 +4472,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       memCacheWidth: (constraints.maxWidth * 0.3 * dpr).round(),
                       memCacheHeight:
                           (constraints.maxHeight * 0.25 * dpr).round(),
+                      imageBuilder: (context, imageProvider) {
+                        ImageLoadProbe.recordSuccess(
+                            normalizedHeroUrl, 'hero_logo');
+                        return Image(
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        );
+                      },
                       placeholder: (_, __) => const SizedBox.shrink(),
                       errorWidget: (_, url, error) {
+                        ImageLoadProbe.recordFailure(url, 'hero_logo', error);
                         logHandshakeIfNeeded(url, error,
                             context: 'LiveTV hero logo');
                         return heroFallback;
@@ -4486,6 +4515,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   memCacheHeight: cacheHeight,
                   imageBuilder: (context, imageProvider) {
                     _markHeroImageCached(normalizedHeroUrl);
+                    ImageLoadProbe.recordSuccess(
+                        normalizedHeroUrl, 'hero_backdrop');
                     return Image(
                       image: imageProvider,
                       fit: BoxFit.cover,
@@ -4496,6 +4527,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     color: AppTheme.darkBackground,
                   ),
                   errorWidget: (_, url, error) {
+                    ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
                     logHandshakeIfNeeded(url, error,
                         context: 'LiveTV hero backdrop');
                     return heroFallback;
@@ -4519,6 +4551,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   memCacheWidth: cacheWidth ~/ 4,
                   memCacheHeight: cacheHeight ~/ 4,
                   imageBuilder: (context, imageProvider) {
+                    ImageLoadProbe.recordSuccess(
+                        normalizedHeroUrl, 'hero_poster_bg');
                     return ImageFiltered(
                       imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                       child: Container(
@@ -4538,9 +4572,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   placeholder: (_, __) => Container(
                     color: AppTheme.darkBackground,
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: AppTheme.darkBackground,
-                  ),
+                  errorWidget: (_, url, error) {
+                    ImageLoadProbe.recordFailure(url, 'hero_poster_bg', error);
+                    return Container(
+                      color: AppTheme.darkBackground,
+                    );
+                  },
                 ),
                 // Main Image (Contained - shows full content)
                 Center(
@@ -4553,6 +4590,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     memCacheHeight: cacheHeight,
                     imageBuilder: (context, imageProvider) {
                       _markHeroImageCached(normalizedHeroUrl);
+                      ImageLoadProbe.recordSuccess(
+                          normalizedHeroUrl, 'hero_poster');
                       return Image(
                         image: imageProvider,
                         fit: BoxFit.contain,
@@ -4561,6 +4600,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     },
                     placeholder: (_, __) => const SizedBox.shrink(),
                     errorWidget: (_, url, error) {
+                      ImageLoadProbe.recordFailure(url, 'hero_poster', error);
                       logHandshakeIfNeeded(url, error,
                           context: 'LiveTV hero main');
                       return heroFallback;
@@ -4767,6 +4807,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             memCacheWidth: (cacheWidth ?? 400) ~/ 4,
             memCacheHeight: (cacheHeight ?? 240) ~/ 4,
             imageBuilder: (context, imageProvider) {
+              ImageLoadProbe.recordSuccess(url, 'live_tv_poster_bg');
               return ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
@@ -4784,7 +4825,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             },
             placeholder: (context, url) => Container(color: Colors.black12),
-            errorWidget: (context, url, err) => fallback,
+            errorWidget: (context, url, err) {
+              ImageLoadProbe.recordFailure(url, 'live_tv_poster_bg', err);
+              return fallback;
+            },
           ),
           // Centered image content (Contain)
           CachedNetworkImage(
@@ -4793,8 +4837,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             fit: BoxFit.contain,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
+            imageBuilder: (context, imageProvider) {
+              ImageLoadProbe.recordSuccess(url, 'live_tv_poster');
+              return Image(
+                image: imageProvider,
+                fit: BoxFit.contain,
+              );
+            },
             placeholder: (context, url) => const SizedBox.shrink(),
-            errorWidget: (context, url, err) => fallback,
+            errorWidget: (context, url, err) {
+              ImageLoadProbe.recordFailure(url, 'live_tv_poster', err);
+              return fallback;
+            },
           ),
         ],
       );
@@ -4806,8 +4860,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       fit: defaultFit,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
+      imageBuilder: (context, imageProvider) {
+        ImageLoadProbe.recordSuccess(url, 'live_tv_card');
+        return Image(
+          image: imageProvider,
+          fit: defaultFit,
+        );
+      },
       placeholder: (context, url) => fallback,
       errorWidget: (context, url, err) {
+        ImageLoadProbe.recordFailure(url, 'live_tv_card', err);
         logHandshakeIfNeeded(url, err, context: 'LiveTV Adaptive');
         return fallback;
       },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 
 /// Optimized image widget with progressive loading and memory management
 class OptimizedImage extends StatelessWidget {
@@ -50,12 +51,24 @@ class OptimizedImage extends StatelessWidget {
       fit: fit,
       memCacheWidth: enableMemoryCache ? optimalWidth : null,
       memCacheHeight: enableMemoryCache ? optimalHeight : null,
+      imageBuilder: (context, imageProvider) {
+        ImageLoadProbe.recordSuccess(imageUrl, 'optimized_image');
+        return Image(
+          image: imageProvider,
+          width: width,
+          height: height,
+          fit: fit,
+        );
+      },
       placeholder: placeholder != null
           ? (context, url) => placeholder!
           : (context, url) => _buildShimmerPlaceholder(),
-      errorWidget: errorWidget != null
-          ? (context, url, error) => errorWidget!
-          : _buildErrorWidget,
+      errorWidget: (context, url, error) {
+        ImageLoadProbe.recordFailure(url, 'optimized_image', error);
+        return errorWidget != null
+            ? errorWidget!
+            : _buildErrorWidget(context, url, error);
+      },
       fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 100),
     );

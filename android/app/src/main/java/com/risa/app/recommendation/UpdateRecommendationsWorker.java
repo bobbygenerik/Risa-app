@@ -1,6 +1,5 @@
 package com.risa.app.recommendation;
 
-import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,47 +9,60 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
-import androidx.core.app.NotificationCompat;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
 
 import com.risa.app.MainActivity;
 import com.risa.app.R;
 
-import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UpdateRecommendationsService extends IntentService {
+public class UpdateRecommendationsWorker extends Worker {
 
-    private static final String TAG = "RecommendationService";
+    private static final String TAG = "RecommendationWorker";
+    private static final String WORK_NAME = "update_recommendations";
     private static final int MAX_RECOMMENDATIONS = 5;
     private static int sNotificationId = 0;
     private static final String CHANNEL_ID = "recommendations";
 
-    public UpdateRecommendationsService() {
-        super("UpdateRecommendationsService");
+    public UpdateRecommendationsWorker(
+            @NonNull Context context,
+            @NonNull WorkerParameters params
+    ) {
+        super(context, params);
     }
 
+    @NonNull
     @Override
-    public void onCreate() {
-        super.onCreate();
-        createNotificationChannel();
-    }
-
-    @Override
-    protected void onHandleIntent(Intent intent) {
+    public Result doWork() {
         Log.d(TAG, "Updating recommendation cards");
 
         List<Content> recommendedContent = getMockRecommendedContent();
 
         if (recommendedContent == null || recommendedContent.isEmpty()) {
             Log.d(TAG, "No content to recommend.");
-            return;
+            return Result.success();
         }
 
+        createNotificationChannel();
+
         NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                (NotificationManager) getApplicationContext()
+                        .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager == null) {
+            Log.w(TAG, "NotificationManager not available.");
+            return Result.retry();
+        }
 
         notificationManager.cancelAll();
 
@@ -58,29 +70,43 @@ public class UpdateRecommendationsService extends IntentService {
             Content content = recommendedContent.get(i);
             buildRecommendation(content, notificationManager);
         }
+
+        return Result.success();
     }
 
     private void buildRecommendation(Content content, NotificationManager notificationManager) {
         try {
-            Bitmap background = BitmapFactory.decodeResource(getResources(), R.drawable.tv_banner);
-
-            Intent detailsIntent = new Intent(this, MainActivity.class);
-
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                    this,
-                    content.getId().hashCode(),
-                    detailsIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+            Bitmap background = BitmapFactory.decodeResource(
+                    getApplicationContext().getResources(),
+                    R.drawable.tv_banner
             );
 
-            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+            Intent detailsIntent = new Intent(getApplicationContext(), MainActivity.class);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    getApplicationContext(),
+                    content.getId().hashCode(),
+                    detailsIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT |
+                            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                                    ? PendingIntent.FLAG_IMMUTABLE
+                                    : 0)
+            );
+
+            Notification notification = new NotificationCompat.Builder(
+                    getApplicationContext(),
+                    CHANNEL_ID
+            )
                     .setContentTitle(content.getTitle())
                     .setContentText(content.getDescription())
                     .setSmallIcon(R.mipmap.ic_launcher)
                     .setLargeIcon(background)
                     .setGroup(TAG)
                     .setCategory(Notification.CATEGORY_RECOMMENDATION)
-                    .setColor(getResources().getColor(R.color.fastlane_background))
+                    .setColor(ContextCompat.getColor(
+                            getApplicationContext(),
+                            R.color.fastlane_background
+                    ))
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
                     .build();
@@ -92,15 +118,28 @@ public class UpdateRecommendationsService extends IntentService {
         }
     }
 
+    public static void enqueueWork(Context context) {
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(
+                UpdateRecommendationsWorker.class
+        ).build();
+        WorkManager.getInstance(context)
+                .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, request);
+    }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Recommendations";
             String description = "Channel for content recommendations";
             int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            NotificationChannel channel =
+                    new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
+            NotificationManager notificationManager =
+                    (NotificationManager) getApplicationContext()
+                            .getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
         }
     }
 
@@ -116,13 +155,19 @@ public class UpdateRecommendationsService extends IntentService {
     }
 
     private static class Content {
-        private String id;
-        private String title;
-        private String description;
-        private String cardImageUrl;
-        private String backgroundImageUrl;
+        private final String id;
+        private final String title;
+        private final String description;
+        private final String cardImageUrl;
+        private final String backgroundImageUrl;
 
-        public Content(String id, String title, String description, String cardImageUrl, String backgroundImageUrl) {
+        public Content(
+                String id,
+                String title,
+                String description,
+                String cardImageUrl,
+                String backgroundImageUrl
+        ) {
             this.id = id;
             this.title = title;
             this.description = description;

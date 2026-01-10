@@ -208,6 +208,7 @@ class ChannelProvider with ChangeNotifier {
   bool _dbDisabled = false;
   bool _autoLoadInProgress = false;
   bool _dbReadOnlyRecoveryInFlight = false;
+  bool _noPlaylistConfigured = false;
   bool _xtreamLiveMetadataLoaded = false;
   String? _xtreamLiveMetadataKey;
   bool _epgRefreshPending = false;
@@ -288,6 +289,60 @@ class ChannelProvider with ChangeNotifier {
     return null;
   }
 
+  String _playlistCountsKey(SharedPreferences prefs, String? playlistUrl) {
+    final keySource = prefs.getString('active_playlist_id')?.trim();
+    final keyBase = (keySource != null && keySource.isNotEmpty)
+        ? keySource
+        : (playlistUrl?.trim().isNotEmpty == true
+            ? playlistUrl!.trim()
+            : 'default');
+    return 'playlist_counts_${Uri.encodeComponent(keyBase)}';
+  }
+
+  Future<void> _persistPlaylistCounts({
+    required SharedPreferences prefs,
+    required String? playlistUrl,
+    required int channelCount,
+    required int movieCount,
+    required int seriesCount,
+  }) async {
+    try {
+      final key = _playlistCountsKey(prefs, playlistUrl);
+      final payload = json.encode({
+        'channels': channelCount,
+        'movies': movieCount,
+        'series': seriesCount,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      await prefs.setString(key, payload);
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to persist playlist counts: $e');
+    }
+  }
+
+  Map<String, int>? _loadPlaylistCounts({
+    required SharedPreferences prefs,
+    required String? playlistUrl,
+  }) {
+    try {
+      final key = _playlistCountsKey(prefs, playlistUrl);
+      final stored = prefs.getString(key);
+      if (stored == null || stored.trim().isEmpty) return null;
+      final decoded = json.decode(stored) as Map<String, dynamic>;
+      final channels = _asInt(decoded['channels']) ?? 0;
+      final movies = _asInt(decoded['movies']) ?? 0;
+      final series = _asInt(decoded['series']) ?? 0;
+      return {
+        'channels': channels,
+        'movies': movies,
+        'series': series,
+      };
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to read playlist counts: $e');
+      return null;
+    }
+  }
+
   Future<bool> _setWakeLock(bool enable) async {
     try {
       if (enable) {
@@ -358,11 +413,21 @@ class ChannelProvider with ChangeNotifier {
     }
     _dbReadOnlyRecoveryInFlight = true;
     _dbReady = false;
-    debugLog(
-        'ChannelProvider: Detected read-only DB, disabling DB for session');
+    debugLog('ChannelProvider: Detected read-only DB, attempting recovery');
     unawaited(() async {
-      _dbDisabled = true;
-      _dbReady = false;
+      final recovered = await _db.recoverFromReadOnly();
+      if (recovered) {
+        debugLog('ChannelProvider: Recovered read-only DB, rebuilding caches');
+        _dbDisabled = false;
+        _dbReady = true;
+        _channelCountDb = 0;
+        _invalidateCategoryCaches();
+        _cachedCategories = null;
+      } else {
+        debugLog('ChannelProvider: Failed to recover DB, disabling for session');
+        _dbDisabled = true;
+        _dbReady = false;
+      }
       _dbReadOnlyRecoveryInFlight = false;
     }());
   }
@@ -1712,6 +1777,7 @@ class ChannelProvider with ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get noPlaylistConfigured => _noPlaylistConfigured;
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
   String? get lastM3UContent => _lastM3UContent; // Expose for debugging
 
@@ -1772,6 +1838,7 @@ class ChannelProvider with ChangeNotifier {
 
     // Set loading immediately so UI shows loading state
     _isLoading = true;
+    _noPlaylistConfigured = false;
     _loadingStatus = 'Checking local cache...';
     _loadingProgress = 0.05;
     notifyListeners();
@@ -1838,6 +1905,7 @@ class ChannelProvider with ChangeNotifier {
 
       if (playlistType == null) {
         _isLoading = false;
+        _noPlaylistConfigured = true;
         notifyListeners();
         StartupProbe.mark(
             'ChannelProvider.autoLoadPlaylist: no saved playlist');
@@ -1871,6 +1939,16 @@ class ChannelProvider with ChangeNotifier {
       final cacheAge = cacheTimestamp != null
           ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
           : null;
+      final String? playlistUrlForCounts;
+      if (playlistType == 'm3u') {
+        playlistUrlForCounts = prefs.getString('m3u_url');
+      } else if (playlistType == 'xtream') {
+        playlistUrlForCounts = prefs.getString('xtream_server');
+      } else {
+        playlistUrlForCounts = null;
+      }
+      final storedCounts =
+          _loadPlaylistCounts(prefs: prefs, playlistUrl: playlistUrlForCounts);
       int? expectedChannels;
       int? expectedMovies;
       int? expectedSeries;
@@ -1889,6 +1967,9 @@ class ChannelProvider with ChangeNotifier {
           debugLog('ChannelProvider: Failed to read JSON cache metadata: $e');
         }
       }
+      expectedChannels ??= storedCounts?['channels'];
+      expectedMovies ??= storedCounts?['movies'];
+      expectedSeries ??= storedCounts?['series'];
 
       // First, try to load from SQLite DB (the fastest for large playlists)
       if (_dbReady) {
@@ -1900,7 +1981,8 @@ class ChannelProvider with ChangeNotifier {
           notifyListeners();
           count = await _db.channelCount().timeout(const Duration(seconds: 4));
           if (expectedChannels != null && expectedChannels > 0) {
-            if (count > 0 && count < expectedChannels) {
+            final minExpected = (expectedChannels * 0.9).round();
+            if (count > 0 && count < minExpected) {
               skipDbLoad = true;
               debugLog(
                   'ChannelProvider: DB cache incomplete ($count/$expectedChannels), falling back');
@@ -2166,6 +2248,7 @@ class ChannelProvider with ChangeNotifier {
       }
 
       debugLog('ChannelProvider: Playlist type: $playlistType');
+      _noPlaylistConfigured = false;
 
       try {
         String? playlistUrl;
@@ -2269,6 +2352,7 @@ class ChannelProvider with ChangeNotifier {
     _lastPlaylistUrl = url;
     _vodLoadRequested = false;
     _vodLoading = false;
+    _noPlaylistConfigured = false;
 
     try {
       await _loadPlaylistFromUrlImpl(url);
@@ -2553,6 +2637,13 @@ class ChannelProvider with ChangeNotifier {
       unawaited(_startBackgroundEnrichment());
       // Persist playlist entry for Manage Playlists
       unawaited(_upsertSavedPlaylist(sourceUrl: url, epgUrl: epgUrl));
+      unawaited(_persistPlaylistCounts(
+        prefs: prefs,
+        playlistUrl: url,
+        channelCount: _channelMaps.length,
+        movieCount: _moviesCount,
+        seriesCount: _seriesCount,
+      ));
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error loading playlist: $e');
       debugLog('ChannelProvider: Stack trace: $stackTrace');
@@ -2610,6 +2701,7 @@ class ChannelProvider with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _vodHydrated = false;
+    _noPlaylistConfigured = false;
     notifyListeners();
 
     final httpClient =
@@ -2795,6 +2887,13 @@ class ChannelProvider with ChangeNotifier {
       _scheduleEpgRefresh(forceRefresh: false);
       // Start background TMDB enrichment (non-blocking)
       unawaited(_startBackgroundEnrichment());
+      unawaited(_persistPlaylistCounts(
+        prefs: prefs,
+        playlistUrl: url,
+        channelCount: _channelMaps.length,
+        movieCount: movies.length,
+        seriesCount: series.length,
+      ));
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error with direct client: $e');
       debugLog('ChannelProvider: Stack trace: $stackTrace');
@@ -2813,6 +2912,7 @@ class ChannelProvider with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _vodHydrated = false;
+    _noPlaylistConfigured = false;
     notifyListeners();
 
     try {

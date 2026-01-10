@@ -121,8 +121,10 @@ class _SeriesScreenState extends State<SeriesScreen>
   static const int _rowVisibleBuffer = 2;
   static const int _itemsPerPage = 12;
   static const int _vodPageSize = 200;
+  static const int _initialPrefetchTarget = 1200;
   bool _isLoadingMore = false;
   bool _vodRetryRequested = false;
+  bool _initialVodPrefetchTriggered = false;
   int _heroImageSkipCount = 0;
   bool _heroSkipScheduled = false;
 
@@ -288,6 +290,26 @@ class _SeriesScreenState extends State<SeriesScreen>
           _isLoadingMore = false;
         });
       }
+    }
+  }
+
+  Future<void> _prefetchInitialSeries() async {
+    if (_isLoadingMore || !mounted) return;
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
+    final total = channelProvider.seriesCount;
+    while (mounted &&
+        contentProvider.series.length < _initialPrefetchTarget) {
+      final offset = contentProvider.series.length;
+      if (total > 0 && offset >= total) return;
+      final page = await channelProvider.getSeries(
+        offset: offset,
+        limit: _vodPageSize,
+      );
+      if (page.isEmpty) return;
+      contentProvider.appendSeries(page);
     }
   }
 
@@ -550,6 +572,11 @@ class _SeriesScreenState extends State<SeriesScreen>
         final totalSeries = channelProvider.seriesCount;
         final hasMoreOverall =
             totalSeries > 0 && series.length < totalSeries;
+        final noPlaylist = channelProvider.noPlaylistConfigured;
+
+        if (noPlaylist) {
+          return _wrapWithDirectionalFocus(_buildEmptyState(context));
+        }
 
         if (series.isEmpty && contentProvider.isLoading) {
           return _buildSkeletonLoader();
@@ -572,6 +599,16 @@ class _SeriesScreenState extends State<SeriesScreen>
             return _buildStartupLoader();
           }
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
+        }
+
+        if (hasMoreOverall &&
+            !_initialVodPrefetchTriggered &&
+            series.length < _initialPrefetchTarget) {
+          _initialVodPrefetchTriggered = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(_prefetchInitialSeries());
+          });
         }
 
         final displaySeries =

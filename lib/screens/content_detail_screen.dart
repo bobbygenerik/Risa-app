@@ -169,8 +169,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               metadata: metadata,
               onWatchPressed: _handlePlayPressed,
               primaryButtonFocusNode: _playButtonFocus,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+              trailing: Wrap(
+                spacing: context.spacingSm(),
+                runSpacing: context.spacingSm(),
                 children: [
                   Consumer<ContentProvider>(
                     builder: (context, contentProvider, child) {
@@ -194,7 +195,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       );
                     },
                   ),
-                  SizedBox(width: context.spacingSm()),
                   BrandSecondaryButton(
                     focusNode: _downloadButtonFocus,
                     onPressed: () {

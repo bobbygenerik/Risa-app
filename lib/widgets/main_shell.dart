@@ -469,6 +469,12 @@ class _MainShellState extends State<MainShell> {
 
     final currentFocus = FocusManager.instance.primaryFocus;
 
+    if (event.logicalKey == LogicalKeyboardKey.goBack ||
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      _handleBackNavigation();
+      return KeyEventResult.handled;
+    }
+
     // Handle left arrow key - open sidebar if focused on content at left edge
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       // If we're focused on content (not sidebar), try to open sidebar

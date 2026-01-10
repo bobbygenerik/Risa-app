@@ -11,6 +11,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
 /// Uses EPG data to get the current program, then fetches artwork from TMDB.
@@ -218,12 +219,21 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
                 fit: widget.fit,
                 memCacheWidth: cacheWidth,
                 memCacheHeight: cacheHeight,
+                imageBuilder: (context, imageProvider) {
+                  ImageLoadProbe.recordSuccess(_artworkUrl!, 'program_artwork');
+                  return Image(
+                    image: imageProvider,
+                    fit: widget.fit,
+                  );
+                },
                 placeholder: (context, url) =>
                     widget.placeholder ??
                     Icon(Icons.tv, size: context.tvIconSize(32)),
-                errorWidget: (context, url, error) =>
-                    widget.errorWidget ??
-                    Icon(Icons.tv, size: context.tvIconSize(32)),
+                errorWidget: (context, url, error) {
+                  ImageLoadProbe.recordFailure(url, 'program_artwork', error);
+                  return widget.errorWidget ??
+                      Icon(Icons.tv, size: context.tvIconSize(32));
+                },
               )
             : (widget.placeholder ??
                 Icon(Icons.tv, size: context.tvIconSize(32))),

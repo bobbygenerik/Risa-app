@@ -248,8 +248,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return CompatPopScope(
       onWillPop: () async {
-        if (await _confirmLeaveWhileLoading()) {
-          context.go('/home');
+        final router = GoRouter.of(context);
+        final shouldLeave = await _confirmLeaveWhileLoading();
+        if (!context.mounted) {
+          return false;
+        }
+        if (shouldLeave) {
+          router.go('/home');
         }
         return false;
       },
@@ -283,8 +288,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _handleBackToHome() async {
-    if (await _confirmLeaveWhileLoading()) {
-      context.go('/home');
+    final router = GoRouter.of(context);
+    final shouldLeave = await _confirmLeaveWhileLoading();
+    if (!context.mounted) {
+      return;
+    }
+    if (shouldLeave) {
+      router.go('/home');
     }
   }
 
