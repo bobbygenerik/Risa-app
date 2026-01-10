@@ -175,7 +175,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   
   // Timer for EPG loading timeout fallback
   late final DateTime _initTime;
-  static const Duration _epgLoadingTimeout = Duration(seconds: 5);
 
 
   @override
@@ -775,7 +774,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           return FutureBuilder<List<Channel>>(
             future: _previewFuture,
             builder: (context, snapshot) {
-              final previewList = snapshot.data ?? channelProvider.channels;
+              final previewList =
+                  (snapshot.data != null && snapshot.data!.isNotEmpty)
+                      ? snapshot.data!
+                      : channelProvider.channels;
               if (previewList.isEmpty) {
                 return _buildSkeletonLoader();
               }
@@ -786,50 +788,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   // Try to find channels with EPG data ready
                   final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
                   
-                  // COLD START FIX: If no EPG-ready channels, fall back to showing
-                  // channels without EPG data rather than showing skeleton indefinitely.
-                  // This ensures the UI always shows content when channels are available.
-                  final List<Channel> displayChannels;
+                  // Only show channels that have EPG data.
                   if (readyChannels.isEmpty) {
-                    // Check if EPG service is still loading or if it's truly empty
-                    final isEpgLoading = epgService.isLoading || epgService.isParsing || epgService.isDownloading;
-                    
-                    // Calculate time since init - show skeleton only briefly while EPG loads
+                    if (epgService.error != null &&
+                        epgService.error!.isNotEmpty) {
+                      return _buildEpgError(epgService.error!);
+                    }
+                    final isEpgLoading = epgService.isLoading ||
+                        epgService.isParsing ||
+                        epgService.isDownloading;
                     final timeSinceInit = DateTime.now().difference(_initTime);
-                    final withinTimeout = timeSinceInit < _epgLoadingTimeout;
-                    
-                    // If EPG is loading AND we're within the timeout window, show skeleton
-                    // Otherwise, proceed with fallback to show content
-                    if (isEpgLoading && withinTimeout) {
-                      debugLog('LiveTV: EPG loading, within timeout (${timeSinceInit.inMilliseconds}ms) - showing skeleton');
-                      return _buildSkeletonLoader();
+                    if (isEpgLoading) {
+                      debugLog(
+                          'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
                     }
-                    
-                    debugLog('LiveTV: EPG timeout reached or not loading - using fallback (isEpgLoading=$isEpgLoading, timeSinceInit=${timeSinceInit.inSeconds}s)');
-                    
-                    // EPG not loading OR we've been waiting too long - use fallback
-                    // Take channels that aren't explicitly hidden
-                    displayChannels = previewList.where((channel) {
-                      final channelId = channel.tvgId ?? channel.id;
-                      return !epgService.shouldHideChannel(
-                        channelId,
-                        channelName: channel.name,
-                      );
-                    }).toList();
-                    
-                    // If all channels are hidden, fall back to showing some anyway
-                    if (displayChannels.isEmpty && previewList.isNotEmpty) {
-                      displayChannels.addAll(previewList.take(10));
-                    }
-                    
-                    if (displayChannels.isEmpty) {
-                      return _buildSkeletonLoader();
-                    }
-                    
-                    debugLog('LiveTV: Using fallback channels without EPG (${displayChannels.length} channels)');
-                  } else {
-                    displayChannels = readyChannels;
+                    return _buildSkeletonLoader();
                   }
+
+                  final displayChannels = readyChannels;
                   
                   // Handle Stable ID vs Index
                   if (_featuredChannelId != null) {
@@ -1053,15 +1029,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           epgService.isParsing ||
           epgService.isDownloading;
       final timeSinceInit = DateTime.now().difference(_initTime);
-      if (isEpgLoading && timeSinceInit < _epgLoadingTimeout) {
+      if (isEpgLoading) {
         debugLog(
             'LiveTV: Hero waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
-        return _buildSkeletonLoader();
       }
+      return _buildSkeletonLoader();
     }
 
-    final selectionPool =
-        epgHeroCandidates.isNotEmpty ? epgHeroCandidates : heroCandidates;
+    final selectionPool = epgHeroCandidates;
     _lastHeroCandidateCount = selectionPool.length;
     // Removed state mutation of _featuredIndex from build method to avoid infinite loops
     // Safe indexing is handled below with modulo operator
@@ -1307,6 +1282,40 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }),
         ),
       ],
+    );
+  }
+
+  Widget _buildEpgError(String message) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'EPG error',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: context.tvSpacing(8)),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: context.tvSpacing(24)),
+            GoToSettingsButton(
+              onPressed: _goToSettings,
+              focusNode: _settingsButtonFocus,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
