@@ -172,11 +172,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _pauseArtworkFetching = false;
   bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
+  
+  // Timer for EPG loading timeout fallback
+  late final DateTime _initTime;
+  static const Duration _epgLoadingTimeout = Duration(seconds: 5);
 
 
   @override
   void initState() {
     super.initState();
+    _initTime = DateTime.now(); // Track init time for EPG loading timeout
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     _fanartEnabled = true;
     _sportsDbEnabled = true;
@@ -781,13 +786,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   // Try to find channels with EPG data ready
                   final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
                   
-                  // USER REQUEST: Show skeletons until Hero and Featured row have EPG data
-                  // This ensures a "premium" first impression.
+                  // COLD START FIX: If no EPG-ready channels, fall back to showing
+                  // channels without EPG data rather than showing skeleton indefinitely.
+                  // This ensures the UI always shows content when channels are available.
+                  final List<Channel> displayChannels;
                   if (readyChannels.isEmpty) {
-                     return _buildSkeletonLoader();
+                    // Check if EPG service is still loading or if it's truly empty
+                    final isEpgLoading = epgService.isLoading || epgService.isParsing || epgService.isDownloading;
+                    
+                    // Calculate time since init - show skeleton only briefly while EPG loads
+                    final timeSinceInit = DateTime.now().difference(_initTime);
+                    final withinTimeout = timeSinceInit < _epgLoadingTimeout;
+                    
+                    // If EPG is loading AND we're within the timeout window, show skeleton
+                    // Otherwise, proceed with fallback to show content
+                    if (isEpgLoading && withinTimeout) {
+                      debugLog('LiveTV: EPG loading, within timeout (${timeSinceInit.inMilliseconds}ms) - showing skeleton');
+                      return _buildSkeletonLoader();
+                    }
+                    
+                    debugLog('LiveTV: EPG timeout reached or not loading - using fallback (isEpgLoading=$isEpgLoading, timeSinceInit=${timeSinceInit.inSeconds}s)');
+                    
+                    // EPG not loading OR we've been waiting too long - use fallback
+                    // Take channels that aren't explicitly hidden
+                    displayChannels = previewList.where((channel) {
+                      final channelId = channel.tvgId ?? channel.id;
+                      return !epgService.shouldHideChannel(
+                        channelId,
+                        channelName: channel.name,
+                      );
+                    }).toList();
+                    
+                    // If all channels are hidden, fall back to showing some anyway
+                    if (displayChannels.isEmpty && previewList.isNotEmpty) {
+                      displayChannels.addAll(previewList.take(10));
+                    }
+                    
+                    if (displayChannels.isEmpty) {
+                      return _buildSkeletonLoader();
+                    }
+                    
+                    debugLog('LiveTV: Using fallback channels without EPG (${displayChannels.length} channels)');
+                  } else {
+                    displayChannels = readyChannels;
                   }
-
-                  final displayChannels = readyChannels;
                   
                   // Handle Stable ID vs Index
                   if (_featuredChannelId != null) {
@@ -4315,7 +4357,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final isChannelLogoFallback = heroImage == featuredChannel.logoUrl;
 
     if (!hasHeroImage) {
-      return Positioned.fill(
+      return SizedBox.expand(
         child: DecoratedBox(
           decoration: heroGradient,
           child: heroFallback,
@@ -4323,7 +4365,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
     }
 
-    return Positioned.fill(
+    return SizedBox.expand(
       child: DecoratedBox(
         decoration: heroGradient,
         child: LayoutBuilder(
@@ -4340,7 +4382,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return Stack(
                 children: [
                   // Blurred background
-                  Positioned.fill(
+                  SizedBox.expand(
                     child: CachedNetworkImage(
                       imageUrl: normalizedHeroUrl,
                       httpHeaders: HttpClientService().imageHeaders,
@@ -4409,30 +4451,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
             if (isExplicitBackdrop) {
               // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
-              return CachedNetworkImage(
-                imageUrl: normalizedHeroUrl,
-                httpHeaders: HttpClientService().imageHeaders,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
-                memCacheWidth: cacheWidth,
-                memCacheHeight: cacheHeight,
-                imageBuilder: (context, imageProvider) {
-                  _markHeroImageCached(normalizedHeroUrl);
-                  return Image(
-                    image: imageProvider,
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.high,
-                  );
-                },
-                placeholder: (_, __) => Container(
-                  color: AppTheme.darkBackground,
+              return SizedBox.expand(
+                child: CachedNetworkImage(
+                  imageUrl: normalizedHeroUrl,
+                  httpHeaders: HttpClientService().imageHeaders,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  memCacheWidth: cacheWidth,
+                  memCacheHeight: cacheHeight,
+                  imageBuilder: (context, imageProvider) {
+                    _markHeroImageCached(normalizedHeroUrl);
+                    return Image(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.high,
+                    );
+                  },
+                  placeholder: (_, __) => Container(
+                    color: AppTheme.darkBackground,
+                  ),
+                  errorWidget: (_, url, error) {
+                    logHandshakeIfNeeded(url, error,
+                        context: 'LiveTV hero backdrop');
+                    return heroFallback;
+                  },
+                  fadeInDuration: const Duration(milliseconds: 300),
                 ),
-                errorWidget: (_, url, error) {
-                  logHandshakeIfNeeded(url, error,
-                      context: 'LiveTV hero backdrop');
-                  return heroFallback;
-                },
-                fadeInDuration: const Duration(milliseconds: 300),
               );
             }
 

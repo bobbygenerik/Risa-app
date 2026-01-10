@@ -766,10 +766,10 @@ class _MyAppState extends State<MyApp> {
               ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
-              // Defer playlist loading until after first frame is rendered
+              // Defer playlist loading minimally - DB load is fast
               _runDeferred(
                 provider.autoLoadPlaylist,
-                delay: const Duration(milliseconds: 1500),
+                delay: const Duration(milliseconds: 100),
               );
               return provider;
             },

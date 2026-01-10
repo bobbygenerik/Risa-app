@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -9,7 +7,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 
 /// Standardized component for the Hero section information overlay
-/// Designed to mimic premium streaming apps like Netflix/Disney+
+/// Uses transparent style matching Live TV - no backdrop blur/glass effect
 class HeroInfoBox extends StatelessWidget {
   final String title;
   final String? description;
@@ -45,7 +43,6 @@ class HeroInfoBox extends StatelessWidget {
     final compactButtonPadding =
         const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
     final maxHeight = MediaQuery.of(context).size.height * 0.45;
-    final descriptionMaxHeight = context.spacingXl() * 1.5;
     final titleStyle = AppTypography.heroTitle(context).copyWith(
       shadows: [
         Shadow(
@@ -79,30 +76,13 @@ class HeroInfoBox extends StatelessWidget {
         maxWidth: context.heroInfoWidth(),
         maxHeight: maxHeight,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.darkBackground.withAlpha((0.95 * 255).round()),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            padding: EdgeInsets.all(context.spacingSm()),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      // Transparent style matching Live TV - no backdrop blur/glass
+      child: Container(
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             // Channel/Brand Identifier if provided
             if (channelLogoUrl != null) ...[
               Container(
@@ -138,43 +118,14 @@ class HeroInfoBox extends StatelessWidget {
               SizedBox(height: context.spacingSm()),
             ],
 
-            // Description
+            // Description - simplified for transparent overlay
             if (description != null && description!.isNotEmpty) ...[
-              SizedBox(
-                height: descriptionMaxHeight,
-                child: ClipRect(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Text(
-                          description!,
-                          style: descriptionStyle,
-                          softWrap: true,
-                        ),
-                      ),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: context.spacingMd(),
-                        child: IgnorePointer(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  AppTheme.darkBackground
-                                      .withAlpha((0.85 * 255).round()),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              Flexible(
+                child: Text(
+                  description!,
+                  style: descriptionStyle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               SizedBox(height: context.spacingMd()),
@@ -257,8 +208,6 @@ class HeroInfoBox extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  ),
-);
+    );
   }
 }

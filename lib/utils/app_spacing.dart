@@ -96,14 +96,14 @@ extension AppSpacingExtension on BuildContext {
   double gridSpacing() => tvSpacing(AppSpacing.gridSpacing);
   double cardSpacing() => tvSpacing(AppSpacing.cardSpacing);
   double rowSpacing() => tvSpacing(AppSpacing.rowSpacing);
-  double cardGap() => tvSpacing(AppSpacing.cardGap);
+  double cardGap() => tvSpacing(16.0); // Increased from 12 for better spacing
 
-  // Responsive card dimensions - increased for better streaming app feel
+  // Responsive card dimensions - sized to show 5-6 cards per row like Netflix/Disney+
   double cardWidth() {
     final screenWidth = MediaQuery.of(this).size.width;
     final isLandscape = screenWidth > MediaQuery.of(this).size.height;
-    // Show fewer cards per row (larger cards) like major streaming apps
-    return isLandscape ? (screenWidth / 4.5) : (screenWidth / 2.6);
+    // Show ~5-6 cards per row for better content discovery (Netflix-like)
+    return isLandscape ? (screenWidth / 6.5) : (screenWidth / 2.8);
   }
 
   double cardHeight() => cardWidth() * AppSpacing.cardPortraitRatio;

@@ -1852,6 +1852,17 @@ class ChannelProvider with ChangeNotifier {
             _rebuildChannelCaches();
             _isLoading = false;
             _hasLoadedPlaylist = true;
+            
+            // CRITICAL: Pre-compute categories immediately so UI can display rows
+            // without waiting for lazy computation. This is the key fix for cold start.
+            _invalidateCategoryCaches();
+            unawaited(_computeCategoriesAsync());
+            
+            // CRITICAL: Trigger EPG service to load from its DB cache
+            // Without this, hasProgramsForChannel() returns false for all channels
+            _updateEpgAllowedChannels();
+            _scheduleEpgRefresh(forceRefresh: false);
+            
             notifyListeners();
             StartupProbe.mark('ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
             
@@ -1864,12 +1875,12 @@ class ChannelProvider with ChangeNotifier {
                 );
                 _channelMaps.addAll(more);
                 _rebuildChannelCaches();
+                _invalidateCategoryCaches();
+                unawaited(_computeCategoriesAsync());
                 _updateEpgAllowedChannels();
                 notifyListeners();
                 debugLog('ChannelProvider: Background load of ${more.length} remaining channels complete');
               }());
-            } else {
-              _updateEpgAllowedChannels();
             }
             return;
           }

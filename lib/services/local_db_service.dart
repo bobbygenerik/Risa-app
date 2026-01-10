@@ -23,21 +23,25 @@ class LocalDbService {
   bool get isReady => _isInit && _db != null;
 
   Future<String> _resolveDbPath() async {
-    final cacheDir = await getApplicationCacheDirectory();
-    final cachePath = p.join(cacheDir.path, 'iptv_local.db');
-    final cacheFile = File(cachePath);
-    if (!await cacheFile.exists()) {
-      // Best-effort migration from legacy documents dir.
-      final docsDir = await getApplicationDocumentsDirectory();
-      final docsPath = p.join(docsDir.path, 'iptv_local.db');
-      final docsFile = File(docsPath);
-      if (await docsFile.exists()) {
+    // Use documents directory - survives cache clears
+    final docsDir = await getApplicationDocumentsDirectory();
+    final docsPath = p.join(docsDir.path, 'iptv_local.db');
+    final docsFile = File(docsPath);
+    
+    if (!await docsFile.exists()) {
+      // Migrate from cache directory if it exists there (previous incorrect location)
+      final cacheDir = await getApplicationCacheDirectory();
+      final cachePath = p.join(cacheDir.path, 'iptv_local.db');
+      final cacheFile = File(cachePath);
+      if (await cacheFile.exists()) {
         try {
-          await docsFile.copy(cachePath);
+          await cacheFile.copy(docsPath);
+          // Clean up old cache location after successful migration
+          await cacheFile.delete();
         } catch (_) {}
       }
     }
-    return cachePath;
+    return docsPath;
   }
 
   Future<void> init() async {

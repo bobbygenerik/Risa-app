@@ -779,84 +779,89 @@ class _MoviesScreenState extends State<MoviesScreen>
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 alignment: Alignment.topCenter,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AnimatedContainer(
-                      duration: TVFocusStyle.animationDuration,
-                      curve: TVFocusStyle.animationCurve,
-                      width: cardWidth,
-                      height: cardHeight,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.cardBackground,
-                        border: isFocused
-                            ? Border.all(color: AppTheme.focusBorder, width: 3)
-                            : null,
-                        boxShadow: isFocused
-                            ? TVFocusStyle.focusedShadow
-                            : TVFocusStyle.defaultShadow,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          children: [
-                            Container(
-                              color: AppTheme.cardBackground,
-                              child: VodCardImage(
-                                content: movie,
-                                fit: BoxFit.fill,
-                                allowPrefetch: allowPrefetch,
-                                placeholder: _buildPlaceholder(movie.title),
-                              ),
-                            ),
-                            if (movie.addedDate != null &&
-                                DateTime.now()
-                                        .difference(movie.addedDate!)
-                                        .inDays <
-                                    14)
-                              const Positioned(
-                                top: 8,
-                                right: 8,
-                                child: BrandBadge.newContent(fontSize: 8),
-                              ),
-                            if (movie.watchProgress != null &&
-                                movie.watchProgress! > 0)
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: LinearProgressIndicator(
-                                  value: movie.watchProgress!,
-                                  backgroundColor: Colors.grey[800],
-                                  color: AppTheme.primaryBlue,
-                                  minHeight: 4,
+                child: SizedBox(
+                  width: cardWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedContainer(
+                        duration: TVFocusStyle.animationDuration,
+                        curve: TVFocusStyle.animationCurve,
+                        width: cardWidth,
+                        height: cardHeight,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.cardBackground,
+                          border: isFocused
+                              ? Border.all(color: AppTheme.focusBorder, width: 3)
+                              : null,
+                          boxShadow: isFocused
+                              ? TVFocusStyle.focusedShadow
+                              : TVFocusStyle.defaultShadow,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            children: [
+                              Container(
+                                color: AppTheme.cardBackground,
+                                child: VodCardImage(
+                                  content: movie,
+                                  fit: BoxFit.fill,
+                                  allowPrefetch: allowPrefetch,
+                                  placeholder: _buildPlaceholder(movie.title),
                                 ),
                               ),
-                          ],
+                              if (movie.addedDate != null &&
+                                  DateTime.now()
+                                          .difference(movie.addedDate!)
+                                          .inDays <
+                                      14)
+                                const Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: BrandBadge.newContent(fontSize: 8),
+                                ),
+                              if (movie.watchProgress != null &&
+                                  movie.watchProgress! > 0)
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: LinearProgressIndicator(
+                                    value: movie.watchProgress!,
+                                    backgroundColor: Colors.grey[800],
+                                    color: AppTheme.primaryBlue,
+                                    minHeight: 4,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      movie.title,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (movie.year != null || movie.rating != null)
+                      const SizedBox(height: 8),
                       Text(
-                        '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
+                        movie.title,
                         style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 10,
+                          color: AppTheme.textPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                  ],
+                      if (movie.year != null || movie.rating != null)
+                        Text(
+                          '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1008,7 +1013,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       _heroImageSkipCount = 0;
     }
     final heroHeight = context.heroHeight();
-    final cardPeek = 140.0;
+    final cardPeek = 80.0; // Match Live TV for visual parity
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final screenSize = MediaQuery.of(context).size;

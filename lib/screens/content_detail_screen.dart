@@ -443,7 +443,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               );
             },
             separatorBuilder: (context, index) =>
-                SizedBox(width: context.spacingSm()),
+                SizedBox(width: context.cardGap()),
             itemCount: episodes.length,
           ),
         );
@@ -568,7 +568,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           return const SizedBox.shrink();
         }
         final cardWidth = context.cardWidth().clamp(180.0, 320.0);
-        final cardHeight = cardWidth * 1.4;
+        final cardHeight = cardWidth * AppSpacing.cardPortraitRatio;
         return Padding(
           padding: EdgeInsets.only(
             left: context.spacingXl(),
@@ -587,7 +587,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   scrollDirection: Axis.horizontal,
                   itemCount: recommendations.length,
                   separatorBuilder: (context, index) =>
-                      SizedBox(width: context.spacingSm()),
+                      SizedBox(width: context.cardGap()),
                   itemBuilder: (context, index) {
                     final item = recommendations[index];
                     return _buildRecommendationCard(
