@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:iptv_player/providers/channel_provider.dart';
 
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
@@ -137,18 +139,7 @@ class _MainShellState extends State<MainShell> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          final location = GoRouterState.of(context).uri.path;
-          final lastLocation = _lastLocation;
-          if (location == '/settings' ||
-              (lastLocation != null && lastLocation.startsWith('/settings'))) {
-            context.go('/home');
-            return;
-          }
-          if (location != '/home') {
-            context.go('/home');
-          } else {
-            context.go('/exit');
-          }
+          _handleBackNavigation();
         }
       },
       child: Focus(
@@ -319,6 +310,51 @@ class _MainShellState extends State<MainShell> {
         ),
       ),
     );
+  }
+
+  void _handleBackNavigation() {
+    final location = GoRouterState.of(context).uri.path;
+    final lastLocation = _lastLocation;
+    if (location == '/settings' ||
+        (lastLocation != null && lastLocation.startsWith('/settings'))) {
+      context.go('/home');
+      return;
+    }
+    if (location != '/home') {
+      context.go('/home');
+      return;
+    }
+
+    final channelProvider = context.read<ChannelProvider>();
+    if (!channelProvider.isLoading) {
+      context.go('/exit');
+      return;
+    }
+
+    showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Playlist still saving'),
+          content: const Text(
+              'Saving is still in progress. Leaving now may interrupt it.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Stay'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Exit'),
+            ),
+          ],
+        );
+      },
+    ).then((leave) {
+      if (leave == true && mounted) {
+        context.go('/exit');
+      }
+    });
   }
 
   void _showSearchDialog() {

@@ -248,7 +248,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return CompatPopScope(
       onWillPop: () async {
-        context.go('/home');
+        if (await _confirmLeaveWhileLoading()) {
+          context.go('/home');
+        }
         return false;
       },
       child: SettingsLayout(
@@ -256,7 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         controller: _layoutController,
         selectedIndex: _selectedIndex,
         onCategorySelected: _handleCategorySelected,
-        onBackToHome: () => context.go('/home'),
+        onBackToHome: _handleBackToHome,
         onRequestContentFocus: _requestContentFocus,
         categories: const [
           SettingsCategory(title: 'General', icon: Icons.settings),
@@ -278,6 +280,41 @@ class _SettingsScreenState extends State<SettingsScreen>
         _contentScrollController.jumpTo(0);
       }
     });
+  }
+
+  Future<void> _handleBackToHome() async {
+    if (await _confirmLeaveWhileLoading()) {
+      context.go('/home');
+    }
+  }
+
+  Future<bool> _confirmLeaveWhileLoading() async {
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    if (!channelProvider.isLoading) {
+      return true;
+    }
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Playlist still saving'),
+          content: const Text(
+              'Saving is still in progress. Leaving now may interrupt it.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Stay'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 
   void _requestContentFocus() {

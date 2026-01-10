@@ -24,6 +24,7 @@ import '../services/tmdb_enrichment_service.dart';
 import 'package:iptv_player/services/local_db_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'playlist_loader.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -279,6 +280,27 @@ class ChannelProvider with ChangeNotifier {
 
   // Playlist loader manages download+isolate parsing and supports cancellation
   PlaylistLoader _playlistLoader = PlaylistLoader();
+
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  Future<bool> _setWakeLock(bool enable) async {
+    try {
+      if (enable) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+      return true;
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to set wakelock: $e');
+      return false;
+    }
+  }
 
   Future<void> _ensureDb() async {
     if (_dbDisabled) return;
@@ -1307,6 +1329,7 @@ class ChannelProvider with ChangeNotifier {
     _loadingStatus = 'Cancelled';
     _loadingProgress = 0.0;
     _isLoading = false;
+    unawaited(_setWakeLock(false));
     notifyListeners();
   }
 
@@ -1745,16 +1768,28 @@ class ChannelProvider with ChangeNotifier {
       return;
     }
     _autoLoadInProgress = true;
+    bool wakeLockEnabled = false;
 
     // Set loading immediately so UI shows loading state
     _isLoading = true;
+    _loadingStatus = 'Checking local cache...';
+    _loadingProgress = 0.05;
     notifyListeners();
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     try {
+      wakeLockEnabled = await _setWakeLock(true);
       await _loadWatchCounts();
       debugLog('ChannelProvider: Auto-loading playlist...');
-      await _ensureDb();
+      try {
+        _loadingStatus = 'Opening local database...';
+        _loadingProgress = 0.1;
+        notifyListeners();
+        await _ensureDb().timeout(const Duration(seconds: 4));
+      } catch (e) {
+        debugLog('ChannelProvider: DB init timeout or failure: $e');
+        _dbReady = false;
+      }
       final prefs = await SharedPreferences.getInstance();
       String? playlistType = prefs.getString('playlist_type');
       // If no legacy playlist type, fall back to saved playlists (active or first)
@@ -1836,11 +1871,65 @@ class ChannelProvider with ChangeNotifier {
       final cacheAge = cacheTimestamp != null
           ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
           : null;
+      int? expectedChannels;
+      int? expectedMovies;
+      int? expectedSeries;
+      if (cacheAge != null && cacheAge < 21600000) {
+        try {
+          final dir = await getApplicationDocumentsDirectory();
+          final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
+          if (await jsonCacheFile.exists()) {
+            final parsed = json.decode(await jsonCacheFile.readAsString())
+                as Map<String, dynamic>;
+            expectedChannels = _asInt(parsed['channelCount']);
+            expectedMovies = _asInt(parsed['movieCount']);
+            expectedSeries = _asInt(parsed['seriesCount']);
+          }
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to read JSON cache metadata: $e');
+        }
+      }
 
       // First, try to load from SQLite DB (the fastest for large playlists)
       if (_dbReady) {
-        final count = await _db.channelCount();
-        if (count > 0) {
+        bool skipDbLoad = false;
+        int count = 0;
+        try {
+          _loadingStatus = 'Loading from database...';
+          _loadingProgress = 0.15;
+          notifyListeners();
+          count = await _db.channelCount().timeout(const Duration(seconds: 4));
+          if (expectedChannels != null && expectedChannels > 0) {
+            if (count > 0 && count < expectedChannels) {
+              skipDbLoad = true;
+              debugLog(
+                  'ChannelProvider: DB cache incomplete ($count/$expectedChannels), falling back');
+            }
+          }
+          if (!skipDbLoad &&
+              ((expectedMovies != null && expectedMovies > 0) ||
+                  (expectedSeries != null && expectedSeries > 0))) {
+            final dbMovies =
+                await _db.movieCount().timeout(const Duration(seconds: 4));
+            final dbSeries =
+                await _db.seriesCount().timeout(const Duration(seconds: 4));
+            if ((expectedMovies != null && expectedMovies > 0 && dbMovies == 0) ||
+                (expectedSeries != null && expectedSeries > 0 && dbSeries == 0)) {
+              skipDbLoad = true;
+              debugLog(
+                  'ChannelProvider: DB VOD cache missing (movies=$dbMovies, series=$dbSeries), falling back');
+            }
+          }
+        } catch (e) {
+          skipDbLoad = true;
+          debugLog('ChannelProvider: DB load timeout/failure: $e');
+        }
+        if (skipDbLoad) {
+          _loadingStatus = 'Cache incomplete, reloading playlist...';
+          _loadingProgress = 0.2;
+          notifyListeners();
+        }
+        if (!skipDbLoad && count > 0) {
           debugLog('ChannelProvider: Found $count channels in DB, loading first chunk...');
           // Load first few thousand immediately for instant UI
           final initialLimit = 2000;
@@ -1894,6 +1983,9 @@ class ChannelProvider with ChangeNotifier {
 
         if (await jsonCacheFile.exists()) {
           try {
+            _loadingStatus = 'Loading cached playlist metadata...';
+            _loadingProgress = 0.25;
+            notifyListeners();
             debugLog('ChannelProvider: Loading from pre-parsed JSON cache...');
             // Optimization: read in chunks or use stream if possible, 
             // but for now let's at least handle the failure gracefully.
@@ -1930,13 +2022,26 @@ class ChannelProvider with ChangeNotifier {
           if (await file.exists()) {
             debugLog(
                 'ChannelProvider: Loading from M3U file cache (streaming parser)...');
+            _loadingStatus = 'Loading cached playlist...';
+            _loadingProgress = 0.3;
+            notifyListeners();
             final cacheLoadStart = DateTime.now();
 
             // Parse from file in isolate to avoid blocking main thread and OOM
             final parseStart = DateTime.now();
             final List<Map<String, dynamic>> allChannels = [];
+            DateTime lastCacheUiUpdate = DateTime.now();
             final parsed = await parsePlaylistCancelable(
               filePath: cacheFilePath,
+              onProgress: (count) {
+                _loadingStatus = 'Parsing cached playlist: $count channels';
+                _loadingProgress = 0.3 + (count / 20000).clamp(0.0, 0.6);
+                final now = DateTime.now();
+                if (now.difference(lastCacheUiUpdate).inMilliseconds > 500) {
+                  lastCacheUiUpdate = now;
+                  notifyListeners();
+                }
+              },
               onChannelsChunk: (chunk) => allChannels.addAll(chunk),
             );
             final parseDuration = DateTime.now().difference(parseStart);
@@ -1974,6 +2079,9 @@ class ChannelProvider with ChangeNotifier {
               channelsFile: parsed['channelsFile'] as String?,
             );
             if (_dbReady) {
+              _loadingStatus = 'Saving to database... don\'t close the app.';
+              _loadingProgress = 0.6;
+              notifyListeners();
               try {
                 await _db.clearChannels();
                 await _db.insertChannels(_channelMaps);
@@ -1993,6 +2101,9 @@ class ChannelProvider with ChangeNotifier {
                 .toList();
 
             if (_dbReady) {
+              _loadingStatus = 'Saving to database... don\'t close the app.';
+              _loadingProgress = 0.7;
+              notifyListeners();
               try {
                 await _db.clearVod();
                 await _db.insertMovies(movies.map((m) => m.toMap()).toList());
@@ -2141,6 +2252,9 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Auto-load playlist failed: $e');
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: failed ($e)');
     } finally {
+      if (wakeLockEnabled) {
+        await _setWakeLock(false);
+      }
       _autoLoadInProgress = false;
     }
   }
@@ -2185,6 +2299,7 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await _setWakeLock(true);
       debugLog(
           'ChannelProvider: Loading playlist from URL: $url (using PlaylistLoader)');
       // Cancel any prior loader job
@@ -2324,6 +2439,12 @@ class ChannelProvider with ChangeNotifier {
       _loadingProgress = 0.8;
       notifyListeners();
 
+      if (_dbReady) {
+        _loadingStatus = 'Saving to database... don\'t close the app.';
+        _loadingProgress = 0.85;
+        notifyListeners();
+      }
+
       final mapStart = DateTime.now();
       final List<Content> moviesPreview = [];
       final List<Content> seriesPreview = [];
@@ -2360,6 +2481,9 @@ class ChannelProvider with ChangeNotifier {
 
         if (_dbReady) {
           try {
+            _loadingStatus = 'Saving to database... don\'t close the app.';
+            _loadingProgress = 0.85;
+            notifyListeners();
             await _db.clearVod();
             await _db.insertMovies(movies.map((m) => m.toMap()).toList());
             await _db.insertSeries(series.map((s) => s.toMap()).toList());
@@ -2476,6 +2600,8 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       rethrow; // Re-throw so UI can handle it
+    } finally {
+      await _setWakeLock(false);
     }
   }
 
@@ -2503,6 +2629,7 @@ class ChannelProvider with ChangeNotifier {
     }
 
     try {
+      await _setWakeLock(true);
       debugLog(
           'ChannelProvider: Using direct HttpClient with improved TLS handling');
 
@@ -2558,6 +2685,9 @@ class ChannelProvider with ChangeNotifier {
       unawaited(_primeXtreamLiveMetadata(url));
       if (_dbReady) {
         try {
+          _loadingStatus = 'Saving to database... don\'t close the app.';
+          _loadingProgress = 0.7;
+          notifyListeners();
           await _db.clearChannels();
           await _db.insertChannels(_channelMaps);
           debugLog(
@@ -2587,6 +2717,9 @@ class ChannelProvider with ChangeNotifier {
 
       if (_dbReady) {
         try {
+          _loadingStatus = 'Saving to database... don\'t close the app.';
+          _loadingProgress = 0.8;
+          notifyListeners();
           await _db.clearVod();
           await _db.insertMovies(movies.map((m) => m.toMap()).toList());
           await _db.insertSeries(series.map((s) => s.toMap()).toList());
@@ -2670,6 +2803,7 @@ class ChannelProvider with ChangeNotifier {
       notifyListeners();
       rethrow;
     } finally {
+      await _setWakeLock(false);
       httpClient.close();
     }
   }
