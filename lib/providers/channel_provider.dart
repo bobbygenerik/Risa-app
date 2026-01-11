@@ -263,6 +263,12 @@ class ChannelProvider with ChangeNotifier {
   bool get isGroupingChannels => _isGroupingChannels;
   bool get hasComputedCategories => _cachedCategories != null;
 
+  Future<List<String>> forceRecomputeCategories() async {
+    if (_isGroupingChannels) return _cachedCategories ?? const [];
+    _invalidateCategoryCaches();
+    return getAllCategoryNamesAsync();
+  }
+
   // Playlist loader manages download+isolate parsing and supports cancellation
   PlaylistLoader _playlistLoader = PlaylistLoader();
 

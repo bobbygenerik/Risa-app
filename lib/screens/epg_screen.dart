@@ -166,7 +166,13 @@ class _EPGScreenState extends State<EPGScreen>
     try {
       final channelProvider =
           Provider.of<ChannelProvider>(context, listen: false);
-      final categories = await channelProvider.getAllCategoryNamesAsync();
+      var categories = await channelProvider.getAllCategoryNamesAsync();
+      if (categories.isEmpty &&
+          channelProvider.hasChannels &&
+          channelProvider.hasComputedCategories &&
+          !channelProvider.isGroupingChannels) {
+        categories = await channelProvider.forceRecomputeCategories();
+      }
       if (!mounted) return;
       if (categories.isNotEmpty) {
         setState(() {

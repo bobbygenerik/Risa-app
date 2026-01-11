@@ -203,6 +203,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _isIdle = false;
   static const Duration _idleThreshold = Duration(seconds: 30);
   static const Duration _idleCheckInterval = Duration(seconds: 6);
+  Timer? _artworkRetryWindowTimer;
+  bool _artworkRetryWindowActive = false;
+  DateTime? _lastArtworkRetryWindow;
 
 
   @override
@@ -511,12 +514,57 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
+  void _startArtworkRetryWindow() {
+    if (_artworkRetryWindowActive || _categoryNames.isEmpty) return;
+    if (_lastArtworkRetryWindow != null &&
+        DateTime.now().difference(_lastArtworkRetryWindow!) <
+            const Duration(seconds: 15)) {
+      return;
+    }
+    _artworkRetryWindowActive = true;
+    _lastArtworkRetryWindow = DateTime.now();
+    _artworkRetryWindowTimer?.cancel();
+    _artworkRetryWindowTimer = Timer(const Duration(seconds: 8), () {
+      _artworkRetryWindowActive = false;
+    });
+    _artworkRetrySweep();
+  }
+
+  void _artworkRetrySweep() {
+    if (!_artworkRetryWindowActive || _isIdle) return;
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    final maxCategories = math.min(4, _categoryNames.length);
+    for (var i = 0; i < maxCategories; i++) {
+      final category = _categoryNames[i];
+      final channels = _categoryChannelCache[category];
+      if (channels == null || channels.isEmpty) continue;
+      final limit = math.min(channels.length, 10);
+      for (var j = 0; j < limit; j++) {
+        final channel = channels[j];
+        final channelId = channel.tvgId ?? channel.id;
+        final program = epgService.getCurrentProgram(
+          channelId,
+          channelName: channel.name,
+          groupTitle: channel.groupTitle,
+        );
+        if (program == null) continue;
+        _ensureFreshProgramArtwork(
+          program,
+          channel,
+          highPriority: true,
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     FocusManager.instance.removeListener(_handleFocusChange);
     _stopIdleTimer();
     _stopSkeletonWatchdog();
+    _artworkRetryWindowTimer?.cancel();
     _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
     _artworkThrottle?.cancel();
@@ -940,6 +988,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     }
                   }
                 }
+                _startArtworkRetryWindow();
                 if (_visibleCategoryCount < _initialCategoryPrefetchCount) {
                   _visibleCategoryCount = math.min(
                     _initialCategoryPrefetchCount,
@@ -3649,6 +3698,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     final normalizedImageUrl =
         imageUrl == null ? null : normalizeImageUrl(imageUrl);
+    final isLogoBackdrop = normalizedImageUrl != null &&
+        _matchesChannelLogo(normalizedImageUrl, channel);
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final cacheWidth = math.min(800, (cardWidth * dpr).round());
     final cacheHeight = math.min(800, (cardHeight * dpr).round());
@@ -3705,19 +3756,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   )
                 else
                   Positioned.fill(child: fallback),
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: SizedBox(
-                    width: 40,
-                    height: 24,
-                    child: _buildChannelLogoWidget(
-                      channel,
-                      logoCacheWidth,
-                      logoCacheHeight,
+                if (!isLogoBackdrop)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: SizedBox(
+                      width: 40,
+                      height: 24,
+                      child: _buildChannelLogoWidget(
+                        channel,
+                        logoCacheWidth,
+                        logoCacheHeight,
+                      ),
                     ),
                   ),
-                ),
                 // Data quality indicators
                 if (currentProgram == null)
                   const Positioned(
@@ -4621,6 +4673,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
           }
 
+          Widget buildLogoBlock(Widget child) {
+            return SizedBox(
+              width: maxLogoWidth,
+              height: maxLogoHeight,
+              child: Align(
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Transform.translate(
+                    offset: const Offset(0, -4),
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          }
+
           Widget buildFallbackContent() {
             final labelText = label;
             if (labelText == null || labelText.isEmpty) {
@@ -4630,7 +4699,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  fallbackIcon,
+                  buildLogoBlock(fallbackIcon),
                   const SizedBox(height: 12),
                   Text(
                     labelText,
@@ -4671,7 +4740,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    logo,
+                    buildLogoBlock(logo),
                     const SizedBox(height: 12),
                     Text(
                       labelText,
