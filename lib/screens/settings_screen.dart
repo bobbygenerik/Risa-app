@@ -5,11 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
-import 'package:iptv_player/services/opensubtitles_service.dart';
-import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
-import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/snackbar_utils.dart';
 import 'dart:convert';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
@@ -21,7 +19,6 @@ import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/providers/content_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/services/xtream_codes_service.dart';
@@ -52,18 +49,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   late final TextEditingController _customEpgUrlController;
   late final TextEditingController _secondaryEpgUrlController;
 
-  // Integration Settings
-  late final TextEditingController _realDebridApiKeyController;
-  late final TextEditingController _openSubtitlesUsernameController;
-  late final TextEditingController _openSubtitlesPasswordController;
-
   // Boolean settings
   bool _hardwareAcceleration = true;
   bool _hardwareDecoding = true;
   bool _autoPlayNextEpisode = true;
   bool _rememberPlaybackPosition = true;
-  bool _realDebridEnabled = false;
-  bool _openSubtitlesEnabled = false;
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _heroVideoPreview = false;
@@ -81,9 +71,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _xtreamPasswordFocusNode = FocusNode();
   final FocusNode _customEpgUrlFocusNode = FocusNode();
   final FocusNode _secondaryEpgUrlFocusNode = FocusNode();
-  final FocusNode _realDebridApiKeyFocusNode = FocusNode();
-  final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
-  final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
 
   // Action Button Focus Nodes
   final FocusNode _loadM3uButtonFocusNode = FocusNode();
@@ -116,9 +103,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamPasswordController = TextEditingController();
     _customEpgUrlController = TextEditingController();
     _secondaryEpgUrlController = TextEditingController();
-    _realDebridApiKeyController = TextEditingController();
-    _openSubtitlesUsernameController = TextEditingController();
-    _openSubtitlesPasswordController = TextEditingController();
 
     // Add listeners
     _customEpgUrlController.addListener(_saveCustomEpgUrl);
@@ -141,18 +125,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       _secondaryEpgUrlController.text =
           prefs.getString('secondary_epg_url') ?? '';
       _detectedEpgUrl = prefs.getString('epg_url') ?? '';
-      _realDebridApiKeyController.text =
-          prefs.getString('realdebrid_api_key') ?? '';
-      _openSubtitlesUsernameController.text =
-          prefs.getString('opensubtitles_username') ?? '';
-      _openSubtitlesPasswordController.text =
-          prefs.getString('opensubtitles_password') ?? '';
-
       _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
       _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
       _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-      _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
-      _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
       _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
       _translationEnabled = prefs.getBool('translation_enabled') ?? false;
       _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
@@ -185,9 +160,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       _xtreamPasswordFocusNode,
       _customEpgUrlFocusNode,
       _secondaryEpgUrlFocusNode,
-      _realDebridApiKeyFocusNode,
-      _openSubtitlesUsernameFocusNode,
-      _openSubtitlesPasswordFocusNode,
       _loadM3uButtonFocusNode,
       _loadXtreamButtonFocusNode,
       _clearM3uButtonFocusNode,
@@ -220,12 +192,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _customEpgUrlController.dispose();
     _secondaryEpgUrlController.removeListener(_saveSecondaryEpgUrl);
     _secondaryEpgUrlController.dispose();
-    _realDebridApiKeyController.dispose();
-    _realDebridApiKeyFocusNode.dispose();
-    _openSubtitlesUsernameController.dispose();
-    _openSubtitlesUsernameFocusNode.dispose();
-    _openSubtitlesPasswordController.dispose();
-    _openSubtitlesPasswordFocusNode.dispose();
 
     _inputMethodFocusNode.dispose();
     _loadM3uButtonFocusNode.dispose();
@@ -382,13 +348,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
 
         // Playlist Status
-        Consumer2<ChannelProvider, ContentProvider>(
-          builder: (context, channelProvider, contentProvider, _) {
+        Consumer<ChannelProvider>(
+          builder: (context, channelProvider, _) {
             return FutureBuilder<List<dynamic>>(
               future: Future.wait([
                 channelProvider.getChannelCountAsync(),
-                channelProvider.getMoviesCountAsync(),
-                channelProvider.getSeriesCountAsync(),
                 _fetchXtreamPanelCounts(),
               ]),
               builder: (context, snapshot) {
@@ -396,22 +360,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final rawChannels = data != null
                     ? data[0] as int
                     : channelProvider.channelCount;
-                final rawMovies = data != null
-                    ? data[1] as int
-                    : contentProvider.movies.length;
-                final rawSeries = data != null
-                    ? data[2] as int
-                    : contentProvider.series.length;
                 final xtreamCounts =
-                    data != null ? data[3] as Map<String, int>? : null;
+                    data != null ? data[1] as Map<String, int>? : null;
 
                 final channels = xtreamCounts?['channels'] ?? rawChannels;
-                final movies = xtreamCounts?['movies'] ?? rawMovies;
-                final series = xtreamCounts?['series'] ?? rawSeries;
 
                 final hasChannels = channels > 0;
-                final hasContent = hasChannels || movies > 0 || series > 0;
-                final totalContent = channels + movies + series;
+                final hasContent = hasChannels;
+                final totalContent = channels;
                 final errorMessage = channelProvider.errorMessage;
                 final responsePreview = channelProvider.lastM3UContent;
 
@@ -485,7 +441,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                             if (hasContent) ...[
                               const SizedBox(height: 4),
                               Text(
-                                '${AppLocalizations.of(context)!.channelsCount(channels)} • ${AppLocalizations.of(context)!.moviesCount(movies)} • ${AppLocalizations.of(context)!.seriesCount(series)}',
+                                AppLocalizations.of(context)!
+                                    .channelsCount(channels),
                                 style: TextStyle(
                                   color: hasContent
                                       ? AppTheme.accentGreen
@@ -802,20 +759,21 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               onTap: _cycleVideoPlayerBackend,
             ),
-            SettingsActionTile(
-              title: AppLocalizations.of(context)!.exoPlayerSurface,
-              subtitle: AppLocalizations.of(context)!.surfaceViewDescription,
-              trailing: Text(
-                _exoPlayerSurfaceType == 'texture'
-                    ? 'TextureView'
-                    : 'SurfaceView',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+            if (_videoPlayerBackend == 'ExoPlayer')
+              SettingsActionTile(
+                title: AppLocalizations.of(context)!.exoPlayerSurface,
+                subtitle: AppLocalizations.of(context)!.surfaceViewDescription,
+                trailing: Text(
+                  _exoPlayerSurfaceType == 'texture'
+                      ? 'TextureView'
+                      : 'SurfaceView',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                onTap: _cycleExoPlayerSurfaceType,
               ),
-              onTap: _cycleExoPlayerSurfaceType,
-            ),
           ],
         ),
         SettingsGroup(
@@ -836,10 +794,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             SettingsSwitchTile(
               title: AppLocalizations.of(context)!.rememberPosition,
-              subtitle: AppLocalizations.of(context)!.resumeVods,
               value: _rememberPlaybackPosition,
               onChanged: (v) =>
-                  _handleSwitchTileChange('Remember Position VOD', v),
+                  _handleSwitchTileChange('Remember Position', v),
             ),
           ],
         ),
@@ -883,63 +840,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               icon: Icons.translate,
               onTap: _showLanguageModelsDialog,
             ),
-          ],
-        ),
-        SettingsGroup(
-          title: AppLocalizations.of(context)!.integration,
-          children: [
-            SettingsSwitchTile(
-              title: AppLocalizations.of(context)!.openSubtitles,
-              subtitle: AppLocalizations.of(context)!.autoDownloadSubtitles,
-              value: _openSubtitlesEnabled,
-              onChanged: (v) =>
-                  _handleSwitchTileChange('Enable OpenSubtitles', v),
-            ),
-            if (_openSubtitlesEnabled) ...[
-              SettingsInputTile(
-                label: AppLocalizations.of(context)!.username,
-                controller: _openSubtitlesUsernameController,
-                focusNode: _openSubtitlesUsernameFocusNode,
-                icon: Icons.person,
-              ),
-              SettingsInputTile(
-                label: AppLocalizations.of(context)!.password,
-                controller: _openSubtitlesPasswordController,
-                focusNode: _openSubtitlesPasswordFocusNode,
-                icon: Icons.lock,
-                obscureText: true,
-              ),
-              SettingsActionTile(
-                title: AppLocalizations.of(context)!.testConnection,
-                icon: Icons.check_circle_outline,
-                onTap: _testOpenSubtitlesConnection,
-              ),
-            ],
-          ],
-        ),
-        SettingsGroup(
-          title: AppLocalizations.of(context)!.streamingSources,
-          children: [
-            SettingsSwitchTile(
-              title: AppLocalizations.of(context)!.realDebrid,
-              subtitle: AppLocalizations.of(context)!.highSpeedStreaming,
-              value: _realDebridEnabled,
-              onChanged: (v) =>
-                  _handleSwitchTileChange('Enable Real-Debrid', v),
-            ),
-            if (_realDebridEnabled) ...[
-              SettingsInputTile(
-                label: 'API Key',
-                controller: _realDebridApiKeyController,
-                focusNode: _realDebridApiKeyFocusNode,
-                icon: Icons.vpn_key,
-              ),
-              SettingsActionTile(
-                title: AppLocalizations.of(context)!.validateApiKey,
-                icon: Icons.check_circle_outline,
-                onTap: _testRealDebridConnection,
-              ),
-            ],
           ],
         ),
       ],
@@ -1037,9 +937,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       await provider.loadPlaylistFromUrl(url);
-      final hasContent = provider.channelCount > 0 ||
-          provider.moviesCount > 0 ||
-          provider.seriesCount > 0;
+      final hasContent = provider.channelCount > 0;
       final error = provider.errorMessage;
       final responsePreview = provider.lastM3UContent;
       if (error != null && error.trim().isNotEmpty) {
@@ -1147,8 +1045,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         await provider.loadPlaylistFromUrl(playlistUrlUsed);
       }
       final hasContent = provider.channelCount > 0 ||
-          provider.moviesCount > 0 ||
-          provider.seriesCount > 0;
+          provider.channelCount > 0;
       final error = provider.errorMessage;
       final responsePreview = provider.lastM3UContent;
       if (error != null && error.trim().isNotEmpty) {
@@ -1204,11 +1101,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     _customEpgUrlController.clear();
     _secondaryEpgUrlController.clear();
     _detectedEpgUrl = '';
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('live_tv_program_artwork_title_cache_v1');
     await prefs.remove('live_tv_program_artwork_negative_cache_v1');
-    await Provider.of<IncrementalEpgService>(context, listen: false)
-        .clearAllData();
+    await epgService.clearAllData();
     setState(() {});
     _showMessage('EPG cleared.');
   }
@@ -1239,14 +1136,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         case 'Auto-play Next Episode':
           _autoPlayNextEpisode = newValue;
           break;
-        case 'Remember Position VOD':
+        case 'Remember Position':
           _rememberPlaybackPosition = newValue;
-          break;
-        case 'Enable OpenSubtitles':
-          _openSubtitlesEnabled = newValue;
-          break;
-        case 'Enable Real-Debrid':
-          _realDebridEnabled = newValue;
           break;
         case 'Enable Live Transcription':
           _transcriptionEnabled = newValue;
@@ -1271,22 +1162,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       case 'Auto-play Next Episode':
         await prefs.setBool('auto_play_next', newValue);
         break;
-      case 'Remember Position VOD':
+      case 'Remember Position':
         await prefs.setBool('remember_playback_position', newValue);
-        break;
-      case 'Enable OpenSubtitles':
-        await prefs.setBool('opensubtitles_enabled', newValue);
-        if (newValue && mounted) {
-          unawaited(Provider.of<OpenSubtitlesService>(context, listen: false)
-              .initialize());
-        }
-        break;
-      case 'Enable Real-Debrid':
-        await prefs.setBool('realdebrid_enabled', newValue);
-        if (newValue && mounted) {
-          unawaited(Provider.of<RealDebridService>(context, listen: false)
-              .initialize());
-        }
         break;
       case 'Enable Live Transcription':
         await prefs.setBool('transcription_enabled', newValue);
@@ -1434,36 +1311,16 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showMessage(String message) {
     if (mounted) {
-      showAppSnackBar(
-        context,
-        SnackBar(
-          content: Text(message, style: const TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFF1E2328),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      SnackbarUtils.show(context, message);
     }
   }
 
-  Future<void> _testOpenSubtitlesConnection() async {
-    // Implementation kept simple for brevity as logic is identical, verifying connection
-    await Provider.of<OpenSubtitlesService>(context, listen: false)
-        .initialize();
-    _showMessage('Testing connection...');
-  }
-
-  Future<void> _testRealDebridConnection() async {
-    unawaited(
-        Provider.of<RealDebridService>(context, listen: false).initialize());
-    _showMessage('Testing API Key...');
-  }
-
   void _showLanguageModelsDialog() {
-    context.push('/ai-models');
+    context.push('/translation-models');
   }
 
   void _showSpeechModelsDialog() {
-    context.push('/ai-models');
+    context.push('/whisper-models');
   }
 
   void _showManagePlaylistsDialog() {

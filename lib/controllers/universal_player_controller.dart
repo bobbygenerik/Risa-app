@@ -28,20 +28,14 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     String? backend, // Optional backend selection
     bool hardwareAcceleration = true,
   }) {
-    // Force ExoPlayer for MPEG-TS streams on Auto to avoid MediaKit audio-only issues.
+    // Default behavior for 'Auto': Always prefer MediaKit for stability and memory efficiency.
+    // ExoPlayer can cause OOM errors on some devices, so only use it when explicitly selected.
     final effectiveBackend = backend ?? 'Auto';
-    final uri = Uri.tryParse(url);
-    final path = uri?.path.toLowerCase() ?? url.toLowerCase();
-    if (effectiveBackend == 'Auto' && path.endsWith('.ts')) {
-      return NativeExoPlayerController(url, autoPlay: autoPlay);
-    }
-
-    // Default behavior for 'Auto': Prefer MediaKit for stability unless user explicitly picks ExoPlayer.
     if (effectiveBackend == 'ExoPlayer') {
        return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
     
-    // Default to MediaKit (mpv) for maximum codec compatibility and stability
+    // Default to MediaKit (mpv) for maximum codec compatibility, stability, and memory efficiency
     return MediaKitPlayerController(url, autoPlay: autoPlay, hardwareAcceleration: hardwareAcceleration);
   }
 }

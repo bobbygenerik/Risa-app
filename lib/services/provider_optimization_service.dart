@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
-import '../services/epg_service.dart';
 import '../services/incremental_epg_service.dart';
 import '../services/smart_learning_engine.dart';
 import '../services/logo_matching_service.dart';
@@ -11,7 +10,6 @@ import '../utils/debug_helper.dart';
 /// Applies different strategies based on IPTV provider characteristics
 class ProviderOptimizationService extends ChangeNotifier {
   final Map<String, ProviderOptimizationConfig> _providerConfigs = {};
-  final EpgService _epgService; // ignore: unused_field
   final IncrementalEpgService _incrementalEpgService; // ignore: unused_field
   final SmartLearningEngine _smartLearningEngine;
   final LogoMatchingService _logoMatchingService;
@@ -91,7 +89,6 @@ class ProviderOptimizationService extends ChangeNotifier {
   List<String> get supportedProviders => _knownProviders.keys.toList();
 
   ProviderOptimizationService(
-    this._epgService,
     this._incrementalEpgService,
     this._smartLearningEngine,
     this._logoMatchingService,

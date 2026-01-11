@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:id="@+id/5jc"
+    android:paddingTop="@dimen/14g"
+    android:paddingBottom="@dimen/170"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+        <com.google.android.material.button.MaterialButton
+            android:gravity="start|center_vertical"
+            android:layout_gravity="start"
+            android:id="@+id/5mf"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/4hi"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:accessibilityLiveRegion="polite"
+            app:icon="@drawable/3n2"
+            app:iconGravity="0x4"
+            app:iconPadding="4dp"
+            style="?attr/5kr"/>
+    </FrameLayout>
+    <com.google.android.material.button.MaterialButton
+        android:gravity="center"
+        android:id="@+id/6tm"
+        android:layout_width="@dimen/39s"
+        android:layout_height="@dimen/4hi"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:contentDescription="@string/3r2"
+        app:icon="@drawable/6nj"
+        style="?attr/sn"/>
+    <com.google.android.material.button.MaterialButton
+        android:gravity="center"
+        android:id="@+id/2de"
+        android:layout_width="@dimen/39s"
+        android:layout_height="@dimen/4hi"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:contentDescription="@string/5fv"
+        app:icon="@drawable/4mf"
+        style="?attr/sn"/>
+</LinearLayout>

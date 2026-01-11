@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/providers/content_provider.dart';
 // import 'package:iptv_player/services/http_client_service.dart'; // removed: unused after MediaKit removal
 // Settings provider import removed - not used in prewarm service
 
@@ -37,31 +36,6 @@ class PrewarmService {
             featuredChannelUrl = first.url;
           } catch (_) {
             featuredChannelUrl = null;
-          }
-        }
-      } catch (_) {}
-
-      // Collect from content provider (movies + series backdrops/posters)
-      try {
-        final contentProvider =
-            Provider.of<ContentProvider>(context, listen: false);
-        final movies = contentProvider.movies;
-        for (final m in movies.take(6)) {
-          if (m.backdropUrl != null && m.backdropUrl!.isNotEmpty) {
-            images.add(m.backdropUrl!);
-          }
-          if (m.imageUrl != null && m.imageUrl!.isNotEmpty) {
-            images.add(m.imageUrl!);
-          }
-        }
-
-        final series = contentProvider.series;
-        for (final s in series.take(6)) {
-          if (s.backdropUrl != null && s.backdropUrl!.isNotEmpty) {
-            images.add(s.backdropUrl!);
-          }
-          if (s.imageUrl != null && s.imageUrl!.isNotEmpty) {
-            images.add(s.imageUrl!);
           }
         }
       } catch (_) {}

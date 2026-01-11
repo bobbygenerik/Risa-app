@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+    <androidx.leanback.widget.ResizingTextView
+        android:id="@+id/9r"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="?attr/44p"/>
+    <TextView
+        android:id="@+id/2i3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="?attr/179"/>
+    <TextView
+        android:id="@+id/750"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="?attr/6pu"/>
+</LinearLayout>

@@ -22,22 +22,6 @@
       }
     }
   },
-  "moviesCount": "{count} movies",
-  "@moviesCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "seriesCount": "{count} series",
-  "@seriesCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "playlists": "Playlists",
   "inputMethodM3u": "Input Method: M3U URL",
   "inputMethodXtream": "Input Method: Xtream Codes",
@@ -96,7 +80,6 @@
   "heroVideoPreview": "Hero Video Preview",
   "showVideoPreviewInHero": "Show video preview in the hero banner",
   "rememberPosition": "Remember Position",
-  "resumeVods": "Resume VODs where you left off",
   "aiFeatures": "AI Features",
   "transcriptionTranslationSubtitles": "Transcription, Translation & Subtitles",
   "liveServices": "Live Services",
@@ -107,12 +90,6 @@
   "manageSpeechModels": "Manage Speech Models",
   "manageTranslationModels": "Manage Translation Models",
   "integration": "Integration",
-  "openSubtitles": "OpenSubtitles",
-  "autoDownloadSubtitles": "Auto-download VOD subtitles",
-  "streamingSources": "Streaming Sources",
-  "realDebrid": "Real-Debrid",
-  "highSpeedStreaming": "High-speed premium streaming",
-  "validateApiKey": "Validate API Key",
   "recordings": "Recordings",
   "manageDvrStorage": "Manage DVR storage",
   "storagePath": "Storage Path",

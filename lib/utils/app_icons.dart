@@ -24,8 +24,6 @@ class AppIcons {
   static const IconData liveTV = Icons.live_tv;
   static const IconData tv = Icons.tv;
   static const IconData tvOff = Icons.tv_off;
-  static const IconData movie = Icons.movie;
-  static const IconData series = Icons.tv;
   static const IconData dvr = Icons.dvr;
 
   // Content & Actions
@@ -128,8 +126,6 @@ extension AppIconsExtension on BuildContext {
   Widget favoriteOutlineIcon({Color? color}) =>
       iconSm(AppIcons.favoriteOutline, color: color);
   Widget tvIcon({Color? color}) => iconMd(AppIcons.tv, color: color);
-  Widget movieIcon({Color? color}) => iconMd(AppIcons.movie, color: color);
-  Widget seriesIcon({Color? color}) => iconMd(AppIcons.series, color: color);
   Widget searchIcon({Color? color}) => iconSm(AppIcons.search, color: color);
   Widget settingsIcon({Color? color}) =>
       iconMd(AppIcons.settings, color: color);

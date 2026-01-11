@@ -549,7 +549,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = Provider.of<ChannelProvider>(context);
-    _maybeRefreshCategories(provider.channelCount);
+    
+    // Only refresh categories if we have channels but no categories loaded
+    if (provider.hasChannels && _categoryNames.isEmpty && !_loadingCategories) {
+      _maybeRefreshCategories(provider.channelCount);
+    }
 
     final routePath = GoRouterState.of(context).uri.path;
     if (_lastRoutePath == routePath) return;
@@ -561,7 +565,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
         _resetRowScrollOffsets();
         _requestInitialFocus();
-        if (_categoryNames.isEmpty) {
+        // Force category refresh on app restart if we have channels but no categories
+        if (provider.hasChannels && _categoryNames.isEmpty && !_loadingCategories) {
           _categoryPrefetchRequested = false;
           _requestCategoryPrefetch();
         }
@@ -799,7 +804,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   // Try to find channels with EPG data ready
                   final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
                   
-                  // Only show channels that have EPG data.
+                  // Only show channels that have EPG data or allow fallback for Shield performance
                   if (readyChannels.isEmpty) {
                     if (epgService.error != null &&
                         epgService.error!.isNotEmpty) {
@@ -809,6 +814,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         epgService.isParsing ||
                         epgService.isDownloading;
                     final timeSinceInit = DateTime.now().difference(_initTime);
+                    
+                    // On Shield, show content faster even without EPG to prevent long loading
+                    if (timeSinceInit.inSeconds > 8 && previewList.isNotEmpty) {
+                      debugLog('LiveTV: Shield timeout - showing channels without EPG');
+                      return _buildFullScreenHero(
+                        context,
+                        previewList[_featuredIndex % previewList.length],
+                        previewList,
+                      );
+                    }
+                    
                     if (isEpgLoading) {
                       debugLog(
                           'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
@@ -1463,14 +1479,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             GestureDetector(
               onTap: () => _openChannelPlayer(channel),
               child: SizedBox(
-                width: context.cardWidth() * 0.5, // Slimmer button
+                width: context.cardWidth() * 0.6,
                 child: BrandPrimaryButton(
                   onPressed: () => _openChannelPlayer(channel),
                   label: 'Watch Now',
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  fontSize: 13,
-                  minHeight: 28,
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  fontSize: 14,
+                  minHeight: 32,
+                  expand: true,
                   focusNode: _watchButtonFocus,
                 ),
               ),

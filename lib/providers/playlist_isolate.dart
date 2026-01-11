@@ -119,8 +119,7 @@ Future<Map<String, dynamic>> parsePlaylistCancelable({
   // Cancel handling
   cancelToken?.onCancel = () {
     if (!completer.isCompleted) {
-      completer.complete(
-          {'channels': [], 'movies': [], 'series': [], 'epgUrl': null});
+      completer.complete({'channels': [], 'epgUrl': null});
     }
     try {
       isolate.kill(priority: Isolate.immediate);

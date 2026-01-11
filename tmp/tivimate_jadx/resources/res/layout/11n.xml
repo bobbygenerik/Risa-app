@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/604"
+    android:layout_width="@dimen/ev"
+    android:layout_height="match_parent"
+    android:paddingEnd="@dimen/486"
+    android:transitionGroup="true"
+    android:elevation="@dimen/761">
+    <androidx.leanback.widget.VerticalGridView
+        android:id="@+id/340"
+        android:layout_width="@dimen/ev"
+        android:layout_height="match_parent"
+        style="?attr/of"/>
+    <View
+        android:id="@+id/11f"
+        android:background="@drawable/rc"
+        android:layout_width="@dimen/1g6"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"/>
+</RelativeLayout>

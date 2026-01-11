@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="5iu">
+        <item quantity="other">Mật khẩu phải dài ít nhất %d ký tự</item>
+    </plurals>
+    <plurals name="5fn">
+        <item quantity="other">Tua nhanh %d giây</item>
+        <item quantity="one">Tua nhanh %d giây</item>
+    </plurals>
+    <plurals name="1n5">
+        <item quantity="other">Tua lại %d giây</item>
+        <item quantity="one">Tua lại %d giây</item>
+    </plurals>
+    <plurals name="17r">
+        <item quantity="other">%d nguồn</item>
+    </plurals>
+    <plurals name="43d">
+        <item quantity="other">%d mùa</item>
+    </plurals>
+</resources>

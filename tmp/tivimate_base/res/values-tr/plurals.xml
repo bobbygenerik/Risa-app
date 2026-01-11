@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="5iu">
+        <item quantity="other">Şifre en az %d karakter uzunluğunda olmalı</item>
+        <item quantity="one">Şifre en az %d karakter uzunluğunda olmalı</item>
+    </plurals>
+    <plurals name="5fn">
+        <item quantity="other">%d saniye ileri sar</item>
+        <item quantity="one">%d saniye ileri sar</item>
+    </plurals>
+    <plurals name="1n5">
+        <item quantity="other">%d saniye geri sar</item>
+        <item quantity="one">%d saniye geri sar</item>
+    </plurals>
+    <plurals name="17r">
+        <item quantity="other">%d kaynak</item>
+        <item quantity="one">%d kaynak</item>
+    </plurals>
+    <plurals name="43d">
+        <item quantity="other">%d sezon</item>
+        <item quantity="one">%d sezon</item>
+    </plurals>
+</resources>

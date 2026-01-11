@@ -32,6 +32,8 @@ class IncrementalEpgService extends ChangeNotifier {
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]
+  Map<String, List<String>>?
+      _normalizedAvailableChannelsStripped; // strippedId -> [originalId1, originalId2]
   final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
   bool _isDownloading = false;
@@ -542,6 +544,7 @@ class IncrementalEpgService extends ChangeNotifier {
     _availableChannels.clear();
     _internalToEpgIdMapping.clear();
     _normalizedAvailableChannels = null;
+    _normalizedAvailableChannelsStripped = null;
     _normalizeCache.clear();
     _manualMappings.clear();
     _programsByChannel.clear();
@@ -636,6 +639,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
       await _saveNormalizedMappingToPrefs(null);
       _normalizedAvailableChannels = null;
+      _normalizedAvailableChannelsStripped = null;
       _availableChannels.clear();
       _internalToEpgIdMapping.clear();
       _programsByChannel.clear();
@@ -721,6 +725,7 @@ class IncrementalEpgService extends ChangeNotifier {
       final data = await compute(json.decode, jsonStr) as Map<String, dynamic>;
       _normalizedAvailableChannels = data.map((k, v) =>
           MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()));
+      _normalizedAvailableChannelsStripped = null;
       _availableChannels
           .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
       debugLog(
@@ -1228,6 +1233,7 @@ class IncrementalEpgService extends ChangeNotifier {
                   debugLog(
                       'EPG: Rebuilding normalized mapping from DB keys...');
                   _normalizedAvailableChannels = {};
+                  _normalizedAvailableChannelsStripped = null;
                   for (final epgId in _programsByChannel.keys) {
                     final normalized = _normalize(epgId);
                     if (normalized.isNotEmpty) {
@@ -1449,6 +1455,7 @@ class IncrementalEpgService extends ChangeNotifier {
           ..clear()
           ..addAll(channelIds);
         _normalizedAvailableChannels = normalizedChannels;
+        _normalizedAvailableChannelsStripped = null;
 
         // Stream programs from the temp file into memory (capped) and DB in batches
         // For background refresh, use double-buffering (stagedPrograms) to avoid UI flicker.
@@ -1745,6 +1752,27 @@ class IncrementalEpgService extends ChangeNotifier {
       return decodeXmlEntities(cleaned);
     }
 
+    List<String> extractTagTexts(String block, String tag) {
+      final regex = RegExp(
+        '<$tag[^>]*>(.*?)</$tag>',
+        caseSensitive: false,
+        dotAll: true,
+      );
+      final matches = regex.allMatches(block);
+      if (matches.isEmpty) return const [];
+      final results = <String>[];
+      for (final match in matches) {
+        final raw = match.group(1) ?? '';
+        final cleaned =
+            raw.replaceAll('<![CDATA[', '').replaceAll(']]>', '').trim();
+        final decoded = decodeXmlEntities(cleaned);
+        if (decoded.isNotEmpty) {
+          results.add(decoded);
+        }
+      }
+      return results;
+    }
+
     String drainBlocks(
       String buffer,
       RegExp startRe,
@@ -1851,8 +1879,8 @@ class IncrementalEpgService extends ChangeNotifier {
             if (normalizedId.isNotEmpty) {
               normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
             }
-            final display = extractTagText(block, 'display-name');
-            if (display != null && display.isNotEmpty) {
+            final displays = extractTagTexts(block, 'display-name');
+            for (final display in displays) {
               final normalizedDisplay = normalizeCached(display);
               if (normalizedDisplay.isNotEmpty) {
                 normalizedChannels
@@ -2031,21 +2059,23 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
 
-        String? displayName;
-        for (final event in subtree) {
+        final displayNames = <String>[];
+        for (var i = 0; i < subtree.length; i++) {
+          final event = subtree[i];
           if (event is XmlStartElementEvent && event.name == 'display-name') {
-            final idx = subtree.indexOf(event);
-            if (idx + 1 < subtree.length) {
-              final next = subtree[idx + 1];
+            if (i + 1 < subtree.length) {
+              final next = subtree[i + 1];
               if (next is XmlTextEvent) {
-                displayName = next.value.trim();
-                if (displayName.isNotEmpty) break;
+                final value = next.value.trim();
+                if (value.isNotEmpty) {
+                  displayNames.add(value);
+                }
               }
             }
           }
         }
-        if (displayName != null && displayName.isNotEmpty) {
-          String normalizedDisplay = normalizeForFilter(displayName);
+        for (final displayName in displayNames) {
+          final normalizedDisplay = normalizeForFilter(displayName);
           if (normalizedDisplay.isNotEmpty) {
             normalizedIds.add(normalizedDisplay);
             if (allowedNormalized.contains(normalizedDisplay)) {
@@ -2094,7 +2124,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       // Parse <icon> and <display-name> elements
-      String? displayName;
+      final displayNames = <String>[];
       String? channelIcon;
       for (final event in events) {
         if (event is XmlStartElementEvent) {
@@ -2103,7 +2133,10 @@ class IncrementalEpgService extends ChangeNotifier {
             if (idx + 1 < events.length) {
               final next = events[idx + 1];
               if (next is XmlTextEvent) {
-                displayName = next.value.trim();
+                final value = next.value.trim();
+                if (value.isNotEmpty) {
+                  displayNames.add(value);
+                }
               }
             }
           } else if (event.name == 'icon') {
@@ -2119,7 +2152,7 @@ class IncrementalEpgService extends ChangeNotifier {
         }
       }
 
-      if (displayName != null && displayName.isNotEmpty) {
+      for (final displayName in displayNames) {
         final normalizedDisplay = normalize(displayName);
         if (normalizedDisplay.isNotEmpty) {
           normalizedChannels.putIfAbsent(normalizedDisplay, () => []).add(id);
@@ -2391,6 +2424,10 @@ class IncrementalEpgService extends ChangeNotifier {
     return normalized;
   }
 
+  static String _stripCountryRegion(String text) {
+    return text.replaceAll(_countryCodeSufRe, '').replaceAll(_regionSufRe, '');
+  }
+
   void _ensureNormalizedMap() {
     if (_availableChannels.isEmpty) return;
     _normalizedAvailableChannels ??= {};
@@ -2399,6 +2436,49 @@ class IncrementalEpgService extends ChangeNotifier {
       if (normalized.isEmpty) continue;
       _normalizedAvailableChannels!.putIfAbsent(normalized, () => []).add(id);
     }
+  }
+
+  void _ensureStrippedNormalizedMap() {
+    if (_availableChannels.isEmpty) return;
+    _normalizedAvailableChannelsStripped ??= {};
+    for (final id in _availableChannels) {
+      final normalized = _normalize(id);
+      if (normalized.isEmpty) continue;
+      final stripped = _stripCountryRegion(normalized);
+      if (stripped.isEmpty || stripped == normalized) continue;
+      _normalizedAvailableChannelsStripped!
+          .putIfAbsent(stripped, () => [])
+          .add(id);
+    }
+  }
+
+  String? _findUniqueStrippedFallback(
+    String normalizedId,
+    String? channelName,
+  ) {
+    _ensureStrippedNormalizedMap();
+    final strippedMap = _normalizedAvailableChannelsStripped;
+    if (strippedMap == null || strippedMap.isEmpty) return null;
+
+    final strippedId = _stripCountryRegion(normalizedId);
+    if (strippedId.isNotEmpty && strippedId != normalizedId) {
+      final candidates = strippedMap[strippedId];
+      if (candidates != null && candidates.length == 1) {
+        return candidates.first;
+      }
+    }
+
+    if (channelName != null && channelName.isNotEmpty) {
+      final normalizedName = _normalize(channelName);
+      final strippedName = _stripCountryRegion(normalizedName);
+      if (strippedName.isNotEmpty && strippedName != normalizedName) {
+        final candidates = strippedMap[strippedName];
+        if (candidates != null && candidates.length == 1) {
+          return candidates.first;
+        }
+      }
+    }
+    return null;
   }
 
   static String _removeDiacritics(String input) {
@@ -2512,6 +2592,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
     String? bestId;
     double bestScore = -1000.0;
+    double secondBest = -1000.0;
 
     for (final id in candidates) {
       double score = 0.0;
@@ -2542,8 +2623,22 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       if (score > bestScore) {
+        secondBest = bestScore;
         bestScore = score;
         bestId = id;
+      } else if (score > secondBest) {
+        secondBest = score;
+      }
+    }
+
+    if (bestId != null && candidates.length > 1 && countryCode == null) {
+      final normalizedBest = _normalize(bestId);
+      final exactMatch = normalizedBest == normalizedTarget;
+      if (!exactMatch && bestScore < 40.0) {
+        return null;
+      }
+      if (secondBest > -999.0 && (bestScore - secondBest) < 5.0) {
+        return null;
       }
     }
 
@@ -2775,12 +2870,6 @@ class IncrementalEpgService extends ChangeNotifier {
       normalized = match.group(2) ?? normalized;
     }
 
-    // Strip common country code suffixes.
-    normalized = normalized.replaceAll(_countryCodeSufRe, '');
-
-    // Remove regional/location tokens to collapse variants (e.g., bbc1manchester -> bbc1).
-    normalized = normalized.replaceAll(_regionSufRe, '');
-
     // Collapse "plus1"/"plusone" and "+1/+2" variants.
     normalized = normalized.replaceAll(_plusOneSufRe, '');
 
@@ -2991,6 +3080,12 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
       }
+    }
+
+    final strippedFallback =
+        _findUniqueStrippedFallback(normalizedId, channelName);
+    if (strippedFallback != null) {
+      return _cacheResolvedMapping(channelId, strippedFallback);
     }
 
     // No match found - only cache the negative result if we are confident data is complete

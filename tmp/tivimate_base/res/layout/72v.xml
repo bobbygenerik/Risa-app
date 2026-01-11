@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:lb="http://schemas.android.com/apk/res-auto">
+    <ImageView android:id="@id/1fn" style="?42m" />
+    <FrameLayout android:id="@id/background" style="?4r0">
+        <androidx.leanback.widget.MediaRowFocusView android:id="@id/5uk" android:layout_width="0.0dip" android:layout_height="fill_parent" android:alpha="0.0" />
+        <LinearLayout android:id="@id/26e" android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <LinearLayout android:id="@id/3ar" style="?48i">
+                <ViewFlipper android:id="@id/8g" style="?3cm" />
+                <TextView android:id="@id/4fu" style="?q5" />
+                <TextView android:id="@id/vt" style="?2or" />
+            </LinearLayout>
+            <LinearLayout android:orientation="horizontal" android:id="@id/5cv" android:layout_width="wrap_content" android:layout_height="fill_parent" android:paddingStart="16.0dip" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

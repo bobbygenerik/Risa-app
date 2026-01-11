@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.GuidanceStylingRelativeLayout android:id="@id/6ds" style="?3q3">
+        <ImageView android:id="@id/1kv" style="?12r" />
+        <TextView android:id="@id/74g" style="?1gp" />
+        <TextView android:id="@id/1qa" style="?3lc" />
+        <TextView android:id="@id/72j" style="?164" />
+    </androidx.leanback.widget.GuidanceStylingRelativeLayout>
+</FrameLayout>

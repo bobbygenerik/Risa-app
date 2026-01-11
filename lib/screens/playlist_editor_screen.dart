@@ -162,7 +162,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             context,
             SnackBar(
               content: Text(
-                  'Playlist updated! ${provider.channels.length} channels, ${provider.moviesCount} movies, ${provider.seriesCount} series found.'),
+                  'Playlist updated! ${provider.channels.length} channels found.'),
               backgroundColor: AppTheme.accentGreen,
             ),
           );

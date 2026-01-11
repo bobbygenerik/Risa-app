@@ -63,8 +63,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     NavTab(id: 'search', label: 'Search', icon: Icons.search, route: '/search'),
     NavTab(id: 'epg', label: 'Guide', icon: Icons.dvr, route: '/epg'),
     NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
-    NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-    NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
     NavTab(
         id: 'favorites',
         label: 'Favorites',
@@ -510,11 +508,13 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 4),
-          child: Image(
-            image: AssetImage(_isExpanded
-                ? 'assets/images/croppedlogo2.png'
-                : 'assets/images/lonelogo (1).png'),
-            height: _isExpanded ? 28 : 20,
+          child: Center(
+            child: Image(
+              image: AssetImage(_isExpanded
+                  ? 'assets/images/croppedlogo2.png'
+                  : 'assets/images/lonelogo (1).png'),
+              height: _isExpanded ? 28 : 20,
+            ),
           ),
         ),
         Expanded(

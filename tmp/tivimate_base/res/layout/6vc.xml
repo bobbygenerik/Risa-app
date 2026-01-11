@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImageView android:id="@id/5ee" android:layout_width="wrap_content" android:layout_height="wrap_content" android:adjustViewBounds="true" android:maxWidth="@dimen/5ad" android:maxHeight="@dimen/27q" android:elevation="@dimen/3cr"
+  xmlns:android="http://schemas.android.com/apk/res/android" />

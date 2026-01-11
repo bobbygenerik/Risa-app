@@ -8,7 +8,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../utils/debug_helper.dart';
 
-/// Lightweight SQLite wrapper for channels/VOD/EPG data.
+/// Lightweight SQLite wrapper for channels/EPG data.
 /// Keeps UI responsive on huge playlists by paging from disk.
 class LocalDbService {
   LocalDbService._();
@@ -52,7 +52,7 @@ class LocalDbService {
       _dbPath = dbPath;
       _db = await openDatabase(
         dbPath,
-        version: 2,
+        version: 3,
         onConfigure: (db) async {
           try {
             // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
@@ -91,26 +91,6 @@ class LocalDbService {
               'CREATE INDEX IF NOT EXISTS idx_channels_idx ON channels(idx)');
 
           await db.execute('''
-          CREATE TABLE vod_movies(
-            id TEXT PRIMARY KEY,
-            title TEXT,
-            payload TEXT
-          )
-        ''');
-          await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_movies_title ON vod_movies(title)');
-
-          await db.execute('''
-          CREATE TABLE vod_series(
-            id TEXT PRIMARY KEY,
-            title TEXT,
-            payload TEXT
-          )
-        ''');
-          await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_series_title ON vod_series(title)');
-
-          await db.execute('''
           CREATE TABLE epg_programs(
             epgId TEXT,
             startTs INTEGER,
@@ -145,6 +125,10 @@ class LocalDbService {
               hash TEXT
             )
           ''');
+          }
+          if (oldVersion < 3) {
+            await db.execute('DROP TABLE IF EXISTS vod_movies');
+            await db.execute('DROP TABLE IF EXISTS vod_series');
           }
         },
       );
@@ -403,99 +387,6 @@ class LocalDbService {
         await batch.commit(noResult: true);
       });
     });
-  }
-
-  Future<void> clearVod() async {
-    await _queueWrite((db) async {
-      await db.delete('vod_movies');
-      await db.delete('vod_series');
-    });
-  }
-
-  Future<void> insertMovies(List<Map<String, dynamic>> movies) async {
-    if (movies.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        for (final m in movies) {
-          batch.insert(
-            'vod_movies',
-            {
-              'id': m['id'],
-              'title': m['title'] ?? '',
-              'payload': json.encode(m),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        await batch.commit(noResult: true);
-      });
-    });
-  }
-
-  Future<void> insertSeries(List<Map<String, dynamic>> series) async {
-    if (series.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        for (final s in series) {
-          batch.insert(
-            'vod_series',
-            {
-              'id': s['id'],
-              'title': s['title'] ?? '',
-              'payload': json.encode(s),
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        await batch.commit(noResult: true);
-      });
-    });
-  }
-
-  Future<int> movieCount() async {
-    final result = await _withDbRead(
-        (db) => db.rawQuery('SELECT COUNT(*) as c FROM vod_movies'));
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<int> seriesCount() async {
-    final result = await _withDbRead(
-        (db) => db.rawQuery('SELECT COUNT(*) as c FROM vod_series'));
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<List<Map<String, dynamic>>> getMoviesPage(
-      {int offset = 0, int limit = 50}) async {
-    final safeLimit = limit.clamp(0, 500);
-    final rows = await _withDbRead((db) {
-      return db.query(
-        'vod_movies',
-        orderBy: 'title COLLATE NOCASE ASC',
-        limit: safeLimit,
-        offset: offset,
-      );
-    });
-    return rows
-        .map((r) => json.decode(r['payload'] as String) as Map<String, dynamic>)
-        .toList();
-  }
-
-  Future<List<Map<String, dynamic>>> getSeriesPage(
-      {int offset = 0, int limit = 50}) async {
-    final safeLimit = limit.clamp(0, 500);
-    final rows = await _withDbRead((db) {
-      return db.query(
-        'vod_series',
-        orderBy: 'title COLLATE NOCASE ASC',
-        limit: safeLimit,
-        offset: offset,
-      );
-    });
-    return rows
-        .map((r) => json.decode(r['payload'] as String) as Map<String, dynamic>)
-        .toList();
   }
 
   Future<void> clearEpg() async {

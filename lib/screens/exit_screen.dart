@@ -104,7 +104,12 @@ class _ExitScreenState extends State<ExitScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          context.go('/home');
+          // Prevent immediate return - add small delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted && context.mounted) {
+              context.go('/home');
+            }
+          });
         }
       },
       child: Scaffold(

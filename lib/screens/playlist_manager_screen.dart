@@ -7,7 +7,7 @@ import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_typography.dart';
-import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/snackbar_utils.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
@@ -233,12 +233,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       }
 
       if (mounted) {
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('Playlist "${playlist.name}" deleted'),
-          ),
-        );
+        SnackbarUtils.show(context, 'Playlist "${playlist.name}" deleted');
       }
     }
   }
@@ -282,57 +277,16 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       });
 
       if (mounted) {
-        showAppSnackBar(
+        SnackbarUtils.showSuccess(
           context,
-          SnackBar(
-            content: Text(
-              '✓ Loaded "${playlist.name}" - ${channelProvider.channelCount} channels',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            backgroundColor: const Color(0xFF1E2328),
-            elevation: 8,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(
-                color: AppTheme.accentGreen,
-                width: 1,
-              ),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
+          '✓ Loaded "${playlist.name}" - ${channelProvider.channelCount} channels',
         );
         context.go('/home');
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text(
-              'Failed to load playlist: $e',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            backgroundColor: const Color(0xFF1E2328),
-            elevation: 8,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(
-                color: AppTheme.accentRed,
-                width: 1,
-              ),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        SnackbarUtils.showError(context, 'Failed to load playlist: $e');
       }
     }
   }
@@ -417,29 +371,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       await _savePlaylists();
 
       if (mounted) {
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text(
-              'Playlist renamed to "$result"',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            backgroundColor: const Color(0xFF1E2328),
-            elevation: 8,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(
-                color: AppTheme.accentGreen,
-                width: 1,
-              ),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        SnackbarUtils.showSuccess(context, 'Playlist renamed to "$result"');
       }
     }
   }

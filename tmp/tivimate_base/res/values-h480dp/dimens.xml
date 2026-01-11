@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="32f">80.0dip</dimen>
+    <dimen name="5nr">24.0dip</dimen>
+    <dimen name="35q">24.0dip</dimen>
+    <dimen name="7cq">80.0dip</dimen>
+</resources>

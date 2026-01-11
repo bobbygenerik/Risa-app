@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout android:id="@id/6m1" android:layout_width="fill_parent" android:layout_height="fill_parent" android:transitionGroup="false"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.NonOverlappingFrameLayout android:id="@id/4nv" android:layout_width="fill_parent" android:layout_height="fill_parent" android:transitionGroup="false" />
+    <androidx.leanback.widget.NonOverlappingFrameLayout android:id="@id/73i" android:layout_width="fill_parent" android:layout_height="fill_parent" android:transitionGroup="true" />
+</FrameLayout>

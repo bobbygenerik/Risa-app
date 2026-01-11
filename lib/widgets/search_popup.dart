@@ -6,9 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 class SearchPopup extends StatefulWidget {
@@ -24,16 +22,12 @@ class _SearchPopupState extends State<SearchPopup> {
   final FocusNode _voiceButtonFocusNode = FocusNode();
 
   List<Channel> _liveTvResults = [];
-  List<Content> _movieResults = [];
-  List<Content> _seriesResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
 
   // Pagination
   static const int _resultsPerSection = 12;
   int _liveTvDisplayCount = _resultsPerSection;
-  int _moviesDisplayCount = _resultsPerSection;
-  int _seriesDisplayCount = _resultsPerSection;
 
   @override
   void initState() {
@@ -56,8 +50,6 @@ class _SearchPopupState extends State<SearchPopup> {
     if (query.trim().isEmpty) {
       setState(() {
         _liveTvResults = [];
-        _movieResults = [];
-        _seriesResults = [];
         _isSearching = false;
         _hasSearched = false;
       });
@@ -73,27 +65,14 @@ class _SearchPopupState extends State<SearchPopup> {
       context,
       listen: false,
     );
-    final contentProvider = Provider.of<ContentProvider>(
-      context,
-      listen: false,
-    );
 
     final liveTv = channelProvider.searchChannels(query);
-    final allContent = contentProvider.searchContent(query);
-    final movies =
-        allContent.where((c) => c.type == ContentType.movie).toList();
-    final series =
-        allContent.where((c) => c.type == ContentType.series).toList();
 
     setState(() {
       _liveTvResults = liveTv;
-      _movieResults = movies;
-      _seriesResults = series;
       _isSearching = false;
       // Reset pagination on new search
       _liveTvDisplayCount = _resultsPerSection;
-      _moviesDisplayCount = _resultsPerSection;
-      _seriesDisplayCount = _resultsPerSection;
     });
   }
 
@@ -193,9 +172,7 @@ class _SearchPopupState extends State<SearchPopup> {
       );
     }
 
-    if (_liveTvResults.isEmpty &&
-        _movieResults.isEmpty &&
-        _seriesResults.isEmpty) {
+    if (_liveTvResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -225,28 +202,6 @@ class _SearchPopupState extends State<SearchPopup> {
             _buildLoadMoreButton(() {
               setState(() {
                 _liveTvDisplayCount += _resultsPerSection;
-              });
-            }),
-          const SizedBox(height: 20),
-        ],
-        if (_movieResults.isNotEmpty) ...[
-          _buildSectionHeader('Movies', Icons.movie, _movieResults.length),
-          _buildContentGrid(_movieResults.take(_moviesDisplayCount).toList()),
-          if (_movieResults.length > _moviesDisplayCount)
-            _buildLoadMoreButton(() {
-              setState(() {
-                _moviesDisplayCount += _resultsPerSection;
-              });
-            }),
-          const SizedBox(height: 20),
-        ],
-        if (_seriesResults.isNotEmpty) ...[
-          _buildSectionHeader('Series', Icons.tv, _seriesResults.length),
-          _buildContentGrid(_seriesResults.take(_seriesDisplayCount).toList()),
-          if (_seriesResults.length > _seriesDisplayCount)
-            _buildLoadMoreButton(() {
-              setState(() {
-                _seriesDisplayCount += _resultsPerSection;
               });
             }),
           const SizedBox(height: 20),
@@ -400,79 +355,5 @@ class _SearchPopupState extends State<SearchPopup> {
     );
   }
 
-  Widget _buildContentGrid(List<Content> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: items.length > 10 ? 10 : items.length, // Limit to 10
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return InkWell(
-          onTap: () {
-            Navigator.of(context).pop(); // Close popup
-            // Navigate to details or player
-            // Assuming standard routes for movies/series details
-            // For now, let's assume we play it or go to a details page if it existed
-            // But based on existing code, we might just push to player or similar.
-            // Let's check routes.
-            // Actually, movies/series usually have a details screen or play directly.
-            // Let's assume we want to play it for now or use a generic route.
-            // Wait, main.dart shows routes for /movies and /series but maybe not details.
-            // Let's try to find a way to open it.
-            // Ah, EnhancedVideoPlayerScreen takes a Content object?
-            // Let's check main.dart routes again.
-            // It seems /player is for channels.
-            // Let's check MoviesScreen to see how it opens content.
-
-            final encodedId = Uri.encodeComponent(item.id);
-            context.push('/content/$encodedId', extra: item);
-          },
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    image: item.imageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(item.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: item.imageUrl == null
-                      ? const Center(
-                          child: Icon(
-                            Icons.movie,
-                            color: AppTheme.textSecondary,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+ 
 }

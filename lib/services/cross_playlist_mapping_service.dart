@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/epg_service.dart';
 import '../services/incremental_epg_service.dart';
 import '../utils/debug_helper.dart';
 
@@ -263,8 +262,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     required String channelId,
     required String playlistId,
     required String mappingId,
-    EpgService? epgService,
-    IncrementalEpgService? incrementalEpgService,
+    IncrementalEpgService? epgService,
   }) async {
     try {
       final mapping = _sharedMappings[mappingId];
@@ -273,13 +271,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
         return false;
       }
 
-      // Apply the mapping using the EPG services
+      // Apply the mapping using the EPG service
       if (epgService != null) {
         await epgService.setManualMapping(channelId, mapping.epgId);
-      }
-
-      if (incrementalEpgService != null) {
-        // Apply to incremental service if needed
       }
 
       // Update cross-playlist mappings

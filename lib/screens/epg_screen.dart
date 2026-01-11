@@ -357,7 +357,27 @@ class _EPGScreenState extends State<EPGScreen>
             }
 
             // Get category names (lightweight - no channel grouping)
+            // Wait for categories to be computed if they're not ready yet
             final rawCategories = channelProvider.getAllCategoryNames();
+            if (rawCategories.isEmpty && channelProvider.hasChannels && !channelProvider.isGroupingChannels) {
+              // Categories not computed yet but we have channels - trigger computation
+              unawaited(channelProvider.getAllCategoryNamesAsync());
+              // Show loading indicator while categories are being computed
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppTheme.primaryBlue),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading categories...',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              );
+            }
+            
             final seen = <String>{};
             final categoryList = <String>[];
             for (final name in rawCategories) {

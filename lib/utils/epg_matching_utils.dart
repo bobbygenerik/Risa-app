@@ -17,6 +17,28 @@ class EPGMatchingUtils {
       RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$', caseSensitive: false);
   static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
 
+  static String _stripCountryRegion(String text) {
+    return text.replaceAll(_countryCodeSufRe, '').replaceAll(_regionSufRe, '');
+  }
+
+  static Map<String, List<String>> _buildStrippedLookup(
+    Set<String> allEpgKeys,
+  ) {
+    final strippedLookup = <String, List<String>>{};
+    for (final key in allEpgKeys) {
+      final normalized = key.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+      final stripped = _stripCountryRegion(normalized);
+      if (stripped.length >= 3) {
+        strippedLookup.putIfAbsent(stripped, () => []).add(key);
+      }
+      final strippedWithNumbers = convertNumberWords(stripped);
+      if (strippedWithNumbers != stripped && strippedWithNumbers.length >= 3) {
+        strippedLookup.putIfAbsent(strippedWithNumbers, () => []).add(key);
+      }
+    }
+    return strippedLookup;
+  }
+
   /// Convert number words to digits for better matching
   static String convertNumberWords(String text) {
     final conversions = {
@@ -204,27 +226,21 @@ class EPGMatchingUtils {
     }
 
     // Try prefix/contains matching with normalized ID
-    final normalizedIdWithoutCountry =
-        normalizedId.replaceAll(_countryCodeSufRe, '');
-    final normalizedIdWithNumbersNoCountry =
-        normalizedWithNumbers.replaceAll(_countryCodeSufRe, '');
     final List<MapEntry<String, String>> prefixMatches = [];
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry = epgNormalized.replaceAll(_countryCodeSufRe, '');
-      final epgWithNumbers = convertNumberWords(epgWithoutCountry);
+      final epgWithNumbers = convertNumberWords(epgNormalized);
       final epgStripped = stripSuffixes(epgWithNumbers);
-      if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) &&
-          normalizedIdWithoutCountry.length >= 4) {
+      if (epgNormalized.startsWith(normalizedId) && normalizedId.length >= 4) {
         prefixMatches.add(entry);
         continue;
       }
-      if (epgWithNumbers.startsWith(normalizedIdWithNumbersNoCountry) &&
-          normalizedIdWithNumbersNoCountry.length >= 4) {
+      if (epgWithNumbers.startsWith(normalizedWithNumbers) &&
+          normalizedWithNumbers.length >= 4) {
         prefixMatches.add(entry);
         continue;
       }
-      final channelStripped = stripSuffixes(normalizedIdWithNumbersNoCountry);
+      final channelStripped = stripSuffixes(normalizedWithNumbers);
       if (epgStripped == channelStripped && channelStripped.length >= 4) {
         prefixMatches.add(entry);
         continue;
@@ -244,13 +260,11 @@ class EPGMatchingUtils {
     }
 
     // Try number-stripped matching
-    final channelStrippedNumbers = stripNumbers(normalizedIdWithoutCountry);
+    final channelStrippedNumbers = stripNumbers(normalizedId);
     if (channelStrippedNumbers.length >= 3) {
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
-        final epgWithoutCountry =
-            epgNormalized.replaceAll(_countryCodeSufRe, '');
-        final epgStrippedNumbers = stripNumbers(epgWithoutCountry);
+        final epgStrippedNumbers = stripNumbers(epgNormalized);
         if (epgStrippedNumbers == channelStrippedNumbers) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
@@ -277,9 +291,7 @@ class EPGMatchingUtils {
     // Try contains matching
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry = epgNormalized.replaceAll(_countryCodeSufRe, '');
-      if (normalizedIdWithoutCountry.contains(epgWithoutCountry) &&
-          epgWithoutCountry.length >= 4) {
+      if (normalizedId.contains(epgNormalized) && epgNormalized.length >= 4) {
         _channelIdCache[cacheKey] = entry.value;
         return entry.value;
       }
@@ -296,17 +308,36 @@ class EPGMatchingUtils {
       final cleanedName = normalizedName.replaceAll(_qualitySufRe, '');
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
-        final epgWithoutCountry =
-            epgNormalized.replaceAll(_countryCodeSufRe, '');
-        if (cleanedName.contains(epgWithoutCountry) &&
-            epgWithoutCountry.length >= 3) {
+        if (cleanedName.contains(epgNormalized) && epgNormalized.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
         }
-        if (epgWithoutCountry.contains(cleanedName) &&
-            cleanedName.length >= 3) {
+        if (epgNormalized.contains(cleanedName) && cleanedName.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
+        }
+      }
+    }
+
+    // Try unique stripped match (country/region) as a fallback.
+    final strippedLookup = _buildStrippedLookup(allEpgKeys);
+    final strippedId = _stripCountryRegion(normalizedId);
+    if (strippedId.length >= 3) {
+      final candidates = strippedLookup[strippedId];
+      if (candidates != null && candidates.length == 1) {
+        _channelIdCache[cacheKey] = candidates.first;
+        return candidates.first;
+      }
+    }
+    if (channelName != null && channelName.isNotEmpty) {
+      final normalizedName =
+          channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+      final strippedName = _stripCountryRegion(normalizedName);
+      if (strippedName.length >= 3) {
+        final candidates = strippedLookup[strippedName];
+        if (candidates != null && candidates.length == 1) {
+          _channelIdCache[cacheKey] = candidates.first;
+          return candidates.first;
         }
       }
     }

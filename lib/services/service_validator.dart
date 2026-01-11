@@ -5,11 +5,6 @@ import 'package:iptv_player/config/tvdb_config.dart';
 /// Service Validator
 /// Checks which external services are properly configured
 class ServiceValidator {
-  /// Check OpenSubtitles availability
-  static bool get isOpenSubtitlesAvailable {
-    return OAuthConfig.openSubtitlesApiKey.isNotEmpty;
-  }
-
   /// Check TMDB availability
   static bool get isTmdbAvailable {
     return OAuthConfig.isTmdbConfigured;
@@ -29,7 +24,6 @@ class ServiceValidator {
   /// Get service status summary
   static Map<String, bool> getServiceStatus() {
     return {
-      'opensubtitles': isOpenSubtitlesAvailable,
       'tmdb': isTmdbAvailable,
       'tvdb': isTvdbAvailable,
       'whisper': isWhisperAvailable,

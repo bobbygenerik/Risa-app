@@ -19,9 +19,8 @@ The Risa-app implements a sophisticated playlist and EPG management system with 
    - Proper serialization and deserialization methods
 
 2. **EPG Service Architecture**
-   - Main `EPGService` with full-featured implementation
-   - `IncrementalEpgService` for batch loading scenarios
-   - Dual EPG source support (primary + secondary)
+   - `IncrementalEpgService` is the primary EPG implementation
+   - Streaming/batch loading for large XMLTV files
    - File-based caching with timestamp validation
 
 3. **Advanced EPG Matching**
@@ -65,7 +64,7 @@ The Risa-app implements a sophisticated playlist and EPG management system with 
 - Comprehensive caching system
 - Background processing prevents UI blocking
 
-### EPG System (`EPGService`)
+### EPG System (`IncrementalEpgService`)
 
 ```dart
 // Key features identified:

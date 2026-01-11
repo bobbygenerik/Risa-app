@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="horizontal" android:id="@id/74n" android:layout_width="wrap_content" android:layout_height="wrap_content" android:baselineAligned="false" android:layoutDirection="ltr"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <include android:id="@id/4tb" layout="@layout/20m" />
+    <include layout="@layout/2a2" />
+    <include android:id="@id/798" layout="@layout/20m" />
+</LinearLayout>

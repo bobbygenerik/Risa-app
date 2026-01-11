@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.leanback.widget.GuidedActionItemContainer style="?3vh"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.leanback.widget.CheckableImageView android:id="@id/6va" style="?3i4" />
+    <ImageView android:id="@id/r1" style="?13b" />
+    <androidx.leanback.widget.NonOverlappingLinearLayout android:id="@id/28m" style="?4g9">
+        <androidx.leanback.widget.GuidedActionEditText android:id="@id/2br" style="?3gm" />
+        <androidx.leanback.widget.GuidedActionEditText android:id="@id/7dt" style="?3sj" />
+    </androidx.leanback.widget.NonOverlappingLinearLayout>
+    <ImageView android:id="@id/2up" style="?35t" />
+</androidx.leanback.widget.GuidedActionItemContainer>

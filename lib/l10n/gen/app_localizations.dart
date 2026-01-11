@@ -148,18 +148,6 @@ abstract class AppLocalizations {
   /// **'{count} channels'**
   String channelsCount(int count);
 
-  /// No description provided for @moviesCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} movies'**
-  String moviesCount(int count);
-
-  /// No description provided for @seriesCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} series'**
-  String seriesCount(int count);
-
   /// No description provided for @playlists.
   ///
   /// In en, this message translates to:
@@ -424,12 +412,6 @@ abstract class AppLocalizations {
   /// **'Remember Position'**
   String get rememberPosition;
 
-  /// No description provided for @resumeVods.
-  ///
-  /// In en, this message translates to:
-  /// **'Resume VODs where you left off'**
-  String get resumeVods;
-
   /// No description provided for @aiFeatures.
   ///
   /// In en, this message translates to:
@@ -489,42 +471,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Integration'**
   String get integration;
-
-  /// No description provided for @openSubtitles.
-  ///
-  /// In en, this message translates to:
-  /// **'OpenSubtitles'**
-  String get openSubtitles;
-
-  /// No description provided for @autoDownloadSubtitles.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-download VOD subtitles'**
-  String get autoDownloadSubtitles;
-
-  /// No description provided for @streamingSources.
-  ///
-  /// In en, this message translates to:
-  /// **'Streaming Sources'**
-  String get streamingSources;
-
-  /// No description provided for @realDebrid.
-  ///
-  /// In en, this message translates to:
-  /// **'Real-Debrid'**
-  String get realDebrid;
-
-  /// No description provided for @highSpeedStreaming.
-  ///
-  /// In en, this message translates to:
-  /// **'High-speed premium streaming'**
-  String get highSpeedStreaming;
-
-  /// No description provided for @validateApiKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Validate API Key'**
-  String get validateApiKey;
 
   /// No description provided for @recordings.
   ///

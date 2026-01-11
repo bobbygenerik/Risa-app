@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/voice_search_button.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
@@ -26,15 +24,11 @@ class _SearchScreenState extends State<SearchScreen>
   final FocusNode _voiceButtonFocusNode = FocusNode();
 
   List<Channel> _liveTvResults = [];
-  List<Content> _movieResults = [];
-  List<Content> _seriesResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
 
   static const int _resultsPerSection = 12;
   int _liveTvDisplayCount = _resultsPerSection;
-  int _moviesDisplayCount = _resultsPerSection;
-  int _seriesDisplayCount = _resultsPerSection;
 
   @override
   void initState() {
@@ -62,8 +56,6 @@ class _SearchScreenState extends State<SearchScreen>
     if (query.trim().isEmpty) {
       setState(() {
         _liveTvResults = [];
-        _movieResults = [];
-        _seriesResults = [];
         _isSearching = false;
         _hasSearched = false;
       });
@@ -77,42 +69,22 @@ class _SearchScreenState extends State<SearchScreen>
 
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
-    final contentProvider =
-        Provider.of<ContentProvider>(context, listen: false);
 
     channelProvider.searchChannelsAsync(query, limit: 200).then((liveTv) {
       if (!mounted) return;
-      final allContent = contentProvider.searchContent(query);
-      final movies =
-          allContent.where((c) => c.type == ContentType.movie).toList();
-      final series =
-          allContent.where((c) => c.type == ContentType.series).toList();
 
       setState(() {
         _liveTvResults = liveTv;
-        _movieResults = movies;
-        _seriesResults = series;
         _isSearching = false;
         _liveTvDisplayCount = _resultsPerSection;
-        _moviesDisplayCount = _resultsPerSection;
-        _seriesDisplayCount = _resultsPerSection;
       });
     }).catchError((_) {
       final liveTv = channelProvider.searchChannels(query);
-      final allContent = contentProvider.searchContent(query);
-      final movies =
-          allContent.where((c) => c.type == ContentType.movie).toList();
-      final series =
-          allContent.where((c) => c.type == ContentType.series).toList();
 
       setState(() {
         _liveTvResults = liveTv;
-        _movieResults = movies;
-        _seriesResults = series;
         _isSearching = false;
         _liveTvDisplayCount = _resultsPerSection;
-        _moviesDisplayCount = _resultsPerSection;
-        _seriesDisplayCount = _resultsPerSection;
       });
     });
   }
@@ -167,7 +139,7 @@ class _SearchScreenState extends State<SearchScreen>
                             TextSelection.collapsed(offset: text.length);
                       },
                       decoration: InputDecoration(
-                        hintText: 'Search for channels, movies, or series...',
+                        hintText: 'Search for channels...',
                         hintStyle: TextStyle(
                             fontSize: 16,
                             color: Colors.white.withValues(alpha: 0.5)),
@@ -230,7 +202,7 @@ class _SearchScreenState extends State<SearchScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'Search for channels, movies, or series',
+              'Search for channels',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
             ),
           ],
@@ -238,9 +210,7 @@ class _SearchScreenState extends State<SearchScreen>
       );
     }
 
-    if (_liveTvResults.isEmpty &&
-        _movieResults.isEmpty &&
-        _seriesResults.isEmpty) {
+    if (_liveTvResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -272,25 +242,6 @@ class _SearchScreenState extends State<SearchScreen>
               setState(() => _liveTvDisplayCount += _resultsPerSection);
             }),
           const SizedBox(height: 32),
-        ],
-        if (_movieResults.isNotEmpty) ...[
-          _buildSectionHeader('Movies', Icons.movie, _movieResults.length),
-          const SizedBox(height: 12),
-          _buildContentGrid(_movieResults.take(_moviesDisplayCount).toList()),
-          if (_movieResults.length > _moviesDisplayCount)
-            _buildLoadMoreButton(() {
-              setState(() => _moviesDisplayCount += _resultsPerSection);
-            }),
-          const SizedBox(height: 32),
-        ],
-        if (_seriesResults.isNotEmpty) ...[
-          _buildSectionHeader('Series', Icons.tv, _seriesResults.length),
-          const SizedBox(height: 12),
-          _buildContentGrid(_seriesResults.take(_seriesDisplayCount).toList()),
-          if (_seriesResults.length > _seriesDisplayCount)
-            _buildLoadMoreButton(() {
-              setState(() => _seriesDisplayCount += _resultsPerSection);
-            }),
         ],
       ],
     );
@@ -446,101 +397,4 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _buildContentGrid(List<Content> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 6,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Focus(
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent &&
-                (event.logicalKey == LogicalKeyboardKey.select ||
-                    event.logicalKey == LogicalKeyboardKey.enter)) {
-              context.push('/content/${Uri.encodeComponent(item.id)}',
-                  extra: item);
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Builder(
-            builder: (context) {
-              final isFocused = Focus.of(context).hasFocus;
-              return InkWell(
-                onTap: () => context.push(
-                    '/content/${Uri.encodeComponent(item.id)}',
-                    extra: item),
-                borderRadius: BorderRadius.circular(12),
-                child: AnimatedScale(
-                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                  duration: TVFocusStyle.animationDuration,
-                  curve: TVFocusStyle.animationCurve,
-                  child: AnimatedContainer(
-                    duration: TVFocusStyle.animationDuration,
-                    curve: TVFocusStyle.animationCurve,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: isFocused
-                          ? Border.all(
-                              color: TVFocusStyle.focusRingColor,
-                              width: 3,
-                            )
-                          : null,
-                      boxShadow: isFocused
-                          ? TVFocusStyle.focusedShadow
-                          : TVFocusStyle.defaultShadow,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardBackground,
-                              borderRadius: BorderRadius.circular(12),
-                              image: item.imageUrl != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(item.imageUrl!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: item.imageUrl == null
-                                ? const Center(
-                                    child: Icon(Icons.movie,
-                                        color: AppTheme.textSecondary),
-                                  )
-                                : null,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            item.title,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.w500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
 }

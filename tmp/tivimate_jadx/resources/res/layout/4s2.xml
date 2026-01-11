@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android" xmlns:lb="http://schemas.android.com/apk/res-auto">
+    <ImageView
+        android:id="@+id/ir"
+        style="?attr/2a9"/>
+    <androidx.leanback.widget.NonOverlappingRelativeLayout
+        android:id="@+id/6d9"
+        style="?attr/1f5"/>
+</merge>

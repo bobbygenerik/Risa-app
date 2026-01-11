@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="4oa" parent="@style/2oe">
+        <item name="6f7">2bg</item>
+        <item name="5t1">57i</item>
+    </style>
+</resources>

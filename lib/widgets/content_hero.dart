@@ -11,7 +11,7 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 
 /// A hero component that displays channel information with EPG data
-/// Used across Live TV, Movies, and Series screens
+/// Used across Live TV screens
 class ContentHero extends StatelessWidget {
   final Channel? channel;
   final Program? currentProgram;
@@ -111,9 +111,9 @@ class ContentHero extends StatelessWidget {
           ],
         ),
       ),
-      child: Center(
+        child: Center(
         child: Icon(
-          isLive ? Icons.tv : Icons.movie,
+          Icons.tv,
           size: 80,
           color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
         ),

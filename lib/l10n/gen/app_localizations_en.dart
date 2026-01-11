@@ -42,16 +42,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String moviesCount(int count) {
-    return '$count movies';
-  }
-
-  @override
-  String seriesCount(int count) {
-    return '$count series';
-  }
-
-  @override
   String get playlists => 'Playlists';
 
   @override
@@ -189,9 +179,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rememberPosition => 'Remember Position';
 
   @override
-  String get resumeVods => 'Resume VODs where you left off';
-
-  @override
   String get aiFeatures => 'AI Features';
 
   @override
@@ -223,24 +210,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integration => 'Integration';
-
-  @override
-  String get openSubtitles => 'OpenSubtitles';
-
-  @override
-  String get autoDownloadSubtitles => 'Auto-download VOD subtitles';
-
-  @override
-  String get streamingSources => 'Streaming Sources';
-
-  @override
-  String get realDebrid => 'Real-Debrid';
-
-  @override
-  String get highSpeedStreaming => 'High-speed premium streaming';
-
-  @override
-  String get validateApiKey => 'Validate API Key';
 
   @override
   String get recordings => 'Recordings';

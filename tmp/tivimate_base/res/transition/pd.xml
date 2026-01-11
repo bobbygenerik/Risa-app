@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<transitionSet
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <fade android:interpolator="@android:interpolator/fast_out_linear_in" android:duration="@integer/27t">
+        <targets>
+            <target android:targetId="@id/74r" />
+        </targets>
+    </fade>
+    <slide android:interpolator="@android:interpolator/fast_out_linear_in" android:duration="350" android:slideEdge="@integer/1ei">
+        <targets>
+            <target android:targetId="@id/1kv" />
+            <target android:targetId="@id/1qa" />
+            <target android:targetId="@id/74g" />
+            <target android:targetId="@id/72j" />
+        </targets>
+    </slide>
+    <slide android:interpolator="@android:interpolator/fast_out_linear_in" android:duration="350" android:slideEdge="@integer/5a2">
+        <targets>
+            <target android:targetId="@id/3p6" />
+            <target android:targetId="@id/o3" />
+            <target android:targetId="@id/25n" />
+            <target android:targetId="@id/42b" />
+            <target android:targetId="@id/1sn" />
+            <target android:targetId="@id/i4" />
+            <target android:targetId="@id/279" />
+            <target android:targetId="@id/3e1" />
+            <target android:targetId="@id/6bo" />
+        </targets>
+    </slide>
+</transitionSet>

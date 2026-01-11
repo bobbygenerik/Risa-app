@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ut" parent="@style/h6" />
+    <style name="21d" parent="@style/3oa" />
+    <style name="6fu" parent="@style/1im" />
+    <style name="4v4" parent="@style/2gg" />
+</resources>

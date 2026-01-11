@@ -281,17 +281,35 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: darkBackgroundOpacity(0.95),
+        backgroundColor: dialogBackground,
         contentTextStyle: const TextStyle(
-          color: textPrimary,
+          color: Colors.white,
           fontSize: 14,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
-        actionTextColor: accentOrange,
+        actionTextColor: primaryBlue,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        elevation: 8,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: dialogBackground,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+        contentTextStyle: const TextStyle(
+          color: textSecondary,
+          fontSize: 14,
+        ),
+        elevation: 12,
       ),
     );
   }

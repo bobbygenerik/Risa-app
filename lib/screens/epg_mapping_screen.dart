@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/channel.dart';
-import '../services/epg_service.dart';
 import '../services/incremental_epg_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_theme.dart';
 import '../utils/debug_helper.dart';
+import '../utils/snackbar_utils.dart';
 import '../widgets/epg_mapping_dialogs.dart';
 
 class EpgMappingScreen extends StatefulWidget {
@@ -22,8 +23,7 @@ class EpgMappingScreen extends StatefulWidget {
 }
 
 class _EpgMappingScreenState extends State<EpgMappingScreen> {
-  final EpgService _epgService = EpgService();
-  final IncrementalEpgService _incrementalEpgService = IncrementalEpgService();
+  late final IncrementalEpgService _epgService;
 
   final List<ChannelMappingEntry> _mappingEntries = [];
   List<ChannelMappingEntry> _filteredEntries = [];
@@ -36,6 +36,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   @override
   void initState() {
     super.initState();
+    _epgService = context.read<IncrementalEpgService>();
     _initializeMapping();
   }
 
@@ -44,7 +45,6 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
     try {
       await _epgService.initialize();
-      await _incrementalEpgService.initialize();
 
       _buildMappingEntries();
       _calculateMatchConfidence();
@@ -63,7 +63,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       final tvgId = channel.tvgId ?? channel.id;
       final existingMapping = _epgService.getManualMapping(tvgId);
       final hasEpgData =
-          _epgService.hasEpgData(tvgId, channelName: channel.name);
+          _epgService.hasEpgMatch(tvgId, channelName: channel.name);
       final suggestedMatches =
           _epgService.getSuggestedMatches(tvgId, channel.name, limit: 5);
 
@@ -90,7 +90,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
     final tvgId = channel.tvgId ?? channel.id;
     final hasExactMatch =
-        _epgService.hasEpgData(tvgId, channelName: channel.name);
+        _epgService.hasEpgMatch(tvgId, channelName: channel.name);
     if (hasExactMatch) return 1.0;
 
     return suggestions.first.value;
@@ -538,12 +538,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
     if (entries.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('No channels with sufficient confidence for auto-mapping'),
-            backgroundColor: Colors.orange,
-          ),
+        SnackbarUtils.showWarning(
+          context,
+          'No channels with sufficient confidence for auto-mapping',
         );
       }
       return;
@@ -568,12 +565,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     await _initializeMapping();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Auto-mapped ${entries.length} channels'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarUtils.showSuccess(context, 'Auto-mapped ${entries.length} channels');
     }
   }
 
@@ -586,12 +578,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     await _initializeMapping();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cleared mappings for selected channels'),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      SnackbarUtils.showInfo(context, 'Cleared mappings for selected channels');
     }
   }
 

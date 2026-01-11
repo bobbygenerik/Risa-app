@@ -12,7 +12,6 @@ import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
@@ -26,8 +25,6 @@ import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
-import 'package:iptv_player/services/opensubtitles_service.dart';
-import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -39,16 +36,14 @@ import 'package:iptv_player/screens/playlist_editor_screen.dart';
 import 'package:iptv_player/screens/playlist_manager_screen.dart';
 import 'package:iptv_player/screens/ssl_settings_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
-import 'package:iptv_player/screens/ai_models_screen.dart';
+import 'package:iptv_player/screens/translation_models_screen.dart';
+import 'package:iptv_player/screens/whisper_models_screen.dart';
 import 'package:iptv_player/screens/epg_diagnostic_screen.dart';
 import 'package:iptv_player/screens/epg_manager_screen.dart';
 import 'package:iptv_player/screens/debug_screen.dart';
 import 'package:iptv_player/screens/exit_screen.dart';
 // modern_home_screen is unused in the redesigned UI; import removed to silence lints
 import 'package:iptv_player/screens/live_tv_screen.dart';
-import 'package:iptv_player/screens/movies_screen.dart';
-import 'package:iptv_player/screens/series_screen.dart';
-import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/multi_view_screen.dart';
 import 'package:iptv_player/widgets/safe_pop_scope.dart';
 
@@ -58,7 +53,6 @@ import 'package:iptv_player/screens/downloads_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/video_player_router.dart';
 
-import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
@@ -79,10 +73,21 @@ Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
   try {
     if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
 
-    // Simple heuristic: assume low memory if running on older Android
+    // Simple heuristic: assume low memory if running on older Android or Shield
     if (Platform.isAndroid) {
       final info = await Process.run('getprop', ['ro.build.version.sdk']);
       final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
+      
+      // Check if it's a Shield device
+      final model = await Process.run('getprop', ['ro.product.model']);
+      final modelName = model.stdout.toString().toLowerCase();
+      final isShield = modelName.contains('shield');
+      
+      // Shield devices need more conservative memory management
+      if (isShield) {
+        return _DeviceMemoryInfo(isLowMemory: true);
+      }
+      
       return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
     }
 
@@ -131,22 +136,36 @@ void main() {
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
       if (memoryInfo.isLowMemory) {
-        // Reduce cache sizes on low-memory devices
-        PaintingBinding.instance.imageCache.maximumSize = 20;
+        // Very conservative cache sizes for Shield/low-memory devices
+        PaintingBinding.instance.imageCache.maximumSize = 15; // Reduced from 20
         PaintingBinding.instance.imageCache.maximumSizeBytes =
-            4 << 20; // 4MB max
-        StartupProbe.mark('Image cache limits configured (LOW MEMORY)');
+            2 << 20; // 2MB max (reduced from 4MB)
+        StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
       } else {
         PaintingBinding.instance.imageCache.maximumSize =
-            50; // Conservative but functional
+            40; // Reduced from 50 for better performance
         PaintingBinding.instance.imageCache.maximumSizeBytes =
-            8 << 20; // 8MB max
+            6 << 20; // 6MB max (reduced from 8MB)
         StartupProbe.mark('Image cache limits configured (CONSERVATIVE)');
       }
 
-      // Force immediate garbage collection
+      // Force immediate garbage collection and memory cleanup for Shield
       final tmp = List<int>.generate(1024, (index) => index);
       tmp.clear();
+      
+      // Additional cleanup for Shield devices
+      if (memoryInfo.isLowMemory) {
+        // Clear any existing image cache
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        
+        // Force multiple GC cycles for Shield
+        for (int i = 0; i < 3; i++) {
+          final waste = List<int>.generate(512, (index) => index);
+          waste.clear();
+        }
+        StartupProbe.mark('Shield memory cleanup completed');
+      }
 
       // Initialize SSL handler for IPTV providers with certificate issues
       await SSLHandler.init();
@@ -267,7 +286,7 @@ class _StartupLoaderState extends State<StartupLoader> {
 
     StartupProbe.mark('StartupLoader: continuing with background TMDB init');
 
-    // EPG loading is now handled by the EpgService provider's initialize() method
+    // EPG loading is now handled by the IncrementalEpgService provider's initialize() method
     // which loads from cache or fetches from URL automatically
 
     // Small delay so the indicator is visible briefly on very fast devices
@@ -752,9 +771,6 @@ class _MyAppState extends State<MyApp> {
             },
           ),
           ChangeNotifierProvider(
-            create: (_) => ContentProvider()..initialize(),
-          ),
-          ChangeNotifierProvider(
             create: (context) {
               final service = IncrementalEpgService();
               // Start EPG initialization immediately for fast startup
@@ -762,8 +778,7 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProxyProvider2<ContentProvider, IncrementalEpgService,
-              ChannelProvider>(
+          ChangeNotifierProxyProvider<IncrementalEpgService, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading minimally - DB load is fast
@@ -773,8 +788,7 @@ class _MyAppState extends State<MyApp> {
               );
               return provider;
             },
-            update: (context, contentProvider, epgService, channelProvider) {
-              channelProvider?.setContentProvider(contentProvider);
+            update: (context, epgService, channelProvider) {
               channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
@@ -828,20 +842,6 @@ class _MyAppState extends State<MyApp> {
             },
             update: (_, speechService, transcriptionService) {
               return transcriptionService ?? WhisperTranscriptionService();
-            },
-          ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = OpenSubtitlesService();
-              _runDeferred(service.initialize);
-              return service;
-            },
-          ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = RealDebridService();
-              _runDeferred(service.initialize);
-              return service;
             },
           ),
           ChangeNotifierProxyProvider<WhisperTranscriptionService,
@@ -942,26 +942,22 @@ final _router = GoRouter(
   debugLogDiagnostics: true,
   routes: [
     GoRoute(path: '/', redirect: (context, state) => '/home'),
-    // Main shell containing fixed navbar with home, movies, series screens
+    // Main shell containing fixed navbar with home, guide, search screens
     ShellRoute(
       builder: (context, state, child) {
         // Determine active tab from current location
         final location = state.matchedLocation;
         final activeTab = location == '/search'
             ? 'search'
-            : location == '/movies'
-                ? 'movies'
-                : location == '/series'
-                    ? 'series'
-                    : location == '/epg'
-                        ? 'epg'
-                        : location == '/settings'
-                            ? 'settings'
-                            : location == '/favorites'
-                                ? 'favorites'
-                                : location == '/downloads'
-                                    ? 'downloads'
-                                    : 'home';
+            : location == '/epg'
+                ? 'epg'
+                : location == '/settings'
+                    ? 'settings'
+                    : location == '/favorites'
+                        ? 'favorites'
+                        : location == '/downloads'
+                            ? 'downloads'
+                            : 'home';
 
         return MainShell(activeTab: activeTab, child: child);
       },
@@ -970,16 +966,6 @@ final _router = GoRouter(
           path: '/home',
           pageBuilder: (context, state) =>
               _fadeSlidePage(key: state.pageKey, child: const LiveTVScreen()),
-        ),
-        GoRoute(
-          path: '/movies',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const MoviesScreen()),
-        ),
-        GoRoute(
-          path: '/series',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
         ),
         GoRoute(
           path: '/epg',
@@ -1051,7 +1037,19 @@ final _router = GoRouter(
       path: '/ai-models',
       pageBuilder: (context, state) => _fadeSlidePage(
           key: state.pageKey,
-          child: const SafePopScope(child: AIModelsScreen())),
+          child: const SafePopScope(child: TranslationModelsScreen())),
+    ),
+    GoRoute(
+      path: '/translation-models',
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: TranslationModelsScreen())),
+    ),
+    GoRoute(
+      path: '/whisper-models',
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey,
+          child: const SafePopScope(child: WhisperModelsScreen())),
     ),
     GoRoute(
       path: '/epg-diagnostic',
@@ -1076,55 +1074,6 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const ExitScreen()),
     ),
     GoRoute(
-      path: '/content/:id',
-      pageBuilder: (context, state) {
-        Content? content;
-
-        if (state.extra is Content) {
-          content = state.extra as Content;
-        } else {
-          final encodedId = state.pathParameters['id'];
-          final contentId =
-              encodedId != null ? Uri.decodeComponent(encodedId) : null;
-          if (contentId != null) {
-            final contentProvider = Provider.of<ContentProvider>(
-              context,
-              listen: false,
-            );
-            final catalog = [
-              ...contentProvider.movies,
-              ...contentProvider.series,
-              ...contentProvider.continueWatching,
-              ...contentProvider.highlights,
-            ];
-            for (final entry in catalog) {
-              if (entry.id == contentId) {
-                content = entry;
-                break;
-              }
-            }
-          }
-        }
-
-        if (content == null) {
-          return _fadeSlidePage(
-            key: state.pageKey,
-            child: Scaffold(
-              appBar: AppBar(title: const Text('Content not found')),
-              body: const Center(
-                child: Text('We could not locate the requested item.'),
-              ),
-            ),
-          );
-        }
-
-        return _fadeSlidePage(
-          key: state.pageKey,
-          child: SafePopScope(child: ContentDetailScreen(content: content)),
-        );
-      },
-    ),
-    GoRoute(
       path: '/player',
       pageBuilder: (context, state) {
         final data = state.extra;
@@ -1134,7 +1083,6 @@ final _router = GoRouter(
         String? subtitle;
         String? streamUrl;
         Channel? channel;
-        Content? content;
         bool isLive = false;
 
         if (data is Channel) {
@@ -1150,12 +1098,6 @@ final _router = GoRouter(
                 Provider.of<ChannelProvider>(appContext, listen: false);
             channelProvider.incrementWatchCount(data.id);
           });
-        } else if (data is Content) {
-          content = data;
-          videoUrl = data.videoUrl ?? videoUrl;
-          title = data.title;
-          subtitle = data.description;
-          streamUrl = videoUrl;
         } else if (data is Map<String, dynamic> || data is Map) {
           final mapArgs = data is Map<String, dynamic>
               ? data
@@ -1173,7 +1115,6 @@ final _router = GoRouter(
           child: SafePopScope(
             child: VideoPlayerRouter(
               channel: channel,
-              content: content,
               streamUrl: streamUrl,
               videoUrl: videoUrl,
               title: title,
@@ -1230,25 +1171,6 @@ CustomTransitionPage _fadeSlidePage({
       );
     },
   );
-}
-
-// Placeholder screens
-class MoviesPlaceholder extends StatelessWidget {
-  const MoviesPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildPlaceholder(context, 'Movies', Icons.movie);
-  }
-}
-
-class SeriesPlaceholder extends StatelessWidget {
-  const SeriesPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildPlaceholder(context, 'Series', Icons.tv);
-  }
 }
 
 class CatchupPlaceholder extends StatelessWidget {

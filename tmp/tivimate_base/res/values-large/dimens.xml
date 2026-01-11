@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="470">440.0dip</dimen>
+    <item type="dimen" name="6un">60.000004%</item>
+    <item type="dimen" name="5h6">90.0%</item>
+    <item type="dimen" name="ft">60.000004%</item>
+    <item type="dimen" name="6vj">90.0%</item>
+    <item type="dimen" name="ed">55.000008%</item>
+    <item type="dimen" name="3ui">79.99999%</item>
+</resources>

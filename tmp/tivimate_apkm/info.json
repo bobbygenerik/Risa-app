@@ -1,0 +1,60 @@
+{
+    "apkm_version": 5,
+    "apk_title": "TiviMate IPTV Player 5.2.0 (320-480dpi) (Android 6.0+)",
+    "app_name": "TiviMate IPTV Player",
+    "release_version": "5.2.0",
+    "variant": "(universal) (320-480dpi) (Android 6.0+)",
+    "release_title": "TiviMate IPTV Player 5.2.0 (320-480dpi) (Android 6.0+)",
+    "versioncode": "5208",
+    "pname": "ar.tvplayer.tv",
+    "post_date": "2025-08-30 19:44:16",
+    "capabilities": [
+        "leanback"
+    ],
+    "languages": [
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "es",
+        "fi",
+        "fr",
+        "hr",
+        "hu",
+        "it",
+        "iw",
+        "ka",
+        "lt",
+        "lv",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sr",
+        "sv",
+        "tr",
+        "uk",
+        "vi",
+        "zh"
+    ],
+    "arches": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+    ],
+    "dpis": [
+        "320",
+        "480"
+    ],
+    "min_api": "23",
+    "accent_color": "0088d0",
+    "apk_id": 10560842,
+    "release_id": 10560843
+}

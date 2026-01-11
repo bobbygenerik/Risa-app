@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.media3.ui.AspectRatioFrameLayout android:layout_gravity="center" android:id="@id/4pv" android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <View android:id="@id/49b" android:background="@android:color/black" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+        <ImageView android:id="@id/37b" android:layout_width="fill_parent" android:layout_height="fill_parent" android:scaleType="fitXY" android:contentDescription="@null" />
+        <ImageView android:id="@id/b0" android:layout_width="fill_parent" android:layout_height="fill_parent" android:scaleType="fitXY" android:contentDescription="@null" />
+        <androidx.media3.ui.SubtitleView android:id="@id/73h" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+        <ProgressBar android:layout_gravity="center" android:id="@id/1f" android:layout_width="wrap_content" android:layout_height="wrap_content" android:indeterminate="true" />
+        <TextView android:textSize="@dimen/1ti" android:textColor="@color/4sa" android:gravity="center" android:layout_gravity="center" android:id="@id/2ij" android:background="@drawable/6hu" android:paddingLeft="@dimen/6kp" android:paddingTop="@dimen/3in" android:paddingRight="@dimen/6kp" android:paddingBottom="@dimen/3in" android:layout_width="wrap_content" android:layout_height="@dimen/2c1" android:layout_marginBottom="@dimen/8" />
+    </androidx.media3.ui.AspectRatioFrameLayout>
+    <FrameLayout android:id="@id/14f" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+    <FrameLayout android:id="@id/2p6" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+    <View android:id="@id/3k9" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+</merge>

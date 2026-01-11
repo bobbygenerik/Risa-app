@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/snackbar_utils.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
@@ -233,12 +233,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                         : BrandSecondaryButton(
                             onPressed: () {
                               service.clearSubtitles();
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(
-                                  content: Text('Subtitles cleared'),
-                                ),
-                              );
+                              SnackbarUtils.show(context, 'Subtitles cleared');
                             },
                             icon: Icons.clear,
                             label: 'Clear',
@@ -258,13 +253,9 @@ class TranscriptionControlPanel extends StatelessWidget {
                               final srt = service.exportAsSRT();
                               // Copy to clipboard (simple cross-platform solution)
                               Clipboard.setData(ClipboardData(text: srt));
-                              showAppSnackBar(
+                              SnackbarUtils.showSuccess(
                                 context,
-                                SnackBar(
-                                  content: Text(
-                                    'Exported ${service.subtitles.length} subtitles to clipboard',
-                                  ),
-                                ),
+                                'Exported ${service.subtitles.length} subtitles to clipboard',
                               );
                             },
                             icon: Icons.save,

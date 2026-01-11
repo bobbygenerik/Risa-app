@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:gravity="center" android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="18.0sp" android:textColor="@color/1hk" android:gravity="center" android:id="@id/3o4" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/5fg" />
+    <EditText android:id="@id/37p" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/787" android:hint="@string/4bg" android:singleLine="true" />
+    <Button android:id="@id/3j8" android:layout_marginTop="@dimen/787" android:text="@string/156" style="@style/1i3" />
+</LinearLayout>

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../services/epg_service.dart';
+import '../services/incremental_epg_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_theme.dart';
 import '../utils/debug_helper.dart';
+import '../utils/snackbar_utils.dart';
 
 class ChannelMappingDialog extends StatefulWidget {
   final dynamic entry; // ChannelMappingEntry
-  final EpgService epgService;
+  final IncrementalEpgService epgService;
 
   const ChannelMappingDialog({
     super.key,
@@ -312,20 +313,10 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Mapping applied successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarUtils.showSuccess(context, 'Mapping applied successfully');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to apply mapping: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarUtils.showError(context, 'Failed to apply mapping: $e');
       }
     }
   }
@@ -339,20 +330,10 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Mapping cleared successfully'),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      SnackbarUtils.showInfo(context, 'Mapping cleared successfully');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to clear mapping: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarUtils.showError(context, 'Failed to clear mapping: $e');
       }
     }
   }
@@ -360,7 +341,7 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
 
 class EpgAnalyticsDialog extends StatelessWidget {
   final List<dynamic> mappingEntries; // List of ChannelMappingEntry
-  final EpgService epgService;
+  final IncrementalEpgService epgService;
 
   const EpgAnalyticsDialog({
     super.key,

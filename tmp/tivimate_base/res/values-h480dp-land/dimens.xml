@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="bi">0.0dip</dimen>
+    <dimen name="1e6">22.0dip</dimen>
+    <dimen name="2q5">48.0dip</dimen>
+    <dimen name="1ps">48.0dip</dimen>
+    <dimen name="1qm">168.0dip</dimen>
+    <dimen name="7br">0.0dip</dimen>
+</resources>

@@ -262,8 +262,7 @@ channel.setMethodCallHandler((call) async {
 **Issue**: Two EPG services with different capabilities causing data mismatch
 
 **Root Cause**: 
-- `IncrementalEpgService` (limited) used by UI
-- `EpgService` (comprehensive) not integrated with UI
+- `IncrementalEpgService` used by UI
 
 **Impact**: EPG data loads but doesn't display in UI
 
@@ -295,7 +294,7 @@ channel.setMethodCallHandler((call) async {
 ### Immediate Actions (High Priority)
 
 1. **Fix EPG Service Integration**
-   - Migrate UI components to use `EpgService`
+   - Keep UI components on `IncrementalEpgService`
    - Update provider registration in `main.dart`
    - Test EPG data display in UI
 

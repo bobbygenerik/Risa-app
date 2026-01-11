@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="23c" parent="@style/5uu" />
+    <style name="5qu" parent="@style/vc" />
+    <style name="5uu" parent="@android:style/Theme.Material.NoActionBar" />
+    <style name="vc" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>

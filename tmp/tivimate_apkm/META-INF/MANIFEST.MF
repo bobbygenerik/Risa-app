@@ -1,0 +1,33 @@
+Manifest-Version: 1.0
+Created-By: 11.0.25 (Oracle Corporation)
+
+Name: split_config.armeabi_v7a.apk
+SHA1-Digest: L9Xt5BZoaVmerPjT/FoJ0y2zG5Y=
+
+Name: split_config.xhdpi.apk
+SHA1-Digest: 9Shto917deRyu88QQd746MrMKBc=
+
+Name: split_config.x86_64.apk
+SHA1-Digest: 5ywkpTunYaJvlA086zP2oxhkctA=
+
+Name: split_config.x86.apk
+SHA1-Digest: UV56BOK5Dewq1bcUo1LrBPW2tcg=
+
+Name: icon.png
+SHA1-Digest: FsWVCdt+51MKIqPOZcOknxhCOeQ=
+
+Name: APKM_installer.url
+SHA1-Digest: WXG2Fx7AAOCZOW45becgkaGPhgg=
+
+Name: split_config.arm64_v8a.apk
+SHA1-Digest: g+2A26kxvuQzOozdeknKTS/ZTYM=
+
+Name: info.json
+SHA1-Digest: S/X4VwpyGkRUmqL4QtkWYWiJdz4=
+
+Name: base.apk
+SHA1-Digest: haw0awnEpbheFJjaWI3PyLQWUGk=
+
+Name: split_config.xxhdpi.apk
+SHA1-Digest: yrGGTm0cVxASnR3QrumqXE8aUg8=
+

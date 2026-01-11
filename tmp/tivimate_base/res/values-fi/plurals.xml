@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="5iu">
+        <item quantity="other">Salasanan pitää olla vähintään %d merkkiä pitkä</item>
+        <item quantity="one">Salasanan pitää olla vähintään %d merkkiä pitkä</item>
+    </plurals>
+    <plurals name="5fn">
+        <item quantity="other">Siirry eteenpäin %d sekuntia</item>
+        <item quantity="one">Siirry eteenpäin %d sekunti</item>
+    </plurals>
+    <plurals name="1n5">
+        <item quantity="other">Siirry taaksepäin %d sekuntia</item>
+        <item quantity="one">Siirry taaksepäin %d sekunti</item>
+    </plurals>
+    <plurals name="17r">
+        <item quantity="other">%d lähdettä</item>
+        <item quantity="one">%d lähde</item>
+    </plurals>
+    <plurals name="43d">
+        <item quantity="other">%d kautta</item>
+        <item quantity="one">Yksi kausi</item>
+    </plurals>
+</resources>

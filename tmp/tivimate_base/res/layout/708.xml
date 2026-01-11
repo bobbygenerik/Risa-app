@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <Button android:id="@id/4sv" android:background="@drawable/79" android:visibility="gone" android:layout_marginTop="@dimen/64c" android:text="@string/22l" android:drawableLeft="@drawable/4l" style="@style/32g" />
+    <Button android:id="@id/8c" android:background="@drawable/2ma" android:visibility="gone" android:layout_marginTop="@dimen/64c" android:text="@string/pr" android:drawableLeft="@drawable/26j" style="@style/32g" />
+</merge>
