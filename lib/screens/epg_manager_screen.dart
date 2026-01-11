@@ -108,7 +108,9 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
       });
 
       try {
-        // Clear cache functionality not available in IncrementalEpgService
+        final epgService =
+            Provider.of<IncrementalEpgService>(context, listen: false);
+        await epgService.clearAllData();
         if (mounted) {
           _showMessage('All EPG data cleared successfully!');
         }

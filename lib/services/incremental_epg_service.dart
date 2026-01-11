@@ -531,6 +531,94 @@ class IncrementalEpgService extends ChangeNotifier {
     await _initializeProgressively(forceRefresh: forceRefresh);
   }
 
+  Future<void> clearAllData({bool clearUrls = true, bool clearSavedPlaylists = true}) async {
+    _resetLoadingState();
+    _error = null;
+    _hasParsed = false;
+    _epgUrl = null;
+    _pendingAllowedRefresh = false;
+    _extendedWindowScheduled = false;
+    _extendingWindow = false;
+    _availableChannels.clear();
+    _internalToEpgIdMapping.clear();
+    _normalizedAvailableChannels = null;
+    _normalizeCache.clear();
+    _manualMappings.clear();
+    _programsByChannel.clear();
+    _lastProgramIndexByChannel.clear();
+    _channelFailureCounts.clear();
+    _loggedMissingEpgIds.clear();
+    _loggedMissingProgramChannels.clear();
+    _invalidateProgramIndexCache();
+    notifyListeners();
+
+    try {
+      await _db.clearEpg();
+    } catch (e) {
+      debugLog('EPG: Failed to clear DB cache: $e');
+    }
+
+    try {
+      final cacheFile = await _getCacheFile();
+      if (await cacheFile.exists()) await cacheFile.delete();
+    } catch (e) {
+      debugLog('EPG: Failed to delete cache file: $e');
+    }
+
+    try {
+      final backupFile = await _getCacheBackupFile();
+      if (await backupFile.exists()) await backupFile.delete();
+    } catch (e) {
+      debugLog('EPG: Failed to delete cache backup: $e');
+    }
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/$_normalizedMapFileName');
+      if (await file.exists()) await file.delete();
+    } catch (e) {
+      debugLog('EPG: Failed to delete normalized mapping file: $e');
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_epgCacheTimeKey);
+      await prefs.remove(_epgCacheUrlKey);
+      await prefs.remove(_manualMappingsKey);
+      if (clearUrls) {
+        await prefs.remove('custom_epg_url');
+        await prefs.remove('epg_url');
+        await prefs.remove('secondary_epg_url');
+      }
+
+      final keys = prefs.getKeys();
+      for (final key in keys) {
+        if (key.startsWith('m3u_epg_url_') ||
+            key.startsWith('m3u_secondary_epg_') ||
+            key.startsWith('xtream_epg_url_') ||
+            key.startsWith('xtream_secondary_epg_')) {
+          await prefs.remove(key);
+        }
+      }
+
+      if (clearSavedPlaylists) {
+        final playlistsJson = prefs.getString('saved_playlists');
+        if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(playlistsJson);
+          final updated = decoded.map((entry) {
+            final map = Map<String, dynamic>.from(entry as Map);
+            map['epgUrl'] = null;
+            map['epgUrlSecondary'] = null;
+            return map;
+          }).toList();
+          await prefs.setString('saved_playlists', jsonEncode(updated));
+        }
+      }
+    } catch (e) {
+      debugLog('EPG: Failed to clear EPG prefs: $e');
+    }
+  }
+
   Future<void> _handleCacheUrlChange(SharedPreferences prefs) async {
     final currentUrl = _epgUrl ?? '';
     final cachedUrl = prefs.getString(_epgCacheUrlKey) ?? '';

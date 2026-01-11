@@ -2628,12 +2628,58 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _artworkRetryAfter.remove(key);
   }
 
-  bool _shouldPrefetchArt(String sectionKey, int index) {
+  bool _shouldPrefetchArt(
+    BuildContext context,
+    String sectionKey,
+    int index,
+    ScrollController controller,
+    double cardWidth,
+    double cardGap,
+    EdgeInsets padding,
+  ) {
+    if (!_isIndexVisibleInRow(
+      context,
+      controller,
+      index,
+      cardWidth,
+      cardGap,
+      padding,
+    )) {
+      return false;
+    }
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
       return index < 4;
     }
     return (index - focusedIndex).abs() <= 3;
+  }
+
+  bool _isIndexVisibleInRow(
+    BuildContext context,
+    ScrollController controller,
+    int index,
+    double cardWidth,
+    double cardGap,
+    EdgeInsets padding,
+  ) {
+    final itemWidth = cardWidth + cardGap;
+    if (itemWidth <= 0) return false;
+
+    double offset;
+    double viewport;
+    if (controller.hasClients) {
+      offset = controller.offset;
+      viewport = controller.position.viewportDimension;
+    } else {
+      final screenWidth = MediaQuery.of(context).size.width;
+      viewport = screenWidth - padding.horizontal;
+      offset = 0.0;
+    }
+
+    if (viewport <= 0) return false;
+    final startIndex = (offset / itemWidth).floor();
+    final endIndex = ((offset + viewport) / itemWidth).ceil() - 1;
+    return index >= startIndex && index <= endIndex;
   }
 
   Widget _buildChannelSection(
@@ -2771,8 +2817,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             itemBuilder: (context, index) {
               final focusNode =
                   isFirstRow && index == 0 ? _firstChannelFocus : null;
-              final allowPrefetch =
-                  _shouldPrefetchArt(sectionKey, index);
+              final allowPrefetch = _shouldPrefetchArt(
+                context,
+                sectionKey,
+                index,
+                rowController,
+                cardWidth,
+                context.cardGap(),
+                EdgeInsets.only(
+                  left: rowInset,
+                  right: context.spacingLg(),
+                ),
+              );
               return _buildChannelCard(
                 context,
                 filteredChannels[index],
