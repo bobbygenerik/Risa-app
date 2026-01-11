@@ -261,6 +261,7 @@ class ChannelProvider with ChangeNotifier {
   // Flag to track if categories are being computed
   bool _isGroupingChannels = false;
   bool get isGroupingChannels => _isGroupingChannels;
+  bool get hasComputedCategories => _cachedCategories != null;
 
   // Playlist loader manages download+isolate parsing and supports cancellation
   PlaylistLoader _playlistLoader = PlaylistLoader();

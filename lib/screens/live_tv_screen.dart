@@ -110,6 +110,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Queue<String> _programArtworkNegativeTitleOrder = Queue<String>();
   final Queue<String> _programTitleLogoOrder = Queue<String>();
   final Queue<String> _categoryCacheOrder = Queue<String>();
+  final Map<String, Size> _heroImageSizes = {};
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
   late final bool _fanartEnabled;
@@ -559,6 +560,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _categoryHasMore.clear();
     _categoryAppendQueue.clear();
     _heroImageCacheHits.clear();
+    _heroImageSizes.clear();
     _heroAspectRatios.clear();
     _heroAspectRatioInFlight.clear();
 
@@ -1354,7 +1356,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      height: 180,
+                      height: cardPeek + 24,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -1471,7 +1473,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // Hero info overlay
         Positioned(
           top: 0,
-          left: contentInset,
+          left: 0,
           right: rightInset,
           height: contentTop, // Limit height to visible area above channels
           child: AnimatedBuilder(
@@ -1524,11 +1526,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     alignment: Alignment.bottomLeft,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
-                      child: _buildHeroInfoPanel(
-                        context,
-                        heroInfoWidth,
-                        _buildFeaturedInfoWithFocus(
-                            context, activeChannel, currentProgram),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    AppTheme.darkBackground
+                                        .withValues(alpha: 0.78),
+                                    AppTheme.darkBackground
+                                        .withValues(alpha: 0.45),
+                                    Colors.transparent,
+                                  ],
+                                  stops: const [0.0, 0.55, 1.0],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(left: contentInset),
+                            child: _buildHeroInfoPanel(
+                              context,
+                              heroInfoWidth,
+                              _buildFeaturedInfoWithFocus(
+                                  context, activeChannel, currentProgram),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -2124,6 +2151,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final height = image.image.height.toDouble();
       if (width > 0 && height > 0 && mounted) {
         setState(() {
+          _heroImageSizes[url] = Size(width, height);
           _heroAspectRatios[url] = width / height;
         });
       }
@@ -2134,6 +2162,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       stream.removeListener(listener);
     });
     stream.addListener(listener);
+  }
+
+  bool _isHighResHeroImage(String url) {
+    if (url.isEmpty) return false;
+    final lower = url.toLowerCase();
+    if (lower.contains('image.tmdb.org')) {
+      if (lower.contains('/original/') ||
+          lower.contains('/w1920/') ||
+          lower.contains('/w1280/')) {
+        return true;
+      }
+    }
+    final size = _heroImageSizes[url];
+    if (size != null) {
+      return size.width >= 1200 || size.height >= 720;
+    }
+    _ensureHeroAspectRatio(url);
+    return false;
   }
 
   int _programArtworkEntryLimit() {
@@ -2259,6 +2305,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     cleaned = cleaned.replaceAll(RegExp(r'\s*[-:|]\s*'), ' ');
     cleaned = cleaned.replaceAll(
         RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false), '');
+    cleaned = cleaned.replaceAll(
+        RegExp(r'\b(tv|channel|network)\b', caseSensitive: false), '');
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
     return cleaned;
   }
@@ -2279,13 +2327,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final channelName =
         channel == null ? '' : _cleanChannelNameForQuery(channel.name);
+    final groupTitle = channel == null
+        ? ''
+        : _cleanChannelNameForQuery(channel.groupTitle ?? '');
     if (_isGenericTitle(canonical) && channelName.isNotEmpty) {
       add('$canonical $channelName');
+    }
+    if (_isGenericTitle(canonical) && groupTitle.isNotEmpty) {
+      add('$canonical $groupTitle');
+    }
+    if (_isGenericTitle(canonical) &&
+        channelName.isNotEmpty &&
+        groupTitle.isNotEmpty) {
+      add('$canonical $channelName $groupTitle');
     }
     add(canonical);
     if (canonical != original) add(original);
     if (_isGenericTitle(canonical) && channelName.isNotEmpty) {
       add(channelName);
+    }
+    if (_isGenericTitle(canonical) && groupTitle.isNotEmpty) {
+      add(groupTitle);
+    }
+    if (canonical.length <= 6 && channelName.isNotEmpty) {
+      add(channelName);
+    }
+    if (canonical.length <= 6 && groupTitle.isNotEmpty) {
+      add(groupTitle);
     }
     if (cacheKey.isNotEmpty) {
       _artworkQueryTitleCache[cacheKey] = List<String>.from(titles);
@@ -2658,14 +2726,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 3. Fall back to the direct image URL provided in the EPG XML itself
-      if (!preferHighRes) {
-        final direct = _normalizeArtworkUrl(program.imageUrl, isHero: true);
-        if (_isValidProgramArtwork(direct, channel)) {
+      final direct = _normalizeArtworkUrl(program.imageUrl, isHero: true);
+      if (_isValidProgramArtwork(direct, channel)) {
+        if (!preferHighRes || _isHighResHeroImage(direct ?? '')) {
           _logArtworkDecision(
             'LiveTV artwork: hero source=epg program="${program.title}" url=$direct',
           );
           return direct;
         }
+        _logArtworkDecision(
+          'LiveTV artwork: skip low-res epg program="${program.title}" url=$direct',
+        );
       }
     }
 

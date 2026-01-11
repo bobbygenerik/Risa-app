@@ -7,6 +7,7 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:intl/intl.dart';
 
@@ -43,6 +44,8 @@ class EPGChannelSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
@@ -56,8 +59,8 @@ class EPGChannelSidebar extends StatelessWidget {
         controller: controller,
         physics: const ClampingScrollPhysics(),
         itemCount: channels.length + (isLoadingMore ? 1 : 0),
-        itemExtent: 68,
-        cacheExtent: 68 * 15, // Cache more items for smoother scrolling
+        itemExtent: rowHeight + rowGap,
+        cacheExtent: (rowHeight + rowGap) * 15, // Cache more items for smoother scrolling
         addAutomaticKeepAlives: true, // Keep channel widgets alive
         itemBuilder: (context, index) {
           if (index >= channels.length) {
@@ -120,6 +123,8 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
   
   @override
   Widget build(BuildContext context) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return Focus(
       focusNode: widget.focusNode,
       canRequestFocus: true,
@@ -161,8 +166,8 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
         child: Container(
-          height: 64,
-          margin: const EdgeInsets.only(bottom: 4, right: 2),
+          height: rowHeight,
+          margin: const EdgeInsets.only(bottom: rowGap, right: 2),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
@@ -218,6 +223,8 @@ class EPGProgramsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return SingleChildScrollView(
       controller: horizontalController,
       scrollDirection: Axis.horizontal,
@@ -228,8 +235,8 @@ class EPGProgramsGrid extends StatelessWidget {
           controller: verticalController,
           physics: const ClampingScrollPhysics(),
           itemCount: channels.length + (isLoadingMore ? 1 : 0),
-          itemExtent: 68,
-          cacheExtent: 68 * 10, // Cache 10 items ahead/behind
+          itemExtent: rowHeight + rowGap,
+          cacheExtent: (rowHeight + rowGap) * 10, // Cache 10 items ahead/behind
           itemBuilder: (context, index) {
             if (index >= channels.length) {
               return const SizedBox(height: 64);
@@ -278,13 +285,23 @@ class EPGProgramRow extends StatelessWidget {
     final channelKey = channel.tvgId ?? channel.id;
     epgService.ensureChannelLoaded(channelKey, channelName: channel.name);
     
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
+    const cellWidth = 240.0;
+    const totalWidth = 12 * cellWidth;
+
     // Check if EPG data is available for this channel
     final hasEpgData = epgService.hasEpgData(channelKey);
     if (!hasEpgData) {
-      return _buildFocusablePlaceholder(
-        label: 'Loading EPG...',
-        focusNode: currentProgramFocusNode,
-        onMoveLeft: onMoveLeft,
+      return Container(
+        height: rowHeight,
+        width: totalWidth,
+        margin: const EdgeInsets.only(bottom: rowGap, left: 0),
+        child: _buildFocusablePlaceholder(
+          label: 'Loading EPG...',
+          focusNode: currentProgramFocusNode,
+          onMoveLeft: onMoveLeft,
+        ),
       );
     }
     
@@ -301,17 +318,14 @@ class EPGProgramRow extends StatelessWidget {
           program.endTime.isAfter(displayStart);
     }).toList();
 
-    const cellWidth = 240.0;
-    const totalWidth = 12 * cellWidth;
-
     final focusIndex = dayPrograms.indexWhere((program) {
       return program.isCurrentlyPlaying;
     });
 
     return Container(
-      height: 64,
+      height: rowHeight,
       width: totalWidth,
-      margin: const EdgeInsets.only(bottom: 4, left: 0),
+      margin: const EdgeInsets.only(bottom: rowGap, left: 0),
       child: dayPrograms.isEmpty
           ? _buildFocusablePlaceholder(
               label: 'No EPG data',
@@ -338,6 +352,7 @@ class EPGProgramRow extends StatelessWidget {
     FocusNode? focusNode,
     VoidCallback? onMoveLeft,
   }) {
+    const rowHeight = AppSpacing.epgRowHeight;
     return Focus(
       focusNode: focusNode,
       canRequestFocus: focusNode != null,
@@ -354,9 +369,8 @@ class EPGProgramRow extends StatelessWidget {
       child: Builder(builder: (context) {
         final isFocused = Focus.of(context).hasFocus;
         return Container(
-          height: 64,
+          height: rowHeight,
           width: 12 * 240.0, // totalWidth
-          margin: const EdgeInsets.only(bottom: 4, left: 0),
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.only(left: 12),
           decoration: BoxDecoration(
@@ -406,6 +420,7 @@ class EPGVirtualProgramRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const rowHeight = AppSpacing.epgRowHeight;
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: programs.asMap().entries.map((entry) {
@@ -440,7 +455,7 @@ class EPGVirtualProgramRow extends StatelessWidget {
         return Positioned(
           left: leftOffset,
           top: 0,
-          height: 64,
+          height: rowHeight,
           width: width,
           child: Container(
             margin: const EdgeInsets.only(right: 2),

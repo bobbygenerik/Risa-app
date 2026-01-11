@@ -69,6 +69,7 @@ class _EPGScreenState extends State<EPGScreen>
   String _channelPageKey = '';
   List<String> _lastCategoryNames = [];
   bool _categoryPrimeRequested = false;
+  DateTime? _lastCategoryPrimeAttempt;
   final Map<String, FocusNode> _programFocusNodes = {};
   final Queue<String> _programFocusOrder = Queue<String>();
   static const int _maxProgramFocusNodes = 400;
@@ -151,9 +152,17 @@ class _EPGScreenState extends State<EPGScreen>
     }
   }
 
-  Future<void> _primeCategories() async {
-    if (_categoryPrimeRequested) return;
+  Future<void> _primeCategories({bool force = false}) async {
+    if (!force && _categoryPrimeRequested) return;
+    final now = DateTime.now();
+    if (force &&
+        _lastCategoryPrimeAttempt != null &&
+        now.difference(_lastCategoryPrimeAttempt!) <
+            const Duration(seconds: 5)) {
+      return;
+    }
     _categoryPrimeRequested = true;
+    _lastCategoryPrimeAttempt = now;
     try {
       final channelProvider =
           Provider.of<ChannelProvider>(context, listen: false);
@@ -445,7 +454,7 @@ class _EPGScreenState extends State<EPGScreen>
                 !channelProvider.isGroupingChannels) {
               // Categories not computed yet but we have channels - trigger computation.
               unawaited(channelProvider.getAllCategoryNamesAsync());
-              unawaited(_primeCategories());
+              unawaited(_primeCategories(force: true));
             }
             if (rawCategories.isNotEmpty) {
               _lastCategoryNames = List<String>.from(rawCategories);
@@ -456,7 +465,8 @@ class _EPGScreenState extends State<EPGScreen>
             final isCategoryLoading = effectiveCategories.isEmpty &&
                 channelProvider.hasChannels &&
                 (channelProvider.isGroupingChannels ||
-                    rawCategories.isEmpty);
+                    (!channelProvider.hasComputedCategories &&
+                        rawCategories.isEmpty));
 
             final seen = <String>{};
             final categoryList = <String>[];
@@ -490,7 +500,8 @@ class _EPGScreenState extends State<EPGScreen>
                 final filteredChannels = _epgState.paginatedChannels;
 
                 // Calculate header height for offset
-                const headerHeight = 72.0; // Approximate header height
+                const headerHeight =
+                    AppSpacing.epgRowHeight + 4.0; // Match row height + gap
 
                 return Container(
                   decoration: const BoxDecoration(
@@ -745,7 +756,7 @@ class _EPGScreenState extends State<EPGScreen>
         children: [
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: context.spacingSm(),
+              horizontal: context.spacingXs(),
               vertical: context.spacingXs(),
             ),
             child: Row(
@@ -807,7 +818,7 @@ class _EPGScreenState extends State<EPGScreen>
               },
               separatorBuilder: (context, index) {
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.spacingSm()),
+                  padding: EdgeInsets.symmetric(horizontal: context.spacingXs()),
                   child: Divider(
                     height: 1,
                     thickness: 1,
@@ -860,11 +871,11 @@ class _EPGScreenState extends State<EPGScreen>
             scale: isFocused ? 1.05 : 1.0,
             child: Container(
               margin: EdgeInsets.symmetric(
-                horizontal: context.spacingSm(),
+                horizontal: context.spacingXs(),
                 vertical: context.spacingXs() * 0.25,
               ),
               padding: EdgeInsets.symmetric(
-                horizontal: context.spacingSm(),
+                horizontal: context.spacingXs(),
                 vertical: context.spacingXs(),
               ),
               child: Row(
@@ -872,8 +883,8 @@ class _EPGScreenState extends State<EPGScreen>
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 90),
                     curve: Curves.easeOut,
-                    width: 4,
-                    height: 24,
+                    width: 3,
+                    height: 22,
                     decoration: BoxDecoration(
                       color:
                           isFocused ? AppTheme.primaryBlue : Colors.transparent,
@@ -883,7 +894,7 @@ class _EPGScreenState extends State<EPGScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       name,
@@ -955,8 +966,8 @@ class _EPGScreenState extends State<EPGScreen>
                 children: [
                   // Time header (scrolls horizontally)
                   Container(
-                    height: 68, // Match channel item height
-                    margin: const EdgeInsets.only(bottom: 0),
+                    height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
+                    margin: const EdgeInsets.only(bottom: 4),
                     child: SingleChildScrollView(
                       controller: _timeHeaderScrollController,
                       scrollDirection: Axis.horizontal,
@@ -1015,8 +1026,8 @@ class _EPGScreenState extends State<EPGScreen>
     return Column(
       children: [
         Container(
-          height: 68, // Match channel item height (itemExtent)
-          margin: const EdgeInsets.only(bottom: 1, right: 4),
+          height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
+          margin: const EdgeInsets.only(bottom: 4, right: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
@@ -1075,7 +1086,7 @@ class _EPGScreenState extends State<EPGScreen>
     final cellWidth = 240.0;
 
     return SizedBox(
-      height: 68, // Match channel item height
+      height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -1083,7 +1094,7 @@ class _EPGScreenState extends State<EPGScreen>
 
           return Container(
             width: cellWidth,
-            height: 68, // Match channel item height
+            height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
