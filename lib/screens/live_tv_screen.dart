@@ -1526,14 +1526,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     alignment: Alignment.bottomLeft,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Stack(
+                        child: Stack(
                         children: [
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
+                                gradient: RadialGradient(
+                                  center: const Alignment(-0.85, 0.15),
+                                  radius: 1.2,
                                   colors: [
                                     AppTheme.darkBackground
                                         .withValues(alpha: 0.78),
@@ -1541,7 +1541,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                         .withValues(alpha: 0.45),
                                     Colors.transparent,
                                   ],
-                                  stops: const [0.0, 0.55, 1.0],
+                                  stops: const [0.0, 0.6, 1.0],
                                 ),
                               ),
                             ),
@@ -3672,12 +3672,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: AppTheme.cardBackground,
-            border: isFocused
-                ? Border.all(color: AppTheme.focusBorder, width: 3)
-                : null,
+            border: Border.all(
+              color: isFocused
+                  ? AppTheme.focusBorder
+                  : Colors.white.withValues(alpha: 0.08),
+              width: isFocused ? 3 : 1,
+            ),
             boxShadow: isFocused
                 ? TVFocusStyle.focusedShadow
-                : TVFocusStyle.defaultShadow,
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -4220,7 +4229,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           colors: [
             Color(0xFF2a2a3e),
             Color(0xFF1a1a2e),
-            AppTheme.cardBackground
+            AppTheme.darkBackground
           ],
         ),
       ),
@@ -4252,9 +4261,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Color(0xFF1B1E2B),
-        Color(0xFF141722),
-        AppTheme.cardBackground,
+        Color(0xFF222635),
+        Color(0xFF171B24),
+        AppTheme.darkBackground,
       ],
     );
     final logoUrl = channel.logoUrl;
@@ -4274,6 +4283,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(gradient: gradient),
+                ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 0.9,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               ),
               if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
@@ -4309,9 +4332,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Color(0xFF1A2E1A),
-        Color(0xFF0F1F0F),
-        Color(0xFF0A1A0A),
+        Color(0xFF223522),
+        Color(0xFF142414),
+        Color(0xFF0C150C),
       ],
     );
     final logoUrl = channel.logoUrl;
@@ -4387,9 +4410,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Color(0xFF0B1E3A),
-        Color(0xFF102A4A),
-        Color(0xFF0A1426),
+        Color(0xFF122A4A),
+        Color(0xFF13253A),
+        Color(0xFF0B1524),
       ],
     );
     final logoUrl = channel.logoUrl;

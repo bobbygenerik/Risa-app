@@ -451,7 +451,8 @@ class _EPGScreenState extends State<EPGScreen>
             final rawCategories = channelProvider.getAllCategoryNames();
             if (rawCategories.isEmpty &&
                 channelProvider.hasChannels &&
-                !channelProvider.isGroupingChannels) {
+                !channelProvider.isGroupingChannels &&
+                !channelProvider.hasComputedCategories) {
               // Categories not computed yet but we have channels - trigger computation.
               unawaited(channelProvider.getAllCategoryNamesAsync());
               unawaited(_primeCategories(force: true));
@@ -464,9 +465,7 @@ class _EPGScreenState extends State<EPGScreen>
                 rawCategories.isNotEmpty ? rawCategories : _lastCategoryNames;
             final isCategoryLoading = effectiveCategories.isEmpty &&
                 channelProvider.hasChannels &&
-                (channelProvider.isGroupingChannels ||
-                    (!channelProvider.hasComputedCategories &&
-                        rawCategories.isEmpty));
+                channelProvider.isGroupingChannels;
 
             final seen = <String>{};
             final categoryList = <String>[];
@@ -479,6 +478,8 @@ class _EPGScreenState extends State<EPGScreen>
               '⭐ Favorites',
               ...categoryList
             ]; // Favorites first, then categories
+            final showCenteredUpdating =
+                isCategoryLoading && categoryList.isEmpty;
 
             final channelPageFuture = _ensureChannelPageFuture(channelProvider);
             return FutureBuilder<List<Channel>>(
@@ -531,6 +532,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   _buildCategorySidebar(
                                     categoryNames,
                                     isLoading: isCategoryLoading,
+                                    showCenteredUpdating: showCenteredUpdating,
                                   ),
                                   const SizedBox(width: 4),
                                   SizedBox(
@@ -740,6 +742,7 @@ class _EPGScreenState extends State<EPGScreen>
   Widget _buildCategorySidebar(
     List<String> categories, {
     bool isLoading = false,
+    bool showCenteredUpdating = false,
   }) {
     return Container(
       width: context.categoryBarWidth(),
@@ -774,7 +777,7 @@ class _EPGScreenState extends State<EPGScreen>
                     ),
                   ),
                 ),
-                if (isLoading) ...[
+                if (isLoading && !showCenteredUpdating) ...[
                   SizedBox(
                     width: 12,
                     height: 12,
@@ -798,34 +801,68 @@ class _EPGScreenState extends State<EPGScreen>
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              key: const PageStorageKey<String>('epg_category_list'),
-              physics: const BouncingScrollPhysics(),
-              primary: false,
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return _buildCategoryItem(
-                  name: category,
-                  isSelected: _epgState.selectedCategory == category,
-                  isFirst: index == 0,
-                  onTap: () {
-                    _epgState.setSelectedCategory(category);
-                    // Scroll channel list to top
-                    _scrollChannelListToTop();
+            child: Stack(
+              children: [
+                ListView.separated(
+                  key: const PageStorageKey<String>('epg_category_list'),
+                  physics: const BouncingScrollPhysics(),
+                  primary: false,
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return _buildCategoryItem(
+                      name: category,
+                      isSelected: _epgState.selectedCategory == category,
+                      isFirst: index == 0,
+                      onTap: () {
+                        _epgState.setSelectedCategory(category);
+                        // Scroll channel list to top
+                        _scrollChannelListToTop();
+                      },
+                    );
                   },
-                );
-              },
-              separatorBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.spacingXs()),
-                  child: Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Colors.white.withValues(alpha: 0.06),
+                  separatorBuilder: (context, index) {
+                    return Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: context.spacingXs()),
+                      child: Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
+                    );
+                  },
+                ),
+                if (showCenteredUpdating)
+                  IgnorePointer(
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color:
+                                  AppTheme.primaryBlue.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Updating',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                );
-              },
+              ],
             ),
           ),
         ],
