@@ -5,13 +5,15 @@ import 'package:path_provider/path_provider.dart';
 
 class WhisperPlatformService {
   static const MethodChannel _channel = MethodChannel('com.risa.iptv/whisper');
+  static const EventChannel _eventChannel =
+      EventChannel('com.risa.iptv/whisper_stream');
 
   static const Map<String, WhisperModel> availableModels = {
     'tiny.en': WhisperModel(
       name: 'tiny.en',
       size: '39 MB',
       description: 'Fastest, English only',
-      bundled: true,
+      bundled: false,
       filename: 'ggml-tiny.en.bin',
     ),
     'base.en': WhisperModel(
@@ -30,7 +32,7 @@ class WhisperPlatformService {
     ),
   };
 
-  /// Initialize Whisper with bundled tiny model
+  /// Initialize Whisper plugin.
   static Future<bool> initialize() async {
     try {
       final result = await _channel.invokeMethod<bool>('initialize');
@@ -47,7 +49,7 @@ class WhisperPlatformService {
   }) async {
     try {
       final modelPath = await _getModelPath(modelName);
-      if (modelPath == null) return null;
+      if (modelPath == null || !await File(modelPath).exists()) return null;
 
       final result = await _channel.invokeMethod<String>('transcribe', {
         'audioPath': audioPath,
@@ -92,6 +94,43 @@ class WhisperPlatformService {
       return false;
     }
   }
+
+  /// Request permission to capture playback audio (Android 10+).
+  static Future<bool> requestAudioCapturePermission() async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'requestCapturePermission',
+      );
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Start audio playback capture and stream transcriptions.
+  static Future<bool> startAudioCapture({String modelName = 'tiny.en'}) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'startAudioCapture',
+        {'modelName': modelName},
+      );
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Stop audio playback capture.
+  static Future<void> stopAudioCapture() async {
+    try {
+      await _channel.invokeMethod<void>('stopAudioCapture');
+    } catch (_) {}
+  }
+
+  /// Stream of transcription updates coming from native capture.
+  static Stream<String> get transcriptionStream => _eventChannel
+      .receiveBroadcastStream()
+      .map((event) => event?.toString() ?? '');
 
   /// Get local path for model
   static Future<String?> _getModelPath(String modelName) async {

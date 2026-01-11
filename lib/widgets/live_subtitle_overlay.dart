@@ -30,12 +30,11 @@ class LiveSubtitleOverlay extends StatelessWidget {
 
     return Consumer<IntegratedTranscriptionService>(
       builder: (context, service, child) {
-        // Prefer VOD subtitles when loaded and matching current playback position
-        final vodText = service.currentVodSubtitle;
-        final liveText = service.latestSubtitles;
-        final subtitles = vodText.isNotEmpty ? vodText : liveText;
-
-        if (subtitles.isEmpty) return const SizedBox.shrink();
+        final subtitles = service.latestSubtitles;
+        final isDownloading = service.isDownloadingWhisperModel;
+        if (subtitles.isEmpty && !isDownloading) {
+          return const SizedBox.shrink();
+        }
         return Container(
           padding: EdgeInsets.symmetric(
             horizontal: context.tvSpacing(AppSizes.md),
@@ -46,23 +45,55 @@ class LiveSubtitleOverlay extends StatelessWidget {
             borderRadius:
                 BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
           ),
-          child: Text(
-            subtitles,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: textColor,
-              fontSize: context.tvTextSize(fontSize),
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-              shadows: const [
-                Shadow(
-                  offset: Offset(1, 1),
-                  blurRadius: 2,
-                  color: Colors.black,
+          child: isDownloading && subtitles.isEmpty
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: context.tvTextSize(16),
+                      height: context.tvTextSize(16),
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    ),
+                    SizedBox(width: context.tvSpacing(AppSizes.sm)),
+                    Text(
+                      'Downloading Whisper model...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: context.tvTextSize(fontSize - 2),
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        shadows: const [
+                          Shadow(
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                            color: Colors.black,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  subtitles,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: context.tvTextSize(fontSize),
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    shadows: const [
+                      Shadow(
+                        offset: Offset(1, 1),
+                        blurRadius: 2,
+                        color: Colors.black,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
         );
       },
     );
@@ -130,12 +161,25 @@ class TranscriptionControlPanel extends StatelessWidget {
                   const SizedBox(height: AppSizes.sm),
 
                   // Target language
-                  _buildLanguageDropdown(
-                    context,
+                  Text(
                     'Target Language',
-                    service.targetLanguage,
-                    service.getAvailableLanguages(),
-                    (lang) async => await service.setTargetLanguage(lang),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white24),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'English (fixed)',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
 
                   const SizedBox(height: AppSizes.md),

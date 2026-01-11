@@ -2,12 +2,9 @@
 
 This directory contains Whisper speech recognition models for the Risa IPTV app.
 
-## Bundled Models
+## Models
 
-- `ggml-tiny.en.bin` - Tiny English-only model (~39MB)
-  - Fastest inference
-  - English language only
-  - Good for real-time transcription
+Whisper models are downloaded on-demand from within the app.
 
 ## Model Sources
 
@@ -16,4 +13,4 @@ Download actual model files from:
 
 ## Usage
 
-The tiny.en model is bundled with the app for immediate speech recognition functionality. Larger models can be downloaded on-demand through the app settings.
+Download a model from the app settings, then use it for live transcription.

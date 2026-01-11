@@ -76,7 +76,7 @@ class ExoPlayerView(
         
         // Configure PlayerView with memory-conscious settings
         playerView.useController = false // We use Flutter overlay controls
-        playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
         playerView.setKeepScreenOn(true)
         playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
         playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -114,12 +114,18 @@ class ExoPlayerView(
         val isAndroidTv =
             (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
                 Configuration.UI_MODE_TYPE_TELEVISION
+        val deviceModel = Build.MODEL.lowercase()
+        val isShield = deviceModel.contains("shield") || deviceModel.contains("nvidia")
         val parametersBuilder = trackSelector.buildUponParameters()
             .setMaxAudioChannelCount(2) // Limit to stereo to save memory
         if (isAndroidTv) {
             // Remove Sd limits to allow 4K/HDR on Shield/TV devices
             // Prefer SDR H.264 on Android TV only if necessary, but ideally let it auto-select
             // parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
+        }
+        if (isShield) {
+            // Force SDR H.264 on Shield to avoid HEVC/HDR rainbow tint.
+            parametersBuilder.setPreferredVideoMimeType(MimeTypes.VIDEO_H264)
         }
         trackSelector.parameters = parametersBuilder.build()
 

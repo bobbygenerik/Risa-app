@@ -8,7 +8,6 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:record/record.dart';
 import 'whisper_transcription_service.dart';
-import 'package:iptv_player/services/http_client_service.dart';
 
 /// Integrated On-Device Transcription and Translation Service
 ///
@@ -39,6 +38,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   bool _isTTSEnabled = false;
   bool _isDownloadingModels = false;
   double _downloadProgress = 0.0;
+  bool _isDownloadingWhisperModel = false;
+  String _lastError = '';
 
   // Languages
   TranslateLanguage _sourceLanguage =
@@ -58,13 +59,13 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Duration? _smoothedPlaybackPosition;
   // EMA alpha for smoothing (0-1). Higher means more responsive, lower means smoother.
   final double _playbackEmaAlpha = 0.2;
-  // VOD (SRT) subtitles parsed for VOD playback
-  final List<VodSubtitle> _vodSubtitles = [];
 
   static const int _maxSubtitleHistory = 200;
-  static const int _maxVodSubtitles = 400;
 
   Timer? _cleanupTimer;
+  // VOD subtitle support (parsed from SRT/WebVTT when loading VOD subtitles)
+  final List<VodSubtitle> _vodSubtitles = [];
+  final int _maxVodSubtitles = 1000;
 
   // Getters
   bool get isInitialized => _isInitialized;
@@ -73,6 +74,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   bool get isTTSEnabled => _isTTSEnabled;
   bool get isDownloadingModels => _isDownloadingModels;
   double get downloadProgress => _downloadProgress;
+  bool get isDownloadingWhisperModel => _isDownloadingWhisperModel;
+  String get lastError => _lastError;
   TranslateLanguage get sourceLanguage => _sourceLanguage;
   TranslateLanguage get targetLanguage => _targetLanguage;
   String get currentText => _currentText;
@@ -149,6 +152,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     if (_whisperService == null) return;
     final whisper = _whisperService;
     if (whisper == null) return;
+    final downloading = whisper.isDownloadingModel;
+    if (_isDownloadingWhisperModel != downloading) {
+      _isDownloadingWhisperModel = downloading;
+      notifyListeners();
+    }
     final newText = whisper.currentText;
     if (newText.isNotEmpty && newText != _currentText) {
       _currentText = newText;
@@ -219,7 +227,16 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     final whisper = _whisperService;
     final url = _lastVideoUrl;
     if (whisper != null && url != null) {
-      await whisper.startTranscription(streamUrl: url);
+      final started = await whisper.startTranscription(streamUrl: url);
+      if (!started) {
+        _lastError = whisper.lastError.isNotEmpty
+            ? whisper.lastError
+            : 'Failed to start live transcription';
+        _isTranscribing = false;
+        notifyListeners();
+        return;
+      }
+      _lastError = '';
     } else {
       debugLog(
           '⚠️ Cannot start live transcription: Whisper service or Video URL missing');
@@ -229,32 +246,6 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
     _isTranscribing = true;
     notifyListeners();
-  }
-
-  /// Load SRT contents (text) and parse into VOD subtitles
-  Future<void> loadSrtFromString(String srtContents) async {
-    try {
-      final parsed = _parseSrt(srtContents);
-      _vodSubtitles
-        ..clear()
-        ..addAll(parsed);
-      _trimVodSubtitles();
-      notifyListeners();
-      debugLog('Loaded ${_vodSubtitles.length} VOD subtitles');
-    } catch (e) {
-      debugLog('Failed to load SRT: $e');
-    }
-  }
-
-  /// Load SRT from a remote URL
-  Future<void> loadSrtFromUrl(String url) async {
-    try {
-      final res = await HttpClientService().getString(url);
-      await loadSrtFromString(res);
-    } catch (e) {
-      debugLog('Failed to fetch SRT from $url: $e');
-      rethrow;
-    }
   }
 
   /// Transcribe an audio file with Whisper
@@ -280,6 +271,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       _isTranscribing = false;
       _currentText = '';
       _lastVideoUrl = null;
+      _lastError = '';
       notifyListeners();
       debugLog('✅ Transcription stopped');
     } catch (e) {
@@ -304,8 +296,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     _subtitles.add(entry);
     _trimSubtitleHistory();
 
-    // Translate if enabled and languages differ
-    if (_isTranslating && _sourceLanguage != _targetLanguage) {
+    // Translate if enabled (auto-detects language per entry)
+    if (_isTranslating) {
       await _translateEntry(entry);
     } else {
       entry.translatedText = text;
@@ -333,6 +325,25 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       // Create translator for detected language -> English
       final sourceLanguage = _getTranslateLanguage(detectedLanguage);
       if (sourceLanguage == null) {
+        entry.translatedText = entry.originalText;
+        return;
+      }
+
+      // Ensure required ML Kit models are available (source -> English).
+      final sourceCode = sourceLanguage.bcpCode;
+      final targetCode = TranslateLanguage.english.bcpCode;
+      try {
+        final sourceReady =
+            await _modelManager.isModelDownloaded(sourceCode);
+        if (!sourceReady) {
+          await _modelManager.downloadModel(sourceCode);
+        }
+        final targetReady =
+            await _modelManager.isModelDownloaded(targetCode);
+        if (!targetReady) {
+          await _modelManager.downloadModel(targetCode);
+        }
+      } catch (_) {
         entry.translatedText = entry.originalText;
         return;
       }
@@ -428,6 +439,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   /// Enable/disable translation
   void setTranslationEnabled(bool enabled) {
     _isTranslating = enabled;
+    if (_isTranslating && _targetLanguage != TranslateLanguage.english) {
+      _targetLanguage = TranslateLanguage.english;
+    }
     notifyListeners();
   }
 
@@ -449,6 +463,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
   /// Set target language
   Future<void> setTargetLanguage(TranslateLanguage language) async {
+    if (language != TranslateLanguage.english) {
+      _targetLanguage = TranslateLanguage.english;
+      notifyListeners();
+      return;
+    }
     if (_targetLanguage == language) return;
 
     _targetLanguage = language;
@@ -517,6 +536,18 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   void _cleanupOldSubtitles() {
     final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
     _subtitles.removeWhere((entry) => entry.timestamp.isBefore(cutoff));
+    // Also trim VOD subtitle list to the configured maximum
+    _trimVodSubtitles();
+    notifyListeners();
+  }
+
+  /// Load VOD subtitles from an SRT string and trim excess entries.
+  void loadVodSubtitlesFromSrt(String srt) {
+    final parsed = _parseSrt(srt);
+    _vodSubtitles
+      ..clear()
+      ..addAll(parsed);
+    _trimVodSubtitles();
     notifyListeners();
   }
 

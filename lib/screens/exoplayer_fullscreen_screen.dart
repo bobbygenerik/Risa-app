@@ -7,11 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../models/channel.dart';
-import '../models/content.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import '../providers/settings_provider.dart';
-import '../providers/content_provider.dart';
 import '../services/incremental_epg_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
@@ -26,7 +24,6 @@ enum ExoSubtitleMode { off, regular, liveTranslation }
 /// This implementation is optimized for Android TV devices like the Nvidia Shield.
 class ExoPlayerFullscreenScreen extends StatefulWidget {
   final Channel? channel;
-  final Content? content;
   final String? streamUrl;
   final String? videoUrl;
   final String? title;
@@ -36,7 +33,6 @@ class ExoPlayerFullscreenScreen extends StatefulWidget {
   const ExoPlayerFullscreenScreen({
     super.key,
     this.channel,
-    this.content,
     this.streamUrl,
     this.videoUrl,
     this.title,
@@ -58,7 +54,6 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   BoxFit _videoFit = BoxFit.contain;
   double _progress = 0.0;
   double _liveProgress = 0.0;
-  Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
   ExoSubtitleMode _subtitleMode = ExoSubtitleMode.off;
@@ -121,7 +116,6 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
         final duration = (call.arguments['duration'] as num).toInt();
         if (mounted && !widget.isLive) {
           _position = Duration(milliseconds: position);
-          _duration = Duration(milliseconds: duration);
           if (duration > 0) {
             setState(() {
               _progress = position / duration;
@@ -146,7 +140,6 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     _liveProgressTimer?.cancel();
     _playPauseFocus.dispose();
 
-    // Save position for VOD content
     unawaited(_saveCurrentPosition());
 
     try {
@@ -170,26 +163,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
 
       if (settings.rememberPlaybackPosition) {
-        final key = widget.content?.id ??
-            widget.title ??
+        final key = widget.title ??
             widget.videoUrl ??
             widget.streamUrl ??
             widget.channel?.url ??
             '';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('position_$key', _position.inMilliseconds);
-
-        // Update watch progress for content
-        if (widget.content != null && mounted) {
-          final contentProvider =
-              Provider.of<ContentProvider>(context, listen: false);
-          if (_duration.inMilliseconds > 0) {
-            final progress =
-                _position.inMilliseconds / _duration.inMilliseconds;
-            await contentProvider.updateWatchProgress(
-                widget.content!.id, progress);
-          }
-        }
       }
     }
   }
@@ -209,7 +189,6 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     }
 
     final url = widget.videoUrl ??
-        widget.content?.videoUrl ??
         widget.streamUrl ??
         widget.channel?.url ??
         '';
@@ -661,6 +640,14 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
           await _transcriptionService!.transcribeVideoStream(streamUrl);
+          if (_transcriptionService!.lastError.isNotEmpty && mounted) {
+            setState(() => _subtitleMode = ExoSubtitleMode.off);
+            showAppSnackBar(
+              context,
+              SnackBar(content: Text(_transcriptionService!.lastError)),
+            );
+            return;
+          }
         }
         setState(() => _subtitleMode = mode);
       } else {
@@ -710,7 +697,6 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
               Navigator.pop(context);
               // Retry by reloading the video
               final url = widget.videoUrl ??
-                  widget.content?.videoUrl ??
                   widget.streamUrl ??
                   widget.channel?.url ??
                   '';

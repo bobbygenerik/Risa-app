@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
-import '../models/content.dart';
 import '../utils/debug_helper.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
@@ -20,7 +19,6 @@ import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
-  final Content? content;
   final String? streamUrl;
   final String? videoUrl;
   final String? title;
@@ -30,7 +28,6 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   const EnhancedVideoPlayerScreen({
     super.key,
     this.channel,
-    this.content,
     this.streamUrl,
     this.videoUrl,
     this.title,
@@ -85,7 +82,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       _transcriptionListener = () {
         if (!mounted) return;
         final url = widget.videoUrl ??
-            widget.content?.videoUrl ??
             widget.streamUrl ??
             widget.channel?.url ??
             '';
@@ -120,7 +116,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     final url = widget.videoUrl ??
-        widget.content?.videoUrl ??
         widget.streamUrl ??
         widget.channel?.url ??
         '';
@@ -136,26 +131,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     try {
-      final service =
-          Provider.of<IntegratedTranscriptionService>(context, listen: false);
-      String? subtitleUrl;
-      subtitleUrl ??= widget.channel?.attributes != null
-          ? widget.channel!.attributes!['subtitleUrl']
-          : null;
-      subtitleUrl ??= widget.channel?.attributes != null
-          ? widget.channel!.attributes!['subtitle']
-          : null;
-
       await WakelockPlus.enable();
       _hideControlsAfterDelay();
-
-      if (subtitleUrl != null && subtitleUrl.isNotEmpty) {
-        try {
-          // fire-and-forget loading of VOD subtitles
-          // ignore: unawaited_futures
-          service.loadSrtFromUrl(subtitleUrl);
-        } catch (_) {}
-      }
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -232,7 +209,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       Positioned.fill(
                         child: ExoPlayerWidget(
                           url: widget.videoUrl ??
-                              widget.content?.videoUrl ??
                               widget.streamUrl ??
                               widget.channel?.url ??
                               '',
@@ -636,6 +612,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
           await service.transcribeVideoStream(streamUrl);
+          if (service.lastError.isNotEmpty && mounted) {
+            setState(() => _subtitleMode = EnhancedSubtitleMode.off);
+            showAppSnackBar(
+              context,
+              SnackBar(content: Text(service.lastError)),
+            );
+            return;
+          }
         }
       } else {
         await service.stopTranscription();
@@ -821,8 +805,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return const SizedBox.shrink();
   }
 
-  // Manual SRT loading removed per user preference; VOD subtitles are automatically
-  // used if provided by the content metadata. Function intentionally removed.
 }
 
 enum EnhancedSubtitleMode { off, regular, liveTranslation }

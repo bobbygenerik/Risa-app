@@ -1,6 +1,4 @@
-import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:iptv_player/services/whisper_platform_service.dart';
@@ -10,20 +8,22 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool _isTranscribing = false;
   bool _isTranslating = false;
   bool _isTTSEnabled = false;
+  bool _isDownloadingModel = false;
   String _lastError = '';
   TranslateLanguage _sourceLanguage = TranslateLanguage.english;
-  TranslateLanguage _targetLanguage = TranslateLanguage.spanish;
+  TranslateLanguage _targetLanguage = TranslateLanguage.english;
   final List<SubtitleEntry> _subtitles = [];
   String _currentText = '';
 
-  Timer? _recordingTimer;
   OnDeviceTranslator? _translator;
   String _selectedModel = 'tiny.en';
+  StreamSubscription<String>? _transcriptionSubscription;
 
   bool get isInitialized => _isInitialized;
   bool get isTranscribing => _isTranscribing;
   bool get isTranslating => _isTranslating;
   bool get isTTSEnabled => _isTTSEnabled;
+  bool get isDownloadingModel => _isDownloadingModel;
   bool get isWhisperLoaded => _isInitialized;
   String get lastError => _lastError;
   TranslateLanguage get sourceLanguage => _sourceLanguage;
@@ -75,88 +75,79 @@ class WhisperTranscriptionService extends ChangeNotifier {
       return false;
     }
 
-    if (streamUrl == null || streamUrl.isEmpty) {
-      _lastError = 'No stream URL provided';
-      notifyListeners();
-      return false;
-    }
+    if (_isTranscribing) return true;
 
     try {
+      final modelAvailable =
+          await WhisperPlatformService.isModelAvailable(_selectedModel);
+      if (!modelAvailable) {
+        _lastError =
+            'Whisper model $_selectedModel not downloaded. Downloading now...';
+        _isDownloadingModel = true;
+        notifyListeners();
+
+        final downloaded =
+            await WhisperPlatformService.downloadModel(_selectedModel);
+        _isDownloadingModel = false;
+        if (!downloaded) {
+          _lastError =
+              'Whisper model $_selectedModel not downloaded. Open Settings > Manage Speech Models to download.';
+          notifyListeners();
+          return false;
+        }
+      }
+      _lastError = '';
+
+      final permissionGranted =
+          await WhisperPlatformService.requestAudioCapturePermission();
+      if (!permissionGranted) {
+        _lastError =
+            'Audio capture permission denied. Allow screen capture to enable subtitles.';
+        notifyListeners();
+        return false;
+      }
+
+      final started = await WhisperPlatformService.startAudioCapture(
+        modelName: _selectedModel,
+      );
+      if (!started) {
+        _lastError =
+            'Failed to start audio capture. Try restarting playback.';
+        notifyListeners();
+        return false;
+      }
+
+      _transcriptionSubscription ??=
+          WhisperPlatformService.transcriptionStream.listen(
+        (text) async {
+          final cleaned = text.trim();
+          if (cleaned.isEmpty) return;
+          _currentText = cleaned;
+
+          final entry = SubtitleEntry(
+            originalText: cleaned,
+            translatedText:
+                _isTranslating ? await _translateText(cleaned) : cleaned,
+            timestamp: DateTime.now(),
+          );
+
+          _subtitles.add(entry);
+          notifyListeners();
+        },
+        onError: (error) {
+          _lastError = error.toString();
+          notifyListeners();
+        },
+      );
+
       _isTranscribing = true;
       notifyListeners();
-
-      // Extract audio from stream in 5-second chunks using ffmpeg
-      _recordingTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-        await _extractAndTranscribeAudio(streamUrl);
-      });
-
       return true;
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = 'Transcription failed: $e';
       _isTranscribing = false;
       notifyListeners();
       return false;
-    }
-  }
-
-  Future<void> _extractAndTranscribeAudio(String streamUrl) async {
-    if (!_isInitialized) return;
-
-    try {
-      final tempDir = Directory.systemTemp;
-      final audioPath =
-          '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.wav';
-
-      // Use ffmpeg to extract 5 seconds of audio from stream
-      final result = await Process.run('ffmpeg', [
-        '-i',
-        streamUrl,
-        '-t',
-        '5',
-        '-vn',
-        '-acodec',
-        'pcm_s16le',
-        '-ar',
-        '16000',
-        '-ac',
-        '1',
-        '-y',
-        audioPath,
-      ]);
-
-      if (result.exitCode == 0 && await File(audioPath).exists()) {
-        await _processAudioChunk(audioPath);
-        await File(audioPath).delete();
-      }
-    } catch (e) {
-      debugLog('Audio extraction error: $e');
-    }
-  }
-
-  Future<void> _processAudioChunk(String audioPath) async {
-    if (!_isInitialized) return;
-
-    try {
-      final result = await WhisperPlatformService.transcribe(
-        audioPath: audioPath,
-        modelName: _selectedModel,
-      );
-
-      if (result != null && result.isNotEmpty) {
-        _currentText = result;
-
-        final entry = SubtitleEntry(
-          originalText: result,
-          translatedText:
-              _isTranslating ? await _translateText(result) : result,
-          timestamp: DateTime.now(),
-        );
-
-        _subtitles.add(entry);
-        notifyListeners();
-      }
-    } catch (e) {
-      debugLog('Transcription error: $e');
     }
   }
 
@@ -174,13 +165,19 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   Future<void> stopTranscription() async {
-    _recordingTimer?.cancel();
+    await WhisperPlatformService.stopAudioCapture();
+    await _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = null;
     _isTranscribing = false;
     notifyListeners();
   }
 
   void setTranslationEnabled(bool enabled) {
     _isTranslating = enabled;
+    if (_isTranslating && _targetLanguage != TranslateLanguage.english) {
+      _targetLanguage = TranslateLanguage.english;
+      _translator = null;
+    }
     if (enabled && _translator == null) {
       _translator = OnDeviceTranslator(
         sourceLanguage: _sourceLanguage,
@@ -198,6 +195,11 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   Future<void> setTargetLanguage(TranslateLanguage language) async {
+    if (language != TranslateLanguage.english) {
+      _targetLanguage = TranslateLanguage.english;
+      notifyListeners();
+      return;
+    }
     _targetLanguage = language;
     unawaited(_translator?.close());
     _translator = null;
@@ -259,7 +261,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _recordingTimer?.cancel();
+    unawaited(_transcriptionSubscription?.cancel());
     _translator?.close();
     super.dispose();
   }
