@@ -28,8 +28,8 @@ class SettingsProvider extends ChangeNotifier {
   String _playbackQuality = 'Auto';
   double _videoBufferSize = 50;
   bool _heroVideoPreview = false;
-  String _videoPlayerBackend = 'Auto'; // Auto, ExoPlayer, MediaKit
-  String _exoPlayerSurfaceType = 'surface'; // surface, texture
+  String _videoPlayerBackend = 'MediaKit'; // ExoPlayer, MediaKit
+  String _exoPlayerSurfaceType = 'surface'; // surface
 
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
@@ -99,9 +99,22 @@ class SettingsProvider extends ChangeNotifier {
     _playbackQuality = prefs.getString('playback_quality') ?? 'Auto';
     _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
     _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
-    _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
-    _exoPlayerSurfaceType =
-        prefs.getString('exo_player_surface_type') ?? 'surface';
+    final storedBackend = prefs.getString('video_player_backend');
+    if (storedBackend == null || storedBackend == 'Auto') {
+      _videoPlayerBackend = 'MediaKit';
+      if (storedBackend == 'Auto') {
+        prefs.setString('video_player_backend', _videoPlayerBackend);
+      }
+    } else {
+      _videoPlayerBackend = storedBackend;
+    }
+    final storedSurface = prefs.getString('exo_player_surface_type');
+    if (storedSurface == null || storedSurface == 'surface') {
+      _exoPlayerSurfaceType = 'surface';
+    } else {
+      _exoPlayerSurfaceType = 'surface';
+      prefs.setString('exo_player_surface_type', _exoPlayerSurfaceType);
+    }
   }
 
   Future<void> setHardwareAcceleration(bool value) async {
@@ -232,16 +245,18 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setVideoPlayerBackend(String value) async {
-    if (_videoPlayerBackend == value) return;
-    _videoPlayerBackend = value;
-    await _prefs?.setString('video_player_backend', value);
+    final resolved = value == 'Auto' ? 'MediaKit' : value;
+    if (_videoPlayerBackend == resolved) return;
+    _videoPlayerBackend = resolved;
+    await _prefs?.setString('video_player_backend', resolved);
     notifyListeners();
   }
 
   Future<void> setExoPlayerSurfaceType(String value) async {
-    if (_exoPlayerSurfaceType == value) return;
-    _exoPlayerSurfaceType = value;
-    await _prefs?.setString('exo_player_surface_type', value);
+    final resolved = value == 'surface' ? 'surface' : 'surface';
+    if (_exoPlayerSurfaceType == resolved) return;
+    _exoPlayerSurfaceType = resolved;
+    await _prefs?.setString('exo_player_surface_type', resolved);
     notifyListeners();
   }
 

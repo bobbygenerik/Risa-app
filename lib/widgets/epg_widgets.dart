@@ -21,6 +21,9 @@ class EPGChannelSidebar extends StatelessWidget {
   final VoidCallback? onFocusCategories;
   final VoidCallback? onFocusRefresh;
   final VoidCallback? onFocusPrograms;
+  final ValueChanged<Channel>? onFocusProgramForChannel;
+  final FocusNode? Function(Channel channel, int index)?
+      channelFocusNodeForChannel;
 
   const EPGChannelSidebar({
     super.key,
@@ -34,6 +37,8 @@ class EPGChannelSidebar extends StatelessWidget {
     this.onFocusCategories,
     this.onFocusRefresh,
     this.onFocusPrograms,
+    this.onFocusProgramForChannel,
+    this.channelFocusNodeForChannel,
   });
 
   @override
@@ -71,10 +76,14 @@ class EPGChannelSidebar extends StatelessWidget {
             channel: channels[index],
             onTap: () => onChannelTap(channels[index]),
             onLongPress: () => onChannelLongPress(channels[index]),
-            focusNode: index == 0 ? firstChannelFocusNode : null,
+            focusNode: channelFocusNodeForChannel != null
+                ? channelFocusNodeForChannel!.call(channels[index], index)
+                : (index == 0 ? firstChannelFocusNode : null),
             onMoveLeft: onFocusCategories,
             onMoveUpFromFirst: index == 0 ? onFocusRefresh : null,
-            onMoveRight: onFocusPrograms,
+            onMoveRight: onFocusProgramForChannel == null
+                ? onFocusPrograms
+                : () => onFocusProgramForChannel!.call(channels[index]),
           );
         },
       ),
@@ -190,6 +199,8 @@ class EPGProgramsGrid extends StatelessWidget {
   final double gridWidth;
   final Function(Program) onProgramTap;
   final FocusNode? firstProgramFocusNode;
+  final FocusNode? Function(Channel channel)? programFocusNodeForChannel;
+  final void Function(Channel channel, int index)? onRequestChannelFocus;
 
   const EPGProgramsGrid({
     super.key,
@@ -201,6 +212,8 @@ class EPGProgramsGrid extends StatelessWidget {
     required this.gridWidth,
     required this.onProgramTap,
     this.firstProgramFocusNode,
+    this.programFocusNodeForChannel,
+    this.onRequestChannelFocus,
   });
 
   @override
@@ -227,6 +240,11 @@ class EPGProgramsGrid extends StatelessWidget {
               onProgramTap: onProgramTap,
               isFirstRow: index == 0,
               firstProgramFocusNode: firstProgramFocusNode,
+              currentProgramFocusNode:
+                  programFocusNodeForChannel?.call(channels[index]),
+              onMoveLeft: onRequestChannelFocus == null
+                  ? null
+                  : () => onRequestChannelFocus!.call(channels[index], index),
             );
           },
         ),
@@ -241,6 +259,8 @@ class EPGProgramRow extends StatelessWidget {
   final Function(Program) onProgramTap;
   final bool isFirstRow;
   final FocusNode? firstProgramFocusNode;
+  final FocusNode? currentProgramFocusNode;
+  final VoidCallback? onMoveLeft;
 
   const EPGProgramRow({
     super.key,
@@ -249,6 +269,8 @@ class EPGProgramRow extends StatelessWidget {
     required this.onProgramTap,
     this.isFirstRow = false,
     this.firstProgramFocusNode,
+    this.currentProgramFocusNode,
+    this.onMoveLeft,
   });
 
   @override
@@ -259,17 +281,10 @@ class EPGProgramRow extends StatelessWidget {
     // Check if EPG data is available for this channel
     final hasEpgData = epgService.hasEpgData(channelKey);
     if (!hasEpgData) {
-      return Container(
-        height: 64,
-        width: 12 * 240.0, // totalWidth
-        margin: const EdgeInsets.only(bottom: 4, left: 0),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 12),
-        child: Text(
-          'Loading EPG...',
-          style: TextStyle(
-              fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
-        ),
+      return _buildFocusablePlaceholder(
+        label: 'Loading EPG...',
+        focusNode: currentProgramFocusNode,
+        onMoveLeft: onMoveLeft,
       );
     }
     
@@ -289,19 +304,19 @@ class EPGProgramRow extends StatelessWidget {
     const cellWidth = 240.0;
     const totalWidth = 12 * cellWidth;
 
+    final focusIndex = dayPrograms.indexWhere((program) {
+      return program.isCurrentlyPlaying;
+    });
+
     return Container(
       height: 64,
       width: totalWidth,
       margin: const EdgeInsets.only(bottom: 4, left: 0),
       child: dayPrograms.isEmpty
-          ? Container(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: 12),
-              child: Text(
-                'No EPG data',
-                style: TextStyle(
-                    fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
-              ),
+          ? _buildFocusablePlaceholder(
+              label: 'No EPG data',
+              focusNode: currentProgramFocusNode,
+              onMoveLeft: onMoveLeft,
             )
           : EPGVirtualProgramRow(
               programs: dayPrograms,
@@ -311,7 +326,54 @@ class EPGProgramRow extends StatelessWidget {
               onProgramTap: onProgramTap,
               isFirstRow: isFirstRow,
               firstProgramFocusNode: firstProgramFocusNode,
+              currentProgramFocusNode: currentProgramFocusNode,
+              focusProgramIndex: focusIndex >= 0 ? focusIndex : 0,
+              onMoveLeft: onMoveLeft,
             ),
+    );
+  }
+
+  Widget _buildFocusablePlaceholder({
+    required String label,
+    FocusNode? focusNode,
+    VoidCallback? onMoveLeft,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      canRequestFocus: focusNode != null,
+      onKeyEvent: (node, event) {
+        final moveLeft = onMoveLeft;
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+            moveLeft != null) {
+          moveLeft();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(builder: (context) {
+        final isFocused = Focus.of(context).hasFocus;
+        return Container(
+          height: 64,
+          width: 12 * 240.0, // totalWidth
+          margin: const EdgeInsets.only(bottom: 4, left: 0),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2a2a3e).withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: isFocused
+                ? Border.all(color: AppTheme.focusBorder, width: 2)
+                : Border.all(
+                    color: Colors.white.withValues(alpha: 0.1), width: 1),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+                fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+          ),
+        );
+      }),
     );
   }
 }
@@ -324,6 +386,9 @@ class EPGVirtualProgramRow extends StatelessWidget {
   final Function(Program) onProgramTap;
   final bool isFirstRow;
   final FocusNode? firstProgramFocusNode;
+  final FocusNode? currentProgramFocusNode;
+  final int? focusProgramIndex;
+  final VoidCallback? onMoveLeft;
 
   const EPGVirtualProgramRow({
     super.key,
@@ -334,6 +399,9 @@ class EPGVirtualProgramRow extends StatelessWidget {
     required this.onProgramTap,
     this.isFirstRow = false,
     this.firstProgramFocusNode,
+    this.currentProgramFocusNode,
+    this.focusProgramIndex,
+    this.onMoveLeft,
   });
 
   @override
@@ -365,6 +433,10 @@ class EPGVirtualProgramRow extends StatelessWidget {
 
         final focusNode =
             isFirstRow && programIndex == 0 ? firstProgramFocusNode : null;
+        final resolvedFocusNode = (focusProgramIndex != null &&
+                focusProgramIndex == programIndex)
+            ? currentProgramFocusNode
+            : focusNode;
         return Positioned(
           left: leftOffset,
           top: 0,
@@ -375,7 +447,8 @@ class EPGVirtualProgramRow extends StatelessWidget {
             child: EPGProgramCell(
               program: program,
               onTap: () => onProgramTap(program),
-              focusNode: focusNode,
+              focusNode: resolvedFocusNode,
+              onMoveLeft: onMoveLeft,
             ),
           ),
         );
@@ -388,12 +461,14 @@ class EPGProgramCell extends StatelessWidget {
   final Program program;
   final VoidCallback onTap;
   final FocusNode? focusNode;
+  final VoidCallback? onMoveLeft;
 
   const EPGProgramCell({
     super.key,
     required this.program,
     required this.onTap,
     this.focusNode,
+    this.onMoveLeft,
   });
 
   @override
@@ -407,6 +482,16 @@ class EPGProgramCell extends StatelessWidget {
     return Focus(
       focusNode: focusNode,
       canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        final moveLeft = onMoveLeft;
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+            moveLeft != null) {
+          moveLeft();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;

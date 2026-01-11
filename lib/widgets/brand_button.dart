@@ -80,7 +80,6 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           Flexible(
             child: Text(
               widget.label,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: labelColor,

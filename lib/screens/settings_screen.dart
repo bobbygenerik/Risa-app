@@ -57,8 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _heroVideoPreview = false;
-  String _exoPlayerSurfaceType = 'surface';
-  String _videoPlayerBackend = 'Auto';
+  String _videoPlayerBackend = 'MediaKit';
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -135,9 +134,19 @@ class _SettingsScreenState extends State<SettingsScreen>
           prefs.getBool('remember_playback_position') ?? true;
       _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
-      _exoPlayerSurfaceType =
-          prefs.getString('exo_player_surface_type') ?? 'surface';
-      _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
+      final storedSurface = prefs.getString('exo_player_surface_type');
+      if (storedSurface != null && storedSurface != 'surface') {
+        unawaited(prefs.setString('exo_player_surface_type', 'surface'));
+      }
+      final storedBackend = prefs.getString('video_player_backend');
+      if (storedBackend == null || storedBackend == 'Auto') {
+        _videoPlayerBackend = 'MediaKit';
+        if (storedBackend == 'Auto') {
+          unawaited(prefs.setString('video_player_backend', 'MediaKit'));
+        }
+      } else {
+        _videoPlayerBackend = storedBackend;
+      }
     });
   }
 
@@ -762,17 +771,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             if (_videoPlayerBackend == 'ExoPlayer')
               SettingsActionTile(
                 title: AppLocalizations.of(context)!.exoPlayerSurface,
-                subtitle: AppLocalizations.of(context)!.surfaceViewDescription,
+                subtitle: '${AppLocalizations.of(context)!.surfaceViewDescription} (TextureView disabled on Shield).',
                 trailing: Text(
-                  _exoPlayerSurfaceType == 'texture'
-                      ? 'TextureView'
-                      : 'SurfaceView',
+                  'SurfaceView',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
-                onTap: _cycleExoPlayerSurfaceType,
               ),
           ],
         ),
@@ -1190,22 +1196,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  Future<void> _cycleExoPlayerSurfaceType() async {
-    final nextValue =
-        _exoPlayerSurfaceType == 'texture' ? 'surface' : 'texture';
-    setState(() => _exoPlayerSurfaceType = nextValue);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('exo_player_surface_type', nextValue);
-    if (mounted) {
-      unawaited(Provider.of<SettingsProvider>(context, listen: false)
-          .setExoPlayerSurfaceType(nextValue));
-    }
-    _showMessage(
-        'ExoPlayer surface set to ${nextValue == 'texture' ? 'TextureView' : 'SurfaceView'}.');
-  }
-
   Future<void> _cycleVideoPlayerBackend() async {
-    final backends = ['Auto', 'MediaKit', 'ExoPlayer'];
+    final backends = ['MediaKit', 'ExoPlayer'];
     final currentIndex = backends.indexOf(_videoPlayerBackend);
     final nextIndex = (currentIndex + 1) % backends.length;
     final nextValue = backends[nextIndex];

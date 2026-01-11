@@ -1,6 +1,7 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -67,6 +68,13 @@ class _EPGScreenState extends State<EPGScreen>
   Future<List<Channel>>? _channelPageFuture;
   String _channelPageKey = '';
   List<String> _lastCategoryNames = [];
+  bool _categoryPrimeRequested = false;
+  final Map<String, FocusNode> _programFocusNodes = {};
+  final Queue<String> _programFocusOrder = Queue<String>();
+  static const int _maxProgramFocusNodes = 400;
+  final Map<String, FocusNode> _channelFocusNodes = {};
+  final Queue<String> _channelFocusOrder = Queue<String>();
+  static const int _maxChannelFocusNodes = 400;
 
   @override
   void initState() {
@@ -107,6 +115,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Load EPG data on init - non-blocking
     _loadEpgData();
+    unawaited(_primeCategories());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Load EPG favorites from SharedPreferences
@@ -140,6 +149,57 @@ class _EPGScreenState extends State<EPGScreen>
     } catch (e) {
       debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
     }
+  }
+
+  Future<void> _primeCategories() async {
+    if (_categoryPrimeRequested) return;
+    _categoryPrimeRequested = true;
+    try {
+      final channelProvider =
+          Provider.of<ChannelProvider>(context, listen: false);
+      final categories = await channelProvider.getAllCategoryNamesAsync();
+      if (!mounted) return;
+      if (categories.isNotEmpty) {
+        setState(() {
+          _lastCategoryNames = List<String>.from(categories);
+        });
+      }
+    } catch (e) {
+      debugLog('EPG Screen: Failed to prime categories: $e');
+    }
+  }
+
+  FocusNode _programFocusNodeForChannel(Channel channel) {
+    final key = channel.tvgId ?? channel.id;
+    final existing = _programFocusNodes[key];
+    if (existing != null) return existing;
+    final node = FocusNode(debugLabel: 'EPGProgram:$key');
+    _programFocusNodes[key] = node;
+    _programFocusOrder.addLast(key);
+    while (_programFocusOrder.length > _maxProgramFocusNodes) {
+      final removedKey = _programFocusOrder.removeFirst();
+      final removedNode = _programFocusNodes.remove(removedKey);
+      removedNode?.dispose();
+    }
+    return node;
+  }
+
+  FocusNode _channelFocusNodeForChannel(Channel channel, int index) {
+    if (index == 0) {
+      return _firstChannelFocus;
+    }
+    final key = channel.tvgId ?? channel.id;
+    final existing = _channelFocusNodes[key];
+    if (existing != null) return existing;
+    final node = FocusNode(debugLabel: 'EPGChannel:$key');
+    _channelFocusNodes[key] = node;
+    _channelFocusOrder.addLast(key);
+    while (_channelFocusOrder.length > _maxChannelFocusNodes) {
+      final removedKey = _channelFocusOrder.removeFirst();
+      final removedNode = _channelFocusNodes.remove(removedKey);
+      removedNode?.dispose();
+    }
+    return node;
   }
 
   /// Scroll the EPG grid to show the current time
@@ -216,6 +276,16 @@ class _EPGScreenState extends State<EPGScreen>
         'epg_first_program'
       ],
     );
+    for (final node in _programFocusNodes.values) {
+      node.dispose();
+    }
+    _programFocusNodes.clear();
+    _programFocusOrder.clear();
+    for (final node in _channelFocusNodes.values) {
+      node.dispose();
+    }
+    _channelFocusNodes.clear();
+    _channelFocusOrder.clear();
     _timerService.unregister('epg_auto_refresh');
     _epgState.removeListener(_handleEpgStateChanged);
     _epgState.dispose();
@@ -375,6 +445,7 @@ class _EPGScreenState extends State<EPGScreen>
                 !channelProvider.isGroupingChannels) {
               // Categories not computed yet but we have channels - trigger computation.
               unawaited(channelProvider.getAllCategoryNamesAsync());
+              unawaited(_primeCategories());
             }
             if (rawCategories.isNotEmpty) {
               _lastCategoryNames = List<String>.from(rawCategories);
@@ -382,10 +453,10 @@ class _EPGScreenState extends State<EPGScreen>
 
             final effectiveCategories =
                 rawCategories.isNotEmpty ? rawCategories : _lastCategoryNames;
-            final isCategoryLoading = rawCategories.isEmpty &&
+            final isCategoryLoading = effectiveCategories.isEmpty &&
                 channelProvider.hasChannels &&
                 (channelProvider.isGroupingChannels ||
-                    _lastCategoryNames.isEmpty);
+                    rawCategories.isEmpty);
 
             final seen = <String>{};
             final categoryList = <String>[];
@@ -682,6 +753,8 @@ class _EPGScreenState extends State<EPGScreen>
                 Expanded(
                   child: Text(
                     'Categories',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
@@ -702,6 +775,8 @@ class _EPGScreenState extends State<EPGScreen>
                   const SizedBox(width: 6),
                   Text(
                     'Updating',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 10,
@@ -821,7 +896,7 @@ class _EPGScreenState extends State<EPGScreen>
                             ? FontWeight.w600
                             : FontWeight.w500,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -903,6 +978,10 @@ class _EPGScreenState extends State<EPGScreen>
                       gridWidth: _epgState.calculateProgramsGridWidth(),
                       onProgramTap: _showProgramDetails,
                       firstProgramFocusNode: _firstProgramFocus,
+                      programFocusNodeForChannel: _programFocusNodeForChannel,
+                      onRequestChannelFocus: (channel, index) =>
+                          _channelFocusNodeForChannel(channel, index)
+                              .requestFocus(),
                     ),
                   ),
                 ],
@@ -978,6 +1057,9 @@ class _EPGScreenState extends State<EPGScreen>
             onFocusCategories: () => _firstCategoryFocus.requestFocus(),
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
+            onFocusProgramForChannel: (channel) =>
+                _programFocusNodeForChannel(channel).requestFocus(),
+            channelFocusNodeForChannel: _channelFocusNodeForChannel,
             controller: _sidebarController,
           ),
         ),

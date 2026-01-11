@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 /// Abstract interface for a video player controller.
 /// This allows switching between the stock `video_player` (Texture-based)
@@ -28,9 +29,9 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     String? backend, // Optional backend selection
     bool hardwareAcceleration = true,
   }) {
-    // Default behavior for 'Auto': Always prefer MediaKit for stability and memory efficiency.
+    // Default behavior: prefer MediaKit for stability and memory efficiency.
     // ExoPlayer can cause OOM errors on some devices, so only use it when explicitly selected.
-    final effectiveBackend = backend ?? 'Auto';
+    final effectiveBackend = backend ?? 'MediaKit';
     if (effectiveBackend == 'ExoPlayer') {
        return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
@@ -116,7 +117,10 @@ class MediaKitPlayerController extends UniversalPlayerController {
     _player.stream.error.listen(_onError);
     
     // Load the media
-    _player.open(Media(url), play: autoPlay);
+    _player.open(
+      Media(url, httpHeaders: HttpClientService().videoHeaders),
+      play: autoPlay,
+    );
   }
 
   /// Expose the video controller for Video widget
@@ -192,6 +196,7 @@ class NativeExoPlayerController extends UniversalPlayerController {
   MethodChannel? _channel;
   UniversalPlayerValue _value = const UniversalPlayerValue();
   bool _isDisposed = false;
+  bool _pendingPlay = false;
   
   // A unique ID is assigned by the view, but we are a controller *before* the view is created.
   // Strategy: The Controller holds the state, and the View (when created) connects to this controller.
@@ -209,9 +214,11 @@ class NativeExoPlayerController extends UniversalPlayerController {
     notifyListeners();
     
     // Initial load
+    final shouldAutoPlay = autoPlay || _pendingPlay;
+    _pendingPlay = false;
     _channel!.invokeMethod('loadVideo', {
       'videoUrl': url,
-      'autoPlay': autoPlay,
+      'autoPlay': shouldAutoPlay,
     });
   }
 
@@ -263,10 +270,19 @@ class NativeExoPlayerController extends UniversalPlayerController {
   }
 
   @override
-  Future<void> play() async => _channel?.invokeMethod('play');
+  Future<void> play() async {
+    if (_channel == null) {
+      _pendingPlay = true;
+      return;
+    }
+    await _channel?.invokeMethod('play');
+  }
 
   @override
-  Future<void> pause() async => _channel?.invokeMethod('pause');
+  Future<void> pause() async {
+    _pendingPlay = false;
+    await _channel?.invokeMethod('pause');
+  }
 
   @override
   Future<void> seekTo(Duration position) async {

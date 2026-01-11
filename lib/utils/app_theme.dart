@@ -9,12 +9,12 @@ class AppTheme {
   static const Color primaryBlue = Color(0xFF2E3192);
   static const Color richBlack = Color(0xFF080808); // Cinema-grade Rich Black
   static const Color darkBackground = Color(
-      0xFF050505); // Deeper than pure grey, better for OLED than true grey
+      0xFF111316); // Deep charcoal base for premium TV contrast
   static const Color cardBackground = Color(0x00000000); // fully transparent
   static const Color dialogBackground =
       Color(0xFF1E1E2E); // Solid dark for dialogs/popups
   static const Color sidebarBackground =
-      Color(0xFF08090C); // Slightly lighter black for sidebar contrast
+      Color(0xFF15171C); // Slightly lighter charcoal for sidebar contrast
   static const Color textPrimary =
       Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);

@@ -61,7 +61,7 @@ class AppColors {
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A1A2E), AppTheme.cardBackground],
+    colors: [Color(0xFF1A1A2E), AppTheme.darkBackground],
   );
 
   static const LinearGradient fadeGradient = LinearGradient(

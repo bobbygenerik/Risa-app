@@ -98,21 +98,15 @@ class WhisperTranscriptionService extends ChangeNotifier {
       }
       _lastError = '';
 
-      final permissionGranted =
-          await WhisperPlatformService.requestAudioCapturePermission();
-      if (!permissionGranted) {
-        _lastError =
-            'Audio capture permission denied. Allow screen capture to enable subtitles.';
-        notifyListeners();
-        return false;
-      }
-
       final started = await WhisperPlatformService.startAudioCapture(
         modelName: _selectedModel,
+        streamUrl: streamUrl,
+        preferExoCapture: true,
       );
       if (!started) {
-        _lastError =
-            'Failed to start audio capture. Try restarting playback.';
+        _lastError = WhisperPlatformService.lastError.isNotEmpty
+            ? WhisperPlatformService.lastError
+            : 'Failed to start audio capture. Try restarting playback.';
         notifyListeners();
         return false;
       }

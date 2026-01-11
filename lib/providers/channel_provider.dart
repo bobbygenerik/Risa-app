@@ -1154,6 +1154,7 @@ class ChannelProvider with ChangeNotifier {
       final cached = prefs.getStringList(_categoryCacheKey!);
       if (cached != null && cached.isNotEmpty) {
         _cachedCategories = List<String>.from(cached);
+        _notifyListenersSafe();
       }
     } catch (e) {
       debugLog('ChannelProvider: Failed to load cached categories: $e');
