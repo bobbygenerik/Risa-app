@@ -101,9 +101,11 @@ class MediaKitPlayerController extends UniversalPlayerController {
     // Fix for "Black Screen" on some Android devices:
     // androidAttachSurfaceAfterVideoOutput: true prevents surface race conditions.
     _videoController = VideoController(
-      _player, 
+      _player,
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: hardwareAcceleration,
+        // Helps avoid black/blank video on some Android TV devices (e.g. Shield).
+        androidAttachSurfaceAfterVideoParameters: true,
       ),
     );
 

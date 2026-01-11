@@ -623,18 +623,39 @@ class TMDBService {
 
   static String? _extractBackdropUrl(Map<String, dynamic>? details) {
     if (details == null) return null;
-    final backdrop = (details['backdrop'] as String?)?.trim();
+    final backdrop = _resizeTmdbImageUrl(
+      (details['backdrop'] as String?)?.trim(),
+      isBackdrop: true,
+    );
     if (backdrop != null && backdrop.isNotEmpty) return backdrop;
     
     // Only return poster if it's explicitly allowed or high-quality.
     // We append a hint so the UI knows it's a poster.
-    final poster = (details['poster'] as String?)?.trim();
+    final poster = _resizeTmdbImageUrl(
+      (details['poster'] as String?)?.trim(),
+      isBackdrop: false,
+    );
     if (poster != null && poster.isNotEmpty) {
        // If it contains "poster" or common OMDb patterns, let's keep it but 
        // the UI will handle it via _isLikelyPosterUrl.
        return poster;
     }
     return null;
+  }
+
+  static String? _resizeTmdbImageUrl(String? url, {required bool isBackdrop}) {
+    if (url == null || url.isEmpty) return url;
+    final size = isBackdrop ? 'w1280' : 'w780';
+    try {
+      final uri = Uri.parse(url);
+      if (!uri.host.contains('image.tmdb.org')) return url;
+      final segments = uri.pathSegments.toList();
+      if (segments.length >= 3 && segments[0] == 't' && segments[1] == 'p') {
+        segments[2] = size;
+        return uri.replace(pathSegments: segments).toString();
+      }
+    } catch (_) {}
+    return url;
   }
 
   static double _titleSimilarity(String s1, String s2) {
@@ -675,12 +696,14 @@ class TMDBService {
         if (filePath == null || filePath.isEmpty) continue;
         if (width >= _kPreferredBackdropWidth ||
             height >= _kPreferredBackdropHeight) {
-          return '$_imageBaseUrl$filePath';
+          return _resizeTmdbImageUrl('$_imageBaseUrl$filePath',
+              isBackdrop: true);
         }
       }
       final firstPath = (available.first['file_path'] as String?)?.trim();
       if (firstPath != null && firstPath.isNotEmpty) {
-        return '$_imageBaseUrl$firstPath';
+        return _resizeTmdbImageUrl('$_imageBaseUrl$firstPath',
+            isBackdrop: true);
       }
     } catch (e, st) {
       debugLog('TMDB image lookup failed for $mediaType/$tmdbId: $e\n$st');

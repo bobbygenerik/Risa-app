@@ -341,6 +341,7 @@ class IncrementalEpgService extends ChangeNotifier {
   Future<void> _loadCurrentDayPrograms({bool forceRefresh = false}) async {
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
 
+    final start = DateTime.now();
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -348,17 +349,23 @@ class IncrementalEpgService extends ChangeNotifier {
     try {
       // Check if we have valid cache for current day
       if (!forceRefresh) {
+        final dbStart = DateTime.now();
         final programCount = await _db.programCount();
+        debugLog(
+            'EPG: DB programCount took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
         if (programCount > 0) {
           debugLog('EPG: Loading current day from DB cache...');
           final now = DateTime.now();
           final startOfDay = DateTime(now.year, now.month, now.day);
           final endOfDay = startOfDay.add(const Duration(days: 1));
           
+          final dbProgramsStart = DateTime.now();
           final dbPrograms = await _db.getAllProgramsByChannel(
             pastHours: 12,
             futureHours: 24, // Current day + some buffer
           );
+          debugLog(
+              'EPG: DB getAllProgramsByChannel took ${DateTime.now().difference(dbProgramsStart).inMilliseconds}ms');
           
           if (dbPrograms.isNotEmpty) {
             // Filter for current day programs
@@ -398,7 +405,10 @@ class IncrementalEpgService extends ChangeNotifier {
               _error = null;
               notifyListeners();
               
-              debugLog('EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
+              debugLog(
+                  'EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
+              debugLog(
+                  'EPG: Current day total ${DateTime.now().difference(start).inMilliseconds}ms');
               return;
             }
           }
@@ -416,6 +426,8 @@ class IncrementalEpgService extends ChangeNotifier {
       debugLog('EPG: Current day loading error: $e');
       _error = 'Failed to load current day EPG: $e';
     } finally {
+      debugLog(
+          'EPG: Current day load finished in ${DateTime.now().difference(start).inMilliseconds}ms');
       _isLoading = false;
       notifyListeners();
     }
@@ -429,12 +441,15 @@ class IncrementalEpgService extends ChangeNotifier {
       // Small delay to let current day render first
       await Future.delayed(const Duration(milliseconds: 500));
       
+      final start = DateTime.now();
       await _loadChannelList(
         forceRefresh: false,
         allowStaleCache: true,
         fromBackgroundRefresh: true,
         currentDayOnly: false,
       );
+      debugLog(
+          'EPG: Background EPG load took ${DateTime.now().difference(start).inMilliseconds}ms');
       
       debugLog('EPG: ✓ Full EPG loaded in background');
     } catch (e) {
@@ -846,6 +861,7 @@ class IncrementalEpgService extends ChangeNotifier {
     _error = null;
     notifyListeners();
     debugLog('EPG: Starting EPG download from $_epgUrl...');
+    final downloadStart = DateTime.now();
 
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 60)
@@ -867,6 +883,8 @@ class IncrementalEpgService extends ChangeNotifier {
         // Ensure no partial cache remains
         final cf = await _getCacheFile();
         if (await cf.exists()) await cf.delete();
+        debugLog(
+            'EPG: Download aborted in ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
         return;
       }
 
@@ -1082,6 +1100,8 @@ class IncrementalEpgService extends ChangeNotifier {
       final fileSize = await file.length();
       debugLog(
           'EPG: Download complete. Saved to ${file.path} (${(fileSize / 1024).toStringAsFixed(2)} KB)');
+      debugLog(
+          'EPG: Download finished in ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
 
       // Minimal sanity checks on final file
       if (fileSize == 0 || fileSize < 100) {
@@ -1137,6 +1157,8 @@ class IncrementalEpgService extends ChangeNotifier {
       } catch (_) {}
       return;
     } finally {
+      debugLog(
+          'EPG: Download flow total ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
       client.close();
       _isDownloading = false;
       notifyListeners();
@@ -1158,6 +1180,7 @@ class IncrementalEpgService extends ChangeNotifier {
       return;
     }
 
+    final loadStart = DateTime.now();
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -1183,19 +1206,28 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         if (!deferRefresh) {
+          final downloadStart = DateTime.now();
           await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
+          debugLog(
+              'EPG: Download phase took ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
         }
 
         // OPTIMIZATION: Try loading programs from DB before parsing XML
         if (!forceRefresh && !_dbDisabled && !skipDbLoad) {
+          final dbCountStart = DateTime.now();
           final programCount = await _db.programCount();
+          debugLog(
+              'EPG: DB programCount took ${DateTime.now().difference(dbCountStart).inMilliseconds}ms');
           if (programCount > 0) {
             debugLog('EPG: Found $programCount programs in DB, loading...');
             try {
+              final dbLoadStart = DateTime.now();
               final dbPrograms = await _db.getAllProgramsByChannel(
                 pastHours: 12,
                 futureHours: _epgFutureHours,
               );
+              debugLog(
+                  'EPG: DB getAllProgramsByChannel took ${DateTime.now().difference(dbLoadStart).inMilliseconds}ms');
               if (dbPrograms.isNotEmpty) {
                 // Populate in-memory cache from DB
                 _programsByChannel.clear();
@@ -1248,6 +1280,8 @@ class IncrementalEpgService extends ChangeNotifier {
 
                 debugLog(
                     'EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
+                debugLog(
+                    'EPG: Load from DB total ${DateTime.now().difference(loadStart).inMilliseconds}ms');
                 _hasParsed = true;
                 _isLoading = false;
                 _isParsing = false;
@@ -1337,7 +1371,10 @@ class IncrementalEpgService extends ChangeNotifier {
           });
         }
 
+        final parseStart = DateTime.now();
         var parseResult = await parseEpg(effectiveAllowedChannels);
+        debugLog(
+            'EPG: Parse compute took ${DateTime.now().difference(parseStart).inMilliseconds}ms');
         final initialProgramCount = parseResult['programCount'] as int? ?? 0;
         final initialChannelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
@@ -1348,10 +1385,13 @@ class IncrementalEpgService extends ChangeNotifier {
             (initialProgramCount == 0 || initialChannelIds.isEmpty)) {
           debugLog(
               'EPG: Filtered parse returned no data; scanning channel IDs for targeted fallback.');
+          final scanStart = DateTime.now();
           final scanResult = await compute(_scanEpgChannelIdsInIsolate, {
             'filePath': file.path,
             'allowedNormalized': _allowedChannelIdsNormalized.toList(),
           });
+          debugLog(
+              'EPG: Channel ID scan took ${DateTime.now().difference(scanStart).inMilliseconds}ms');
           final normalizedIds = (scanResult['normalizedIds'] as List<dynamic>)
               .cast<String>()
               .toSet();
@@ -1460,11 +1500,14 @@ class IncrementalEpgService extends ChangeNotifier {
         // Stream programs from the temp file into memory (capped) and DB in batches
         // For background refresh, use double-buffering (stagedPrograms) to avoid UI flicker.
         // For foreground load, write directly to _programsByChannel so UI updates live.
+        final ingestStart = DateTime.now();
         await _ingestProgramsFromFile(
           programFilePath,
           target: fromBackgroundRefresh ? stagedPrograms : _programsByChannel,
           skipChannels: skipChannels,
         );
+        debugLog(
+            'EPG: Program ingest took ${DateTime.now().difference(ingestStart).inMilliseconds}ms');
 
         // Only swap if we used a staging buffer (Double Buffering)
         if (fromBackgroundRefresh) {
@@ -1478,6 +1521,8 @@ class IncrementalEpgService extends ChangeNotifier {
         _error = noMatchingIdsForPlaylist
             ? 'No matching EPG IDs for this playlist. Check tvg-id or mapping.'
             : null;
+        debugLog(
+            'EPG: Load (parse+ingest) total ${DateTime.now().difference(loadStart).inMilliseconds}ms');
 
         // Persist cache timestamp (do NOT store full EPG or channel lists in prefs)
         final prefs = await SharedPreferences.getInstance();

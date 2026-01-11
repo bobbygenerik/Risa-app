@@ -95,8 +95,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Set<String> _artworkRequests = {};
   final Map<String, Future<String?>> _pendingArtworkRequests =
       {}; // Deduplication
-  final Queue<Program> _artworkQueue = Queue<Program>();
+  final Queue<Program> _artworkQueueHigh = Queue<Program>();
+  final Queue<Program> _artworkQueueLow = Queue<Program>();
   final Set<String> _queuedArtworkIds = {};
+  final Map<String, Future<String?>> _pendingArtworkByTitle = {};
   final Queue<String> _programArtworkOrder = Queue<String>();
   final Queue<String> _programArtworkTitleOrder = Queue<String>();
   final Queue<String> _programArtworkNegativeTitleOrder = Queue<String>();
@@ -113,6 +115,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, int> _artworkFailureCounts = {};
   final Map<String, String?> _programTitleLogos = {};
   final Set<String> _titleLogoRequests = {};
+  final Map<String, List<String>> _artworkQueryTitleCache = {};
   final Map<String, Channel> _programChannelLookup = {};
   final Map<String, List<Channel>> _categoryChannelCache = {};
   final Set<String> _categoryChannelLoading = {};
@@ -145,6 +148,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _maxCategoryLoads = 2; // Restored
   int _lastPrefetchAnchor = -1;
   static const int _prefetchWindowRows = 3; // Restored but conservative
+  static const int _heroPrefetchWindow = 5;
+  static const int _rowPrefetchWindow = 2;
   final Map<String, ValueNotifier<int>> _categoryRowNotifiers = {};
   Future<List<Channel>>? _previewFuture;
   int _lastPreviewChannelCount = -1;
@@ -155,6 +160,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
   final Map<String, bool> _heroImageCacheHits = {};
+  final Map<String, double> _heroAspectRatios = {};
+  final Set<String> _heroAspectRatioInFlight = {};
   bool _userHasScrolled = false;
 
   int _lastHeroCandidateCount = 0;
@@ -353,14 +360,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _featuredRotationTimer?.cancel();
 
     // Clear all caches
-    _artworkQueue.clear();
+    _artworkQueueHigh.clear();
+    _artworkQueueLow.clear();
     _artworkRequests.clear();
     _pendingArtworkRequests.clear();
+    _pendingArtworkByTitle.clear();
     _programArtwork.clear();
     _programArtworkByTitle.clear();
     _programArtworkNegativeByTitle.clear();
     _programTitleLogos.clear();
     _titleLogoRequests.clear();
+    _artworkQueryTitleCache.clear();
     _programChannelLookup.clear();
     _categoryChannelCache.clear();
     _categoryChannelLoading.clear();
@@ -383,6 +393,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _categoryHasMore.clear();
     _categoryAppendQueue.clear();
     _heroImageCacheHits.clear();
+    _heroAspectRatios.clear();
+    _heroAspectRatioInFlight.clear();
 
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
@@ -802,8 +814,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return Consumer<IncrementalEpgService>(
                 builder: (context, epgService, _) {
                   // Try to find channels with EPG data ready
-                  final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
-                  
+                  final readyChannels =
+                      _filterChannelsWithLoadedEpg(previewList, epgService);
+
                   // Only show channels that have EPG data or allow fallback for Shield performance
                   if (readyChannels.isEmpty) {
                     if (epgService.error != null &&
@@ -814,17 +827,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         epgService.isParsing ||
                         epgService.isDownloading;
                     final timeSinceInit = DateTime.now().difference(_initTime);
-                    
-                    // On Shield, show content faster even without EPG to prevent long loading
-                    if (timeSinceInit.inSeconds > 8 && previewList.isNotEmpty) {
-                      debugLog('LiveTV: Shield timeout - showing channels without EPG');
-                      return _buildFullScreenHero(
-                        context,
-                        previewList[_featuredIndex % previewList.length],
-                        previewList,
-                      );
-                    }
-                    
+
                     if (isEpgLoading) {
                       debugLog(
                           'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
@@ -1073,6 +1076,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final activeChannel = selectedHero?.channel ?? featuredChannel;
     final currentProgram = selectedHero?.program;
     final heroImage = selectedHero?.heroImage;
+    if (selectedHero?.program != null) {
+      _ensureFreshProgramArtwork(
+        selectedHero!.program!,
+        selectedHero.channel,
+        highPriority: true,
+      );
+    }
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -1595,10 +1605,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   String? _getChannelCardImage(
-      Program? program, Channel? channel, bool allowPrefetch) {
+    Program? program,
+    Channel? channel,
+    bool allowPrefetch, {
+    bool highPriority = false,
+  }) {
     // Strictly prefer program artwork when it's not a poster/portrait image.
     if (program != null) {
-      final cached = _programArtwork[program.id];
+      final cached =
+          _normalizeArtworkUrl(_programArtwork[program.id], isHero: false);
       if (cached != null && cached.isNotEmpty) {
         _logArtworkDecision(
           'LiveTV artwork: card source=cached program="${program.title}" url=$cached',
@@ -1606,7 +1621,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return cached;
       }
 
-      final byTitle = _getProgramArtworkByTitle(program, channel);
+      final byTitle = _normalizeArtworkUrl(
+        _getProgramArtworkByTitle(program, channel),
+        isHero: false,
+      );
       if (byTitle != null && byTitle.isNotEmpty) {
         _logArtworkDecision(
           'LiveTV artwork: card source=title_cache program="${program.title}" url=$byTitle',
@@ -1627,12 +1645,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           _setProgramArtwork(program.id, '');
-          _enqueueArtwork(program);
+          _enqueueArtwork(program, highPriority: highPriority);
         });
       }
 
       // Fall back to EPG-provided art while services are resolving.
-      final programImage = program.imageUrl;
+      final programImage =
+          _normalizeArtworkUrl(program.imageUrl, isHero: false);
       if (_isValidProgramArtwork(programImage, channel!)) {
         final normalized = normalizeImageUrl(programImage!);
         _logArtworkDecision(
@@ -1809,11 +1828,82 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
+  bool _isExplicitBackdropUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('backdrop') ||
+        lower.contains('landscape') ||
+        lower.contains('fanart') ||
+        lower.contains('/bg/');
+  }
+
+  String _applyTmdbSize(String url, String size) {
+    try {
+      final uri = Uri.parse(url);
+      if (!uri.host.contains('image.tmdb.org')) return url;
+      final segments = uri.pathSegments.toList();
+      if (segments.length >= 3 && segments[0] == 't' && segments[1] == 'p') {
+        segments[2] = size;
+        return uri.replace(pathSegments: segments).toString();
+      }
+    } catch (_) {}
+    return url;
+  }
+
+  String? _normalizeArtworkUrl(String? url, {bool isHero = false}) {
+    if (url == null || url.isEmpty) return url;
+    final size = isHero ? 'w1280' : 'w780';
+    return _applyTmdbSize(url, size);
+  }
+
+  void _ensureHeroAspectRatio(String url) {
+    if (url.isEmpty) return;
+    if (_heroAspectRatios.containsKey(url)) return;
+    if (_heroAspectRatioInFlight.contains(url)) return;
+    _heroAspectRatioInFlight.add(url);
+    final provider = CachedNetworkImageProvider(
+      url,
+      headers: HttpClientService().imageHeaders,
+    );
+    final stream = provider.resolve(const ImageConfiguration());
+    late ImageStreamListener listener;
+    listener = ImageStreamListener((image, _) {
+      final width = image.image.width.toDouble();
+      final height = image.image.height.toDouble();
+      if (width > 0 && height > 0 && mounted) {
+        setState(() {
+          _heroAspectRatios[url] = width / height;
+        });
+      }
+      _heroAspectRatioInFlight.remove(url);
+      stream.removeListener(listener);
+    }, onError: (_, __) {
+      _heroAspectRatioInFlight.remove(url);
+      stream.removeListener(listener);
+    });
+    stream.addListener(listener);
+  }
+
+  int _programArtworkEntryLimit() {
+    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkEntries;
+  }
+
+  int _programArtworkTitleLimit() {
+    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkTitleEntries;
+  }
+
+  int _programArtworkNegativeLimit() {
+    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkNegativeEntries;
+  }
+
+  int _programTitleLogoLimit() {
+    return MemoryManager.isLowMemory ? 30 : _maxProgramTitleLogoEntries;
+  }
+
   void _registerProgramArtworkEntry(String key, String value) {
     _programArtwork[key] = value;
     _programArtworkOrder.remove(key);
     _programArtworkOrder.addLast(key);
-    while (_programArtworkOrder.length > _maxProgramArtworkEntries) {
+    while (_programArtworkOrder.length > _programArtworkEntryLimit()) {
       final removed = _programArtworkOrder.removeFirst();
       _programArtwork.remove(removed);
       _programChannelLookup.remove(removed);
@@ -1824,7 +1914,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _programArtworkByTitle[key] = value;
     _programArtworkTitleOrder.remove(key);
     _programArtworkTitleOrder.addLast(key);
-    while (_programArtworkTitleOrder.length > _maxProgramArtworkTitleEntries) {
+    while (_programArtworkTitleOrder.length > _programArtworkTitleLimit()) {
       final removed = _programArtworkTitleOrder.removeFirst();
       _programArtworkByTitle.remove(removed);
     }
@@ -1836,7 +1926,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _programArtworkNegativeTitleOrder.remove(key);
     _programArtworkNegativeTitleOrder.addLast(key);
     while (_programArtworkNegativeTitleOrder.length >
-        _maxProgramArtworkNegativeEntries) {
+        _programArtworkNegativeLimit()) {
       final removed = _programArtworkNegativeTitleOrder.removeFirst();
       _programArtworkNegativeByTitle.remove(removed);
     }
@@ -1923,6 +2013,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   List<String> _buildArtworkQueryTitles(Program program, Channel? channel) {
     final original = program.title.trim();
     final canonical = _canonicalArtworkTitle(original).trim();
+    final cacheKey = _titleCacheKey(program, channel);
+    final cached = _artworkQueryTitleCache[cacheKey];
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
     final titles = <String>[];
     void add(String value) {
       if (value.isEmpty || titles.contains(value)) return;
@@ -1938,6 +2033,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (canonical != original) add(original);
     if (_isGenericTitle(canonical) && channelName.isNotEmpty) {
       add(channelName);
+    }
+    if (cacheKey.isNotEmpty) {
+      _artworkQueryTitleCache[cacheKey] = List<String>.from(titles);
     }
     return titles;
   }
@@ -2083,7 +2181,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _programTitleLogos[key] = value;
     _programTitleLogoOrder.remove(key);
     _programTitleLogoOrder.addLast(key);
-    while (_programTitleLogoOrder.length > _maxProgramTitleLogoEntries) {
+    while (_programTitleLogoOrder.length > _programTitleLogoLimit()) {
       final removed = _programTitleLogoOrder.removeFirst();
       _programTitleLogos.remove(removed);
     }
@@ -2108,11 +2206,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  void _enqueueArtwork(Program program) {
+  void _enqueueArtwork(Program program, {bool highPriority = false}) {
     if (_pauseArtworkFetching || _suspendArtworkCaches) return;
     if (_queuedArtworkIds.contains(program.id)) return;
     _queuedArtworkIds.add(program.id);
-    _artworkQueue.add(program);
+    if (highPriority) {
+      _artworkQueueHigh.add(program);
+    } else {
+      _artworkQueueLow.add(program);
+    }
     _scheduleArtworkDrain();
   }
 
@@ -2237,7 +2339,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         continue;
       }
 
-      final heroImage = _resolveHeroImage(program, channel);
+      final heroImage = _resolveHeroImage(
+        program,
+        channel,
+        allowFetch: false,
+      );
 
       candidates.add(_HeroCandidate(
         channel: channel,
@@ -2257,11 +2363,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return candidates.take(15).toList();
   }
 
-  String? _resolveHeroImage(Program? program, Channel channel) {
+  String? _resolveHeroImage(
+    Program? program,
+    Channel channel, {
+    bool allowFetch = true,
+    bool highPriority = false,
+  }) {
     // Only return artwork if we have a specific program from the EPG
     if (program != null) {
       // 1. Try cached TMDB/OMDb program artwork
-      final cached = _programArtwork[program.id];
+      final cached =
+          _normalizeArtworkUrl(_programArtwork[program.id], isHero: true);
       if (_isValidProgramArtwork(cached, channel)) {
         _logArtworkDecision(
           'LiveTV artwork: hero source=cached program="${program.title}" url=$cached',
@@ -2270,7 +2382,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 1b. Try cached artwork by title to avoid repeated fetches across airings
-      final byTitle = _getProgramArtworkByTitle(program, channel);
+      final byTitle = _normalizeArtworkUrl(
+        _getProgramArtworkByTitle(program, channel),
+        isHero: true,
+      );
       if (_isValidProgramArtwork(byTitle, channel)) {
         _logArtworkDecision(
           'LiveTV artwork: hero source=title_cache program="${program.title}" url=$byTitle',
@@ -2279,12 +2394,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 2. Trigger a fetch if any image service is enabled
-      if (_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) {
-        _ensureFreshProgramArtwork(program, channel);
+      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) &&
+          allowFetch) {
+        _ensureFreshProgramArtwork(
+          program,
+          channel,
+          highPriority: highPriority,
+        );
       }
 
       // 3. Fall back to the direct image URL provided in the EPG XML itself
-      final direct = program.imageUrl;
+      final direct =
+          _normalizeArtworkUrl(program.imageUrl, isHero: true);
       if (_isValidProgramArtwork(direct, channel)) {
         _logArtworkDecision(
           'LiveTV artwork: hero source=epg program="${program.title}" url=$direct',
@@ -2296,7 +2417,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  void _ensureFreshProgramArtwork(Program program, Channel channel) {
+  void _ensureFreshProgramArtwork(
+    Program program,
+    Channel channel, {
+    bool highPriority = false,
+  }) {
     if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
       return;
     }
@@ -2320,7 +2445,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return;
       }
       _setProgramArtwork(program.id, '');
-      _enqueueArtwork(program);
+      _enqueueArtwork(program, highPriority: highPriority);
     });
   }
 
@@ -2340,13 +2465,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return '';
     }
 
-    final cachedByTitle = _getProgramArtworkByTitle(
-      program,
-      _programChannelLookup[program.id],
-    );
+    final channel = _programChannelLookup[program.id];
+    final titleKey = _titleCacheKey(program, channel);
+    final cachedByTitle = _getProgramArtworkByTitle(program, channel);
     if (cachedByTitle != null && cachedByTitle.isNotEmpty) {
       _setProgramArtwork(program.id, cachedByTitle);
       return cachedByTitle;
+    }
+
+    if (titleKey.isNotEmpty) {
+      final pendingByTitle = _pendingArtworkByTitle[titleKey];
+      if (pendingByTitle != null) {
+        return pendingByTitle;
+      }
     }
 
     // Check for pending request
@@ -2360,32 +2491,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Create and store the future for deduplication
     final future = _fetchArtworkWithFallback(program);
     _pendingArtworkRequests[program.id] = future;
+    if (titleKey.isNotEmpty) {
+      _pendingArtworkByTitle[titleKey] = future;
+    }
 
     try {
       final result = await future;
-      _setProgramArtwork(program.id, result ?? '');
-      if (result != null && result.isNotEmpty) {
+      final normalized = _normalizeArtworkUrl(result, isHero: true);
+      _setProgramArtwork(program.id, normalized ?? '');
+      if (normalized != null && normalized.isNotEmpty) {
         _setProgramArtworkByTitle(
           program,
-          result,
-          _programChannelLookup[program.id],
+          normalized,
+          channel,
         );
-        _clearArtworkNoMatch(
-          program,
-          _programChannelLookup[program.id],
-        );
+        _clearArtworkNoMatch(program, channel);
         _clearArtworkFailure(program.id);
       } else {
-        _markArtworkNoMatch(
-          program,
-          _programChannelLookup[program.id],
-        );
+        _markArtworkNoMatch(program, channel);
       }
-      return result ?? '';
+      return normalized ?? '';
     } finally {
       // Removing the stored future object is synchronous; don't pass it to unawaited
       await _pendingArtworkRequests.remove(program.id);
       _artworkRequests.remove(program.id);
+      if (titleKey.isNotEmpty) {
+        final pending = _pendingArtworkByTitle.remove(titleKey);
+        if (pending != null) {
+          unawaited(pending);
+        }
+      }
     }
   }
 
@@ -2405,22 +2540,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _drainArtworkQueue() async {
     _artworkThrottle?.cancel();
     _artworkThrottle = null;
-    if (_artworkQueue.isEmpty ||
+    if ((_artworkQueueHigh.isEmpty && _artworkQueueLow.isEmpty) ||
         !mounted ||
         _pauseArtworkFetching ||
         _suspendArtworkCaches) {
       return;
     }
 
-    const int batchSize = 1;
+    final batchSize = MemoryManager.isLowMemory ? 1 : 2;
     final batch = <Program>[];
-    for (var i = 0; i < batchSize && _artworkQueue.isNotEmpty; i++) {
-      final program = _artworkQueue.removeFirst();
+    for (var i = 0;
+        i < batchSize &&
+            (_artworkQueueHigh.isNotEmpty || _artworkQueueLow.isNotEmpty);
+        i++) {
+      final program = _artworkQueueHigh.isNotEmpty
+          ? _artworkQueueHigh.removeFirst()
+          : _artworkQueueLow.removeFirst();
       _queuedArtworkIds.remove(program.id);
       batch.add(program);
     }
 
-    for (final program in batch) {
+    final futures = batch.map((program) async {
       try {
         debugLog('LiveTV: Fetching artwork for: "${program.title}"');
         final image = await _fetchProgramArtwork(program);
@@ -2434,9 +2574,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         debugLog('LiveTV: Error fetching artwork for "${program.title}": $e');
         _markArtworkFailure(program.id);
       }
-    }
+    }).toList();
+    await Future.wait(futures);
 
-    if (_artworkQueue.isNotEmpty) {
+    if (_artworkQueueHigh.isNotEmpty || _artworkQueueLow.isNotEmpty) {
       _scheduleArtworkDrain();
     }
   }
@@ -2653,6 +2794,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     double cardWidth,
     double cardGap,
     EdgeInsets padding,
+    bool isFirstRow,
   ) {
     if (!_isIndexVisibleInRow(
       context,
@@ -2664,11 +2806,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     )) {
       return false;
     }
+    final window =
+        MemoryManager.isLowMemory ? 1 : (isFirstRow ? _heroPrefetchWindow : _rowPrefetchWindow);
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
-      return index < 4;
+      return index < window;
     }
-    return (index - focusedIndex).abs() <= 3;
+    return (index - focusedIndex).abs() <= window;
   }
 
   bool _isIndexVisibleInRow(
@@ -2845,6 +2989,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   left: rowInset,
                   right: context.spacingLg(),
                 ),
+                isFirstRow,
               );
               return _buildChannelCard(
                 context,
@@ -3136,8 +3281,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 alignment: Alignment.topCenter,
-                child: _buildCardContent(context, channel, program, isFocused,
-                    cardWidth, cardHeight, allowPrefetch),
+                child: _buildCardContent(
+                  context,
+                  channel,
+                  program,
+                  isFocused,
+                  cardWidth,
+                  cardHeight,
+                  allowPrefetch,
+                  isFirstRow: isFirstRow,
+                ),
               ),
             );
           },
@@ -3154,10 +3307,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     double cardWidth,
     double cardHeight,
     bool allowPrefetch,
-  ) {
+    {required bool isFirstRow}) {
     final progress = currentProgram?.progressPercentage ?? 0.0;
-    final imageUrl =
-        _getChannelCardImage(currentProgram, channel, allowPrefetch);
+    final imageUrl = _getChannelCardImage(
+      currentProgram,
+      channel,
+      allowPrefetch,
+      highPriority: isFirstRow,
+    );
     final normalizedImageUrl =
         imageUrl == null ? null : normalizeImageUrl(imageUrl);
     final dpr = MediaQuery.of(context).devicePixelRatio;
@@ -4417,16 +4574,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _releaseArtworkCachesForPlayback() {
-    _artworkQueue.clear();
+    _artworkQueueHigh.clear();
+    _artworkQueueLow.clear();
     _queuedArtworkIds.clear();
     _artworkRequests.clear();
     _pendingArtworkRequests.clear();
+    _pendingArtworkByTitle.clear();
     _programArtwork.clear();
     _programArtworkOrder.clear();
     _programTitleLogos.clear();
     _programTitleLogoOrder.clear();
     _programChannelLookup.clear();
+    _artworkQueryTitleCache.clear();
     _heroImageCacheHits.clear();
+    _heroAspectRatios.clear();
+    _heroAspectRatioInFlight.clear();
 
     // Clear additional caches that can consume memory
     _programArtworkByTitle.clear();
@@ -4454,11 +4616,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
     );
 
-    final normalizedHeroUrl = normalizeImageUrl(heroImage ?? '');
+    final normalizedHeroUrl =
+        _normalizeArtworkUrl(normalizeImageUrl(heroImage ?? ''), isHero: true) ??
+            '';
     final hasHeroImage =
         normalizedHeroUrl.isNotEmpty && !_suspendHeroBackground;
     if (hasHeroImage && !_heroImageCacheHits.containsKey(normalizedHeroUrl)) {
       _checkHeroImageCache(normalizedHeroUrl);
+    }
+    if (hasHeroImage) {
+      _ensureHeroAspectRatio(normalizedHeroUrl);
     }
     final heroFallback = _buildHeroLoadingFallback(
       featuredChannel,
@@ -4568,15 +4735,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             // Adaptive handling:
-            // Default to "Poster Mode" (Blur + Contain) unless we are SURE it's a backdrop.
-            // This prevents zooming in on posters or generic images, which looks broken.
-            final lower = normalizedHeroUrl.toLowerCase();
-            final isExplicitBackdrop = lower.contains('backdrop') || 
-                                     lower.contains('landscape') ||
-                                     lower.contains('fanart') ||
-                                     lower.contains('/bg/');
+            // Prefer aspect ratio over URL heuristics to avoid misclassification.
+            final aspect = _heroAspectRatios[normalizedHeroUrl];
+            final isLandscape = aspect != null
+                ? aspect >= 1.2
+                : _isExplicitBackdropUrl(normalizedHeroUrl);
 
-            if (isExplicitBackdrop) {
+            if (isLandscape) {
               // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
               return SizedBox.expand(
                 child: CachedNetworkImage(

@@ -66,6 +66,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   Future<List<Channel>>? _channelPageFuture;
   String _channelPageKey = '';
+  List<String> _lastCategoryNames = [];
 
   @override
   void initState() {
@@ -311,27 +312,37 @@ class _EPGScreenState extends State<EPGScreen>
     if (_channelPageFuture == null || _channelPageKey != pageKey) {
       _channelPageKey = pageKey;
       _channelPageFuture = () async {
+        final start = DateTime.now();
         final pageSize = _epgState.channelsPerPage;
         final expected = (_epgState.currentPage + 1) * pageSize;
         final fetchLimit = expected + 1;
         if (_epgState.selectedCategory == '⭐ Favorites') {
-          return channelProvider.getFilteredChannels(
+          final result = channelProvider.getFilteredChannels(
             favoriteIds: _epgState.epgFavoriteChannelIds,
             excludeHidden: true,
             limit: fetchLimit,
           );
+          debugLog(
+              'EPG Screen: Favorites fetch took ${DateTime.now().difference(start).inMilliseconds}ms');
+          return result;
         }
         if (_epgState.selectedCategory != null) {
-          return channelProvider.getFilteredChannelsAsync(
+          final result = await channelProvider.getFilteredChannelsAsync(
             category: _epgState.selectedCategory,
             excludeHidden: true,
             limit: fetchLimit,
           );
+          debugLog(
+              'EPG Screen: Category "${_epgState.selectedCategory}" fetch took ${DateTime.now().difference(start).inMilliseconds}ms');
+          return result;
         }
-        return channelProvider.getFilteredChannelsAsync(
+        final result = await channelProvider.getFilteredChannelsAsync(
           excludeHidden: true,
           limit: fetchLimit,
         );
+        debugLog(
+            'EPG Screen: All channels fetch took ${DateTime.now().difference(start).inMilliseconds}ms');
+        return result;
       }();
     }
     return _channelPageFuture!;
@@ -359,28 +370,26 @@ class _EPGScreenState extends State<EPGScreen>
             // Get category names (lightweight - no channel grouping)
             // Wait for categories to be computed if they're not ready yet
             final rawCategories = channelProvider.getAllCategoryNames();
-            if (rawCategories.isEmpty && channelProvider.hasChannels && !channelProvider.isGroupingChannels) {
-              // Categories not computed yet but we have channels - trigger computation
+            if (rawCategories.isEmpty &&
+                channelProvider.hasChannels &&
+                !channelProvider.isGroupingChannels) {
+              // Categories not computed yet but we have channels - trigger computation.
               unawaited(channelProvider.getAllCategoryNamesAsync());
-              // Show loading indicator while categories are being computed
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: AppTheme.primaryBlue),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading categories...',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-              );
             }
-            
+            if (rawCategories.isNotEmpty) {
+              _lastCategoryNames = List<String>.from(rawCategories);
+            }
+
+            final effectiveCategories =
+                rawCategories.isNotEmpty ? rawCategories : _lastCategoryNames;
+            final isCategoryLoading = rawCategories.isEmpty &&
+                channelProvider.hasChannels &&
+                (channelProvider.isGroupingChannels ||
+                    _lastCategoryNames.isEmpty);
+
             final seen = <String>{};
             final categoryList = <String>[];
-            for (final name in rawCategories) {
+            for (final name in effectiveCategories) {
               final trimmed = name.trim();
               if (trimmed.isEmpty || trimmed == '⭐ Favorites') continue;
               if (seen.add(trimmed)) categoryList.add(trimmed);
@@ -437,7 +446,10 @@ class _EPGScreenState extends State<EPGScreen>
                               child: Row(
                                 children: [
                                   // Category sidebar
-                                  _buildCategorySidebar(categoryNames),
+                                  _buildCategorySidebar(
+                                    categoryNames,
+                                    isLoading: isCategoryLoading,
+                                  ),
                                   const SizedBox(width: 4),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
@@ -643,7 +655,10 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildCategorySidebar(List<String> categories) {
+  Widget _buildCategorySidebar(
+    List<String> categories, {
+    bool isLoading = false,
+  }) {
     return Container(
       width: context.categoryBarWidth(),
       decoration: BoxDecoration(
@@ -655,34 +670,79 @@ class _EPGScreenState extends State<EPGScreen>
           ),
         ),
       ),
-      child: ListView.separated(
-        key: const PageStorageKey<String>('epg_category_list'),
-        physics: const BouncingScrollPhysics(),
-        primary: false,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _buildCategoryItem(
-            name: category,
-            isSelected: _epgState.selectedCategory == category,
-            isFirst: index == 0,
-            onTap: () {
-              _epgState.setSelectedCategory(category);
-              // Scroll channel list to top
-              _scrollChannelListToTop();
-            },
-          );
-        },
-        separatorBuilder: (context, index) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingSm()),
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: Colors.white.withValues(alpha: 0.06),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacingSm(),
+              vertical: context.spacingXs(),
             ),
-          );
-        },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Categories',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                if (isLoading) ...[
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Updating',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              key: const PageStorageKey<String>('epg_category_list'),
+              physics: const BouncingScrollPhysics(),
+              primary: false,
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                return _buildCategoryItem(
+                  name: category,
+                  isSelected: _epgState.selectedCategory == category,
+                  isFirst: index == 0,
+                  onTap: () {
+                    _epgState.setSelectedCategory(category);
+                    // Scroll channel list to top
+                    _scrollChannelListToTop();
+                  },
+                );
+              },
+              separatorBuilder: (context, index) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: context.spacingSm()),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

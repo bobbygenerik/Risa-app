@@ -137,6 +137,7 @@ class ChannelProvider with ChangeNotifier {
   static const int _playlistCacheVersion = 3;
   static const String _epgMapSignaturePrefix = 'epg_map_signature_';
   static const String _epgMapCountPrefix = 'epg_map_count_';
+  static const String _categoryCachePrefix = 'category_cache_';
   // Debug preview capture size (unused after refactor)
 
   // Store raw channel data as maps to avoid expensive conversion on main thread
@@ -183,6 +184,8 @@ class ChannelProvider with ChangeNotifier {
   String? _currentEpgMapSignature;
   String? _currentEpgMapSignatureKey;
   String? _currentEpgMapCountKey;
+  String? _categoryCacheKey;
+  bool _categoryCacheLoaded = false;
   bool _xtreamEpgMapLoaded = false;
   static const String _xtreamEpgMapFileName = 'xtream_epg_map.json';
   bool _dbReady = false;
@@ -1133,12 +1136,38 @@ class ChannelProvider with ChangeNotifier {
     _currentEpgMapSignatureKey = signatureKey;
     _currentEpgMapCountKey =
         '$_epgMapCountPrefix${Uri.encodeComponent(keyBase)}';
+    _categoryCacheKey = '$_categoryCachePrefix${Uri.encodeComponent(keyBase)}';
+    _categoryCacheLoaded = false;
     _currentEpgMapSignature = await _computeEpgMapSignature(
       playlistUrl: playlistUrl,
       epgUrl: epgUrl,
       channelCount: channelCount,
       channelsFile: channelsFile,
     );
+  }
+
+  Future<void> _loadCachedCategoriesFromPrefs() async {
+    if (_categoryCacheLoaded || _categoryCacheKey == null) return;
+    _categoryCacheLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getStringList(_categoryCacheKey!);
+      if (cached != null && cached.isNotEmpty) {
+        _cachedCategories = List<String>.from(cached);
+      }
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to load cached categories: $e');
+    }
+  }
+
+  Future<void> _persistCachedCategories() async {
+    if (_categoryCacheKey == null || _cachedCategories == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_categoryCacheKey!, _cachedCategories!);
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to persist cached categories: $e');
+    }
   }
 
   Future<String> _computeEpgMapSignature({
@@ -1653,10 +1682,23 @@ class ChannelProvider with ChangeNotifier {
             _rebuildChannelCaches();
             _isLoading = false;
             _hasLoadedPlaylist = true;
-            
+
+            final cachedPlaylistUrl = playlistType == 'm3u'
+                ? prefs.getString('m3u_url')
+                : prefs.getString('xtream_server');
+            final cachedEpgUrl =
+                prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
+            await _setCurrentEpgMapSignature(
+              prefs: prefs,
+              playlistUrl: cachedPlaylistUrl,
+              epgUrl: cachedEpgUrl,
+              channelCount: count,
+            );
+
             // CRITICAL: Pre-compute categories immediately so UI can display rows
             // without waiting for lazy computation. This is the key fix for cold start.
             _invalidateCategoryCaches();
+            unawaited(_loadCachedCategoriesFromPrefs());
             
             // CRITICAL: Trigger EPG service to load from its DB cache
             // Without this, hasProgramsForChannel() returns false for all channels
@@ -2423,7 +2465,16 @@ class ChannelProvider with ChangeNotifier {
   /// Get list of category names (lightweight - computed in isolate)
   List<String> getCategories() {
     if (_cachedCategories != null) {
+      if (_cachedCategories!.isNotEmpty || _channelMaps.isEmpty) {
+        return _cachedCategories!;
+      }
+      _invalidateCategoryCaches();
+    }
+    if (_cachedCategories != null) {
       return _cachedCategories!;
+    }
+    if (!_categoryCacheLoaded) {
+      unawaited(_loadCachedCategoriesFromPrefs());
     }
     if (_isGroupingChannels) {
       return [];
@@ -2612,14 +2663,21 @@ class ChannelProvider with ChangeNotifier {
     _isGroupingChannels = true;
     _categoriesCompleter = Completer<List<String>>();
     _notifyListenersSafe();
+    final start = DateTime.now();
 
     try {
       if (_dbReady) {
+        final dbStart = DateTime.now();
         _cachedCategories = await _db.getCategories();
+        debugLog(
+            'ChannelProvider: Category DB load took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
         if ((_cachedCategories?.isEmpty ?? true) && _channelMaps.isNotEmpty) {
           final groupTitles = _getCategoryTitleCache();
+          final isolateStart = DateTime.now();
           _cachedCategories =
               await compute(_extractCategoriesInIsolate, groupTitles);
+          debugLog(
+              'ChannelProvider: Category isolate compute took ${DateTime.now().difference(isolateStart).inMilliseconds}ms');
         }
         debugLog(
             'ChannelProvider: Loaded ${_cachedCategories!.length} categories from DB');
@@ -2628,8 +2686,11 @@ class ChannelProvider with ChangeNotifier {
         final groupTitles = _getCategoryTitleCache();
 
         // Run category extraction in isolate
+        final isolateStart = DateTime.now();
         _cachedCategories =
             await compute(_extractCategoriesInIsolate, groupTitles);
+        debugLog(
+            'ChannelProvider: Category isolate compute took ${DateTime.now().difference(isolateStart).inMilliseconds}ms');
 
         debugLog(
             'ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channelMaps.length} channels');
@@ -2639,10 +2700,13 @@ class ChannelProvider with ChangeNotifier {
       _cachedCategories = [];
     }
 
+    debugLog(
+        'ChannelProvider: Category compute total ${DateTime.now().difference(start).inMilliseconds}ms');
     _isGroupingChannels = false;
     if (_categoriesCompleter != null && !_categoriesCompleter!.isCompleted) {
       _categoriesCompleter!.complete(_cachedCategories ?? []);
     }
+    unawaited(_persistCachedCategories());
     _notifyListenersSafe();
   }
 
@@ -2674,7 +2738,18 @@ class ChannelProvider with ChangeNotifier {
   }
 
   Future<List<String>> getAllCategoryNamesAsync() async {
-    if (_cachedCategories != null) return _cachedCategories!;
+    if (_cachedCategories != null) {
+      if (_cachedCategories!.isNotEmpty || _channelMaps.isEmpty) {
+        return _cachedCategories!;
+      }
+      _invalidateCategoryCaches();
+    }
+    if (!_categoryCacheLoaded) {
+      await _loadCachedCategoriesFromPrefs();
+      if (_cachedCategories != null && _cachedCategories!.isNotEmpty) {
+        return _cachedCategories!;
+      }
+    }
     if (_categoriesCompleter != null) {
       return _categoriesCompleter!.future;
     }
@@ -2691,6 +2766,7 @@ class ChannelProvider with ChangeNotifier {
     _channelIdCache = null;
     _hiddenFlagCache = null;
     _categoriesCompleter = null;
+    _categoryCacheLoaded = false;
   }
 
   /// Get all category names for dropdowns/selectors (returns cached list)

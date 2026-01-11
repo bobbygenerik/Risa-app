@@ -96,6 +96,8 @@ class ExoPlayerView(
         val shared = context.getSharedPreferences("risa_exo_prefs", Context.MODE_PRIVATE)
         val forcePlatform = shared.getBoolean(prefsKey, false)
         val requestedExtensionMode = (creationParams?.get("extensionRenderers") as? String)?.lowercase()
+        val deviceModel = Build.MODEL.lowercase()
+        val isShield = deviceModel.contains("shield") || deviceModel.contains("nvidia")
 
         // Force platform decoders to reduce memory usage
         val extensionMode = androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
@@ -103,9 +105,12 @@ class ExoPlayerView(
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
             init {
                 setExtensionRendererMode(extensionMode)
-                setEnableDecoderFallback(false) // Disable fallback to save memory
+                setEnableDecoderFallback(isShield) // Shield needs decoder fallback for stability
                 setEnableAudioFloatOutput(false) // Disable float audio to save memory
-                android.util.Log.d("ExoPlayer", "RenderersFactory configured: extensionMode=OFF, decoderFallback=false, floatAudio=false")
+                android.util.Log.d(
+                    "ExoPlayer",
+                    "RenderersFactory configured: extensionMode=OFF, decoderFallback=${isShield}, floatAudio=false"
+                )
             }
         }
 
@@ -114,8 +119,6 @@ class ExoPlayerView(
         val isAndroidTv =
             (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
                 Configuration.UI_MODE_TYPE_TELEVISION
-        val deviceModel = Build.MODEL.lowercase()
-        val isShield = deviceModel.contains("shield") || deviceModel.contains("nvidia")
         val parametersBuilder = trackSelector.buildUponParameters()
             .setMaxAudioChannelCount(2) // Limit to stereo to save memory
         if (isAndroidTv) {
