@@ -135,8 +135,9 @@ class _MainShellState extends State<MainShell> {
     // final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale // Removed
 
     final showSidebarScrim = _isSidebarExpanded;
-    final sidebarScrimWidth =
-        showSidebarScrim ? AppSpacing.sidebarWidth * 0.72 : AppSpacing.sidebarCollapsedWidth;
+    final sidebarScrimWidth = showSidebarScrim
+        ? AppSpacing.sidebarWidth + 16
+        : AppSpacing.sidebarCollapsedWidth;
 
     return PopScope(
       canPop: false,
