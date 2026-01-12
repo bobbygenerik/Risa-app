@@ -272,6 +272,17 @@ class LocalDbService {
       {int offset = 0, int limit = 50}) async {
     final safeLimit = limit.clamp(0, 500);
     final rows = await _withDbRead((db) {
+      if (category.trim().toLowerCase() == 'uncategorized') {
+        return db.query(
+          'channels',
+          where:
+              'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
+          whereArgs: ['', 'Uncategorized'],
+          orderBy: 'idx ASC',
+          limit: safeLimit,
+          offset: offset,
+        );
+      }
       return db.query(
         'channels',
         where: 'groupTitle = ?',
@@ -296,6 +307,18 @@ class LocalDbService {
     final results = await _withDbRead((db) async {
       final batch = db.batch();
       for (final category in categories) {
+        if (category.trim().toLowerCase() == 'uncategorized') {
+          batch.query(
+            'channels',
+            where:
+                'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
+            whereArgs: ['', 'Uncategorized'],
+            orderBy: 'idx ASC',
+            limit: safeLimit,
+            offset: safeOffset,
+          );
+          continue;
+        }
         batch.query(
           'channels',
           where: 'groupTitle = ?',
@@ -333,7 +356,7 @@ class LocalDbService {
 
   Future<List<String>> getCategories({int? limit}) async {
     final query = StringBuffer(
-        'SELECT groupTitle FROM channels WHERE groupTitle IS NOT NULL GROUP BY groupTitle ORDER BY MIN(idx)');
+        'SELECT CASE WHEN groupTitle IS NULL OR TRIM(groupTitle) = \'\' THEN \'Uncategorized\' ELSE groupTitle END AS cat, MIN(idx) AS minIdx FROM channels GROUP BY cat ORDER BY CASE WHEN cat = \'Uncategorized\' THEN 1 ELSE 0 END, minIdx');
     final args = <Object>[];
     if (limit != null && limit > 0) {
       query.write(' LIMIT ?');
@@ -343,7 +366,7 @@ class LocalDbService {
       return db.rawQuery(query.toString(), args);
     });
     return rows
-        .map((r) => (r['groupTitle'] as String?) ?? 'Uncategorized')
+        .map((r) => (r['cat'] as String?) ?? 'Uncategorized')
         .toList();
   }
 

@@ -31,7 +31,8 @@ List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
   final List<String> categories = [];
   final Set<String> seen = {};
   for (final title in groupTitles) {
-    final category = title ?? 'Uncategorized';
+    final trimmed = title?.trim() ?? '';
+    final category = trimmed.isEmpty ? 'Uncategorized' : trimmed;
     if (!seen.contains(category)) {
       seen.add(category);
       // Add Uncategorized at the end
@@ -1205,7 +1206,7 @@ class ChannelProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final cached = prefs.getStringList(_categoryCacheKey!);
       if (cached != null && cached.isNotEmpty) {
-        _cachedCategories = List<String>.from(cached);
+        _cachedCategories = _normalizeCategories(cached);
         _notifyListenersSafe();
       }
     } catch (e) {
@@ -2770,14 +2771,14 @@ class ChannelProvider with ChangeNotifier {
     try {
       if (_dbReady) {
         final dbStart = DateTime.now();
-        _cachedCategories = await _db.getCategories();
+        _cachedCategories = _normalizeCategories(await _db.getCategories());
         debugLog(
             'ChannelProvider: Category DB load took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
         if ((_cachedCategories?.isEmpty ?? true) && _channelMaps.isNotEmpty) {
           final groupTitles = _getCategoryTitleCache();
           final isolateStart = DateTime.now();
-          _cachedCategories =
-              await compute(_extractCategoriesInIsolate, groupTitles);
+          _cachedCategories = _normalizeCategories(
+              await compute(_extractCategoriesInIsolate, groupTitles));
           debugLog(
               'ChannelProvider: Category isolate compute took ${DateTime.now().difference(isolateStart).inMilliseconds}ms');
         }
@@ -2789,8 +2790,8 @@ class ChannelProvider with ChangeNotifier {
 
         // Run category extraction in isolate
         final isolateStart = DateTime.now();
-        _cachedCategories =
-            await compute(_extractCategoriesInIsolate, groupTitles);
+        _cachedCategories = _normalizeCategories(
+            await compute(_extractCategoriesInIsolate, groupTitles));
         debugLog(
             'ChannelProvider: Category isolate compute took ${DateTime.now().difference(isolateStart).inMilliseconds}ms');
 
@@ -2819,6 +2820,27 @@ class ChannelProvider with ChangeNotifier {
           _channelMaps.map((m) => m['groupTitle'] as String?).toList();
     }
     return _categoryTitleCache ?? const [];
+  }
+
+  List<String> _normalizeCategories(List<String> categories) {
+    final normalized = <String>[];
+    bool hasUncategorized = false;
+    for (final raw in categories) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        hasUncategorized = true;
+        continue;
+      }
+      if (trimmed == 'Uncategorized') {
+        hasUncategorized = true;
+        continue;
+      }
+      normalized.add(trimmed);
+    }
+    if (hasUncategorized) {
+      normalized.add('Uncategorized');
+    }
+    return normalized;
   }
 
   List<String?> _getChannelIdCache() {
