@@ -928,13 +928,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final categories = await channelProvider.getAllCategoryNamesAsync();
       debugLog('LiveTV: Fetched ${categories.length} categories');
       if (!mounted) return;
+      final effectiveCategories = categories.isNotEmpty
+          ? categories
+          : _buildFallbackCategories(channelProvider);
       if (force) {
         _categoryChannelCache.clear();
         _categoryCacheOrder.clear();
         _categoryOffsets.clear();
         _categoryHasMore.clear();
       }
-      _categoryNames = categories;
+      _categoryNames = effectiveCategories;
       _categoryNameSet
         ..clear()
         ..addAll(_categoryNames);
@@ -964,6 +967,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } finally {
       _loadingCategories = false;
     }
+  }
+
+  List<String> _buildFallbackCategories(ChannelProvider provider) {
+    if (!provider.hasChannels) return [];
+    final preview = provider.getFilteredChannels(limit: 200);
+    final seen = <String>{};
+    final categories = <String>[];
+    for (final channel in preview) {
+      final trimmed = (channel.groupTitle ?? '').trim();
+      final name = trimmed.isEmpty ? 'Uncategorized' : trimmed;
+      if (seen.add(name)) {
+        if (name != 'Uncategorized') {
+          categories.add(name);
+        }
+      }
+    }
+    if (seen.contains('Uncategorized')) {
+      categories.add('Uncategorized');
+    }
+    return categories;
   }
 
   Future<void> _prefetchInitialCategoryRows() async {

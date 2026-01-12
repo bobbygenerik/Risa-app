@@ -701,6 +701,19 @@ class _EPGScreenState extends State<EPGScreen>
               if (trimmed.isEmpty || trimmed == '⭐ Favorites') continue;
               if (seen.add(trimmed)) categoryList.add(trimmed);
             }
+            if (categoryList.isEmpty && channelProvider.hasChannels) {
+              final preview = channelProvider.getFilteredChannels(limit: 200);
+              for (final channel in preview) {
+                final trimmed = (channel.groupTitle ?? '').trim();
+                final name = trimmed.isEmpty ? 'Uncategorized' : trimmed;
+                if (seen.add(name)) categoryList.add(name);
+              }
+              categoryList.remove('⭐ Favorites');
+              if (seen.contains('Uncategorized') &&
+                  !categoryList.contains('Uncategorized')) {
+                categoryList.add('Uncategorized');
+              }
+            }
             final categoryNames = [
               '⭐ Favorites',
               ...categoryList
