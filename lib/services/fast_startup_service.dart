@@ -38,15 +38,10 @@ class FastStartupService {
   /// Fast load channels with all optimizations
   Future<List<Channel>> fastLoadChannels(String m3uUrl) async {
     _logStep('Fast channel loading started');
-    
-    // Mock fast loading
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    final channels = [
-      Channel(id: '1', name: 'Channel 1', url: 'http://example.com/1'),
-      Channel(id: '2', name: 'Channel 2', url: 'http://example.com/2'),
-    ];
-    
+
+    final cached = await SmartCacheService.instance.loadCachedChannelData();
+    final channels = cached ?? const <Channel>[];
+
     _logStep('Fast channel loading completed (${channels.length} channels)');
     return channels;
   }
@@ -54,21 +49,10 @@ class FastStartupService {
   /// Fast load EPG with streaming and caching
   Future<Map<String, List<Program>>> fastLoadEPG(String epgUrl) async {
     _logStep('Fast EPG loading started');
-    
-    // Mock fast loading
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    final epgData = <String, List<Program>>{
-      '1': [Program(
-        id: '1_1',
-        channelId: '1',
-        title: 'Mock Program',
-        description: 'Mock description',
-        startTime: DateTime.now(),
-        endTime: DateTime.now().add(const Duration(hours: 1)),
-      )],
-    };
-    
+
+    final cached = await SmartCacheService.instance.loadCachedEpgData();
+    final epgData = cached ?? <String, List<Program>>{};
+
     _logStep('Fast EPG loading completed (${epgData.length} channels)');
     return epgData;
   }

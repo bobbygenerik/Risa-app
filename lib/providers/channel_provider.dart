@@ -3,13 +3,14 @@ import '../providers/playlist_isolate.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:io';
-// 'dart:math' removed (unused here)
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/performance_monitor.dart';
+import 'package:iptv_player/utils/hash_utils.dart';
 import '../models/channel.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
 // M3U parsing is handled via `playlist_isolate.dart` (streaming/isolate helpers).
@@ -20,6 +21,7 @@ import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/services/local_db_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
+import 'package:iptv_player/services/smart_cache_service.dart';
 import 'playlist_loader.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -168,6 +170,49 @@ class ChannelProvider with ChangeNotifier {
       final groupKey = group.isNotEmpty ? group : 'uncategorized';
       _channelIndicesByGroup.putIfAbsent(groupKey, () => []).add(i);
     }
+  }
+
+  void _refreshSmartChannelCache({bool allowConversion = true}) {
+    if (_channelMaps.isEmpty) return;
+    unawaited(() async {
+      try {
+        final smartCache = SmartCacheService.instance;
+        if (allowConversion && _channelMaps.length <= 5000) {
+          final channels =
+              _channelMaps.map((m) => Channel.fromMap(m)).toList();
+          await smartCache.cacheChannelData(channels, overwriteDb: false);
+        } else {
+          final signature = _signatureFromChannelMaps(_channelMaps);
+          await smartCache.markChannelCacheFresh(
+            channelCount: _channelMaps.length,
+            signature: signature,
+          );
+        }
+      } catch (e) {
+        debugLog('ChannelProvider: Smart cache refresh failed: $e');
+      }
+    }());
+  }
+
+  String _signatureFromChannelMaps(List<Map<String, dynamic>> maps) {
+    if (maps.isEmpty) return 'empty';
+    final sampleCount = math.min(4, maps.length);
+    final buffer = StringBuffer()..write('count:${maps.length}');
+    for (var i = 0; i < sampleCount; i++) {
+      final m = maps[i];
+      buffer
+        ..write('|')
+        ..write(m['id'] ?? '')
+        ..write(':')
+        ..write(m['name'] ?? '');
+    }
+    final last = maps.last;
+    buffer
+      ..write('|last:')
+      ..write(last['id'] ?? '')
+      ..write(':')
+      ..write(last['name'] ?? '');
+    return fnv1aHex(buffer.toString());
   }
 
   final List<Channel> _favoriteChannels = [];
@@ -1224,6 +1269,11 @@ class ChannelProvider with ChangeNotifier {
   int get channelCount => _dbReady ? _channelCountDb : _channelMaps.length;
   int _channelCountDb = 0;
   Future<int> getChannelCountAsync() async {
+    if (!_dbReady && !_dbDisabled) {
+      try {
+        await _ensureDb();
+      } catch (_) {}
+    }
     if (_dbReady) {
       try {
         final dbCount = await _db.channelCount();
@@ -1471,6 +1521,10 @@ class ChannelProvider with ChangeNotifier {
   bool get noPlaylistConfigured => _noPlaylistConfigured;
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
   String? get lastM3UContent => _lastM3UContent; // Expose for debugging
+  bool get isDbReady => _dbReady;
+  bool get isDbDisabled => _dbDisabled;
+  bool get isDbReadOnlyRecoveryInFlight => _dbReadOnlyRecoveryInFlight;
+  int get dbChannelCount => _channelCountDb;
 
   /// Get channels sorted by watch count (most watched first) - limited
   List<Channel> get mostWatchedChannels {
@@ -1714,6 +1768,8 @@ class ChannelProvider with ChangeNotifier {
             _scheduleEpgRefresh(forceRefresh: false);
             
             notifyListeners();
+            unawaited(SmartCacheService.instance
+                .markChannelCacheFresh(channelCount: count));
             StartupProbe.mark('ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
             
             // Compute categories in background after UI is shown
@@ -1736,6 +1792,7 @@ class ChannelProvider with ChangeNotifier {
                 _invalidateCategoryCaches();
                 unawaited(_computeCategoriesAsync());
                 _updateEpgAllowedChannels();
+                _refreshSmartChannelCache();
                 notifyListeners();
                 debugLog('ChannelProvider: Background load of ${more.length} remaining channels complete');
               }());
@@ -1874,6 +1931,7 @@ class ChannelProvider with ChangeNotifier {
             _isLoading = false;
             _hasLoadedPlaylist = true;
             notifyListeners();
+            _refreshSmartChannelCache();
             final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
             debugLog(
                 'ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
@@ -2185,6 +2243,7 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       _hasLoadedPlaylist = true;
       notifyListeners();
+      _refreshSmartChannelCache();
 
       PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
       PerformanceMonitor.trackMemoryUsage('After playlist load');
@@ -2395,6 +2454,7 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       _hasLoadedPlaylist = true;
       notifyListeners();
+      _refreshSmartChannelCache();
 
       _scheduleEpgRefresh(forceRefresh: false);
       unawaited(_persistPlaylistCounts(
@@ -2408,6 +2468,7 @@ class ChannelProvider with ChangeNotifier {
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
+      _refreshSmartChannelCache();
       rethrow;
     } finally {
       await _setWakeLock(false);
@@ -2521,6 +2582,39 @@ class ChannelProvider with ChangeNotifier {
     });
     if (indices.isEmpty) return const [];
     return indices.map(_getChannelAt).toList();
+  }
+
+  Future<Map<String, List<Channel>>> getCategoryPreviewBatch(
+    List<String> categories, {
+    int limit = 20,
+  }) async {
+    if (categories.isEmpty) return {};
+    if (_dbReady) {
+      try {
+        final rowsByCategory = await _db.getChannelsForCategoriesPage(
+          categories,
+          limit: limit,
+        );
+        final result = <String, List<Channel>>{};
+        for (final category in categories) {
+          final rows = rowsByCategory[category] ?? const [];
+          result[category] = rows.map((m) => Channel.fromMap(m)).toList();
+        }
+        return result;
+      } catch (e) {
+        debugLog('ChannelProvider: DB category batch failed: $e');
+        _recoverReadOnlyDb(e);
+      }
+    }
+
+    final result = <String, List<Channel>>{};
+    for (final category in categories) {
+      result[category] = await getChannelsForCategoryAsync(
+        category,
+        limit: limit,
+      );
+    }
+    return result;
   }
 
   /// Save parsed playlist data to JSON cache for fast loading

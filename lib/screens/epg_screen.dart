@@ -2,6 +2,7 @@ import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -76,6 +77,11 @@ class _EPGScreenState extends State<EPGScreen>
   final Map<String, FocusNode> _channelFocusNodes = {};
   final Queue<String> _channelFocusOrder = Queue<String>();
   static const int _maxChannelFocusNodes = 400;
+  static const String _epgSnapshotKey = 'epg_snapshot_v1';
+  static const Duration _epgSnapshotTtl = Duration(hours: 6);
+  static const int _epgSnapshotChannelLimit = 60;
+  bool _snapshotApplied = false;
+  Timer? _snapshotSaveDebounce;
 
   @override
   void initState() {
@@ -117,6 +123,7 @@ class _EPGScreenState extends State<EPGScreen>
     // Load EPG data on init - non-blocking
     _loadEpgData();
     unawaited(_primeCategories());
+    unawaited(_loadEpgSnapshot());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Load EPG favorites from SharedPreferences
@@ -149,6 +156,218 @@ class _EPGScreenState extends State<EPGScreen>
       }
     } catch (e) {
       debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
+    }
+  }
+
+  Future<String?> _readPlaylistIdentity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('active_playlist_id') ??
+          prefs.getString('m3u_url') ??
+          prefs.getString('xtream_server');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _loadEpgSnapshot() async {
+    if (_snapshotApplied) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_epgSnapshotKey);
+      if (raw == null || raw.isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return;
+      final savedAt = decoded['savedAt'] as int?;
+      if (savedAt == null) return;
+      final age = DateTime.now()
+          .difference(DateTime.fromMillisecondsSinceEpoch(savedAt));
+      if (age > _epgSnapshotTtl) return;
+      final playlistId = decoded['playlistId'] as String?;
+      final snapshotChannelCount = decoded['channelCount'] as int?;
+      final currentPlaylistId = await _readPlaylistIdentity();
+      if (!mounted) return;
+      if (playlistId != null &&
+          currentPlaylistId != null &&
+          playlistId != currentPlaylistId) {
+        return;
+      }
+      final provider =
+          Provider.of<ChannelProvider>(context, listen: false);
+      if (snapshotChannelCount != null &&
+          provider.channelCount > 0 &&
+          (snapshotChannelCount - provider.channelCount).abs() >
+              math.max(20, (provider.channelCount * 0.1).round())) {
+        return;
+      }
+      final channelsRaw = decoded['channels'];
+      if (channelsRaw is! List) return;
+      final selectedCategory = decoded['selectedCategory'] as String?;
+      final favoriteIdsRaw = decoded['favoriteIds'];
+      final favoriteIds = <String>{};
+      if (favoriteIdsRaw is List) {
+        for (final id in favoriteIdsRaw) {
+          if (id is String && id.isNotEmpty) favoriteIds.add(id);
+        }
+      }
+      final channels = <Channel>[];
+      final programSnapshot = <String, List<Program>>{};
+      for (final c in channelsRaw) {
+        if (c is! Map<String, dynamic>) continue;
+        final id = (c['id'] as String?) ?? '';
+        final name = (c['name'] as String?) ?? '';
+        final url = (c['url'] as String?) ?? '';
+        if (id.isEmpty || name.isEmpty || url.isEmpty) continue;
+        final channel = Channel(
+          id: id,
+          name: name,
+          url: url,
+          logoUrl: c['logoUrl'] as String?,
+          groupTitle: c['groupTitle'] as String?,
+          tvgId: c['tvgId'] as String?,
+          channelNumber: c['channelNumber'] as int?,
+          language: c['language'] as String?,
+          country: c['country'] as String?,
+        );
+        channels.add(channel);
+        final programsRaw = c['programs'];
+        if (programsRaw is List) {
+          final epgId = channel.tvgId ?? channel.id;
+          final programs = <Program>[];
+          for (final p in programsRaw) {
+            if (p is! Map<String, dynamic>) continue;
+            final startTs = p['startTs'] as int? ?? 0;
+            final endTs = p['endTs'] as int? ?? 0;
+            if (startTs == 0 || endTs == 0) continue;
+            final title = (p['title'] as String?) ?? '';
+            if (title.isEmpty) continue;
+            programs.add(Program(
+              id: '${epgId}_$startTs',
+              channelId: epgId,
+              title: title,
+              description: p['description'] as String?,
+              startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+              endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+              imageUrl: p['imageUrl'] as String?,
+            ));
+          }
+          if (programs.isNotEmpty) {
+            programSnapshot[epgId] = programs;
+          }
+        }
+      }
+      if (channels.isEmpty) return;
+
+      _snapshotApplied = true;
+      if (selectedCategory != null && selectedCategory.isNotEmpty) {
+        _epgState.setSelectedCategory(selectedCategory);
+      }
+      if (favoriteIds.isNotEmpty) {
+        _epgState.setEpgFavoriteChannelIds(favoriteIds);
+      }
+      _epgState.updatePaginatedChannels(channels);
+      _epgState.setHasMore(true);
+      if (programSnapshot.isNotEmpty) {
+        final epgService =
+            Provider.of<IncrementalEpgService>(context, listen: false);
+        epgService.applyProgramSnapshot(programSnapshot);
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+
+  void _scheduleSnapshotSave(List<Channel> channels) {
+    if (channels.isEmpty) return;
+    _snapshotSaveDebounce?.cancel();
+    _snapshotSaveDebounce =
+        Timer(const Duration(seconds: 3), () => _saveEpgSnapshot(channels));
+  }
+
+  List<Program> _snapshotProgramsForChannel(
+    Channel channel,
+    IncrementalEpgService epgService,
+  ) {
+    final channelId = channel.tvgId ?? channel.id;
+    final programs = epgService.getProgramsForChannel(
+      channelId,
+      channelName: channel.name,
+      groupTitle: channel.groupTitle,
+    );
+    if (programs.isEmpty) return const [];
+    final now = DateTime.now();
+    Program? current;
+    Program? next;
+    for (final program in programs) {
+      if (program.startTime.isBefore(now) &&
+          program.endTime.isAfter(now)) {
+        current = program;
+      } else if (program.startTime.isAfter(now)) {
+        final nextProgram = next;
+        if (nextProgram == null ||
+            program.startTime.isBefore(nextProgram.startTime)) {
+          next = program;
+        }
+      }
+    }
+    final snapshot = <Program>[];
+    if (current != null) {
+      snapshot.add(current);
+    }
+    if (next != null) {
+      snapshot.add(next);
+    }
+    return snapshot;
+  }
+
+  Future<void> _saveEpgSnapshot(List<Channel> channels) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final playlistId = await _readPlaylistIdentity();
+      if (!mounted) return;
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
+      final payload = <Map<String, dynamic>>[];
+      for (final channel in channels.take(_epgSnapshotChannelLimit)) {
+        final programs = _snapshotProgramsForChannel(channel, epgService);
+        final programPayload = programs
+            .map((program) => {
+                  'startTs': program.startTime.millisecondsSinceEpoch,
+                  'endTs': program.endTime.millisecondsSinceEpoch,
+                  'title': program.title,
+                  'description': program.description,
+                  'imageUrl': program.imageUrl,
+                })
+            .toList();
+        payload.add({
+          'id': channel.id,
+          'name': channel.name,
+          'url': channel.url,
+          'logoUrl': channel.logoUrl,
+          'groupTitle': channel.groupTitle,
+          'tvgId': channel.tvgId,
+          'channelNumber': channel.channelNumber,
+          'language': channel.language,
+          'country': channel.country,
+          if (programPayload.isNotEmpty) 'programs': programPayload,
+        });
+      }
+      if (payload.isEmpty) return;
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      final snapshot = {
+        'savedAt': DateTime.now().millisecondsSinceEpoch,
+        'playlistId': playlistId,
+        'channelCount': provider.channelCount,
+        'selectedCategory': _epgState.selectedCategory,
+        'favoriteIds': _epgState.epgFavoriteChannelIds.toList(),
+        'channels': payload,
+      };
+      await prefs.setString(_epgSnapshotKey, jsonEncode(snapshot));
+    } catch (_) {
+      // Best-effort persistence only.
     }
   }
 
@@ -301,6 +520,8 @@ class _EPGScreenState extends State<EPGScreen>
     }
     _channelFocusNodes.clear();
     _channelFocusOrder.clear();
+    _snapshotSaveDebounce?.cancel();
+    unawaited(_saveEpgSnapshot(_epgState.paginatedChannels));
     _timerService.unregister('epg_auto_refresh');
     _epgState.removeListener(_handleEpgStateChanged);
     _epgState.dispose();
@@ -501,6 +722,7 @@ class _EPGScreenState extends State<EPGScreen>
                 final rawChannels = snapshot.data!;
                 final hasMore = rawChannels.length > expected;
                 final allFilteredChannels = rawChannels.take(expected).toList();
+                _scheduleSnapshotSave(allFilteredChannels);
 
                 _epgState.setHasMore(hasMore);
                 _epgState.updatePaginatedChannels(allFilteredChannels);
@@ -763,53 +985,10 @@ class _EPGScreenState extends State<EPGScreen>
       ),
       child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.spacingXs(),
-              vertical: context.spacingXs(),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Categories',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-                if (isLoading && !showCenteredUpdating) ...[
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Updating',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
           Expanded(
             child: Stack(
               children: [
-                ListView.separated(
+                ListView.builder(
                   key: const PageStorageKey<String>('epg_category_list'),
                   physics: const BouncingScrollPhysics(),
                   primary: false,
@@ -825,17 +1004,6 @@ class _EPGScreenState extends State<EPGScreen>
                         // Scroll channel list to top
                         _scrollChannelListToTop();
                       },
-                    );
-                  },
-                  separatorBuilder: (context, index) {
-                    return Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: context.spacingXs()),
-                      child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
                     );
                   },
                 ),
@@ -912,7 +1080,10 @@ class _EPGScreenState extends State<EPGScreen>
             duration: const Duration(milliseconds: 90),
             curve: Curves.easeOut,
             scale: isFocused ? 1.05 : 1.0,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              height: AppSpacing.epgRowHeight,
               margin: EdgeInsets.symmetric(
                 horizontal: context.spacingXs(),
                 vertical: context.spacingXs() * 0.25,
@@ -920,6 +1091,13 @@ class _EPGScreenState extends State<EPGScreen>
               padding: EdgeInsets.symmetric(
                 horizontal: context.spacingXs(),
                 vertical: context.spacingXs(),
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: isFocused
+                    ? Border.all(color: AppTheme.focusBorder, width: 2)
+                    : Border.all(
+                        color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
               child: Row(
                 children: [
@@ -971,10 +1149,18 @@ class _EPGScreenState extends State<EPGScreen>
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
     final preloadCount = math.min(12, channels.length);
-    for (var i = 0; i < preloadCount; i++) {
-      final channel = channels[i];
-      final channelKey = channel.tvgId ?? channel.id;
-      epgService.ensureChannelLoaded(channelKey, channelName: channel.name);
+    if (preloadCount > 0) {
+      final channelIds = <String>[];
+      final channelNames = <String?>[];
+      for (var i = 0; i < preloadCount; i++) {
+        final channel = channels[i];
+        channelIds.add(channel.tvgId ?? channel.id);
+        channelNames.add(channel.name);
+      }
+      unawaited(epgService.ensureChannelsLoadedBatch(
+        channelIds,
+        channelNames: channelNames,
+      ));
     }
 
     // Show loading indicator when EPG is loading

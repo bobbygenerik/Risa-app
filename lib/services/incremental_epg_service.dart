@@ -3,9 +3,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:xml/xml_events.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/local_db_service.dart';
+import 'package:iptv_player/services/smart_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
@@ -27,7 +29,8 @@ class CatchupInfo {
   const CatchupInfo({required this.streamId, required this.durationHours});
 }
 
-class IncrementalEpgService extends ChangeNotifier {
+class IncrementalEpgService extends ChangeNotifier
+    with WidgetsBindingObserver {
   final Set<String> _availableChannels = {};
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
@@ -44,6 +47,7 @@ class IncrementalEpgService extends ChangeNotifier {
   bool _initInFlight = false;
   bool _refreshInFlight = false;
   bool _dbDisabled = false;
+  bool _dbClosedDetected = false;
   bool _pendingAllowedRefresh = false;
   DateTime? _lastMappingsLoad;
   DateTime? _lastInitAttempt;
@@ -71,6 +75,10 @@ class IncrementalEpgService extends ChangeNotifier {
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
   bool get _suspendDbReads => _isParsing || _isDownloading || _isLoading;
+
+  IncrementalEpgService() {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   // Provider-style alias map (normalized) to bridge common naming drift
   static const Map<String, List<String>> _aliasMap = {
@@ -157,6 +165,10 @@ class IncrementalEpgService extends ChangeNotifier {
   String? get error => _error;
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _availableChannels.length;
+  bool get isDbReady => _db.isReady;
+  bool get isDbDisabled => _dbDisabled;
+  bool get isDbClosedDetected => _dbClosedDetected;
+  Duration get cacheDuration => _cacheDuration;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
   bool get isReady =>
       _hasParsed &&
@@ -177,10 +189,30 @@ class IncrementalEpgService extends ChangeNotifier {
     if (message.contains('read-only') ||
         message.contains('read only') ||
         message.contains('readonly') ||
-        message.contains('database_closed') ||
-        message.contains('database closed') ||
         message.contains('locked')) {
       _dbDisabled = true;
+    }
+    if (message.contains('database_closed') ||
+        message.contains('database closed')) {
+      _dbClosedDetected = true;
+    }
+  }
+
+  bool _isDatabaseClosedError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('database_closed') ||
+        message.contains('database closed');
+  }
+
+  Future<void> _restoreDbIfClosed() async {
+    if (!_dbClosedDetected) return;
+    try {
+      await _db.init().timeout(const Duration(seconds: 5));
+      _dbDisabled = false;
+      _dbClosedDetected = false;
+      debugLog('EPG: DB reopened after close');
+    } catch (e) {
+      debugLog('EPG: DB reopen failed: $e');
     }
   }
 
@@ -222,6 +254,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
   /// Progressive initialization: load current day first, then remaining days in background
   Future<void> _initializeProgressively({bool forceRefresh = false}) async {
+    await _restoreDbIfClosed();
     if (!forceRefresh &&
         (_isLoading || _isDownloading || _isParsing || _initInFlight)) {
       debugLog('EPG: Progressive init skipped (already loading or in flight)');
@@ -348,70 +381,77 @@ class IncrementalEpgService extends ChangeNotifier {
 
     try {
       // Check if we have valid cache for current day
-      if (!forceRefresh) {
-        final dbStart = DateTime.now();
-        final programCount = await _db.programCount();
-        debugLog(
-            'EPG: DB programCount took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
-        if (programCount > 0) {
-          debugLog('EPG: Loading current day from DB cache...');
-          final now = DateTime.now();
-          final startOfDay = DateTime(now.year, now.month, now.day);
-          final endOfDay = startOfDay.add(const Duration(days: 1));
-          
-          final dbProgramsStart = DateTime.now();
-          final dbPrograms = await _db.getAllProgramsByChannel(
-            pastHours: 12,
-            futureHours: 24, // Current day + some buffer
-          );
+      if (!forceRefresh && !_dbDisabled && _db.isReady) {
+        try {
+          final dbStart = DateTime.now();
+          final programCount = await _db.programCount();
           debugLog(
-              'EPG: DB getAllProgramsByChannel took ${DateTime.now().difference(dbProgramsStart).inMilliseconds}ms');
-          
-          if (dbPrograms.isNotEmpty) {
-            // Filter for current day programs
-            final currentDayPrograms = <String, List<Program>>{};
-            for (final entry in dbPrograms.entries) {
-              final epgId = entry.key;
-              final programs = entry.value
-                  .where((row) {
-                    final startTime = DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int);
-                    return startTime.isAfter(startOfDay) && startTime.isBefore(endOfDay);
-                  })
-                  .map((row) => Program(
-                        id: '${epgId}_${row['startTs']}',
-                        channelId: epgId,
-                        title: row['title'] as String? ?? '',
-                        description: row['description'] as String?,
-                        startTime: DateTime.fromMillisecondsSinceEpoch(
-                            row['startTs'] as int),
-                        endTime: DateTime.fromMillisecondsSinceEpoch(
-                            row['endTs'] as int),
-                        imageUrl: row['imageUrl'] as String?,
-                      ))
-                  .toList();
-              
-              if (programs.isNotEmpty) {
-                currentDayPrograms[epgId] = programs;
+              'EPG: DB programCount took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
+          if (programCount > 0) {
+            debugLog('EPG: Loading current day from DB cache...');
+            final now = DateTime.now();
+            final startOfDay = DateTime(now.year, now.month, now.day);
+            final endOfDay = startOfDay.add(const Duration(days: 1));
+
+            final dbProgramsStart = DateTime.now();
+            final dbPrograms = await _db.getAllProgramsByChannel(
+              pastHours: 12,
+              futureHours: 24, // Current day + some buffer
+            );
+            debugLog(
+                'EPG: DB getAllProgramsByChannel took ${DateTime.now().difference(dbProgramsStart).inMilliseconds}ms');
+
+            if (dbPrograms.isNotEmpty) {
+              // Filter for current day programs
+              final currentDayPrograms = <String, List<Program>>{};
+              for (final entry in dbPrograms.entries) {
+                final epgId = entry.key;
+                final programs = entry.value
+                    .where((row) {
+                      final startTime = DateTime.fromMillisecondsSinceEpoch(
+                          row['startTs'] as int);
+                      return startTime.isAfter(startOfDay) &&
+                          startTime.isBefore(endOfDay);
+                    })
+                    .map((row) => Program(
+                          id: '${epgId}_${row['startTs']}',
+                          channelId: epgId,
+                          title: row['title'] as String? ?? '',
+                          description: row['description'] as String?,
+                          startTime: DateTime.fromMillisecondsSinceEpoch(
+                              row['startTs'] as int),
+                          endTime: DateTime.fromMillisecondsSinceEpoch(
+                              row['endTs'] as int),
+                          imageUrl: row['imageUrl'] as String?,
+                        ))
+                    .toList();
+
+                if (programs.isNotEmpty) {
+                  currentDayPrograms[epgId] = programs;
+                }
+              }
+
+              if (currentDayPrograms.isNotEmpty) {
+                _programsByChannel.clear();
+                _programsByChannel.addAll(currentDayPrograms);
+                _availableChannels.clear();
+                _availableChannels.addAll(currentDayPrograms.keys);
+                _hasParsed = true;
+                _isLoading = false;
+                _error = null;
+                notifyListeners();
+
+                debugLog(
+                    'EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
+                debugLog(
+                    'EPG: Current day total ${DateTime.now().difference(start).inMilliseconds}ms');
+                return;
               }
             }
-
-            if (currentDayPrograms.isNotEmpty) {
-              _programsByChannel.clear();
-              _programsByChannel.addAll(currentDayPrograms);
-              _availableChannels.clear();
-              _availableChannels.addAll(currentDayPrograms.keys);
-              _hasParsed = true;
-              _isLoading = false;
-              _error = null;
-              notifyListeners();
-              
-              debugLog(
-                  'EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
-              debugLog(
-                  'EPG: Current day total ${DateTime.now().difference(start).inMilliseconds}ms');
-              return;
-            }
           }
+        } catch (e) {
+          debugLog('EPG: DB current day load failed, using network: $e');
+          _handleDbError(e);
         }
       }
 
@@ -424,7 +464,12 @@ class IncrementalEpgService extends ChangeNotifier {
       
     } catch (e) {
       debugLog('EPG: Current day loading error: $e');
-      _error = 'Failed to load current day EPG: $e';
+      if (_isDatabaseClosedError(e)) {
+        _handleDbError(e);
+        _error = null;
+      } else {
+        _error = 'Failed to load current day EPG: $e';
+      }
     } finally {
       debugLog(
           'EPG: Current day load finished in ${DateTime.now().difference(start).inMilliseconds}ms');
@@ -1172,6 +1217,7 @@ class IncrementalEpgService extends ChangeNotifier {
     bool skipDbLoad = false,
     bool currentDayOnly = false,
   }) async {
+    await _restoreDbIfClosed();
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
 
     // Prevent overlapping loads
@@ -1213,14 +1259,14 @@ class IncrementalEpgService extends ChangeNotifier {
         }
 
         // OPTIMIZATION: Try loading programs from DB before parsing XML
-        if (!forceRefresh && !_dbDisabled && !skipDbLoad) {
-          final dbCountStart = DateTime.now();
-          final programCount = await _db.programCount();
-          debugLog(
-              'EPG: DB programCount took ${DateTime.now().difference(dbCountStart).inMilliseconds}ms');
-          if (programCount > 0) {
-            debugLog('EPG: Found $programCount programs in DB, loading...');
-            try {
+        if (!forceRefresh && !_dbDisabled && !skipDbLoad && _db.isReady) {
+          try {
+            final dbCountStart = DateTime.now();
+            final programCount = await _db.programCount();
+            debugLog(
+                'EPG: DB programCount took ${DateTime.now().difference(dbCountStart).inMilliseconds}ms');
+            if (programCount > 0) {
+              debugLog('EPG: Found $programCount programs in DB, loading...');
               final dbLoadStart = DateTime.now();
               final dbPrograms = await _db.getAllProgramsByChannel(
                 pastHours: 12,
@@ -1288,6 +1334,11 @@ class IncrementalEpgService extends ChangeNotifier {
                 _error = null;
                 notifyListeners();
 
+                unawaited(SmartCacheService.instance.cacheEpgData(
+                  _programsByChannel,
+                  overwriteDb: false,
+                ));
+
                 _scheduleEpgWindowExtension(
                   fromBackgroundRefresh: fromBackgroundRefresh,
                 );
@@ -1298,31 +1349,39 @@ class IncrementalEpgService extends ChangeNotifier {
                 }
                 return;
               }
-            } catch (e) {
-              debugLog('EPG: Failed to load programs from DB: $e');
-              // Fall through to XML parsing
             }
+          } catch (e) {
+            debugLog('EPG: Failed to load programs from DB: $e');
+            _handleDbError(e);
+            // Fall through to XML parsing
           }
         }
 
         // Legacy optimization for mappings only (fallback)
         if (!forceRefresh &&
             _normalizedAvailableChannels != null &&
-            _normalizedAvailableChannels!.isNotEmpty) {
-          final mappingCount = await _db.mappingCount();
-          if (mappingCount > 0 && _programsByChannel.isNotEmpty) {
-            debugLog(
-                'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
+            _normalizedAvailableChannels!.isNotEmpty &&
+            !_dbDisabled &&
+            _db.isReady) {
+          try {
+            final mappingCount = await _db.mappingCount();
+            if (mappingCount > 0 && _programsByChannel.isNotEmpty) {
+              debugLog(
+                  'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
 
-            _availableChannels.addAll(
-                _normalizedAvailableChannels!.values.expand((list) => list));
+              _availableChannels.addAll(
+                  _normalizedAvailableChannels!.values.expand((list) => list));
 
-            _hasParsed = true;
-            _isLoading = false;
-            _isParsing = false;
-            _error = null;
-            notifyListeners();
-            return;
+              _hasParsed = true;
+              _isLoading = false;
+              _isParsing = false;
+              _error = null;
+              notifyListeners();
+              return;
+            }
+          } catch (e) {
+            debugLog('EPG: Failed to read mapping count: $e');
+            _handleDbError(e);
           }
         }
 
@@ -1336,9 +1395,15 @@ class IncrementalEpgService extends ChangeNotifier {
           return;
         }
 
-        final existingHashes = (!_dbDisabled && _db.isReady)
-            ? await _db.getEpgChannelHashes()
-            : <String, String>{};
+        Map<String, String> existingHashes = <String, String>{};
+        if (!_dbDisabled && _db.isReady) {
+          try {
+            existingHashes = await _db.getEpgChannelHashes();
+          } catch (e) {
+            debugLog('EPG: Failed to load channel hashes: $e');
+            _handleDbError(e);
+          }
+        }
 
         debugLog('EPG: Starting background parsing...');
         _isParsing = true;
@@ -1540,6 +1605,11 @@ class IncrementalEpgService extends ChangeNotifier {
 
         debugLog(
             'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs with ~$parsedProgramCount programs');
+
+        unawaited(SmartCacheService.instance.cacheEpgData(
+          _programsByChannel,
+          overwriteDb: false,
+        ));
 
         if (channelHashes.isNotEmpty && !_dbDisabled) {
           try {
@@ -3214,6 +3284,36 @@ class IncrementalEpgService extends ChangeNotifier {
     return [];
   }
 
+  void applyProgramSnapshot(
+    Map<String, List<Program>> snapshot, {
+    bool overrideExisting = false,
+  }) {
+    if (snapshot.isEmpty) return;
+    var changed = false;
+    for (final entry in snapshot.entries) {
+      final epgId = entry.key;
+      if (epgId.isEmpty) continue;
+      final programs = entry.value;
+      if (programs.isEmpty) continue;
+      if (!overrideExisting && _programsByChannel.containsKey(epgId)) {
+        continue;
+      }
+      _programsByChannel[epgId] = programs;
+      _availableChannels.add(epgId);
+      final normalized = _normalize(epgId);
+      if (normalized.isNotEmpty) {
+        _normalizedAvailableChannels ??= {};
+        _normalizedAvailableChannels!
+            .putIfAbsent(normalized, () => [])
+            .add(epgId);
+      }
+      changed = true;
+    }
+    if (changed && !_isParsing && !_isLoading) {
+      notifyListeners();
+    }
+  }
+
   bool hasProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
     final epgId = _internalToEpgIdMapping[channelId] ??
@@ -3829,8 +3929,16 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_restoreDbIfClosed());
+    }
+  }
+
+  @override
   void dispose() {
     _batchTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

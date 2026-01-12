@@ -45,7 +45,14 @@ class LocalDbService {
   }
 
   Future<void> init() async {
-    if (_isInit) return;
+    if (_isInit) {
+      final db = _db;
+      if (db != null && db.isOpen) {
+        return;
+      }
+      _isInit = false;
+      _db = null;
+    }
 
     try {
       final dbPath = await _resolveDbPath();
@@ -143,7 +150,9 @@ class LocalDbService {
 
   Database _requireDb() {
     final db = _db;
-    if (db == null) {
+    if (db == null || !db.isOpen) {
+      _db = null;
+      _isInit = false;
       throw StateError('LocalDbService not initialized');
     }
     return db;
@@ -273,6 +282,38 @@ class LocalDbService {
       );
     });
     return rows.map(_hydrateAttrs).toList();
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>>
+      getChannelsForCategoriesPage(
+    List<String> categories, {
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    if (categories.isEmpty) return {};
+    final safeLimit = limit.clamp(0, 500);
+    final safeOffset = offset.clamp(0, 1000000);
+    final results = await _withDbRead((db) async {
+      final batch = db.batch();
+      for (final category in categories) {
+        batch.query(
+          'channels',
+          where: 'groupTitle = ?',
+          whereArgs: [category],
+          orderBy: 'idx ASC',
+          limit: safeLimit,
+          offset: safeOffset,
+        );
+      }
+      return batch.commit(noResult: false);
+    });
+    final mapped = <String, List<Map<String, dynamic>>>{};
+    for (var i = 0; i < categories.length; i++) {
+      final rows =
+          (results[i] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+      mapped[categories[i]] = rows.map(_hydrateAttrs).toList();
+    }
+    return mapped;
   }
 
   Future<List<Map<String, dynamic>>> getChannelIdentifiersPage(
