@@ -1,6 +1,6 @@
 class TvdbConfig {
   // Get your free API key from: https://thetvdb.com/
-  static const String apiKey = String.fromEnvironment('TVDB_API_KEY');
+  static const String apiKey = 'ba8661dd-b9bf-4d03-b663-7b273a86b32a';
 
   // Instructions:
   // 1. Create an account at https://thetvdb.com/

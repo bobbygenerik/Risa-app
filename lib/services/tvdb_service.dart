@@ -44,48 +44,66 @@ class TvdbService {
     }
 
     try {
-      final searchUri = Uri.parse('$_baseUrl/search').replace(
-        queryParameters: {
-          'query': normalized,
-          'type': 'series',
-          'limit': '5',
-        },
-      );
-      final searchResponse = await http.get(
-        searchUri,
-        headers: _authHeaders(token),
-      );
-      if (searchResponse.statusCode != 200) {
-        debugLog('TVDB search failed: ${searchResponse.statusCode}');
-        _cache[cacheKey] = _TvdbCacheItem(null, _expiry());
-        return null;
+      final seriesImage =
+          await _searchBestImageByType(token, normalized, 'series');
+      if (seriesImage != null) {
+        _cache[cacheKey] = _TvdbCacheItem(seriesImage, _expiry());
+        return seriesImage;
       }
 
-      final decoded = jsonDecode(searchResponse.body) as Map<String, dynamic>;
-      final results = decoded['data'];
-      if (results is List) {
-        for (final entry in results) {
-          if (entry is! Map<String, dynamic>) continue;
-          final image = _extractImage(entry);
-          if (image != null) {
-            _cache[cacheKey] = _TvdbCacheItem(image, _expiry());
-            return image;
-          }
-          final id = entry['id'];
-          if (id is int) {
-            final seriesImage = await _fetchSeriesImage(token, id);
-            if (seriesImage != null) {
-              _cache[cacheKey] = _TvdbCacheItem(seriesImage, _expiry());
-              return seriesImage;
-            }
-          }
-        }
+      final movieImage =
+          await _searchBestImageByType(token, normalized, 'movie');
+      if (movieImage != null) {
+        _cache[cacheKey] = _TvdbCacheItem(movieImage, _expiry());
+        return movieImage;
       }
     } catch (e, st) {
       debugLog('TVDB lookup failed: $e\n$st');
     }
 
     _cache[cacheKey] = _TvdbCacheItem(null, _expiry());
+    return null;
+  }
+
+  static Future<String?> _searchBestImageByType(
+    String token,
+    String title,
+    String type,
+  ) async {
+    final searchUri = Uri.parse('$_baseUrl/search').replace(
+      queryParameters: {
+        'query': title,
+        'type': type,
+        'limit': '5',
+      },
+    );
+    final searchResponse = await http.get(
+      searchUri,
+      headers: _authHeaders(token),
+    );
+    if (searchResponse.statusCode != 200) {
+      debugLog('TVDB search failed ($type): ${searchResponse.statusCode}');
+      return null;
+    }
+
+    final decoded = jsonDecode(searchResponse.body) as Map<String, dynamic>;
+    final results = decoded['data'];
+    if (results is List) {
+      for (final entry in results) {
+        if (entry is! Map<String, dynamic>) continue;
+        final image = _extractImage(entry);
+        if (image != null) {
+          return image;
+        }
+        final id = entry['id'];
+        if (id is int) {
+          final seriesImage = await _fetchSeriesImage(token, id);
+          if (seriesImage != null) {
+            return seriesImage;
+          }
+        }
+      }
+    }
     return null;
   }
 

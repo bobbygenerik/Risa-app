@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/config/oauth_config.dart';
+import 'package:iptv_player/config/fanart_config.dart';
+import 'package:iptv_player/config/sportradar_config.dart';
+import 'package:iptv_player/config/thesportsdb_config.dart';
 import 'package:iptv_player/config/tvdb_config.dart';
 
 /// Service Validator
@@ -21,11 +24,29 @@ class ServiceValidator {
     return TvdbConfig.apiKey.isNotEmpty;
   }
 
+  /// Check Fanart availability
+  static bool get isFanartAvailable {
+    return FanartConfig.apiKey.isNotEmpty;
+  }
+
+  /// Check Sportradar availability
+  static bool get isSportradarAvailable {
+    return SportradarConfig.apiKey.isNotEmpty;
+  }
+
+  /// Check TheSportsDB availability
+  static bool get isSportsDbAvailable {
+    return TheSportsDbConfig.apiKey.isNotEmpty;
+  }
+
   /// Get service status summary
   static Map<String, bool> getServiceStatus() {
     return {
       'tmdb': isTmdbAvailable,
       'tvdb': isTvdbAvailable,
+      'fanart': isFanartAvailable,
+      'sportradar': isSportradarAvailable,
+      'thesportsdb': isSportsDbAvailable,
       'whisper': isWhisperAvailable,
     };
   }

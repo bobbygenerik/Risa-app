@@ -20,8 +20,6 @@ class TMDBService {
   static const String _apiKey = TMDBConfig.apiKey;
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _imageBaseUrl = 'https://image.tmdb.org/t/p/original';
-  static const String _omdbApiKey = 'c5832aa4';
-  static const String _omdbBaseUrl = 'https://www.omdbapi.com';
   static const int _kPreferredBackdropWidth = 1600;
   static const int _kPreferredBackdropHeight = 900;
   // LRU in-memory cache: key -> _CacheItem
@@ -338,47 +336,6 @@ class TMDBService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> _getOMDbDetails(
-    String title, {
-    int? year,
-    String type = 'movie',
-  }) async {
-    if (_omdbApiKey.isEmpty) return null;
-    try {
-      final normalizedTitle = _normalizeTitle(title);
-      var searchUrl =
-          '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(normalizedTitle)}';
-      if (year != null) {
-        searchUrl += '&y=$year';
-      }
-      searchUrl += '&type=$type';
-
-      final response = await http.get(Uri.parse(searchUrl));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['Response'] == 'True') {
-          final poster = data['Poster'] as String?;
-          final validPoster =
-              (poster?.isNotEmpty == true && poster != 'N/A') ? poster : null;
-
-          return {
-            'rating': data['imdbRating'] != null && data['imdbRating'] != 'N/A'
-                ? double.tryParse(data['imdbRating'] as String)
-                : null,
-            'poster': validPoster,
-            'backdrop': validPoster,
-            'title': data['Title'] as String? ?? normalizedTitle,
-            'overview': data['Plot'] as String?,
-            'release_date': data['Year'] as String?,
-          };
-        }
-      }
-    } catch (e) {
-      debugLog('OMDb API error for "$title": $e');
-    }
-    return null;
-  }
 
   static Future<Map<String, dynamic>?> getTVDetails(
     String title, {
@@ -487,17 +444,6 @@ class TMDBService {
         if (_hasArtwork(details)) {
           debugLog(
               'Team heuristic returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
-        } else {
-          debugLog(
-              'Team heuristic failed for "$normalizedTitle", querying OMDb fallback.');
-          details ??= await _tryOmdbFallback(normalizedTitle, year);
-          if (_hasArtwork(details)) {
-            debugLog(
-                'OMDb fallback returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
-          } else {
-            debugLog(
-                'OMDb fallback returned no artwork for "$normalizedTitle".');
-          }
         }
       } else {
         debugLog(
@@ -540,9 +486,6 @@ class TMDBService {
     var details = await _resolveTmdbBackdrop(normalizedTitle, year);
     if (!_hasArtwork(details)) {
       details ??= await _tryTeamHeuristic(normalizedTitle, year);
-      if (!_hasArtwork(details)) {
-        details ??= await _tryOmdbFallback(normalizedTitle, year);
-      }
     }
 
     final image = _extractBackdropUrl(details);
@@ -602,16 +545,6 @@ class TMDBService {
     return details;
   }
 
-  static Future<Map<String, dynamic>?> _tryOmdbFallback(
-      String normalizedTitle, int? year) async {
-    final seriesResult =
-        await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
-    if (_hasArtwork(seriesResult)) return seriesResult;
-    final movieResult =
-        await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
-    if (_hasArtwork(movieResult)) return movieResult;
-    return null;
-  }
 
   static bool _hasArtwork(Map<String, dynamic>? details) {
     if (details == null) return false;
@@ -636,7 +569,7 @@ class TMDBService {
       isBackdrop: false,
     );
     if (poster != null && poster.isNotEmpty) {
-       // If it contains "poster" or common OMDb patterns, let's keep it but 
+       // If it contains "poster" or common poster patterns, keep it but 
        // the UI will handle it via _isLikelyPosterUrl.
        return poster;
     }
