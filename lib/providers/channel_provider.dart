@@ -223,6 +223,7 @@ class ChannelProvider with ChangeNotifier {
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
   bool _disposed = false; // Track if provider is disposed
+  bool _isColdStartLoad = false;
   // Loading progress for UI feedback
   double _loadingProgress = 0.0;
   String _loadingStatus = '';
@@ -1516,6 +1517,7 @@ class ChannelProvider with ChangeNotifier {
   List<Channel> get favoriteChannels => _favoriteChannels;
   double get loadingProgress => _loadingProgress;
   String get loadingStatus => _loadingStatus;
+  bool get isColdStartLoad => _isColdStartLoad;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -1579,6 +1581,7 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Auto-load already in progress, skipping');
       return;
     }
+    _isColdStartLoad = false;
     _autoLoadInProgress = true;
     bool wakeLockEnabled = false;
 
@@ -1745,6 +1748,7 @@ class ChannelProvider with ChangeNotifier {
             _rebuildChannelCaches();
             _isLoading = false;
             _hasLoadedPlaylist = true;
+            _isColdStartLoad = false;
 
             final cachedPlaylistUrl = playlistType == 'm3u'
                 ? prefs.getString('m3u_url')
@@ -1829,6 +1833,7 @@ class ChannelProvider with ChangeNotifier {
               
               // We've loaded the preview, let's let the UI show SOMETHING
               _hasLoadedPlaylist = true;
+              _isColdStartLoad = false;
               notifyListeners();
               
               // CRITICAL: Do NOT return early. We want to fall through to load the FULL list
@@ -1931,6 +1936,7 @@ class ChannelProvider with ChangeNotifier {
 
             _isLoading = false;
             _hasLoadedPlaylist = true;
+            _isColdStartLoad = false;
             notifyListeners();
             _refreshSmartChannelCache();
             final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
@@ -2017,6 +2023,10 @@ class ChannelProvider with ChangeNotifier {
         }
 
         if (playlistUrl != null && playlistUrl.isNotEmpty) {
+          if (!_isColdStartLoad) {
+            _isColdStartLoad = true;
+            notifyListeners();
+          }
           debugLog('ChannelProvider: Loading playlist URL: $playlistUrl');
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: downloading playlist');
@@ -2243,6 +2253,7 @@ class ChannelProvider with ChangeNotifier {
       _loadingStatus = 'Complete!';
       _isLoading = false;
       _hasLoadedPlaylist = true;
+      _isColdStartLoad = false;
       notifyListeners();
       _refreshSmartChannelCache();
 
@@ -2305,6 +2316,7 @@ class ChannelProvider with ChangeNotifier {
       }
 
       _isLoading = false;
+      _isColdStartLoad = false;
       notifyListeners();
       rethrow; // Re-throw so UI can handle it
     } finally {
@@ -2454,6 +2466,7 @@ class ChannelProvider with ChangeNotifier {
 
       _isLoading = false;
       _hasLoadedPlaylist = true;
+      _isColdStartLoad = false;
       notifyListeners();
       _refreshSmartChannelCache();
 
@@ -2468,6 +2481,7 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Stack trace: $stackTrace');
       _errorMessage = e.toString();
       _isLoading = false;
+      _isColdStartLoad = false;
       notifyListeners();
       _refreshSmartChannelCache();
       rethrow;
@@ -2520,6 +2534,7 @@ class ChannelProvider with ChangeNotifier {
       }
 
       _isLoading = false;
+      _isColdStartLoad = false;
       notifyListeners();
 
       _scheduleEpgRefresh(forceRefresh: false);

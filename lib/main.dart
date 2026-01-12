@@ -176,36 +176,14 @@ void main() {
       HttpClientService().initialize();
       StartupProbe.mark('HTTP client service initialized');
 
-      // Only lock landscape on Android TV, allow portrait on mobile
+      // Always lock landscape orientation on Android devices.
       if (!kIsWeb && Platform.isAndroid) {
-        // Detect if running on TV
-        try {
-          final result =
-              await Process.run('getprop', ['ro.build.characteristics']);
-          final model = await Process.run('getprop', ['ro.product.model']);
-          final characteristics = result.stdout.toString().toLowerCase();
-          final modelName = model.stdout.toString();
-
-          final isTv = characteristics.contains('tv') ||
-              modelName.contains('Shield') ||
-              modelName.contains('Android TV');
-
-          TVFocusHelper.setIsAndroidTV(isTv);
-          debugLog(
-              'Device Detection: isTV=$isTv (chars=$characteristics, model=$modelName)');
-
-          if (isTv) {
-            await SystemChrome.setPreferredOrientations([
-              DeviceOrientation.landscapeLeft,
-              DeviceOrientation.landscapeRight,
-            ]);
-            StartupProbe.mark('Preferred orientations locked (Android TV)');
-          } else {
-            StartupProbe.mark('Mobile device detected - orientations unlocked');
-          }
-        } catch (e) {
-          debugLog('Error detecting device type: $e');
-        }
+        TVFocusHelper.setIsAndroidTV(true);
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+        StartupProbe.mark('Preferred orientations locked (Android)');
       }
 
       FlutterError.onError = (FlutterErrorDetails details) {
@@ -239,7 +217,7 @@ void main() {
 
       // Launch main app directly without startup progress widget
       StartupProbe.mark('Launching main app directly');
-      runApp(const StartupLoader());
+      runApp(const MyApp());
     },
     (error, stack) {
       // Optionally log error to a service
@@ -251,81 +229,6 @@ void main() {
       _ErrorHandler.reportError(error, stack);
     },
   );
-}
-
-class StartupLoader extends StatefulWidget {
-  const StartupLoader({super.key});
-
-  @override
-  State<StartupLoader> createState() => _StartupLoaderState();
-}
-
-class _StartupLoaderState extends State<StartupLoader> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    StartupProbe.mark('StartupLoader initState');
-    unawaited(_initialize());
-  }
-
-  Future<void> _initialize() async {
-    StartupProbe.mark('StartupLoader: background TMDB init start');
-
-    // Initialize fast startup service first
-    await FastStartupService.instance.initialize();
-    StartupProbe.mark('FastStartup service initialized');
-
-    // Initialize TMDB in background without blocking startup
-    unawaited(TMDBService.init().then((_) {
-      StartupProbe.mark('StartupLoader: background TMDB init finished');
-    }).catchError((error, stack) {
-      debugLog('TMDBService.init() failed during startup: $error');
-    }));
-
-    StartupProbe.mark('StartupLoader: continuing with background TMDB init');
-
-    // EPG loading is now handled by the IncrementalEpgService provider's initialize() method
-    // which loads from cache or fetches from URL automatically
-
-    // Small delay so the indicator is visible briefly on very fast devices
-    await Future.delayed(const Duration(milliseconds: 150));
-    StartupProbe.mark('StartupLoader: ready to enter MyApp');
-    setState(() => _ready = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_ready) return const MyApp();
-
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en', ''),
-      ],
-      theme: AppTheme.darkTheme,
-      home: const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppTheme.primaryBlue),
-              SizedBox(height: 12),
-              Text('Loading cache...', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Global error handler for reporting and displaying errors
@@ -547,6 +450,13 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initialize() async {
     try {
+      StartupProbe.mark('MyApp initialization: FastStartup init start');
+      await FastStartupService.instance.initialize();
+      StartupProbe.mark('MyApp initialization: FastStartup init finished');
+
+      unawaited(TMDBService.init().catchError((error, stack) {
+        debugLog('TMDBService.init() failed during startup: $error');
+      }));
       StartupProbe.mark('MyApp initialization: clear old playlists');
       await _clearOldPlaylists();
       StartupProbe.mark('MyApp initialization: playlists cleared');

@@ -1357,6 +1357,16 @@ class IncrementalEpgService extends ChangeNotifier
           }
         }
 
+        if (!forceRefresh && _allowedChannelIdsNormalized.isEmpty) {
+          debugLog(
+              'EPG: Allowed channels not ready; deferring parse until playlist loads.');
+          _pendingAllowedRefresh = true;
+          _isLoading = false;
+          _isParsing = false;
+          notifyListeners();
+          return;
+        }
+
         // Legacy optimization for mappings only (fallback)
         if (!forceRefresh &&
             _normalizedAvailableChannels != null &&

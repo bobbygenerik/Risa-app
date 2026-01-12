@@ -200,7 +200,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   DateTime? _skeletonShownAt;
   DateTime? _lastRecoveryAttempt;
   bool _isSkeletonVisible = false;
-  bool _showStuckBanner = false;
   bool _recoveryInFlight = false;
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
@@ -576,7 +575,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return;
     }
     _skeletonShownAt = null;
-    _showStuckBanner = false;
     _recoveryInFlight = false;
     _stopSkeletonWatchdog();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -590,11 +588,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final shownAt = _skeletonShownAt;
     if (shownAt == null) return;
     if (DateTime.now().difference(shownAt) < _skeletonStuckThreshold) return;
-    if (!_showStuckBanner) {
-      setState(() {
-        _showStuckBanner = true;
-      });
-    }
     _triggerStuckRecovery();
   }
 
@@ -623,10 +616,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } finally {
       _recoveryInFlight = false;
     }
-  }
-
-  void _handleStuckRetry() {
-    _triggerStuckRecovery(userInitiated: true);
   }
 
   void _refreshOnResume() {
@@ -1301,12 +1290,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
           }
 
+          final showColdStartOverlay = channelProvider.isColdStartLoad &&
+              channelProvider.isLoading &&
+              !hasChannels;
+          final epgService = context.watch<IncrementalEpgService>();
+          final epgStatus = epgService.isDownloading
+              ? 'Downloading EPG data...'
+              : epgService.isParsing
+                  ? 'Parsing EPG data...'
+                  : epgService.isLoading
+                      ? 'Loading EPG cache...'
+                      : null;
+          Widget buildSkeleton() => _buildSkeletonLoaderTracked(
+                showColdStartOverlay: showColdStartOverlay,
+                statusText: channelProvider.loadingStatus,
+                secondaryStatusText: epgStatus,
+                progress: channelProvider.loadingProgress,
+              );
+
           // Improved EPG loading detection - only show skeleton if truly loading
 
           if (!hasChannels &&
               channelProvider.isLoading &&
               !channelProvider.noPlaylistConfigured) {
-            return _buildSkeletonLoaderTracked();
+            return buildSkeleton();
           }
 
           // Only show skeleton if we have NO categories AND (loading OR (waiting for EPG while having no content))
@@ -1314,7 +1321,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (_categoryNames.isEmpty &&
               channelProvider.isLoading &&
               !channelProvider.noPlaylistConfigured) {
-            return _buildSkeletonLoaderTracked();
+            return buildSkeleton();
           }
 
           if (!hasChannels) {
@@ -1322,7 +1329,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             if (!channelProvider.noPlaylistConfigured &&
                 (!channelProvider.hasLoadedPlaylist ||
                     channelProvider.isLoading)) {
-              return _buildSkeletonLoaderTracked();
+              return buildSkeleton();
             }
             _markSkeletonVisibility(false);
             return Center(
@@ -1382,7 +1389,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ? snapshot.data!
                       : channelProvider.channels;
               if (previewList.isEmpty) {
-                return _buildSkeletonLoaderTracked();
+                return buildSkeleton();
               }
               
               // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
@@ -1408,7 +1415,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       debugLog(
                           'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
                     }
-                    return _buildSkeletonLoaderTracked();
+                    return buildSkeleton();
                   }
                   _markSkeletonVisibility(false);
 
@@ -5843,17 +5850,123 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
-  Widget _buildSkeletonLoaderTracked() {
+  Widget _buildColdStartOverlayCard({
+    String? statusText,
+    String? secondaryStatusText,
+    double? progress,
+  }) {
+    final trimmedStatus = (statusText ?? '').trim();
+    final resolvedStatus =
+        trimmedStatus.isNotEmpty ? trimmedStatus : 'Preparing playlist...';
+    final trimmedSecondary = (secondaryStatusText ?? '').trim();
+    final resolvedSecondary = trimmedSecondary.isNotEmpty ? trimmedSecondary : '';
+    final resolvedProgress = (progress ?? 0.0).clamp(0.0, 1.0);
+    final showProgressValue = resolvedProgress > 0.02;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520, minWidth: 280),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Loading playlist',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              resolvedStatus,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            if (resolvedSecondary.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                resolvedSecondary,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: showProgressValue ? resolvedProgress : null,
+              minHeight: 6,
+              color: AppTheme.primaryBlue,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'First load can take a minute on large playlists.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '(Please keep the app open while this completes.)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoaderTracked({
+    bool? showColdStartOverlay,
+    String? statusText,
+    String? secondaryStatusText,
+    double? progress,
+  }) {
     _markSkeletonVisibility(true);
+    final channelProvider = context.read<ChannelProvider>();
+    final hasChannels = channelProvider.hasChannels;
+    final resolvedOverlay = showColdStartOverlay ??
+        (channelProvider.isColdStartLoad &&
+            channelProvider.isLoading &&
+            !hasChannels);
+    final resolvedStatus = statusText ?? channelProvider.loadingStatus;
+    final resolvedProgress = progress ?? channelProvider.loadingProgress;
     return _buildSkeletonLoader(
-      showStuckBanner: _showStuckBanner,
-      onRetry: _handleStuckRetry,
+      showColdStartOverlay: resolvedOverlay,
+      statusText: resolvedStatus,
+      secondaryStatusText: secondaryStatusText,
+      progress: resolvedProgress,
     );
   }
 
   Widget _buildSkeletonLoader({
-    bool showStuckBanner = false,
-    VoidCallback? onRetry,
+    bool showColdStartOverlay = false,
+    String? statusText,
+    String? secondaryStatusText,
+    double? progress,
   }) {
     final heroHeight = context.heroHeight();
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
@@ -5875,11 +5988,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
 
-    final bannerWidth = math.min(
-      560.0,
-      screenSize.width - contentInset - rightInset - 96,
-    );
-
     return Focus(
       focusNode: _skeletonFocus,
       onFocusChange: (hasFocus) {
@@ -5894,42 +6002,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               color: AppColors.background,
             ),
           ),
-          if (showStuckBanner)
-            Positioned(
-              top: AppSizes.lg,
-              left: contentInset,
-              width: bannerWidth > 0 ? bannerWidth : 320,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Loading is taking longer than expected.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    BrandSecondaryButton(
-                      label: 'Retry',
-                      onPressed: onRetry ?? () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
           // Channel logo
           Positioned(
             top: AppSizes.lg,
@@ -6028,6 +6100,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
             ),
           ),
+          if (showColdStartOverlay)
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    alignment: Alignment.center,
+                    child: _buildColdStartOverlayCard(
+                      statusText: statusText,
+                      secondaryStatusText: secondaryStatusText,
+                      progress: progress,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
