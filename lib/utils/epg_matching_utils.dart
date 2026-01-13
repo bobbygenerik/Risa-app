@@ -13,9 +13,88 @@ class EPGMatchingUtils {
       caseSensitive: false);
   static final RegExp _countryCodeSufRe =
       RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$', caseSensitive: false);
-  static final RegExp _suffixSufRe =
-      RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$', caseSensitive: false);
+  static final RegExp _suffixSufRe = RegExp(
+      r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$',
+      caseSensitive: false);
   static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
+  static final RegExp _timeRe =
+      RegExp(r'\b\d{1,2}(:\d{2})?\s?(am|pm)\b', caseSensitive: false);
+  static final RegExp _shortTimeRe =
+      RegExp(r'\b\d{1,2}\s*[ap]\b', caseSensitive: false);
+  static final RegExp _callSignRe = RegExp(r'^\s*[A-Z]{3,4}\b');
+  static final RegExp _noiseTokensRe = RegExp(
+      r'\b(paid\s+programming|home\s+shopping|homeshopping|infomercial|sponsored|promotion|promo|commercial|advertisement)\b',
+      caseSensitive: false);
+
+  static String normalizeForFilter(String text) {
+    var s = text.toLowerCase();
+    // remove explicit time tokens to avoid false negatives
+    s = s.replaceAll(_timeRe, ' ');
+    s = s.replaceAll(_shortTimeRe, ' ');
+    // remove common bracket/sep characters
+    s = s.replaceAll(RegExp(r'[\[\]\(\)\{\}\-_:]'), ' ');
+    // strip non-alphanumeric to spaces, collapse whitespace
+    s = s.replaceAll(_nonAlphaNumRe, ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
+  /// Heuristic: title is likely local/news with time or callsign.
+  static bool isLikelyNewsTitle(String title) {
+    final normalized = normalizeForFilter(title);
+    if (!normalized.contains('news')) return false;
+    return _timeRe.hasMatch(title) ||
+        _shortTimeRe.hasMatch(title) ||
+        _callSignRe.hasMatch(title.trim());
+  }
+
+  /// Normalize program/channel titles for external lookups.
+  /// Use aggressiveForNews when the title is news-like.
+  static String normalizeTitleForLookup(
+    String title, {
+    bool aggressiveForNews = false,
+  }) {
+    var normalized = title;
+    normalized = normalized.replaceAll(RegExp(r'\s*[-:]\s*'), ' ');
+    normalized = normalized.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
+    normalized = normalized.replaceAll(
+        RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false), '');
+    normalized = normalized.replaceAll(
+        RegExp(r'\bseason\s+\d+\b', caseSensitive: false), '');
+    normalized = normalized.replaceAll(
+        RegExp(r'\bepisode\s+\d+\b', caseSensitive: false), '');
+    normalized = normalized.replaceAll(
+        RegExp(r'\bpart\s+\d+\b', caseSensitive: false), '');
+    normalized = normalized.replaceAll(
+        RegExp(r'\b(\d+)(st|nd|rd|th)\s+hour\b', caseSensitive: false), '');
+    normalized = normalized.replaceAll(
+        RegExp(r'\b(\d+)\s*(st|nd|rd|th)?\s*hour\b', caseSensitive: false), '');
+    normalized =
+        normalized.replaceAll(RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$'), '');
+    normalized =
+        normalized.replaceAll(RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$'), '');
+    normalized = normalized.replaceAll(_noiseTokensRe, '');
+
+    if (aggressiveForNews || isLikelyNewsTitle(title)) {
+      normalized = normalized.replaceAll(
+          RegExp(r'\bnews\s+at\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
+              caseSensitive: false),
+          'news');
+      normalized = normalized.replaceAll(
+          RegExp(r'\b(at|@)\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
+              caseSensitive: false),
+          '');
+      normalized = normalized.replaceAll(_timeRe, '');
+      normalized = normalized.replaceAll(_shortTimeRe, '');
+      normalized = normalized.replaceAll(RegExp(r'^\s*[A-Z]{3,4}\b\s+'), '');
+    } else {
+      normalized = normalized.replaceAll(_timeRe, '');
+      normalized = normalized.replaceAll(_shortTimeRe, '');
+    }
+
+    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return normalized.isEmpty ? title : normalized;
+  }
 
   static String _stripCountryRegion(String text) {
     return text.replaceAll(_countryCodeSufRe, '').replaceAll(_regionSufRe, '');
@@ -135,11 +214,8 @@ class EPGMatchingUtils {
       normalizedEpgKeys[normalized] = key;
 
       // Also add without domain suffix
-      final withoutDomain = key
-          .split('.')
-          .first
-          .toLowerCase()
-          .replaceAll(_nonAlphaNumRe, '');
+      final withoutDomain =
+          key.split('.').first.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       if (!normalizedEpgKeys.containsKey(withoutDomain)) {
         normalizedEpgKeys[withoutDomain] = key;
       }
@@ -210,8 +286,7 @@ class EPGMatchingUtils {
     }
 
     // Try normalized matching
-    final normalizedId =
-        channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+    final normalizedId = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
       return normalizedKeys[normalizedId];
@@ -301,9 +376,18 @@ class EPGMatchingUtils {
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName =
           channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+      final cleanedLookupName =
+          normalizeTitleForLookup(channelName, aggressiveForNews: false)
+              .toLowerCase()
+              .replaceAll(_nonAlphaNumRe, '');
       if (normalizedKeys.containsKey(normalizedName)) {
         _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
         return normalizedKeys[normalizedName];
+      }
+      if (cleanedLookupName.isNotEmpty &&
+          normalizedKeys.containsKey(cleanedLookupName)) {
+        _channelIdCache[cacheKey] = normalizedKeys[cleanedLookupName];
+        return normalizedKeys[cleanedLookupName];
       }
       final cleanedName = normalizedName.replaceAll(_qualitySufRe, '');
       for (final entry in normalizedKeys.entries) {
@@ -313,6 +397,18 @@ class EPGMatchingUtils {
           return entry.value;
         }
         if (epgNormalized.contains(cleanedName) && cleanedName.length >= 3) {
+          _channelIdCache[cacheKey] = entry.value;
+          return entry.value;
+        }
+        if (cleanedLookupName.isNotEmpty &&
+            cleanedLookupName.contains(epgNormalized) &&
+            epgNormalized.length >= 3) {
+          _channelIdCache[cacheKey] = entry.value;
+          return entry.value;
+        }
+        if (cleanedLookupName.isNotEmpty &&
+            epgNormalized.contains(cleanedLookupName) &&
+            cleanedLookupName.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
         }
@@ -354,13 +450,13 @@ class EPGMatchingUtils {
       if (lowerKey.contains(lowerChannelId)) {
         // Calculate "junk" remaining
         final diff = lowerKey.length - lowerChannelId.length;
-        
+
         // Strict check: if the difference is too big, it's likely a different channel
         // e.g. "TNT" (3) vs "TNT Sports 4K" (13) -> diff 10. Too big.
         // e.g. "BBC One" (7) vs "BBC One HD" (10) -> diff 3. Acceptable.
         if (diff < minLengthDiff && diff < 8) {
-             minLengthDiff = diff;
-             bestPartialMatch = key;
+          minLengthDiff = diff;
+          bestPartialMatch = key;
         }
       }
     }

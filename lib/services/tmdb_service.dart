@@ -1,4 +1,5 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -76,7 +77,11 @@ class TMDBService {
   };
 
   static String _normalizeTitle(String title) {
-    var output = title.trim();
+    final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
+    var output = EPGMatchingUtils.normalizeTitleForLookup(
+      title,
+      aggressiveForNews: aggressive,
+    );
     output =
         output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
     output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');

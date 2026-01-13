@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/config/tvdb_config.dart';
 
 class _TvdbCacheItem {
@@ -18,9 +19,13 @@ class TvdbService {
   static final Map<String, _TvdbCacheItem> _cache = {};
 
   static String _normalizeTitle(String title) {
-    var output = title.trim();
+    final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
+    var output = EPGMatchingUtils.normalizeTitleForLookup(
+      title,
+      aggressiveForNews: aggressive,
+    );
     output = output.replaceAll(RegExp(r'\s+'), ' ');
-    return output;
+    return output.trim();
   }
 
   static String _cacheKey(String title) {

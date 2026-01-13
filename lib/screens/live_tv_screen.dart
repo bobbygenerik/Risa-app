@@ -32,6 +32,7 @@ import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
+import 'package:iptv_player/utils/epg_matching_utils.dart';
 
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
@@ -203,6 +204,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _recoveryInFlight = false;
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
+  bool _startupOverlayActive = false;
   Timer? _idleTimer;
   DateTime _lastInteractionAt = DateTime.now();
   bool _isIdle = false;
@@ -1290,10 +1292,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
           }
 
-          final showColdStartOverlay = channelProvider.isColdStartLoad &&
-              channelProvider.isLoading &&
-              !hasChannels;
           final epgService = context.watch<IncrementalEpgService>();
+          final overlayBusy = channelProvider.isLoading ||
+              epgService.isDownloading ||
+              epgService.isParsing ||
+              epgService.isLoading;
+          final showStartupOverlay =
+              (channelProvider.isColdStartLoad || _startupOverlayActive) &&
+                  overlayBusy;
+          if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (!_startupOverlayActive) {
+                setState(() => _startupOverlayActive = true);
+              }
+            });
+          }
+          if (_startupOverlayActive && !overlayBusy) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (_startupOverlayActive) {
+                setState(() => _startupOverlayActive = false);
+              }
+            });
+          }
           final epgStatus = epgService.isDownloading
               ? 'Downloading EPG data...'
               : epgService.isParsing
@@ -1301,8 +1323,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   : epgService.isLoading
                       ? 'Loading EPG cache...'
                       : null;
+          Widget wrapWithOverlay(Widget child) {
+            if (!showStartupOverlay) return child;
+            return Stack(
+              children: [
+                child,
+                Positioned.fill(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        alignment: Alignment.center,
+                        child: _buildColdStartOverlayCard(
+                          statusText: channelProvider.loadingStatus,
+                          secondaryStatusText: epgStatus,
+                          progress: channelProvider.loadingProgress,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
           Widget buildSkeleton() => _buildSkeletonLoaderTracked(
-                showColdStartOverlay: showColdStartOverlay,
+                showColdStartOverlay: showStartupOverlay,
                 statusText: channelProvider.loadingStatus,
                 secondaryStatusText: epgStatus,
                 progress: channelProvider.loadingProgress,
@@ -1332,7 +1378,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return buildSkeleton();
             }
             _markSkeletonVisibility(false);
-            return Center(
+            return wrapWithOverlay(Center(
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1365,7 +1411,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   ],
                 ),
               ),
-            );
+            ));
           }
 
           _requestCategoryPrefetch();
@@ -1393,7 +1439,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
               
               // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
-              return Consumer<IncrementalEpgService>(
+              return wrapWithOverlay(Consumer<IncrementalEpgService>(
                 builder: (context, epgService, _) {
                   // Try to find channels with EPG data ready
                   final readyChannels =
@@ -1448,7 +1494,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     displayChannels,
                   );
                 },
-              );
+              ));
             },
           );
           },
@@ -2239,7 +2285,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final cached =
           _normalizeArtworkUrl(_programArtwork[program.id], isHero: false);
       if (cached != null && cached.isNotEmpty) {
-        if (_isValidProgramArtwork(cached, channel!)) {
+        if (_isValidProgramArtwork(
+          cached,
+          channel!,
+          programTitle: program.title,
+          source: 'cached',
+        )) {
           final normalized = normalizeImageUrl(cached);
           _logArtworkDecision(
             'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
@@ -2253,7 +2304,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         isHero: false,
       );
       if (byTitle != null && byTitle.isNotEmpty) {
-        if (_isValidProgramArtwork(byTitle, channel!)) {
+        if (_isValidProgramArtwork(
+          byTitle,
+          channel!,
+          programTitle: program.title,
+          source: 'title_cache',
+        )) {
           final normalized = normalizeImageUrl(byTitle);
           _logArtworkDecision(
             'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
@@ -2282,7 +2338,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // Fall back to EPG-provided art while services are resolving.
       final programImage =
           _normalizeArtworkUrl(program.imageUrl, isHero: false);
-      if (_isValidProgramArtwork(programImage, channel!)) {
+      if (_isValidProgramArtwork(
+        programImage,
+        channel!,
+        programTitle: program.title,
+        source: 'epg',
+      )) {
         final normalized = normalizeImageUrl(programImage!);
         _logArtworkDecision(
           'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
@@ -2331,25 +2392,45 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
-  bool _isValidProgramArtwork(String? url, Channel channel) {
+  bool _isValidProgramArtwork(
+    String? url,
+    Channel channel, {
+    String? programTitle,
+    String? source,
+  }) {
     if (url == null || url.isEmpty) return false;
     // Hard-reject poster/portrait artwork for hero/card usage.
     if (_isLikelyPosterUrl(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_poster',
+      );
       return false;
     }
     // Avoid title logos (clearart) for backgrounds.
     if (_isLikelyTitleLogoUrl(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_title_logo',
+      );
       return false;
     }
     final channelLogo = channel.logoUrl;
     if (channelLogo != null && channelLogo == url) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo',
+      );
       return false;
     }
     if (_matchesChannelLogo(url, channel)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo_match',
+      );
       return false;
     }
     // Block small images that would look bad when scaled up
     if (_isLikelySmallImage(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_small',
+      );
       return false;
     }
     return true;
@@ -2666,6 +2747,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'sports',
       'sport',
       'movie',
+      'paidprogramming',
+      'homeshopping',
       'episode',
       'program',
       'show',
@@ -2696,6 +2779,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   List<String> _buildArtworkQueryTitles(Program program, Channel? channel) {
     final original = program.title.trim();
     final canonical = _canonicalArtworkTitle(original).trim();
+    final isNews = EPGMatchingUtils.isLikelyNewsTitle(canonical);
+    final normalizedLookup = EPGMatchingUtils.normalizeTitleForLookup(
+      canonical,
+      aggressiveForNews: isNews,
+    );
     final cacheKey = _titleCacheKey(program, channel);
     final cached = _artworkQueryTitleCache[cacheKey];
     if (cached != null && cached.isNotEmpty) {
@@ -2730,23 +2818,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final groupTitle = channel == null
         ? ''
         : _cleanChannelNameForQuery(channel.groupTitle ?? '');
-    if (_isGenericTitle(canonical) && channelName.isNotEmpty) {
+    if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
       add('$canonical $channelName');
     }
-    if (_isGenericTitle(canonical) && groupTitle.isNotEmpty) {
+    if ((_isGenericTitle(canonical) || isNews) && groupTitle.isNotEmpty) {
       add('$canonical $groupTitle');
     }
-    if (_isGenericTitle(canonical) &&
+    if ((_isGenericTitle(canonical) || isNews) &&
         channelName.isNotEmpty &&
         groupTitle.isNotEmpty) {
       add('$canonical $channelName $groupTitle');
     }
     addVariant(canonical);
+    if (normalizedLookup != canonical) {
+      addVariant(normalizedLookup);
+    }
     if (canonical != original) addVariant(original);
-    if (_isGenericTitle(canonical) && channelName.isNotEmpty) {
+    if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
       add(channelName);
     }
-    if (_isGenericTitle(canonical) && groupTitle.isNotEmpty) {
+    if ((_isGenericTitle(canonical) || isNews) && groupTitle.isNotEmpty) {
       add(groupTitle);
     }
     if (canonical.length <= 6 && channelName.isNotEmpty) {
@@ -3107,7 +3198,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // 1. Try cached TMDB program artwork
       final cached =
           _normalizeArtworkUrl(_programArtwork[program.id], isHero: true);
-      if (_isValidProgramArtwork(cached, channel)) {
+      if (_isValidProgramArtwork(
+        cached,
+        channel,
+        programTitle: program.title,
+        source: 'hero_cached',
+      )) {
         final normalized = normalizeImageUrl(cached!);
         _logArtworkDecision(
           'LiveTV artwork: hero source=cached program="${program.title}" url=$normalized',
@@ -3120,7 +3216,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _getProgramArtworkByTitle(program, channel),
         isHero: true,
       );
-      if (_isValidProgramArtwork(byTitle, channel)) {
+      if (_isValidProgramArtwork(
+        byTitle,
+        channel,
+        programTitle: program.title,
+        source: 'hero_title_cache',
+      )) {
         final normalized = normalizeImageUrl(byTitle!);
         _logArtworkDecision(
           'LiveTV artwork: hero source=title_cache program="${program.title}" url=$normalized',
@@ -3140,7 +3241,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
       // 3. Fall back to the direct image URL provided in the EPG XML itself
       final direct = _normalizeArtworkUrl(program.imageUrl, isHero: true);
-      if (_isValidProgramArtwork(direct, channel)) {
+      if (_isValidProgramArtwork(
+        direct,
+        channel,
+        programTitle: program.title,
+        source: 'hero_epg',
+      )) {
         final normalized = normalizeImageUrl(direct!);
         if (!preferHighRes || _isHighResHeroImage(normalized)) {
           _logArtworkDecision(
@@ -3170,7 +3276,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final existing = _programArtwork[program.id];
     if (existing != null &&
         existing.isNotEmpty &&
-        _isValidProgramArtwork(existing, channel)) {
+        _isValidProgramArtwork(
+          existing,
+          channel,
+          programTitle: program.title,
+          source: 'existing',
+        )) {
       return;
     }
 
@@ -3181,7 +3292,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final current = _programArtwork[program.id];
       if (current != null &&
           current.isNotEmpty &&
-          _isValidProgramArtwork(current, channel)) {
+          _isValidProgramArtwork(
+            current,
+            channel,
+            programTitle: program.title,
+            source: 'current',
+          )) {
         return;
       }
       _setProgramArtwork(program.id, '');
@@ -4651,265 +4767,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return name.isEmpty ? epgId : name;
   }
 
-  Widget _buildChannelPlaceholder() {
+  Widget _buildChannelCardFallback(Program? program, Channel channel) {
+    return _buildMissingArtworkFallback();
+  }
+
+  Widget _buildMissingArtworkFallback() {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF2a2a3e),
-            Color(0xFF1a1a2e),
-            AppTheme.darkBackground
+            Color(0xFF2A2A36),
+            Color(0xFF1B1B24),
+            AppTheme.darkBackground,
           ],
         ),
       ),
       child: Center(
         child: Icon(
-          Icons.tv,
-          color: AppTheme.primaryBlue.withValues(alpha: 0.4),
-          size: 32,
+          Icons.image_not_supported,
+          color: Colors.white.withValues(alpha: 0.55),
+          size: 36,
         ),
-      ),
-    );
-  }
-
-  Widget _buildChannelCardFallback(Program? program, Channel channel) {
-    if (_isNewsProgram(program, channel)) {
-      return _buildNewsCardFallback(channel);
-    }
-    if (program != null && _isSportsProgram(program, channel)) {
-      return _buildSportsCardFallback(channel);
-    }
-    if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
-      return _buildLogoCardFallback(channel);
-    }
-    return _buildChannelPlaceholder();
-  }
-
-  Widget _buildLogoCardFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF222635),
-        Color(0xFF171B24),
-        AppTheme.darkBackground,
-      ],
-    );
-    final logoUrl = channel.logoUrl;
-    final normalizedLogoUrl =
-        logoUrl == null ? null : normalizeImageUrl(logoUrl);
-    return Container(
-      decoration: const BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final dpr = MediaQuery.of(context).devicePixelRatio;
-          final maxLogoWidth = constraints.maxWidth * 0.6;
-          final maxLogoHeight = constraints.maxHeight * 0.45;
-          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(gradient: gradient),
-                ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.9,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.04),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              if (normalizedLogoUrl != null && normalizedLogoUrl.isNotEmpty)
-                Center(
-                  child: CachedNetworkImage(
-                    imageUrl: normalizedLogoUrl,
-                    httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.contain,
-                    width: maxLogoWidth,
-                    height: maxLogoHeight,
-                    memCacheWidth: logoCacheWidth,
-                    memCacheHeight: logoCacheHeight,
-                    errorWidget: (_, url, error) {
-                      logHandshakeIfNeeded(url, error,
-                          context: 'LiveTV card logo');
-                      return const Icon(
-                        Icons.tv,
-                        color: Colors.white70,
-                        size: 32,
-                      );
-                    },
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSportsCardFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF223522),
-        Color(0xFF142414),
-        Color(0xFF0C150C),
-      ],
-    );
-    final logoUrl = channel.logoUrl;
-    final normalizedLogoUrl =
-        logoUrl == null ? null : normalizeImageUrl(logoUrl);
-    return Container(
-      decoration: const BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final dpr = MediaQuery.of(context).devicePixelRatio;
-          final maxLogoWidth = constraints.maxWidth * 0.6;
-          final maxLogoHeight = constraints.maxHeight * 0.45;
-          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(gradient: gradient),
-                ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (normalizedLogoUrl != null &&
-                        normalizedLogoUrl.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.contain,
-                        width: maxLogoWidth,
-                        height: maxLogoHeight,
-                        memCacheWidth: logoCacheWidth,
-                        memCacheHeight: logoCacheHeight,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV sports card logo');
-                          return const Icon(
-                            Icons.sports,
-                            color: Colors.white70,
-                            size: 32,
-                          );
-                        },
-                      )
-                    else
-                      const Icon(
-                        Icons.sports,
-                        color: Colors.white70,
-                        size: 32,
-                      ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'SPORTS',
-                      style: AppTypography.caption(context).copyWith(
-                        letterSpacing: 4,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildNewsCardFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF122A4A),
-        Color(0xFF13253A),
-        Color(0xFF0B1524),
-      ],
-    );
-    final logoUrl = channel.logoUrl;
-    final normalizedLogoUrl =
-        logoUrl == null ? null : normalizeImageUrl(logoUrl);
-    return Container(
-      decoration: const BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final dpr = MediaQuery.of(context).devicePixelRatio;
-          final maxLogoWidth = constraints.maxWidth * 0.6;
-          final maxLogoHeight = constraints.maxHeight * 0.45;
-          final logoCacheWidth = math.min(320, (maxLogoWidth * dpr).round());
-          final logoCacheHeight = math.min(320, (maxLogoHeight * dpr).round());
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(gradient: gradient),
-                ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (normalizedLogoUrl != null &&
-                        normalizedLogoUrl.isNotEmpty)
-                      CachedNetworkImage(
-                        imageUrl: normalizedLogoUrl,
-                        httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.contain,
-                        width: maxLogoWidth,
-                        height: maxLogoHeight,
-                        memCacheWidth: logoCacheWidth,
-                        memCacheHeight: logoCacheHeight,
-                        errorWidget: (_, url, error) {
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV news card logo');
-                          return const Icon(
-                            Icons.newspaper,
-                            color: Colors.white70,
-                            size: 32,
-                          );
-                        },
-                      )
-                    else
-                      const Icon(
-                        Icons.newspaper,
-                        color: Colors.white70,
-                        size: 32,
-                      ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'NEWS',
-                      style: AppTypography.caption(context).copyWith(
-                        letterSpacing: 4,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }
@@ -5864,77 +5744,59 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final showProgressValue = resolvedProgress > 0.02;
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 520, minWidth: 280),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.12),
-            width: 1,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Loading playlist',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+            textAlign: TextAlign.center,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Loading playlist',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              resolvedStatus,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            if (resolvedSecondary.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                resolvedSecondary,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: showProgressValue ? resolvedProgress : null,
-              minHeight: 6,
-              color: AppTheme.primaryBlue,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'First load can take a minute on large playlists.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.6),
-                  ),
-              textAlign: TextAlign.center,
-            ),
+          const SizedBox(height: 10),
+          Text(
+            resolvedStatus,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+            textAlign: TextAlign.center,
+          ),
+          if (resolvedSecondary.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              '(Please keep the app open while this completes.)',
+              resolvedSecondary,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
               textAlign: TextAlign.center,
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(
+            value: showProgressValue ? resolvedProgress : null,
+            minHeight: 6,
+            color: AppTheme.primaryBlue,
+            backgroundColor: Colors.white.withValues(alpha: 0.15),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'First load can take a minute on large playlists.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '(Please keep the app open while this completes.)',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

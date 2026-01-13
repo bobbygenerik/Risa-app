@@ -61,7 +61,7 @@
     }
   },
   "system": "System",
-  "epgDiagnosticTool": "EPG Diagnostic Tool",
+  "epgDiagnosticTool": "Diagnostics",
   "exportBackup": "Export Backup",
   "importBackup": "Import Backup",
   "debugPerformance": "Debug Performance",
