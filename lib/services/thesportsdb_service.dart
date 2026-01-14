@@ -9,12 +9,13 @@ class _TheSportsDbCacheEntry {
   const _TheSportsDbCacheEntry(this.url, this.expiresAt);
 }
 
-/// Thin wrapper over TheSportsDB event search APIs for artwork.
+/// Thin wrapper over TheSportsDB APIs for event and team artwork.
 class TheSportsDbService {
   static final _searchUrlTemplate = TheSportsDbConfig.searchUrl;
   static final _apiKey = TheSportsDbConfig.apiKey;
   static const Duration _cacheTtl = Duration(hours: 2);
   static final Map<String, _TheSportsDbCacheEntry> _cache = {};
+  static const String _baseUrl = 'https://www.thesportsdb.com/api/v1/json';
 
   static Future<String?> getHeroImage(String title) async {
     if (title.isEmpty || _searchUrlTemplate.isEmpty) return null;
@@ -43,14 +44,25 @@ class TheSportsDbService {
       }
       final body = json.decode(response.body);
       final hero = _extractHeroFromResponse(body);
+      if (hero != null) {
+        _cache[cacheKey] = _TheSportsDbCacheEntry(
+          hero,
+          DateTime.now().add(_cacheTtl),
+        );
+        debugLog('TheSportsDb: Found hero for "$title": $hero');
+        return hero;
+      }
+
+      // Fallback: try team lookup if event search fails
+      final teamHero = await _tryTeamLookup(title);
       _cache[cacheKey] = _TheSportsDbCacheEntry(
-        hero,
+        teamHero,
         DateTime.now().add(_cacheTtl),
       );
-      if (hero != null) {
-        debugLog('TheSportsDb: Found hero for "$title": $hero');
+      if (teamHero != null) {
+        debugLog('TheSportsDb: Found team hero for "$title": $teamHero');
       }
-      return hero;
+      return teamHero;
     } catch (e, st) {
       debugLog('TheSportsDb: Error searching "$title": $e\n$st');
       return null;
@@ -63,10 +75,46 @@ class TheSportsDbService {
     if (events == null || events.isEmpty) return null;
     for (final raw in events) {
       if (raw is! Map<String, dynamic>) continue;
-      final thumb = (raw['strFanart'] as String?) ?? raw['strThumb'] as String?;
-      if (thumb != null && thumb.isNotEmpty) {
-        return thumb;
+      // Prefer strFanart, fallback to strThumb, then strPoster
+      final fanart = raw['strFanart'] as String?;
+      if (fanart != null && fanart.isNotEmpty) return fanart;
+      final thumb = raw['strThumb'] as String?;
+      if (thumb != null && thumb.isNotEmpty) return thumb;
+      final poster = raw['strPoster'] as String?;
+      if (poster != null && poster.isNotEmpty) return poster;
+    }
+    return null;
+  }
+
+  /// Attempts to find team artwork by searching for team name.
+  /// Uses strTeamFanart1-4 and strStadium when available.
+  static Future<String?> _tryTeamLookup(String query) async {
+    if (_apiKey.isEmpty) return null;
+    try {
+      final uri = Uri.parse(
+          '$_baseUrl/$_apiKey/searchteams.php?t=${Uri.encodeComponent(query)}');
+      final response = await http.get(uri);
+      if (response.statusCode != 200) return null;
+      final body = json.decode(response.body);
+      if (body is! Map<String, dynamic>) return null;
+      final teams = body['teams'] as List<dynamic>?;
+      if (teams == null || teams.isEmpty) return null;
+      for (final raw in teams) {
+        if (raw is! Map<String, dynamic>) continue;
+        // Try fanart fields first (strTeamFanart1-4)
+        for (var i = 1; i <= 4; i++) {
+          final fanart = raw['strTeamFanart$i'] as String?;
+          if (fanart != null && fanart.isNotEmpty) return fanart;
+        }
+        // Fallback to stadium
+        final stadium = raw['strStadium'] as String?;
+        if (stadium != null && stadium.isNotEmpty) return stadium;
+        // Last resort: team badge
+        final badge = raw['strTeamBadge'] as String?;
+        if (badge != null && badge.isNotEmpty) return badge;
       }
+    } catch (e) {
+      debugLog('TheSportsDb: Team lookup failed for "$query": $e');
     }
     return null;
   }

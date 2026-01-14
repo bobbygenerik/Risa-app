@@ -239,6 +239,7 @@ class ChannelProvider with ChangeNotifier {
   bool _dbDisabled = false;
   bool _autoLoadInProgress = false;
   bool _dbReadOnlyRecoveryInFlight = false;
+  bool _dbClosedRecoveryInFlight = false;
   bool _noPlaylistConfigured = false;
   bool _xtreamLiveMetadataLoaded = false;
   String? _xtreamLiveMetadataKey;
@@ -459,6 +460,40 @@ class ChannelProvider with ChangeNotifier {
       }
       _dbReadOnlyRecoveryInFlight = false;
     }());
+  }
+
+  bool _isClosedDbError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('database_closed') ||
+        message.contains('database closed') ||
+        message.contains('not initialized');
+  }
+
+  void _recoverClosedDb(Object error) {
+    if (!_isClosedDbError(error) || _dbClosedRecoveryInFlight) {
+      return;
+    }
+    _dbClosedRecoveryInFlight = true;
+    _dbReady = false;
+    debugLog('ChannelProvider: Detected closed DB, attempting reopen');
+    unawaited(() async {
+      try {
+        await _db.init();
+        _dbDisabled = false;
+        _dbReady = true;
+        _channelCountDb = 0;
+      } catch (e) {
+        debugLog('ChannelProvider: DB reopen failed: $e');
+        _dbReady = false;
+        _dbDisabled = true;
+      }
+      _dbClosedRecoveryInFlight = false;
+    }());
+  }
+
+  void _handleDbError(Object error) {
+    _recoverReadOnlyDb(error);
+    _recoverClosedDb(error);
   }
 
   void _updateEpgAllowedChannels() async {
@@ -1097,6 +1132,7 @@ class ChannelProvider with ChangeNotifier {
           batch.clear();
         } catch (e) {
           debugLog('ChannelProvider: Failed to persist EPG mapping batch: $e');
+          _handleDbError(e);
         }
         await Future.delayed(Duration.zero);
       }
@@ -1112,6 +1148,7 @@ class ChannelProvider with ChangeNotifier {
       } catch (e) {
         debugLog(
             'ChannelProvider: Failed to persist final EPG mapping batch: $e');
+        _handleDbError(e);
       }
     }
 
@@ -1122,6 +1159,7 @@ class ChannelProvider with ChangeNotifier {
       } catch (e) {
         debugLog(
             'ChannelProvider: Failed to load mappings into EPG service: $e');
+        _handleDbError(e);
       }
     }
 
@@ -1149,6 +1187,7 @@ class ChannelProvider with ChangeNotifier {
       return true;
     } catch (e) {
       debugLog('ChannelProvider: Failed to reuse EPG mapping: $e');
+      _handleDbError(e);
       return false;
     }
   }
@@ -1169,6 +1208,7 @@ class ChannelProvider with ChangeNotifier {
       await prefs.setInt(_currentEpgMapCountKey!, count);
     } catch (e) {
       debugLog('ChannelProvider: Failed to persist EPG map signature: $e');
+      _handleDbError(e);
     }
   }
 
@@ -1286,7 +1326,7 @@ class ChannelProvider with ChangeNotifier {
         return _channelCountDb;
       } catch (e) {
         debugLog('ChannelProvider: DB channel count failed: $e');
-        _recoverReadOnlyDb(e);
+        _handleDbError(e);
       }
     }
     return _channelMaps.length;
@@ -1317,7 +1357,7 @@ class ChannelProvider with ChangeNotifier {
         return const [];
       } catch (e) {
         debugLog('ChannelProvider: DB channel page failed: $e');
-        _recoverReadOnlyDb(e);
+        _handleDbError(e);
       }
     }
 
@@ -1342,7 +1382,7 @@ class ChannelProvider with ChangeNotifier {
         return result;
       } catch (e) {
         debugLog('ChannelProvider: DB grouped channels failed: $e');
-        _recoverReadOnlyDb(e);
+        _handleDbError(e);
       }
     }
 
@@ -2585,7 +2625,7 @@ class ChannelProvider with ChangeNotifier {
         return const [];
       } catch (e) {
         debugLog('ChannelProvider: DB category page failed: $e');
-        _recoverReadOnlyDb(e);
+        _handleDbError(e);
       }
     }
 
@@ -2619,7 +2659,7 @@ class ChannelProvider with ChangeNotifier {
         return result;
       } catch (e) {
         debugLog('ChannelProvider: DB category batch failed: $e');
-        _recoverReadOnlyDb(e);
+        _handleDbError(e);
       }
     }
 

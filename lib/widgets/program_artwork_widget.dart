@@ -125,7 +125,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         return;
       }
 
-      // Fetch from TMDB
+      // Priority order for sports: Sportradar -> TheSportsDB -> TVDB
+      // Priority order for general: TVDB -> TMDB -> Fanart
       if (isSports) {
         debugLog('ProgramArtwork: Attempting Sportradar for "$searchTitle"');
         final sportradarUrl =
@@ -165,6 +166,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         return;
       }
 
+      // General content: TMDB handles TVDB -> TMDB -> Fanart internally
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
 

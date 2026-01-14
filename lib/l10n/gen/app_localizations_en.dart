@@ -121,7 +121,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get system => 'System';
 
   @override
-  String get epgDiagnosticTool => 'EPG Diagnostic Tool';
+  String get epgDiagnosticTool => 'Diagnostics';
 
   @override
   String get exportBackup => 'Export Backup';

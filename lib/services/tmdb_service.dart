@@ -21,8 +21,6 @@ class TMDBService {
   static const String _apiKey = TMDBConfig.apiKey;
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _imageBaseUrl = 'https://image.tmdb.org/t/p/original';
-  static const int _kPreferredBackdropWidth = 1600;
-  static const int _kPreferredBackdropHeight = 900;
   // LRU in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Uses LRU eviction for better hit rates.
   static final Map<String, _CacheItem> _cache = <String, _CacheItem>{};
@@ -518,10 +516,13 @@ class TMDBService {
     details ??= await getMovieDetails(normalizedTitle, year: year);
 
     if (details != null) {
-      final hasArtwork = _hasArtwork(details);
       final tmdbId = details['tmdbId'] as int?;
       final mediaType = details['mediaType'] as String?;
-      if (!hasArtwork && tmdbId != null && mediaType != null) {
+      final hasBackdrop =
+          (details['backdrop'] as String?)?.trim().isNotEmpty == true;
+
+      // If TMDB only has a poster, still try Fanart for real backdrops.
+      if (!hasBackdrop && tmdbId != null && mediaType != null) {
         final fanartImage = await FanartService.getBackdrop(
           tmdbId,
           isTv: mediaType == 'tv',
@@ -609,38 +610,57 @@ class TMDBService {
     return intersection.length / math.max(words1.length, words2.length);
   }
 
+  /// Fetches high-res backdrop from TMDB /images endpoint.
+  /// Filters by include_image_language=null,en; enforces min 1920x1080;
+  /// prefers aspect ratio > 1.7; sorts by vote_average desc then vote_count desc.
   static Future<String?> _getHighResBackdrop(
       int tmdbId, String mediaType) async {
     final typePath = mediaType == 'tv' ? 'tv' : 'movie';
     final url =
-        '$_baseUrl/$typePath/$tmdbId/images?api_key=$_apiKey&include_image_language=en,null';
+        '$_baseUrl/$typePath/$tmdbId/images?api_key=$_apiKey&include_image_language=null,en';
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode != 200) return null;
       final data = json.decode(response.body) as Map<String, dynamic>;
       final available = (data['backdrops'] as List?) ?? [];
       if (available.isEmpty) return null;
-      available.sort((a, b) {
-        final aw = (a['width'] as int?) ?? 0;
-        final ah = (a['height'] as int?) ?? 0;
-        final bw = (b['width'] as int?) ?? 0;
-        final bh = (b['height'] as int?) ?? 0;
-        return (bw * bh).compareTo(aw * ah);
-      });
-      for (final entry in available) {
+
+      // Filter: iso_639_1 == null or 'en', min 1920x1080
+      final filtered = available.where((entry) {
+        final lang = entry['iso_639_1'] as String?;
+        if (lang != null && lang != 'en') return false;
         final width = (entry['width'] as int?) ?? 0;
         final height = (entry['height'] as int?) ?? 0;
-        final filePath = (entry['file_path'] as String?)?.trim();
-        if (filePath == null || filePath.isEmpty) continue;
-        if (width >= _kPreferredBackdropWidth ||
-            height >= _kPreferredBackdropHeight) {
-          return _resizeTmdbImageUrl('$_imageBaseUrl$filePath',
-              isBackdrop: true);
+        return width >= 1920 && height >= 1080;
+      }).toList();
+
+      if (filtered.isEmpty) return null;
+
+      // Sort: prefer aspect ratio > 1.7, then vote_average desc, then vote_count desc
+      filtered.sort((a, b) {
+        final aw = (a['width'] as int?) ?? 1;
+        final ah = (a['height'] as int?) ?? 1;
+        final bw = (b['width'] as int?) ?? 1;
+        final bh = (b['height'] as int?) ?? 1;
+        final aAspect = aw / ah;
+        final bAspect = bw / bh;
+        final aWide = aAspect > 1.7 ? 1 : 0;
+        final bWide = bAspect > 1.7 ? 1 : 0;
+        if (aWide != bWide) return bWide.compareTo(aWide);
+        final aVoteAvg = (a['vote_average'] as num?)?.toDouble() ?? 0.0;
+        final bVoteAvg = (b['vote_average'] as num?)?.toDouble() ?? 0.0;
+        if ((bVoteAvg - aVoteAvg).abs() > 0.01) {
+          return bVoteAvg.compareTo(aVoteAvg);
         }
-      }
-      final firstPath = (available.first['file_path'] as String?)?.trim();
-      if (firstPath != null && firstPath.isNotEmpty) {
-        return _resizeTmdbImageUrl('$_imageBaseUrl$firstPath',
+        final aVoteCount = (a['vote_count'] as int?) ?? 0;
+        final bVoteCount = (b['vote_count'] as int?) ?? 0;
+        return bVoteCount.compareTo(aVoteCount);
+      });
+
+      final best = filtered.first;
+      final filePath = (best['file_path'] as String?)?.trim();
+      if (filePath != null && filePath.isNotEmpty) {
+        return _resizeTmdbImageUrl('$_imageBaseUrl$filePath',
             isBackdrop: true);
       }
     } catch (e, st) {

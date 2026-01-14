@@ -7,7 +7,8 @@ import 'package:iptv_player/utils/debug_helper.dart';
 class FanartService {
   static const _baseUrl = 'https://webservice.fanart.tv/v3';
 
-  /// Returns the first full-bleed background/blur image for the given TMDB ID.
+  /// Returns the best full-bleed background/blur image for the given TMDB ID.
+  /// Sorts by likes desc instead of taking first.
   static Future<String?> getBackdrop(int tmdbId, {required bool isTv}) async {
     if (FanartConfig.apiKey.isEmpty) return null;
     final endpoint = isTv ? 'tv/$tmdbId' : 'movies/$tmdbId';
@@ -19,8 +20,19 @@ class FanartService {
       final key = isTv ? 'tvbackground' : 'moviebackground';
       final list = data[key] as List?;
       if (list == null || list.isEmpty) return null;
-      final first = list.first;
-      final urlValue = first['url'] as String?;
+
+      // Sort by likes desc
+      final sorted = List<Map<String, dynamic>>.from(
+        list.map((e) => e as Map<String, dynamic>),
+      );
+      sorted.sort((a, b) {
+        final aLikes = int.tryParse(a['likes']?.toString() ?? '0') ?? 0;
+        final bLikes = int.tryParse(b['likes']?.toString() ?? '0') ?? 0;
+        return bLikes.compareTo(aLikes);
+      });
+
+      final best = sorted.first;
+      final urlValue = best['url'] as String?;
       if (urlValue == null || urlValue.isEmpty) return null;
       return urlValue;
     } catch (e, st) {

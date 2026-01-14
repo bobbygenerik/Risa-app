@@ -18,6 +18,10 @@ class TvdbService {
   static DateTime? _tokenExpiry;
   static final Map<String, _TvdbCacheItem> _cache = {};
 
+  // TVDB v4 artwork type constants
+  static const int _kArtworkTypeBackground = 3;
+  static const int _kArtworkTypeMovieBackground = 15;
+
   static String _normalizeTitle(String title) {
     final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
     var output = EPGMatchingUtils.normalizeTitleForLookup(
@@ -94,8 +98,20 @@ class TvdbService {
     final decoded = jsonDecode(searchResponse.body) as Map<String, dynamic>;
     final results = decoded['data'];
     if (results is List) {
+      final normalizedTitle = _normalizeTitle(title);
+      final isNews = EPGMatchingUtils.isLikelyNewsTitle(normalizedTitle);
+      final minScore = isNews ? 0.7 : 0.55;
       for (final entry in results) {
         if (entry is! Map<String, dynamic>) continue;
+        final candidateTitle = _extractTitle(entry);
+        if (candidateTitle.isEmpty) continue;
+        final score = EPGMatchingUtils.calculateSimilarity(
+          normalizedTitle,
+          _normalizeTitle(candidateTitle),
+        );
+        if (score < minScore) {
+          continue;
+        }
         final image = _extractImage(entry);
         if (image != null) {
           return image;
@@ -105,6 +121,13 @@ class TvdbService {
           final seriesImage = await _fetchSeriesImage(token, id);
           if (seriesImage != null) {
             return seriesImage;
+          }
+          // Try movie endpoint if series fails
+          if (type == 'movie') {
+            final movieImage = await _fetchMovieImage(token, id);
+            if (movieImage != null) {
+              return movieImage;
+            }
           }
         }
       }
@@ -119,34 +142,127 @@ class TvdbService {
     };
   }
 
-  static String? _extractImage(Map<String, dynamic> entry) {
+  static String _extractTitle(Map<String, dynamic> entry) {
     final candidates = [
+      entry['name'],
+      entry['seriesName'],
+      entry['title'],
+      entry['originalName'],
+      entry['translations'] is Map ? (entry['translations'] as Map)['eng'] : null,
+    ];
+    for (final value in candidates) {
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return '';
+  }
+
+  static String? _extractImage(Map<String, dynamic> entry) {
+    final landscapeCandidates = [
+      entry['banner'],
+      entry['image'],
+      entry['image_url'],
+    ];
+    for (final value in landscapeCandidates) {
+      final normalized = _normalizeCandidate(value);
+      if (normalized == null) continue;
+      if (_isPosterPath(normalized)) continue;
+      return normalized;
+    }
+
+    final fallbackCandidates = [
       entry['image'],
       entry['image_url'],
       entry['banner'],
       entry['thumbnail'],
       entry['thumb'],
     ];
-    for (final value in candidates) {
-      if (value is String && value.trim().isNotEmpty) {
-        return _normalizeImageUrl(value);
-      }
+    for (final value in fallbackCandidates) {
+      final normalized = _normalizeCandidate(value);
+      if (normalized == null) continue;
+      return normalized;
     }
     return null;
   }
 
+  static String? _normalizeCandidate(dynamic value) {
+    if (value is! String) return null;
+    if (value.trim().isEmpty) return null;
+    final normalized = _normalizeImageUrl(value);
+    if (_isMissingArtwork(normalized)) return null;
+    return normalized;
+  }
+
+  static bool _isPosterPath(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/banners/posters/') ||
+        lower.contains('/banners/poster/');
+  }
+
+  /// Fetches best background artwork from TVDB v4 /artworks endpoint.
+  /// Filters by type 3 (Background) or 15 (Movie Background), prefers higher score.
   static Future<String?> _fetchSeriesImage(String token, int id) async {
     try {
-      final uri = Uri.parse('$_baseUrl/series/$id/extended');
+      final uri = Uri.parse('$_baseUrl/series/$id/artworks');
       final response = await http.get(uri, headers: _authHeaders(token));
       if (response.statusCode != 200) return null;
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final data = decoded['data'];
       if (data is Map<String, dynamic>) {
-        return _extractImage(data);
+        final artworks = data['artworks'] as List?;
+        if (artworks != null && artworks.isNotEmpty) {
+          return _selectBestArtwork(artworks);
+        }
       }
     } catch (e) {
-      debugLog('TVDB series lookup failed for $id: $e');
+      debugLog('TVDB series artwork lookup failed for $id: $e');
+    }
+    return null;
+  }
+
+  /// Fetches best background artwork from TVDB v4 movie artworks endpoint.
+  static Future<String?> _fetchMovieImage(String token, int id) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/movies/$id/artworks');
+      final response = await http.get(uri, headers: _authHeaders(token));
+      if (response.statusCode != 200) return null;
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        final artworks = data['artworks'] as List?;
+        if (artworks != null && artworks.isNotEmpty) {
+          return _selectBestArtwork(artworks);
+        }
+      }
+    } catch (e) {
+      debugLog('TVDB movie artwork lookup failed for $id: $e');
+    }
+    return null;
+  }
+
+  /// Selects best artwork from list: filters by type 3 or 15, prefers higher score.
+  static String? _selectBestArtwork(List<dynamic> artworks) {
+    final backgrounds = artworks.where((art) {
+      if (art is! Map<String, dynamic>) return false;
+      final type = art['type'] as int?;
+      return type == _kArtworkTypeBackground ||
+          type == _kArtworkTypeMovieBackground;
+    }).toList();
+
+    if (backgrounds.isEmpty) return null;
+
+    // Sort by score desc
+    backgrounds.sort((a, b) {
+      final aScore = (a['score'] as num?)?.toDouble() ?? 0.0;
+      final bScore = (b['score'] as num?)?.toDouble() ?? 0.0;
+      return bScore.compareTo(aScore);
+    });
+
+    final best = backgrounds.first as Map<String, dynamic>;
+    final image = best['image'] as String?;
+    if (image != null && image.isNotEmpty) {
+      return _normalizeImageUrl(image);
     }
     return null;
   }
@@ -156,6 +272,13 @@ class TvdbService {
       return 'https:$url';
     }
     return url;
+  }
+
+  static bool _isMissingArtwork(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/banners/images/missing/') ||
+        lower.contains('missing/series.jpg') ||
+        lower.contains('missing/fanart.jpg');
   }
 
   static DateTime _expiry() => DateTime.now().add(_defaultTtl);

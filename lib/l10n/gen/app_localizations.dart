@@ -301,7 +301,7 @@ abstract class AppLocalizations {
   /// No description provided for @epgDiagnosticTool.
   ///
   /// In en, this message translates to:
-  /// **'EPG Diagnostic Tool'**
+  /// **'Diagnostics'**
   String get epgDiagnosticTool;
 
   /// No description provided for @exportBackup.

@@ -17,6 +17,7 @@ class LocalDbService {
   Database? _db;
   bool _isInit = false;
   bool _resetting = false;
+  Completer<void>? _resetCompleter;
   String? _dbPath;
   Future<void> _writeQueue = Future.value();
 
@@ -158,7 +159,15 @@ class LocalDbService {
     return db;
   }
 
+  Future<void> _waitForReset() async {
+    final completer = _resetCompleter;
+    if (completer != null) {
+      await completer.future;
+    }
+  }
+
   Future<T> _withDb<T>(Future<T> Function(Database db) action) async {
+    await _waitForReset();
     final db = _requireDb();
     try {
       return await action(db);
@@ -177,6 +186,7 @@ class LocalDbService {
   }
 
   Future<T> _withDbRead<T>(Future<T> Function(Database db) action) async {
+    await _waitForReset();
     if (!_isInit) {
       await init();
     }
@@ -189,6 +199,7 @@ class LocalDbService {
     final completer = Completer<T>();
     _writeQueue = _writeQueue.then((_) async {
       try {
+        await _waitForReset();
         if (!_isInit) {
           await init();
         }
@@ -216,8 +227,12 @@ class LocalDbService {
   }
 
   Future<void> _resetDatabase() async {
-    if (_resetting) return;
+    if (_resetting) {
+      await _waitForReset();
+      return;
+    }
     _resetting = true;
+    _resetCompleter ??= Completer<void>();
     try {
       debugLog('LocalDbService: resetting read-only database');
       final db = _db;
@@ -238,6 +253,8 @@ class LocalDbService {
       await init();
     } finally {
       _resetting = false;
+      _resetCompleter?.complete();
+      _resetCompleter = null;
     }
   }
 

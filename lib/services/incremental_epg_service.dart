@@ -764,7 +764,11 @@ class IncrementalEpgService extends ChangeNotifier
   void _queueMappingPersist(String channelId, String epgId) {
     if (channelId.isEmpty || epgId.isEmpty) return;
     if (_dbDisabled || !_db.isReady) return;
-    unawaited(_db.upsertEpgMapping({channelId: epgId}));
+    unawaited(
+      _db.upsertEpgMapping({channelId: epgId}).catchError((e) {
+        _handleDbError(e);
+      }),
+    );
   }
 
   String? _cacheResolvedMapping(String channelId, String? epgId) {
@@ -3729,7 +3733,9 @@ class IncrementalEpgService extends ChangeNotifier
     if (channelId.isEmpty) return;
     _manualMappings.remove(channelId);
     _internalToEpgIdMapping.remove(channelId);
-    unawaited(_db.deleteEpgMapping(channelId));
+    unawaited(_db.deleteEpgMapping(channelId).catchError((e) {
+      _handleDbError(e);
+    }));
     await _saveManualMappings();
     notifyListeners();
   }
