@@ -737,9 +737,21 @@ class _EPGScreenState extends State<EPGScreen>
                 final allFilteredChannels = rawChannels.take(expected).toList();
                 _scheduleSnapshotSave(allFilteredChannels);
 
-                _epgState.setHasMore(hasMore);
-                _epgState.updatePaginatedChannels(allFilteredChannels);
-                final filteredChannels = _epgState.paginatedChannels;
+                // FIX: Do NOT update state during build. Use the data directly.
+                // We only update the state when the page changes or filters change, 
+                // which is handled by the controllers, not the build method.
+                if (_epgState.paginatedChannels.isEmpty && allFilteredChannels.isNotEmpty) {
+                   // Initial seed only - safe to defer
+                   WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        _epgState.setHasMore(hasMore);
+                        _epgState.updatePaginatedChannels(allFilteredChannels);
+                      }
+                   });
+                }
+
+                // Use the fresh data directly for this frame
+                final filteredChannels = allFilteredChannels;
 
                 // Calculate header height for offset
                 const headerHeight =

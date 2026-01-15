@@ -18,6 +18,7 @@ class LocalDbService {
   bool _isInit = false;
   bool _resetting = false;
   Completer<void>? _resetCompleter;
+  Completer<void>? _initCompleter;
   String? _dbPath;
   Future<void> _writeQueue = Future.value();
 
@@ -46,18 +47,30 @@ class LocalDbService {
   }
 
   Future<void> init() async {
+    debugLog('LocalDbService: init() called, _isInit=$_isInit, _initCompleter=${_initCompleter != null}');
+    if (_initCompleter != null) {
+      debugLog('LocalDbService: Init already in progress, waiting...');
+      return _initCompleter!.future;
+    }
+
     if (_isInit) {
       final db = _db;
       if (db != null && db.isOpen) {
+        debugLog('LocalDbService: DB already initialized and open');
         return;
       }
+      debugLog('LocalDbService: DB was marked init but not open, reinitializing...');
       _isInit = false;
       _db = null;
     }
 
+    final completer = Completer<void>();
+    _initCompleter = completer;
+
     try {
       final dbPath = await _resolveDbPath();
       _dbPath = dbPath;
+      debugLog('LocalDbService: Opening database at $dbPath');
       _db = await openDatabase(
         dbPath,
         version: 3,
@@ -141,11 +154,15 @@ class LocalDbService {
         },
       );
       _isInit = true;
+      completer.complete();
     } catch (e) {
       // Fail softly; fall back to in-memory providers if DB unavailable.
       debugLog('LocalDbService: init failed, continuing without DB: $e');
       _isInit = false;
+      completer.completeError(e);
       rethrow;
+    } finally {
+      _initCompleter = null;
     }
   }
 
@@ -173,10 +190,21 @@ class LocalDbService {
       return await action(db);
     } catch (e) {
       if (_isClosedError(e)) {
-        await init();
+        debugLog('LocalDbService: Detected closed DB, attempting to reopen...');
+        try {
+          // CRITICAL: Mark DB as not initialized so init() will actually reopen it
+          _isInit = false;
+          _db = null;
+          await init();
+          debugLog('LocalDbService: DB reopened successfully');
+        } catch (initError) {
+          debugLog('LocalDbService: Failed to reopen DB: $initError');
+          rethrow;
+        }
         return await action(_requireDb());
       }
       if (_isReadOnlyError(e) && !_resetting) {
+        debugLog('LocalDbService: Detected read-only DB, attempting reset...');
         await _resetDatabase();
         final retryDb = _requireDb();
         return await action(retryDb);
@@ -433,6 +461,31 @@ class LocalDbService {
       );
     });
     return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> getProgramsForEpgIds(List<String> epgIds,
+      {required int startMs, required int endMs}) async {
+    if (epgIds.isEmpty) return [];
+    
+    // Split into chunks to avoid SQLite variable limits (usually 999)
+    const int chunkSize = 500;
+    final results = <Map<String, dynamic>>[];
+    
+    for (var i = 0; i < epgIds.length; i += chunkSize) {
+      final chunk = epgIds.sublist(
+          i, (i + chunkSize).clamp(0, epgIds.length));
+      
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await _withDbRead((db) {
+        return db.rawQuery(
+          'SELECT * FROM epg_programs WHERE epgId IN ($placeholders) AND endTs >= ? AND startTs < ? ORDER BY epgId, startTs',
+          [...chunk, startMs, endMs],
+        );
+      });
+      results.addAll(rows);
+    }
+    
+    return results;
   }
 
   Future<void> insertChannels(List<Map<String, dynamic>> channels) async {

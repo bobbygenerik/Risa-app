@@ -497,6 +497,8 @@ class IncrementalEpgService extends ChangeNotifier
           'EPG: Background EPG load took ${DateTime.now().difference(start).inMilliseconds}ms');
       
       debugLog('EPG: ✓ Full EPG loaded in background');
+      // CRITICAL: Notify listeners so UI knows EPG data is ready
+      notifyListeners();
     } catch (e) {
       debugLog('EPG: Background EPG loading error: $e');
       // Don't update error state as current day is already loaded
@@ -3626,7 +3628,8 @@ class IncrementalEpgService extends ChangeNotifier
 
     // Ensure programs are populated from DB if not already
     if (!_programsByChannel.containsKey(epgId)) {
-      unawaited(_loadProgramsFromDb(epgId));
+      // Use the batch loader for single items too for consistency
+      unawaited(_loadProgramsFromDbBatch([epgId]));
     }
   }
 
@@ -3635,6 +3638,7 @@ class IncrementalEpgService extends ChangeNotifier
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
+    debugLog('EPG: ensureChannelsLoadedBatch called with ${channelIds.length} channels');
     final effectiveNames =
         channelNames != null && channelNames.length == channelIds.length
             ? channelNames
@@ -3659,20 +3663,33 @@ class IncrementalEpgService extends ChangeNotifier
       epgIdsToLoad.add(epgId);
     }
 
-    if (epgIdsToLoad.isEmpty) return;
+    if (epgIdsToLoad.isEmpty) {
+      debugLog('EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)');
+      return;
+    }
+    debugLog('EPG: ensureChannelsLoadedBatch - queueing ${epgIdsToLoad.length} channels for batch load');
     _pendingBatch.addAll(epgIdsToLoad);
     _batchTimer?.cancel();
-    _batchTimer = Timer(const Duration(milliseconds: 300), () {
+    _batchTimer = Timer(const Duration(milliseconds: 300), () async {
       final batch = List<String>.from(_pendingBatch);
-      _pendingBatch.clear();
-      loadChannelBatch(batch);
-    });
-
-    for (final epgId in epgIdsToLoad) {
-      if (!_programsByChannel.containsKey(epgId)) {
-        unawaited(_loadProgramsFromDb(epgId));
+      debugLog('EPG: Batch timer fired, loading ${batch.length} channels');
+      await _loadProgramsFromDbBatch(batch);
+      // Only clear if load succeeded (not suspended)
+      if (!_suspendDbReads) {
+        _pendingBatch.removeWhere((id) => batch.contains(id));
+      } else {
+        // Reschedule for later
+        _batchTimer?.cancel();
+        _batchTimer = Timer(const Duration(milliseconds: 500), () async {
+          final retryBatch = List<String>.from(_pendingBatch);
+          debugLog('EPG: Batch timer retry after suspend, loading ${retryBatch.length} channels');
+          await _loadProgramsFromDbBatch(retryBatch);
+          if (!_suspendDbReads) {
+            _pendingBatch.removeWhere((id) => retryBatch.contains(id));
+          }
+        });
       }
-    }
+    });
   }
 
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
@@ -3944,10 +3961,109 @@ class IncrementalEpgService extends ChangeNotifier
     }
   }
 
+  Future<void> _loadProgramsFromDbBatch(List<String> epgIds) async {
+    try {
+      debugLog('EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads');
+      // If suspended due to parsing, let it retry. Only cancel timer on permanent failures.
+      if (_dbDisabled || epgIds.isEmpty || !_db.isReady) {
+        debugLog('EPG: _loadProgramsFromDbBatch returning early - dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads, emptyIds=${epgIds.isEmpty}');
+        _batchTimer?.cancel();
+        _batchTimer = null;
+        return;
+      }
+      // If suspended for parsing, just return - timer will retry automatically
+      if (_suspendDbReads) {
+        debugLog('EPG: _loadProgramsFromDbBatch suspended (parsing in progress), timer will retry');
+        return;
+      }
+      
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final endMs = nowMs + (_epgFutureHours * 3600000);
+      
+      // Calculate start time based on max catchup to be safe, or just nowMs
+      // For batch, we'll use a conservative start time
+      final maxCatchupMs = 7 * 24 * 3600000; // 7 days max catchup assumption
+      final startMs = nowMs - maxCatchupMs;
+
+      final rows = await _db.getProgramsForEpgIds(epgIds,
+          startMs: startMs, endMs: endMs);
+      
+      debugLog('EPG: DB query returned ${rows.length} program rows for ${epgIds.length} channels');
+      if (rows.isEmpty) {
+        debugLog('EPG: No programs found in DB for requested channels');
+        // Mark channels as loaded (even though empty) to prevent infinite retry loops
+        for (final epgId in epgIds) {
+          if (!_programsByChannel.containsKey(epgId)) {
+            _programsByChannel[epgId] = [];
+          }
+        }
+        notifyListeners();
+        return;
+      }
+
+      final byId = <String, List<Program>>{};
+      
+      for (final r in rows) {
+        final epgId = r['epgId'] as String;
+        final startTs = r['startTs'] as int? ?? 0;
+        final endTs = r['endTs'] as int? ?? 0;
+        
+        // Filter out expired catchup if needed per channel
+        final normalized = normalizeForFilter(epgId);
+        final catchupHours = _catchupHoursByNormalizedId[normalized] ?? 0;
+        final safeStart = catchupHours > 0 
+           ? nowMs - (catchupHours * 3600000) 
+           : nowMs;
+           
+        if (endTs < safeStart) continue;
+
+        final catchupUrl =
+            _buildCatchupUrl(epgId, startTs, endTs, nowMs: nowMs);
+
+        byId.putIfAbsent(epgId, () => []).add(Program(
+          id: '${epgId}_$startTs',
+          channelId: epgId,
+          title: (r['title'] as String?) ?? '',
+          description: r['description'] as String?,
+          startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+          endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+          imageUrl: r['imageUrl'] as String?,
+          category: null,
+          isLive: null,
+          canRecord: null,
+          catchupUrl: catchupUrl,
+        ));
+      }
+
+      var added = false;
+      for (final entry in byId.entries) {
+         _programsByChannel[entry.key] = entry.value;
+         _availableChannels.add(entry.key);
+         added = true;
+      }
+      
+      if (added) {
+        debugLog('EPG: Batch loaded programs for ${byId.length} channels');
+        notifyListeners();
+      }
+
+    } catch (e) {
+      debugLog('EPG: Failed to load batch programs from DB: $e');
+      // Stop the timer on error to prevent error spam
+      _batchTimer?.cancel();
+      _batchTimer = null;
+      _handleDbError(e);
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_restoreDbIfClosed());
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Cancel timers when app is backgrounded to prevent errors
+      _batchTimer?.cancel();
+      _batchTimer = null;
     }
   }
 

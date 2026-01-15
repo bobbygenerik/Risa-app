@@ -378,7 +378,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   // ignore: unused_field
   bool _disclaimerAccepted = false;
-  bool _loading = true;
   // ignore: unused_field
   bool _hasPlaylist = false;
   bool _prewarmStarted = false;
@@ -471,9 +470,6 @@ class _MyAppState extends State<MyApp> {
       debugLog('$stack');
     } finally {
       if (mounted) {
-        setState(() {
-          _loading = false;
-        });
         StartupProbe.mark('MyApp initialization: complete');
       }
     }
@@ -609,66 +605,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: Scaffold(
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1E1E2E), Color(0xFF0D0D12)],
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.live_tv,
-                    size: 80,
-                    color: AppTheme.primaryBlue,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const CircularProgressIndicator(
-                  color: AppTheme.primaryBlue,
-                  strokeWidth: 3,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'RISA IPTV PLAYER',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Initializing experience...',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 14,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    // Loading screen removed to show skeleton loaders immediately
+    /* if (_loading) { ... } code removed */
 
     return _ErrorHandler.wrapWithErrorListener(
       MultiProvider(
@@ -699,8 +637,10 @@ class _MyAppState extends State<MyApp> {
               return provider;
             },
             update: (context, epgService, channelProvider) {
-              channelProvider?.setEpgService(epgService);
-              return channelProvider ?? ChannelProvider();
+              final provider = channelProvider ?? ChannelProvider();
+              // Defer setting the service to avoid notifications during build
+              Future.microtask(() => provider.setEpgService(epgService));
+              return provider;
             },
           ),
           ChangeNotifierProvider(

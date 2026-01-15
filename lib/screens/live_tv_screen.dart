@@ -194,9 +194,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
   bool _snapshotApplied = false;
+  final bool _canPop = false;
 
   // Timer for EPG loading timeout fallback
   late final DateTime _initTime;
+  bool _epgTimeoutLogged = false;
   Timer? _skeletonWatchdog;
   DateTime? _skeletonShownAt;
   DateTime? _lastRecoveryAttempt;
@@ -809,6 +811,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _snapshotSaveDebounce?.cancel();
     _featuredRotationTimer?.cancel();
 
+    _epgTimeoutLogged = false;
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
@@ -1196,19 +1199,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget build(BuildContext context) {
     super.build(context);
     _restoreCardFocusIfMissing();
+    final bool shouldScrollFirst = _scrollController.hasClients && _safeScrollOffset() > 100;
     return PopScope(
-      canPop: false,
+      canPop: !shouldScrollFirst,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (_scrollController.hasClients && _safeScrollOffset() > 10) {
+        if (shouldScrollFirst) {
           unawaited(_scrollController.animateTo(
             0.0,
-            duration: const Duration(milliseconds: 280),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
           ));
-          return;
         }
-        Navigator.of(context).maybePop();
       },
       child: Container(
         decoration: const BoxDecoration(
@@ -1228,6 +1230,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     .where((name) => !_categoryNameSet.contains(name))
                     .toList();
             if (newNames.isNotEmpty) {
+              debugLog('LiveTV: Processing ${newNames.length} new categories (total: ${latestCategories.length}, current: ${_categoryNames.length})');
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (_categoryNames.isEmpty) {
@@ -1254,6 +1257,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   _visibleCategoryCount = _categoryNames.length;
                 }
                 _lastPrefetchAnchor = -1;
+                debugLog('LiveTV: Updated _categoryNames to ${_categoryNames.length}, visibleCount: $_visibleCategoryCount');
                 setState(() {});
                 unawaited(_prefetchInitialCategoryRows());
               });
@@ -1330,13 +1334,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             return buildSkeleton();
           }
 
-          // Only show skeleton if we have NO categories AND (loading OR (waiting for EPG while having no content))
           // If we have categories (data), SHOW THE UI! The EPG can populate later.
-          if (_categoryNames.isEmpty &&
+          // FIX: If we have channels but no categories yet, allow loading to continue
+          // BUT if we have categories, we MUST show the UI.
+          final hasCategories = _categoryNames.isNotEmpty;
+          
+            if (!hasCategories &&
               channelProvider.isLoading &&
-              !channelProvider.noPlaylistConfigured) {
-            return buildSkeleton();
-          }
+              !channelProvider.noPlaylistConfigured &&
+              !hasChannels) {
+             // Still initial load with no channels
+             return buildSkeleton();
+            }
 
           if (!hasChannels) {
             final errorMessage = channelProvider.errorMessage;
@@ -1414,7 +1423,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       _filterChannelsWithLoadedEpg(previewList, epgService);
 
                   // Only show channels that have EPG data or allow fallback for Shield performance
-                  if (readyChannels.isEmpty) {
+                  final timeSinceInit = DateTime.now().difference(_initTime);
+                  
+                  // Force show all channels after 20 seconds even if EPG not loaded
+                  List<Channel> displayChannels = readyChannels;
+                  if (displayChannels.isEmpty && timeSinceInit.inSeconds > 20) {
+                    if (!_epgTimeoutLogged) {
+                      debugLog(
+                          'LiveTV: EPG load timeout (${timeSinceInit.inMilliseconds}ms), showing all channels');
+                      _epgTimeoutLogged = true;
+                    }
+                    displayChannels = previewList;
+                  }
+                  
+                  if (displayChannels.isEmpty) {
                     if (epgService.error != null &&
                         epgService.error!.isNotEmpty) {
                       _markSkeletonVisibility(false);
@@ -1423,7 +1445,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     final isEpgLoading = epgService.isLoading ||
                         epgService.isParsing ||
                         epgService.isDownloading;
-                    final timeSinceInit = DateTime.now().difference(_initTime);
 
                     if (isEpgLoading) {
                       debugLog(
@@ -1433,7 +1454,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   }
                   _markSkeletonVisibility(false);
 
-                  final displayChannels = readyChannels;
+                  // displayChannels already defined above
                   
                   // Handle Stable ID vs Index
                   if (_featuredChannelId != null) {
@@ -2869,11 +2890,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (canonical.length <= 6 && groupTitle.isNotEmpty) {
       add(groupTitle);
     }
-    final canonicalWords = canonical.split(' ');
-    if (canonicalWords.length >= 6) {
-      addVariant(canonicalWords.take(5).join(' '));
-      addVariant(canonicalWords.take(3).join(' '));
-    }
+    // REMOVED: Truncated title variants (3-5 words) causing false positives/negatives for specific movies
+    // We now rely on the full canonical title, original title, and channel-name appended variants.
+    
     if (groupTitle.isNotEmpty) {
       final lowerGroup = groupTitle.toLowerCase();
       if (lowerGroup.contains('sports')) {
@@ -3412,6 +3431,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _scheduleArtworkDrain() {
+    if (_pauseArtworkFetching || _suspendArtworkCaches || _isIdle) {
+      debugLog('LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
+      return;
+    }
     _artworkThrottle ??=
         Timer(const Duration(milliseconds: 700), _drainArtworkQueue);
   }
@@ -4364,6 +4387,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       height: 24,
                       child: _buildChannelLogoWidget(
                         channel,
+                        currentProgram,
                         logoCacheWidth,
                         logoCacheHeight,
                       ),
@@ -4900,13 +4924,35 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelLogoWidget(
     Channel channel,
+    Program? program,
     int cacheWidth,
     int cacheHeight,
   ) {
-    if (channel.logoUrl != null &&
-        channel.logoUrl!.isNotEmpty) {
+    // 1. Try Playlist Logo first explicitly
+    final playlistLogo = channel.logoUrl;
+    // 2. Fallback to Online/EPG Title Logo if playlist logo is missing
+    final effectiveLogoUrl = (playlistLogo != null && playlistLogo.isNotEmpty)
+        ? playlistLogo
+        : _resolveProgramTitleLogo(program, channel);
+
+    if (effectiveLogoUrl != null && effectiveLogoUrl.isNotEmpty) {
+      final url = normalizeImageUrl(effectiveLogoUrl);
+      final isSvg = url.toLowerCase().endsWith('.svg') ||
+              url.toLowerCase().contains('.svg?');
+
+      if (isSvg) {
+        return SvgPicture.network(
+          url,
+          fit: BoxFit.contain,
+          headers: HttpClientService().imageHeaders,
+          placeholderBuilder: (_) => const SizedBox.shrink(),
+          clipBehavior: Clip.hardEdge,
+        );
+      }
+
+      // Use a consistent provider for both sources
       final provider = LogoImageCache.providerFor(
-        channel.logoUrl!,
+        url,
         headers: HttpClientService().imageHeaders,
       );
       final placeholder = Container(
@@ -4920,6 +4966,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           size: 16,
         ),
       );
+      
       return Image(
         image: provider,
         fit: BoxFit.contain,
@@ -4928,9 +4975,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (wasSync || frame != null) return child;
           return placeholder;
         },
-        errorBuilder: (context, error, stackTrace) => placeholder,
+        errorBuilder: (context, error, stackTrace) {
+          // If the image fails to load, we can try to return the placeholder
+          // or just swallow the error.
+          return placeholder;
+        },
       );
     }
+    
+    // No logo found
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.1 * 255).round()),
@@ -5915,9 +5968,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final channelProvider = context.read<ChannelProvider>();
     final hasChannels = channelProvider.hasChannels;
     final resolvedOverlay = showColdStartOverlay ??
-        (channelProvider.isColdStartLoad &&
-            channelProvider.isLoading &&
-            !hasChannels);
+        (channelProvider.isColdStartLoad && channelProvider.isLoading);
     final resolvedStatus = statusText ?? channelProvider.loadingStatus;
     final resolvedProgress = progress ?? channelProvider.loadingProgress;
     return _buildSkeletonLoader(
@@ -6141,7 +6192,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 fit: BoxFit.contain,
               );
             },
-            placeholder: (context, url) => const SizedBox.shrink(),
+            placeholder: (context, url) => fallback,
             errorWidget: (context, url, err) {
               ImageLoadProbe.recordFailure(url, 'live_tv_poster', err);
               return fallback;

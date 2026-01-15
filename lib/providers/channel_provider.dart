@@ -410,9 +410,8 @@ class ChannelProvider with ChangeNotifier {
 
   @override
   void notifyListeners() {
-    if (!_disposed) {
-      super.notifyListeners();
-    }
+    if (_disposed) return;
+    super.notifyListeners();
   }
 
   void _notifyListenersSafe() {
@@ -1621,7 +1620,8 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Auto-load already in progress, skipping');
       return;
     }
-    _isColdStartLoad = false;
+    // If we have no channels, treat this as a cold start load so we show the overlay status
+    _isColdStartLoad = _channelMaps.isEmpty;
     _autoLoadInProgress = true;
     bool wakeLockEnabled = false;
 
@@ -2088,11 +2088,18 @@ class ChannelProvider with ChangeNotifier {
     } catch (e) {
       debugLog('ChannelProvider: Auto-load playlist failed: $e');
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: failed ($e)');
+      _isLoading = false;
+      notifyListeners();
     } finally {
       if (wakeLockEnabled) {
         await _setWakeLock(false);
       }
       _autoLoadInProgress = false;
+      // Ensure loading state is cleared if we exited abnormally without setting it
+      if (_isLoading && !_hasLoadedPlaylist) { 
+         _isLoading = false;
+         notifyListeners();
+      }
     }
   }
 
@@ -2290,7 +2297,7 @@ class ChannelProvider with ChangeNotifier {
 
       unawaited(_saveJsonCache(parsed));
       _loadingProgress = 1.0;
-      _loadingStatus = 'Complete!';
+      // _loadingStatus = 'Complete!'; // Removed to prevent lingering text
       _isLoading = false;
       _hasLoadedPlaylist = true;
       _isColdStartLoad = false;
@@ -2820,15 +2827,20 @@ class ChannelProvider with ChangeNotifier {
     if (_cachedCategories != null || _isGroupingChannels) return;
     _isGroupingChannels = true;
     _categoriesCompleter = Completer<List<String>>();
-    _notifyListenersSafe();
+    // _notifyListenersSafe(); // Removed to prevent setState triggers during build
     final start = DateTime.now();
 
     try {
-      if (_dbReady) {
+      if (_dbReady && _db.isReady) {
         final dbStart = DateTime.now();
-        _cachedCategories = _normalizeCategories(await _db.getCategories());
-        debugLog(
-            'ChannelProvider: Category DB load took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
+        try {
+          _cachedCategories = _normalizeCategories(await _db.getCategories());
+          debugLog(
+              'ChannelProvider: Category DB load took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
+        } catch (e) {
+          debugLog('ChannelProvider: DB category load failed: $e, falling back to memory');
+          _dbReady = false;
+        }
         if ((_cachedCategories?.isEmpty ?? true) && _channelMaps.isNotEmpty) {
           final groupTitles = _getCategoryTitleCache();
           final isolateStart = DateTime.now();
@@ -2840,7 +2852,8 @@ class ChannelProvider with ChangeNotifier {
         debugLog(
             'ChannelProvider: Loaded ${_cachedCategories!.length} categories from DB');
       } else {
-        // Just extract groupTitle strings from maps - very lightweight
+        // CRITICAL: Always fall back to in-memory computation if DB unavailable
+        // This ensures categories load even if DB is closed
         final groupTitles = _getCategoryTitleCache();
 
         // Run category extraction in isolate
