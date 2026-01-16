@@ -25,6 +25,11 @@ class _EPGScreenState extends State<EPGScreen> {
   Channel? _playingChannel;
   VideoPlayerController? _miniPlayerController;
 
+  // Cache for filtered channels to avoid re-sorting on every build
+  List<Channel>? _cachedFilteredChannels;
+  List<Channel>? _lastRawChannels;
+  String? _lastSelectedCategory;
+
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   final FocusNode _firstContentFocusNode = FocusNode();
@@ -101,27 +106,38 @@ class _EPGScreenState extends State<EPGScreen> {
         final categories = channelProvider.getGroupedChannels();
         final categoryNames = categories.keys.toList()..sort();
 
-        // Filter channels by selected category and hidden status
-        final filteredChannels =
-            channels.where((ch) {
-              // Filter by hidden status
-              if (ch.isHidden == true) return false;
-              // Filter by category
-              if (_selectedCategory != null &&
-                  ch.groupTitle != _selectedCategory) {
-                return false;
-              }
-              return true;
-            }).toList()..sort((a, b) {
-              // Sort by custom order first, then by channel number, then by name
-              if (a.sortOrder != null && b.sortOrder != null) {
-                return a.sortOrder!.compareTo(b.sortOrder!);
-              }
-              if (a.channelNumber != null && b.channelNumber != null) {
-                return a.channelNumber!.compareTo(b.channelNumber!);
-              }
-              return a.name.compareTo(b.name);
-            });
+        // ⚡ Bolt Optimization: Memoize filtered channels
+        // This prevents expensive sorting/filtering when only EpgService notifies (common case)
+        if (_cachedFilteredChannels == null ||
+            !identical(channels, _lastRawChannels) ||
+            _selectedCategory != _lastSelectedCategory) {
+
+          _cachedFilteredChannels =
+              channels.where((ch) {
+                // Filter by hidden status
+                if (ch.isHidden == true) return false;
+                // Filter by category
+                if (_selectedCategory != null &&
+                    ch.groupTitle != _selectedCategory) {
+                  return false;
+                }
+                return true;
+              }).toList()..sort((a, b) {
+                // Sort by custom order first, then by channel number, then by name
+                if (a.sortOrder != null && b.sortOrder != null) {
+                  return a.sortOrder!.compareTo(b.sortOrder!);
+                }
+                if (a.channelNumber != null && b.channelNumber != null) {
+                  return a.channelNumber!.compareTo(b.channelNumber!);
+                }
+                return a.name.compareTo(b.name);
+              });
+
+          _lastRawChannels = channels;
+          _lastSelectedCategory = _selectedCategory;
+        }
+
+        final filteredChannels = _cachedFilteredChannels!;
 
         return Stack(
           children: [
