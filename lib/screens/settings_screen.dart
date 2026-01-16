@@ -3032,6 +3032,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     TextInputType? keyboardType,
     bool obscureText = false,
     int? maxLines = 1,
+    Widget? suffixIcon,
   }) {
     return Focus(
       focusNode: focusNode,
@@ -3043,48 +3044,78 @@ class _SettingsScreenState extends State<SettingsScreen>
       onKey: (node, event) {
         if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
+
         // On SELECT/ENTER, enable editing and show keyboard
         if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
           if (!isEditable) {
             onEditableChanged(true);
             // Request focus again after enabling editing to trigger keyboard
-            Future.delayed(Duration(milliseconds: 50), () {
+            Future.delayed(const Duration(milliseconds: 50), () {
               focusNode.requestFocus();
             });
           }
           return KeyEventResult.handled;
         }
+
+        // BACK/ESC to stop editing
+        if (isEditable && (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack)) {
+             onEditableChanged(false);
+             focusNode.requestFocus(); // Keep focus, just exit edit mode
+             return KeyEventResult.handled;
+        }
+
+        // LEFT ARROW to return to sidebar (only when not editing)
+        if (!isEditable && key == LogicalKeyboardKey.arrowLeft) {
+             requestFirstSidebarFocus();
+             return KeyEventResult.handled;
+        }
+
         return KeyEventResult.ignored;
       },
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        autofocus: false,
-        readOnly: !isEditable,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        maxLines: obscureText ? 1 : maxLines,
-        decoration: InputDecoration(
-          hintText: hintText,
-          helperText: helperText,
-          labelText: labelText,
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-          filled: true,
-          fillColor: AppTheme.highlight,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
+      child: AnimatedBuilder(
+        animation: focusNode,
+        builder: (context, child) {
+          final isFocused = focusNode.hasFocus;
+
+          // Determine visual state indicator
+          final Widget? stateIcon = suffixIcon ?? (
+            isEditable
+              ? Icon(Icons.edit, color: AppTheme.accentOrange, size: 16)
+              : (isFocused ? Icon(Icons.keyboard, color: AppTheme.primaryBlue, size: 16) : null)
+          );
+
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: false,
+            readOnly: !isEditable,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            maxLines: obscureText ? 1 : maxLines,
+            decoration: InputDecoration(
+              hintText: hintText,
+              helperText: helperText,
+              labelText: labelText,
+              prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+              suffixIcon: stateIcon,
+              filled: true,
+              fillColor: AppTheme.highlight,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+          );
+        },
       ),
     );
   }
