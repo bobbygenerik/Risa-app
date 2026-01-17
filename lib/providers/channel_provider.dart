@@ -69,6 +69,21 @@ List<int> _filterCategoryIndicesInIsolate(Map<String, dynamic> args) {
   return indices;
 }
 
+List<int> _searchIndicesInIsolate(Map<String, dynamic> args) {
+  final names = args['names'] as List<String>;
+  final query = (args['query'] as String).toLowerCase();
+  final limit = args['limit'] as int;
+
+  final indices = <int>[];
+  for (int i = 0; i < names.length; i++) {
+    if (names[i].contains(query)) {
+      indices.add(i);
+      if (indices.length >= limit) break;
+    }
+  }
+  return indices;
+}
+
 List<int> _filterChannelIndicesInIsolate(Map<String, dynamic> args) {
   final titles = args['titles'] as List<String?>? ?? const [];
   final ids = args['ids'] as List<String?>? ?? const [];
@@ -151,8 +166,10 @@ class ChannelProvider with ChangeNotifier {
   final Map<String, List<int>> _channelIndicesByGroup = {};
   List<String> _channelLowerNames = [];
   List<String> _channelLowerGroups = [];
+  int _dataVersion = 0;
 
   void _rebuildChannelCaches() {
+    _dataVersion++;
     _channelIndexById.clear();
     _channelIndicesByGroup.clear();
     _channelLowerNames = List<String>.filled(_channelMaps.length, '');
@@ -3050,6 +3067,28 @@ class ChannelProvider with ChangeNotifier {
         debugLog('ChannelProvider: DB search failed: $e');
       }
     }
+
+    // Optimization: Run search in background isolate to avoid blocking UI
+    if (_channelLowerNames.isNotEmpty) {
+      final currentVersion = _dataVersion;
+      try {
+        final indices = await compute(_searchIndicesInIsolate, {
+          'names': _channelLowerNames,
+          'query': query,
+          'limit': limit,
+        });
+
+        // Ensure data hasn't changed while we were searching
+        if (_dataVersion != currentVersion) {
+          return searchChannels(query, limit: limit);
+        }
+
+        return indices.map((i) => _getChannelAt(i)).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: Isolate search failed: $e');
+      }
+    }
+
     return searchChannels(query, limit: limit);
   }
 

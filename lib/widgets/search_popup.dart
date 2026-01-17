@@ -24,6 +24,7 @@ class _SearchPopupState extends State<SearchPopup> {
   List<Channel> _liveTvResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
+  String _lastSubmittedQuery = '';
 
   // Pagination
   static const int _resultsPerSection = 12;
@@ -56,6 +57,7 @@ class _SearchPopupState extends State<SearchPopup> {
       return;
     }
 
+    _lastSubmittedQuery = query;
     setState(() {
       _isSearching = true;
       _hasSearched = true;
@@ -66,13 +68,16 @@ class _SearchPopupState extends State<SearchPopup> {
       listen: false,
     );
 
-    final liveTv = channelProvider.searchChannels(query);
+    channelProvider.searchChannelsAsync(query).then((liveTv) {
+      if (!mounted) return;
+      if (query != _lastSubmittedQuery) return;
 
-    setState(() {
-      _liveTvResults = liveTv;
-      _isSearching = false;
-      // Reset pagination on new search
-      _liveTvDisplayCount = _resultsPerSection;
+      setState(() {
+        _liveTvResults = liveTv;
+        _isSearching = false;
+        // Reset pagination on new search
+        _liveTvDisplayCount = _resultsPerSection;
+      });
     });
   }
 
