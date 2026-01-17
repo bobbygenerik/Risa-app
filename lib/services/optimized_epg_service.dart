@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/program.dart';
 import '../models/channel.dart';
 import '../utils/debug_helper.dart';
+import 'local_db_service.dart';
 
 /// Optimized EPG service using fast startup and streaming techniques
 class OptimizedEpgService extends ChangeNotifier {
@@ -10,6 +11,10 @@ class OptimizedEpgService extends ChangeNotifier {
   bool _isLoading = false;
   bool _isReady = false;
   
+  // Manual mappings storage
+  final Map<String, String> _manualMappings = {};
+  bool _mappingsLoaded = false;
+
   Map<String, List<Program>> get programs => _programs;
   bool get isLoading => _isLoading;
   bool get isReady => _isReady;
@@ -25,6 +30,9 @@ class OptimizedEpgService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
+    // Ensure mappings are loaded
+    await _ensureMappingsLoaded();
+
     try {
       debugLog('OptimizedEpgService: Starting fast EPG load');
       
@@ -124,9 +132,56 @@ class OptimizedEpgService extends ChangeNotifier {
     return [];
   }
   
-  /// Manual mapping methods (placeholder implementations)
-  String? getManualMapping(String channelId) => null;
-  Future<void> setManualMapping(String channelId, String epgChannelId) async {}
-  Future<void> removeManualMapping(String channelId) async {}
-  bool hasManualMapping(String channelId) => false;
+  /// Manual mapping methods
+  String? getManualMapping(String channelId) {
+    return _manualMappings[channelId];
+  }
+
+  Future<void> setManualMapping(String channelId, String epgChannelId) async {
+    if (channelId.isEmpty || epgChannelId.isEmpty) return;
+
+    // Update memory cache
+    _manualMappings[channelId] = epgChannelId;
+    notifyListeners();
+
+    // Persist to DB
+    try {
+      await LocalDbService.instance.upsertEpgMapping({channelId: epgChannelId});
+    } catch (e) {
+      debugLog('OptimizedEpgService: Failed to persist mapping: $e');
+    }
+  }
+
+  Future<void> removeManualMapping(String channelId) async {
+    if (channelId.isEmpty) return;
+    if (!_manualMappings.containsKey(channelId)) return;
+
+    // Update memory cache
+    _manualMappings.remove(channelId);
+    notifyListeners();
+
+    // Persist to DB
+    try {
+      await LocalDbService.instance.deleteEpgMapping(channelId);
+    } catch (e) {
+      debugLog('OptimizedEpgService: Failed to delete mapping: $e');
+    }
+  }
+
+  bool hasManualMapping(String channelId) {
+    return _manualMappings.containsKey(channelId);
+  }
+
+  /// Helper to ensure mappings are loaded from DB
+  Future<void> _ensureMappingsLoaded() async {
+    if (_mappingsLoaded) return;
+    try {
+      final mappings = await LocalDbService.instance.getAllMappings();
+      _manualMappings.addAll(mappings);
+      _mappingsLoaded = true;
+      debugLog('OptimizedEpgService: Loaded ${_manualMappings.length} manual mappings');
+    } catch (e) {
+      debugLog('OptimizedEpgService: Failed to load manual mappings: $e');
+    }
+  }
 }
