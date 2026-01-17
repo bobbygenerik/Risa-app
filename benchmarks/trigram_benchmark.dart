@@ -1,4 +1,4 @@
-import 'dart:math';
+// ignore_for_file: avoid_print
 
 // CURRENT IMPLEMENTATION SIMULATION
 String _normalize(String text) {
@@ -54,7 +54,7 @@ double _calculateTrigramSetSimilarity(Set<int> aSet, String b) {
 
 void main() {
   const iterations = 10000;
-  final channels = List.generate(1000, (i) => "channel_name_$i_sport_hd");
+  final channels = List.generate(1000, (i) => "channel_name_${i}_sport_hd");
   final target = "channel_name_500_sport";
   final normalizedTarget = _normalize(target);
 
@@ -91,4 +91,6 @@ void main() {
   print('New Implementation: ${swNew.elapsedMilliseconds} ms');
 
   print('Speedup: ${(swOld.elapsedMilliseconds / swNew.elapsedMilliseconds).toStringAsFixed(2)}x');
+  print('checksumOld: $checksumOld');
+  print('checksumNew: $checksumNew');
 }
