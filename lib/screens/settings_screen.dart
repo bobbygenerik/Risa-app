@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -331,18 +332,35 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildActiveContent() {
+    Widget content;
     switch (_selectedIndex) {
       case 0:
-        return _buildGeneralSettings();
+        content = _buildGeneralSettings();
+        break;
       case 1:
-        return _buildPlaybackSettings();
+        content = _buildPlaybackSettings();
+        break;
       case 2:
-        return _buildAISettings();
+        content = _buildAISettings();
+        break;
       case 3:
-        return _buildRecordingsSettings();
+        content = _buildRecordingsSettings();
+        break;
       default:
-        return _buildGeneralSettings();
+        content = _buildGeneralSettings();
     }
+
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          _layoutController.requestMenuFocus();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: content,
+    );
   }
 
   Widget _buildGeneralSettings() {
