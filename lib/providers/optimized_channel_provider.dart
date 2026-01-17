@@ -2,13 +2,20 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../utils/debug_helper.dart';
+import '../providers/playlist_loader.dart';
 
 /// Optimized channel provider using fast startup techniques
 class OptimizedChannelProvider extends ChangeNotifier {
   List<Channel> _channels = [];
+  final Map<String, List<int>> _indicesByCategory = {};
+
   bool _isLoading = false;
   bool _criticalDataLoaded = false;
   String? _errorMessage;
+  final PlaylistLoader _playlistLoader;
+
+  OptimizedChannelProvider({PlaylistLoader? playlistLoader})
+      : _playlistLoader = playlistLoader ?? PlaylistLoader();
   
   List<Channel> get channels => _channels;
   bool get isLoading => _isLoading;
@@ -27,16 +34,40 @@ class OptimizedChannelProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      debugLog('OptimizedChannelProvider: Starting fast channel load');
+      debugLog('OptimizedChannelProvider: Starting fast channel load from $m3uUrl');
       
-      // Mock fast loading
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      _channels = [
-        Channel(id: '1', name: 'Channel 1', url: 'http://example.com/1'),
-        Channel(id: '2', name: 'Channel 2', url: 'http://example.com/2'),
-        Channel(id: '3', name: 'Channel 3', url: 'http://example.com/3'),
-      ];
+      _channels.clear();
+      _indicesByCategory.clear();
+      _criticalDataLoaded = false;
+
+      await _playlistLoader.loadFromUrl(
+        m3uUrl,
+        onProgress: (count) {
+             // We can expose progress if needed, but critical data flag handles the "ready" state
+        },
+        onChannelsChunk: (chunk) {
+            final newChannels = chunk.map((map) => Channel.fromMap(map)).toList();
+            final startIndex = _channels.length;
+            _channels.addAll(newChannels);
+
+            // Index by category
+            for (int i = 0; i < newChannels.length; i++) {
+                final channel = newChannels[i];
+                final rawGroup = (channel.groupTitle ?? '').trim();
+                final category = rawGroup.isEmpty ? 'Uncategorized' : rawGroup;
+
+                if (!_indicesByCategory.containsKey(category)) {
+                  _indicesByCategory[category] = [];
+                }
+                _indicesByCategory[category]!.add(startIndex + i);
+            }
+
+            if (!_criticalDataLoaded && _channels.isNotEmpty) {
+                _criticalDataLoaded = true;
+            }
+            notifyListeners();
+        }
+      );
       
       _criticalDataLoaded = true;
       _isLoading = false;
@@ -52,23 +83,39 @@ class OptimizedChannelProvider extends ChangeNotifier {
     }
   }
   
+  @override
+  void dispose() {
+    _playlistLoader.cancelCurrent();
+    super.dispose();
+  }
+
   /// Get channels for category with pagination
   Future<List<Channel>> getChannelsForCategory(
     String category, {
     int offset = 0,
     int limit = 50,
   }) async {
-    return _channels.skip(offset).take(limit).toList();
+    final indices = _indicesByCategory[category];
+    if (indices == null) return [];
+
+    final end = (offset + limit).clamp(0, indices.length);
+    if (offset >= end) return [];
+
+    return indices.sublist(offset, end).map((i) => _channels[i]).toList();
   }
   
   /// Get channel count for category
   int getChannelCountForCategory(String category) {
-    return _channels.length;
+    return _indicesByCategory[category]?.length ?? 0;
   }
   
   /// Get all category names
   List<String> getAllCategoryNames() {
-    return ['General', 'News', 'Sports'];
+    final categories = _indicesByCategory.keys.toList();
+    categories.sort();
+    // Ensure Uncategorized is at the end if present, or handle sorting as preferred
+    // For now simple sort
+    return categories;
   }
   
   /// Get category names asynchronously (for compatibility)
@@ -81,13 +128,19 @@ class OptimizedChannelProvider extends ChangeNotifier {
     int offset = 0,
     int limit = 50,
   }) async {
-    return _channels.skip(offset).take(limit).toList();
+    final end = (offset + limit).clamp(0, _channels.length);
+    if (offset >= end) return [];
+    return _channels.sublist(offset, end);
   }
   
   /// Get channel in category at index
   Channel? getChannelInCategoryAtIndex(String category, int index) {
-    if (index >= 0 && index < _channels.length) {
-      return _channels[index];
+    final indices = _indicesByCategory[category];
+    if (indices != null && index >= 0 && index < indices.length) {
+      final realIndex = indices[index];
+      if (realIndex >= 0 && realIndex < _channels.length) {
+        return _channels[realIndex];
+      }
     }
     return null;
   }
