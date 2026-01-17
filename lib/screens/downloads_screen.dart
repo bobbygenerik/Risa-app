@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/models/download_item.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -18,7 +19,7 @@ class DownloadsScreen extends StatefulWidget {
 
 class _DownloadsScreenState extends State<DownloadsScreen> {
   String? _storagePath;
-  List<FileSystemEntity> _files = [];
+  List<DownloadItem> _files = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -56,17 +57,22 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         return;
       }
 
-      final files =
+      final fileEntities =
           await dir.list().where((entity) => entity is File).where((file) {
         final ext = path.extension(file.path).toLowerCase();
         return ['.mp4', '.mkv', '.ts', '.m2ts', '.avi', '.mov', '.flv', '.webm']
             .contains(ext);
       }).toList();
 
+      final itemsFuture = fileEntities.map((file) async {
+        final stat = await file.stat();
+        return DownloadItem(file: file, stat: stat);
+      });
+
+      final files = await Future.wait(itemsFuture);
+
       files.sort((a, b) {
-        final aStat = a.statSync();
-        final bStat = b.statSync();
-        return bStat.modified.compareTo(aStat.modified);
+        return b.stat.modified.compareTo(a.stat.modified);
       });
 
       setState(() {
@@ -268,9 +274,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                         vertical: AppSizes.sm),
                                     itemCount: _files.length,
                                     itemBuilder: (context, index) {
-                                      final file = _files[index];
+                                      final item = _files[index];
+                                      final file = item.file;
                                       final fileName = path.basename(file.path);
-                                      final fileStat = file.statSync();
+                                      final fileStat = item.stat;
                                       final fileSize =
                                           _formatFileSize(fileStat.size);
                                       final modDate =
