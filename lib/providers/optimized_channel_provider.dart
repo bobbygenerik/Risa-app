@@ -6,7 +6,7 @@ import '../providers/playlist_loader.dart';
 
 /// Optimized channel provider using fast startup techniques
 class OptimizedChannelProvider extends ChangeNotifier {
-  List<Channel> _channels = [];
+  final List<Channel> _channels = [];
   final Map<String, List<int>> _indicesByCategory = {};
 
   bool _isLoading = false;
