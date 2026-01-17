@@ -70,6 +70,7 @@ class OptimizedChannelTile extends StatelessWidget {
               imageUrl: logoUrl,
               width: 48,
               height: 48,
+              memCacheWidth: 150, // Optimize memory: 48px * 3x density ≈ 150px
               fit: BoxFit.contain,
             )
           : const Icon(Icons.tv, size: 48),
