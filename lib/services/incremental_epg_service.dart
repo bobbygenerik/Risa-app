@@ -2934,22 +2934,32 @@ class IncrementalEpgService extends ChangeNotifier
   }
 
   // Conservative trigram-based similarity to use as a last-resort fallback.
-  double _trigramSimilarity(String a, String b) {
-    final sa = _normalize(a);
-    final sb = _normalize(b);
-    if (sa.isEmpty || sb.isEmpty) return 0.0;
+  // OPTIMIZED: Uses integer packing for trigrams instead of String substrings to avoid allocation.
+  // Assumes inputs are already normalized (which is true for _findBestEpgId usage).
+  static Set<int> _generateTrigramSet(String s) {
+    final set = <int>{};
+    final len = s.length;
+    if (len < 3) return set;
 
-    final aTr = <String>{};
-    for (var i = 0; i + 3 <= sa.length; i++) {
-      aTr.add(sa.substring(i, i + 3));
+    final units = s.codeUnits;
+    for (var i = 0; i < len - 2; i++) {
+      // Pack 3 16-bit code units into a 64-bit int (Dart int is 64-bit on VM)
+      // This avoids creating String objects for every trigram.
+      final t = (units[i] << 32) | (units[i + 1] << 16) | units[i + 2];
+      set.add(t);
     }
-    final bTr = <String>{};
-    for (var i = 0; i + 3 <= sb.length; i++) {
-      bTr.add(sb.substring(i, i + 3));
-    }
-    if (aTr.isEmpty || bTr.isEmpty) return 0.0;
-    final inter = aTr.intersection(bTr).length;
-    final union = aTr.length + bTr.length - inter;
+    return set;
+  }
+
+  static double _calculateTrigramSetSimilarity(Set<int> aSet, String b) {
+    // Generate b's trigrams on the fly (still fast as it avoids String alloc)
+    // Note: We assume b is already normalized here.
+    final bSet = _generateTrigramSet(b);
+
+    if (aSet.isEmpty || bSet.isEmpty) return 0.0;
+
+    final inter = aSet.intersection(bSet).length;
+    final union = aSet.length + bSet.length - inter;
     if (union == 0) return 0.0;
     return inter / union;
   }
@@ -3188,8 +3198,11 @@ class IncrementalEpgService extends ChangeNotifier
           final List<String> allCandidates = [];
           double highestTrigram = 0.0;
 
+          // Optimization: Pre-calculate trigrams for the target name once
+          final targetTrigrams = _generateTrigramSet(normalizedName);
+
           for (final entry in _normalizedAvailableChannels!.entries) {
-            final score = _trigramSimilarity(normalizedName, entry.key);
+            final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             if (score >= 0.75) {
               if (score > highestTrigram) highestTrigram = score;
               allCandidates.addAll(entry.value);
