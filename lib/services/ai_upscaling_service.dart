@@ -185,15 +185,15 @@ class AIUpscalingService extends ChangeNotifier {
     }
 
     try {
-      // Decode image
-      final image = img.decodeImage(frameData);
+      // Decode image in background isolate to avoid blocking UI
+      final image = await compute(_decodeImageIsolate, frameData);
       if (image == null) return frameData;
 
       // Process image in tiles for better performance
       final upscaledImage = await _processTiled(image);
-      
-      // Encode back to bytes
-      return Uint8List.fromList(img.encodePng(upscaledImage));
+
+      // Encode back to bytes in background isolate
+      return await compute(_encodePngIsolate, upscaledImage);
     } catch (e) {
       debugPrint('Frame upscaling error: $e');
       return frameData; // Return original on error
@@ -356,4 +356,14 @@ class AIUpscalingService extends ChangeNotifier {
     _isInitialized = false;
     super.dispose();
   }
+}
+
+/// Decodes image from bytes (runs in Isolate)
+img.Image? _decodeImageIsolate(Uint8List bytes) {
+  return img.decodeImage(bytes);
+}
+
+/// Encodes image to PNG bytes (runs in Isolate)
+Uint8List _encodePngIsolate(img.Image image) {
+  return Uint8List.fromList(img.encodePng(image));
 }
