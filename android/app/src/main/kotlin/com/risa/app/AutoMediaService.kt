@@ -8,6 +8,8 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.media.MediaBrowserServiceCompat
 import android.net.Uri
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -63,6 +65,10 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
                     if (mediaId == null) return
                     
+                    var url = ""
+                    var name = ""
+                    var found = false
+
                     try {
                         val cacheFile = File(applicationContext.filesDir, "parsed_playlist_cache.json")
                         if (cacheFile.exists()) {
@@ -72,27 +78,54 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                             for (i in 0 until channels.length()) {
                                 val channel = channels.getJSONObject(i)
                                 if (channel.optString("id") == mediaId) {
-                                    val url = channel.optString("url", "")
-                                    val name = channel.optString("name", "")
-                                    
-                                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                                    prefs.edit().putString("flutter.last_played_channel", mediaId).apply()
-                                    
-                                    val intent = Intent(this@AutoMediaService, MainActivity::class.java)
-                                    intent.apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        putExtra("autoplay", true)
-                                        putExtra("channel_url", url)
-                                        putExtra("channel_name", name)
-                                        putExtra("channel_id", mediaId)
-                                    }
-                                    startActivity(intent)
-                                    return
+                                    url = channel.optString("url", "")
+                                    name = channel.optString("name", "")
+                                    found = true
+                                    break
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("AutoMediaService", "Error playing from mediaId: ${e.message}")
+                        android.util.Log.e("AutoMediaService", "Error playing from mediaId (cache): ${e.message}")
+                    }
+
+                    // Fallback to DB if not found in cache
+                    if (!found) {
+                        var db: SQLiteDatabase? = null
+                        var cursor: Cursor? = null
+                        try {
+                            val dbFile = getDbFile()
+                            if (dbFile != null && dbFile.exists()) {
+                                db = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)
+                                cursor = db.rawQuery("SELECT url, name FROM channels WHERE id = ?", arrayOf(mediaId))
+                                if (cursor.moveToFirst()) {
+                                    url = cursor.getString(0)
+                                    name = cursor.getString(1)
+                                    found = true
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("AutoMediaService", "Error playing from mediaId (DB): ${e.message}")
+                        } finally {
+                            cursor?.close()
+                            db?.close()
+                        }
+                    }
+
+                    if (found) {
+                        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                        prefs.edit().putString("flutter.last_played_channel", mediaId).apply()
+
+                        val intent = Intent(this@AutoMediaService, MainActivity::class.java)
+                        intent.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            putExtra("autoplay", true)
+                            putExtra("channel_url", url)
+                            putExtra("channel_name", name)
+                            putExtra("channel_id", mediaId)
+                        }
+                        startActivity(intent)
+                        return
                     }
                     
                     // Fallback: just launch app
@@ -227,13 +260,77 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         }
     }
     
+    private fun getDbFile(): File? {
+        // Try app_flutter directory first (standard path_provider location)
+        val appFlutterDir = File(applicationContext.filesDir.parentFile, "app_flutter")
+        val dbFile = File(appFlutterDir, "iptv_local.db")
+        if (dbFile.exists()) return dbFile
+
+        // Fallback check in filesDir (just in case)
+        val fallback = File(applicationContext.filesDir, "iptv_local.db")
+        if (fallback.exists()) return fallback
+
+        return null
+    }
+
     private fun loadFavorites(mediaItems: MutableList<MediaBrowserCompat.MediaItem>) {
-        // TODO: Implement logic to load favorite channels from SharedPreferences or another source.
-        mediaItems.add(createPlayableItem(
-            "favorites_unimplemented",
-            "Favorites not implemented",
-            "This feature is coming soon."
-        ))
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            val dbFile = getDbFile()
+
+            if (dbFile == null) {
+                android.util.Log.d("AutoMediaService", "Favorites DB not found")
+                mediaItems.add(createPlayableItem(
+                    "no_favorites",
+                    "No favorites found",
+                    "Add channels to favorites in the app"
+                ))
+                return
+            }
+
+            db = SQLiteDatabase.openDatabase(
+                dbFile.path,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+
+            // Select favorites
+            cursor = db.rawQuery(
+                "SELECT id, name, groupTitle FROM channels WHERE isFavorite = 1 ORDER BY name ASC",
+                null
+            )
+
+            if (cursor.moveToFirst()) {
+                val idIdx = cursor.getColumnIndex("id")
+                val nameIdx = cursor.getColumnIndex("name")
+                val groupIdx = cursor.getColumnIndex("groupTitle")
+
+                do {
+                    val id = cursor.getString(idIdx)
+                    val name = cursor.getString(nameIdx)
+                    val group = if (groupIdx >= 0) cursor.getString(groupIdx) ?: "Favorites" else "Favorites"
+                    mediaItems.add(createPlayableItem(id, name, group))
+                } while (cursor.moveToNext())
+            } else {
+                 mediaItems.add(createPlayableItem(
+                    "no_favorites",
+                    "No favorites yet",
+                    "Mark channels as favorite to see them here"
+                ))
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.e("AutoMediaService", "Error loading favorites: ${e.message}")
+             mediaItems.add(createPlayableItem(
+                "error",
+                "Error loading favorites",
+                e.message ?: "Unknown error"
+            ))
+        } finally {
+            cursor?.close()
+            db?.close()
+        }
     }
 
     override fun onDestroy() {
