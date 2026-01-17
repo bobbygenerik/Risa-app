@@ -194,7 +194,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
   bool _snapshotApplied = false;
-  final bool _canPop = false;
+  
 
   // Timer for EPG loading timeout fallback
   late final DateTime _initTime;
@@ -5966,7 +5966,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }) {
     _markSkeletonVisibility(true);
     final channelProvider = context.read<ChannelProvider>();
-    final hasChannels = channelProvider.hasChannels;
     final resolvedOverlay = showColdStartOverlay ??
         (channelProvider.isColdStartLoad && channelProvider.isLoading);
     final resolvedStatus = statusText ?? channelProvider.loadingStatus;

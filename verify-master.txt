@@ -1,0 +1,34 @@
+]633;E;{   echo "origin/master: $(git rev-parse --short origin/master 2>/dev/null || echo '(missing)')"\x3b   git show -s --format='%h %an %ai %s' origin/master || true\x3b   echo\x3b   echo "origin/NO-VOD: $(git rev-parse --short origin/NO-VOD 2>/dev/null || echo '(missing)')"\x3b   git show -s --format='%h %an %ai %s' origin/NO-VOD || true\x3b   echo\x3b   echo "local master: $(git rev-parse --short master 2>/dev/null || echo '(missing)')"\x3b   echo\x3b   echo "--- last 10 commits on origin/master ---"\x3b   git log --pretty=format:'%h %an %ad %s' --date=iso -n 10 origin/master || true\x3b   echo\x3b   echo "--- remote branches containing origin/master commit ---"\x3b   git branch -r --contains origin/master || true\x3b   echo\x3b   echo "--- backup branches matching backup/local-master-before-sync* ---"\x3b   git branch --list 'backup/local-master-before-sync*' || true\x3b   echo\x3b   echo "--- if a backup exists, last 6 commits from it ---"\x3b   BACKUP=$(git branch --list 'backup/local-master-before-sync*' | sed 's/^[* ]*//')\x3b   if [ -n "$BACKUP" ]\x3b then git log --pretty=format:'%h %an %ad %s' --date=iso -n 6 "$BACKUP" || true\x3b else echo "(no local backup branch)"\x3b fi\x3b } > "$OUT";6c61178d-51e2-4618-ae5f-4291442881f1]633;Corigin/master: f11f92bd
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+
+origin/NO-VOD: 1b542417
+1b542417 Ubuntu 2026-01-14 23:35:19 +0000 Enhance artwork selection logic across all metadata services
+
+local master: f11f92bd
+
+--- last 10 commits on origin/master ---
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+1b542417 Ubuntu 2026-01-14 23:35:19 +0000 Enhance artwork selection logic across all metadata services
+57f72d82 Ubuntu 2026-01-13 16:50:19 +0000 Refine startup UX and artwork matching
+1c9a7839 Ubuntu 2026-01-12 18:16:22 +0000 Improve cold-start loading UX and defer EPG parse
+a73f3c37 Ubuntu 2026-01-12 05:38:31 +0000 Add category fallback for Live TV and EPG
+c16a1f60 Ubuntu 2026-01-12 05:31:09 +0000 Fix category normalization and Uncategorized handling
+3f8d1d37 Ubuntu 2026-01-12 05:18:31 +0000 Update tvdb/tmdb config and diagnostics
+a3461f18 Ubuntu 2026-01-12 05:14:38 +0000 Improve on-device metadata caching and warm snapshots
+17878c9d Ubuntu 2026-01-11 19:32:02 +0000 Stabilize category loading and artwork retries
+be8c11c3 Ubuntu 2026-01-11 19:16:24 +0000 Polish hero scrim and category updating
+--- remote branches containing origin/master commit ---
+  origin/HEAD -> origin/master
+  origin/bolt-optimize-channel-images-5505784399496346490
+  origin/master
+
+--- backup branches matching backup/local-master-before-sync* ---
+  backup/local-master-before-sync-20260117_045022
+
+--- if a backup exists, last 6 commits from it ---
+a22a5a74 IPTV Developer 2025-11-08 02:41:27 +0000 Fix settings crash, add app icons, update navigation
+6ea10143 IPTV Developer 2025-11-07 05:24:03 +0000 Complete color consistency refactor: Replace all remaining hardcoded Colors with AppTheme constants
+e810c3e3 IPTV Developer 2025-11-07 05:06:13 +0000 Fix color consistency: Replace hardcoded Colors with AppTheme constants
+ace8a459 IPTV Developer 2025-11-06 05:53:45 +0000 🎯 IMPORTANT CHECKPOINT: Clean sidebar implementation with auto-collapse
+4ff64693 IPTV Developer 2025-11-05 01:46:40 +0000 Switch from VLC to video_player - VLC has platform issues on Linux
+1a179693 IPTV Developer 2025-11-05 01:05:06 +0000 Fix content routing - use passed content instead of hardcoded Dune
