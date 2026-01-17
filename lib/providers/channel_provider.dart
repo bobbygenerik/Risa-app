@@ -191,7 +191,7 @@ class ChannelProvider with ChangeNotifier {
         
         if (response.statusCode == 200) {
           print('ChannelProvider: Parsing M3U content (${response.body.length} bytes)');
-          _channels = _parserService.parseM3U(response.body);
+          _channels = await _parserService.parseM3U(response.body);
           print('ChannelProvider: Parsed ${_channels.length} channels');
           
           // Cache the playlist for faster loading next time
@@ -258,16 +258,16 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Load channels from M3U content string
-  void loadPlaylistFromString(String content) {
+  Future<void> loadPlaylistFromString(String content) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _channels = _parserService.parseM3U(content);
+      _channels = await _parserService.parseM3U(content);
 
       // Also parse VOD content (movies and series)
-      final vodContent = _parserService.parseVOD(content);
+      final vodContent = await _parserService.parseVOD(content);
       _movies = vodContent['movies'] ?? [];
       _series = vodContent['series'] ?? [];
 
