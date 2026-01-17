@@ -146,6 +146,29 @@ class IncrementalEpgService extends ChangeNotifier
       RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
   static final RegExp _channelEndRe =
       RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
+
+  static const Map<String, String> _commonWordReplacements = {
+    'noticias': 'news',
+    'newses': 'news',
+    'cine': 'movies',
+    'peliculas': 'movies',
+    'filmes': 'movies',
+    'canal': 'channel',
+    'canale': 'channel',
+    'sport': 'sports',
+    'deportes': 'sports',
+    'futbol': 'football',
+    'fútbol': 'football',
+    'musica': 'music',
+    'musik': 'music',
+    'kids': 'kids',
+    'ninos': 'kids',
+    'infantil': 'kids',
+  };
+
+  static final RegExp _commonWordReplacementsRe =
+      RegExp(r'\b(' + _commonWordReplacements.keys.join('|') + r')\b');
+
   static const int _fnvOffsetBasis = 0xcbf29ce484222325;
   static const int _fnvPrime = 0x100000001b3;
 
@@ -2666,28 +2689,10 @@ class IncrementalEpgService extends ChangeNotifier
 
   static String _translateCommonWords(String input) {
     if (input.isEmpty) return input;
-    const replacements = <String, String>{
-      'noticias': 'news',
-      'newses': 'news',
-      'cine': 'movies',
-      'peliculas': 'movies',
-      'filmes': 'movies',
-      'canal': 'channel',
-      'canale': 'channel',
-      'sport': 'sports',
-      'deportes': 'sports',
-      'futbol': 'football',
-      'fútbol': 'football',
-      'musica': 'music',
-      'musik': 'music',
-      'kids': 'kids',
-      'ninos': 'kids',
-      'infantil': 'kids',
-    };
 
     return input.toLowerCase().replaceAllMapped(
-        RegExp(r'\b(' + replacements.keys.join('|') + r')\b'),
-        (match) => replacements[match.group(0)!] ?? match.group(0)!);
+        _commonWordReplacementsRe,
+        (match) => _commonWordReplacements[match.group(0)!] ?? match.group(0)!);
   }
 
   /// Resolve normalized aliases to a canonical normalized key (if present).
