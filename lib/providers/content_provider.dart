@@ -190,10 +190,7 @@ class ContentProvider with ChangeNotifier {
       // Load movies history
       final moviesJson = prefs.getString('movies_history');
       if (moviesJson != null) {
-        final List<dynamic> moviesList = jsonDecode(moviesJson);
-        final moviesWithProgress = moviesList
-            .map((m) => Content.fromMap(m as Map<String, dynamic>))
-            .toList();
+        final moviesWithProgress = await compute(_parseContentList, moviesJson);
 
         // Merge with existing movies
         for (final savedMovie in moviesWithProgress) {
@@ -211,10 +208,7 @@ class ContentProvider with ChangeNotifier {
       // Load series history
       final seriesJson = prefs.getString('series_history');
       if (seriesJson != null) {
-        final List<dynamic> seriesList = jsonDecode(seriesJson);
-        final seriesWithProgress = seriesList
-            .map((s) => Content.fromMap(s as Map<String, dynamic>))
-            .toList();
+        final seriesWithProgress = await compute(_parseContentList, seriesJson);
 
         // Merge with existing series
         for (final savedSeries in seriesWithProgress) {
@@ -241,4 +235,10 @@ class ContentProvider with ChangeNotifier {
     _highlights.clear();
     notifyListeners();
   }
+}
+
+/// Helper function to parse content list in an isolate
+List<Content> _parseContentList(String jsonStr) {
+  final List<dynamic> list = jsonDecode(jsonStr);
+  return list.map((m) => Content.fromMap(m as Map<String, dynamic>)).toList();
 }
