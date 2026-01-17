@@ -74,28 +74,33 @@ class TMDBService {
     37: 'Western',
   };
 
+  // Regex patterns for title normalization
+  static final RegExp _yearParensRe =
+      RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$');
+  static final RegExp _yearSuffixRe = RegExp(r'[\s\-_:]+(19|20)\d{2}$');
+  static final RegExp _qualityRe = RegExp(
+      r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
+      caseSensitive: false);
+  static final RegExp _seasonEpisodeRe = RegExp(
+      r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b',
+      caseSensitive: false);
+  static final RegExp _episodePartRe = RegExp(
+      r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
+      caseSensitive: false);
+  static final RegExp _whitespaceRe = RegExp(r'\s+');
+
   static String _normalizeTitle(String title) {
     final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
     var output = EPGMatchingUtils.normalizeTitleForLookup(
       title,
       aggressiveForNews: aggressive,
     );
-    output =
-        output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
-    output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
-    output = output.replaceAll(
-        RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
-            caseSensitive: false),
-        '');
-    output = output.replaceAll(
-        RegExp(r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b', caseSensitive: false),
-        '');
-    output = output.replaceAll(
-        RegExp(
-            r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
-            caseSensitive: false),
-        '');
-    output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
+    output = output.replaceAll(_yearParensRe, '');
+    output = output.replaceAll(_yearSuffixRe, '');
+    output = output.replaceAll(_qualityRe, '');
+    output = output.replaceAll(_seasonEpisodeRe, '');
+    output = output.replaceAll(_episodePartRe, '');
+    output = output.replaceAll(_whitespaceRe, ' ').trim();
     return output;
   }
 
