@@ -88,18 +88,19 @@ class AIModelManager extends ChangeNotifier {
 
       final contentLength = response.contentLength ?? model.sizeBytes;
       var downloadedBytes = 0;
-      final chunks = <List<int>>[];
 
-      await for (final chunk in response.stream) {
-        chunks.add(chunk);
-        downloadedBytes += chunk.length;
-        _downloadProgress[model.id] = downloadedBytes / contentLength;
-        notifyListeners();
+      final sink = file.openWrite();
+      try {
+        await for (final chunk in response.stream) {
+          sink.add(chunk);
+          downloadedBytes += chunk.length;
+          _downloadProgress[model.id] = downloadedBytes / contentLength;
+          notifyListeners();
+        }
+        await sink.flush();
+      } finally {
+        await sink.close();
       }
-
-      // Write to file
-      final bytes = chunks.expand((x) => x).toList();
-      await file.writeAsBytes(bytes);
 
       _modelStatus[model.id] = ModelDownloadStatus.downloaded;
       _downloadProgress[model.id] = 1.0;
