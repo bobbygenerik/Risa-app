@@ -12,6 +12,8 @@ class CachedImage extends StatelessWidget {
   final Widget? placeholder;
   final Widget? errorWidget;
   final BorderRadius? borderRadius;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
 
   const CachedImage({
     super.key,
@@ -22,6 +24,8 @@ class CachedImage extends StatelessWidget {
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   @override
@@ -32,6 +36,8 @@ class CachedImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
       imageBuilder: (context, imageProvider) {
         ImageLoadProbe.recordSuccess(imageUrl, 'cached_image');
         return Image(
