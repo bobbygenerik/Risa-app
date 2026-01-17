@@ -10,6 +10,7 @@ class BrandTextField extends StatelessWidget {
   final String? hintText;
   final String? labelText;
   final IconData? prefixIcon;
+  final IconData? suffixIcon;
   final bool obscureText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
@@ -25,6 +26,7 @@ class BrandTextField extends StatelessWidget {
     this.hintText,
     this.labelText,
     this.prefixIcon,
+    this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
     this.onChanged,
@@ -95,6 +97,13 @@ class BrandTextField extends StatelessWidget {
                 prefixIcon: prefixIcon != null
                     ? Icon(
                         prefixIcon,
+                        size: context.tvIconSize(18),
+                        color: AppTheme.textSecondary,
+                      )
+                    : null,
+                suffixIcon: suffixIcon != null
+                    ? Icon(
+                        suffixIcon,
                         size: context.tvIconSize(18),
                         color: AppTheme.textSecondary,
                       )
