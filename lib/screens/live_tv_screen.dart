@@ -509,11 +509,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _initialFocusRequested = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Start with first channel focus for better UX
-      if (_firstChannelFocus.canRequestFocus) {
-        _firstChannelFocus.requestFocus();
-      } else if (_watchButtonFocus.canRequestFocus) {
+      // Start with Watch Now button for better UX - user sees hero first
+      if (_watchButtonFocus.canRequestFocus) {
         _watchButtonFocus.requestFocus();
+      } else if (_firstFeaturedFocus.canRequestFocus) {
+        _firstFeaturedFocus.requestFocus();
+      } else if (_firstChannelFocus.canRequestFocus) {
+        _firstChannelFocus.requestFocus();
       } else if (_skeletonFocus.canRequestFocus) {
         _skeletonFocus.requestFocus();
       }
@@ -4032,16 +4034,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cardHeight = cardWidth * 0.6;
     final isMobile = screenWidth < 800;
     final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
-    final titleStyle = AppTypography.programTitle(context);
-    final timeStyle = AppTypography.programTime(context);
-    final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
-        (titleStyle.height ?? 1.2);
-    final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
-        (timeStyle.height ?? 1.2);
-    // Tighter spacing - minimal gaps between elements
-    final infoSpacing = context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + infoSpacing;
-    // Minimal vertical padding, just enough for focus scaling
+    // Match actual card content spacing: 4dp gap + title + 2dp gap + time
+    const infoGapAboveTitle = 4.0;
+    const infoGapBelowTitle = 2.0;
+    const titleFontSize = 11.0;
+    const timeFontSize = 10.0;
+    const lineHeight = 1.1;
+    final infoHeight = infoGapAboveTitle + 
+        (titleFontSize * lineHeight) + 
+        infoGapBelowTitle + 
+        (timeFontSize * lineHeight);
+    // Tight row height - no extra padding
     final rowHeight =
         cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
@@ -4248,15 +4251,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // On mobile, focus scale is minimal/transient, so don't reserve huge space
     final isMobile = screenWidth < 800;
     final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
-    final titleStyle = AppTypography.programTitle(context);
-    final timeStyle = AppTypography.programTime(context);
-    final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
-        (titleStyle.height ?? 1.2);
-    final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
-        (timeStyle.height ?? 1.2);
-    // Match the tighter spacing used in _buildChannelSection
-    final infoSpacing = context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + infoSpacing;
+    // Match actual card content spacing: 4dp gap + title + 2dp gap + time
+    const infoGapAboveTitle = 4.0;
+    const infoGapBelowTitle = 2.0;
+    const titleFontSize = 11.0;
+    const timeFontSize = 10.0;
+    const lineHeight = 1.1;
+    final infoHeight = infoGapAboveTitle + 
+        (titleFontSize * lineHeight) + 
+        infoGapBelowTitle + 
+        (timeFontSize * lineHeight);
     // Account for category header + spacers (no underline anymore)
     final captionStyle = AppTypography.caption(context);
     final captionHeight =
