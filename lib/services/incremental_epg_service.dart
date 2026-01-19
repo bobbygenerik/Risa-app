@@ -54,6 +54,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _parseProgressTimer;
   DateTime? _lastMappingsLoad;
   DateTime? _lastInitAttempt;
+  DateTime? _lastDownloadTime; // Track when last download completed
   Set<String> _allowedChannelIdsNormalized = {};
   int _allowedChannelCount = 0;
   int _epgFutureHours = 8;
@@ -67,11 +68,36 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   String? _xtreamUsername;
   String? _xtreamPassword;
   bool _disposed = false; // Track if provider is disposed
+  
+  // Throttle notifyListeners for performance - max once per 100ms
+  DateTime? _lastNotifyTime;
+  bool _notifyPending = false;
+  static const Duration _notifyThrottleInterval = Duration(milliseconds: 100);
 
   /// Override notifyListeners to prevent "setState after dispose" crashes
+  /// and throttle notifications for performance
   @override
   void notifyListeners() {
     if (_disposed) return;
+    
+    final now = DateTime.now();
+    if (_lastNotifyTime != null && 
+        now.difference(_lastNotifyTime!) < _notifyThrottleInterval) {
+      // Schedule a delayed notification if not already pending
+      if (!_notifyPending) {
+        _notifyPending = true;
+        Future.delayed(_notifyThrottleInterval, () {
+          _notifyPending = false;
+          if (!_disposed) {
+            _lastNotifyTime = DateTime.now();
+            super.notifyListeners();
+          }
+        });
+      }
+      return;
+    }
+    
+    _lastNotifyTime = now;
     super.notifyListeners();
   }
 
@@ -701,6 +727,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _pendingAllowedRefresh = false;
     _extendedWindowScheduled = false;
     _extendingWindow = false;
+    _lastDownloadTime = null; // Reset download timestamp to allow fresh download
     _availableChannels.clear();
     _internalToEpgIdMapping.clear();
     _normalizedAvailableChannels = null;
@@ -1001,6 +1028,19 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     await _restoreCacheFromBackupIfMissing();
 
+    // Skip download if we just downloaded recently (within 30 seconds)
+    // This prevents redundant downloads when loading current day then full EPG
+    if (!forceRefresh && _lastDownloadTime != null) {
+      final timeSinceLastDownload = DateTime.now().difference(_lastDownloadTime!);
+      if (timeSinceLastDownload.inSeconds < 30) {
+        final cacheFile = await _getCacheFile();
+        if (await cacheFile.exists() && await cacheFile.length() > 0) {
+          debugLog('EPG: Skipping download - just downloaded ${timeSinceLastDownload.inSeconds}s ago.');
+          return;
+        }
+      }
+    }
+
     // Check cache validity - if we have stale cache and no force refresh,
     // use the stale cache for immediate loading and refresh in background
     if (!forceRefresh) {
@@ -1077,7 +1117,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
       if (isAttachment || isOctetStream) {
         debugLog(
-            'EPG: Content-Type is ${contentTypeHeader ?? 'unknown'}; will sniff body for XML/GZIP.');
+            'EPG: Content-Type is $contentTypeHeader; will sniff body for XML/GZIP.');
       }
 
       final file = await _getCacheFile();
@@ -1324,6 +1364,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           } catch (_) {}
           return;
         }
+        // Download completed and validated successfully
+        _lastDownloadTime = DateTime.now();
       } catch (e) {
         debugLog('EPG: Post-download content check failed: $e');
         try {

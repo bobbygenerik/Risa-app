@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class FileLogger {
@@ -9,8 +10,11 @@ class FileLogger {
   File? _logFile;
   final _logBuffer = <String>[];
   bool _isInitialized = false;
+  bool _isWriting = false;
 
   Future<void> init() async {
+    // Skip file logging in release/profile mode for performance
+    if (kReleaseMode || kProfileMode) return;
     if (_isInitialized) return;
 
     try {
@@ -34,12 +38,30 @@ class FileLogger {
   }
 
   void log(String message) {
+    // Skip file logging in release/profile mode for performance
+    if (kReleaseMode || kProfileMode) return;
+    
     final timestampedMessage = '[${DateTime.now().toIso8601String()}] $message';
     if (_isInitialized && _logFile != null) {
-      _logFile!
-          .writeAsStringSync('$timestampedMessage\n', mode: FileMode.append);
+      // Buffer logs and write asynchronously to avoid blocking UI
+      _logBuffer.add(timestampedMessage);
+      _flushBufferAsync();
     } else {
       _logBuffer.add(timestampedMessage);
+    }
+  }
+  
+  Future<void> _flushBufferAsync() async {
+    if (_isWriting || _logBuffer.isEmpty || _logFile == null) return;
+    _isWriting = true;
+    try {
+      final toWrite = _logBuffer.join('\n');
+      _logBuffer.clear();
+      await _logFile!.writeAsString('$toWrite\n', mode: FileMode.append);
+    } catch (_) {
+      // Ignore write errors
+    } finally {
+      _isWriting = false;
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'dart:io' show exit, Platform;
 
 class ExitScreen extends StatefulWidget {
   const ExitScreen({super.key});
@@ -15,6 +16,9 @@ class ExitScreen extends StatefulWidget {
 class _ExitScreenState extends State<ExitScreen> {
   final FocusNode _backButtonFocus = FocusNode();
   final FocusNode _exitButtonFocus = FocusNode();
+  
+  // Prevent back button events for a short time after entering the screen
+  bool _allowBack = false;
 
   final List<String> _exitMessages = [
     "Peace out, cubscout...",
@@ -86,9 +90,34 @@ class _ExitScreenState extends State<ExitScreen> {
     super.initState();
     _selectedMessage = _exitMessages[Random().nextInt(_exitMessages.length)];
     // Ensure the Exit button immediately receives focus when this screen appears
+    // Also delay allowing back button to prevent immediate exit from stale events
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _exitButtonFocus.requestFocus();
+      if (mounted) {
+        _exitButtonFocus.requestFocus();
+        // Allow back navigation after a short delay to ignore stale back events
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            setState(() => _allowBack = true);
+          }
+        });
+      }
     });
+  }
+
+  void _exitApp() {
+    // Try multiple methods to ensure the app exits
+    if (Platform.isAndroid) {
+      // On Android, use SystemNavigator.pop() first, then fall back to exit()
+      SystemNavigator.pop().then((_) {
+        // If we're still here after a short delay, force exit
+        Future.delayed(const Duration(milliseconds: 100), () {
+          exit(0);
+        });
+      });
+    } else {
+      // On other platforms, just exit directly
+      exit(0);
+    }
   }
 
   @override
@@ -103,7 +132,7 @@ class _ExitScreenState extends State<ExitScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
+        if (!didPop && _allowBack) {
           // Prevent immediate return - add small delay
           Future.delayed(const Duration(milliseconds: 100), () {
             if (mounted && context.mounted) {
@@ -155,7 +184,7 @@ class _ExitScreenState extends State<ExitScreen> {
                       width: 160,
                       child: BrandPrimaryButton(
                         focusNode: _exitButtonFocus,
-                        onPressed: () => SystemNavigator.pop(),
+                        onPressed: _exitApp,
                         label: 'Exit App',
                         minHeight: 46,
                         expand: true,
