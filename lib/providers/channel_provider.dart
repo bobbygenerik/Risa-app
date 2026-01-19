@@ -287,7 +287,8 @@ class ChannelProvider with ChangeNotifier {
   List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
     if (_channelMaps.isEmpty || limit <= 0) return const [];
     final total = _channelMaps.length;
-    final count = limit.clamp(0, total);
+    final count = limit.clamp(1, total); // Ensure count >= 1 to prevent division by zero
+    if (count <= 0) return const []; // Extra safety check
     final step = (total / count).ceil().clamp(1, total);
     final sampled = <Map<String, dynamic>>[];
     for (int i = 0; i < total && sampled.length < count; i += step) {

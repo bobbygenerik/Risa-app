@@ -212,8 +212,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               channelProvider.getChannelSampleMapsByStride(sampleSize);
           if (sample.isNotEmpty) {
             final matched = epgService.estimateMatchesFast(sample);
-            mappingCount = matched *
-                (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
+            // Guard against division by zero - use sample.length if not empty, else 1
+            final divisor = sample.isNotEmpty ? sample.length : 1;
+            mappingCount = matched * (totalChannels ~/ divisor);
           }
         } catch (e, st) {
           debugLog('EPG Diagnostic: sampling failed: $e\n$st');

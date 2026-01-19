@@ -1349,8 +1349,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 epgService.isDownloading ||
                 epgService.isParsing ||
                 epgService.isLoading;
+            // Only show startup overlay on cold starts - warm starts use skeleton loaders
             final showStartupOverlay =
-                (channelProvider.isColdStartLoad || _startupOverlayActive) &&
+                channelProvider.isColdStartLoad &&
+                    _startupOverlayActive &&
                     overlayBusy;
             if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2317,7 +2319,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _firstChannelFocus.requestFocus();
+              // Focus the first card in the featured row, not a regular category row
+              _firstFeaturedFocus.requestFocus();
               return KeyEventResult.handled;
             }
           }
@@ -4036,11 +4039,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
     // Tighter spacing - minimal gaps between elements
-    final infoSpacing = context.spacingXs() + context.spacingXs();
+    final infoSpacing = context.spacingXs();
     final infoHeight = titleHeight + timeHeight + infoSpacing;
     // Minimal vertical padding, just enough for focus scaling
     final rowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
+        cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
@@ -4071,23 +4074,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 1),
+          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingXs() * 0.5),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
               color: AppTheme.textPrimary,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 2),
-          child: Container(
-            height: 3,
-            width: context.spacingXl(),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(999),
             ),
           ),
         ),
@@ -4147,7 +4139,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        SizedBox(height: context.spacingXs()),
+        SizedBox(height: context.spacingXs() * 0.5),
       ],
     );
   }
@@ -4263,19 +4255,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
     // Match the tighter spacing used in _buildChannelSection
-    final infoSpacing = context.spacingXs() + context.spacingXs();
+    final infoSpacing = context.spacingXs();
     final infoHeight = titleHeight + timeHeight + infoSpacing;
-    // Account for category header + underline + spacers
+    // Account for category header + spacers (no underline anymore)
     final captionStyle = AppTypography.caption(context);
     final captionHeight =
         (captionStyle.fontSize ?? 13.0) * (captionStyle.height ?? 1.2);
-    // Header spacing structure: title bottom(2) + underline height(3) + underline bottom(8)
-    const headerSpacing = 1 + 3 + 2;
-    final rowBottomSpacing = context.spacingSm();
+    // Header spacing: title bottom padding only
+    final headerSpacing = context.spacingXs() * 0.5;
+    final rowBottomSpacing = context.spacingXs() * 0.5;
 
     // Total calculated height of one full row block in the list
     final cardRowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
+        cardHeight + infoHeight + focusExtra * 0.5;
     return cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
   }
 
@@ -4313,31 +4305,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       required double rowHeight,
       FocusNode? focusNode,
       VoidCallback? onItemFocus}) {
-    return SizedBox(
-      width: cardWidth,
-      height: rowHeight,
-      child: Focus(
-        focusNode: focusNode,
-        canRequestFocus: true,
-        onFocusChange: (hasFocus) {
-          if (hasFocus) {
-            // Update focused index without triggering full screen rebuild if possible
-            _focusedIndexBySection[sectionKey] = index;
-            _lastFocusedCardKey =
-                '$sectionKey|${channel.tvgId ?? channel.id}|$index';
-            _scrollToHeroPeekOnFocus();
-            onItemFocus?.call();
-          } else if (_focusedIndexBySection[sectionKey] == index) {
-            // Clear the stored focus when the card loses focus so hero navigation
-            // can resume once all rows are unfocused.
-            _focusedIndexBySection[sectionKey] = -1;
-          }
-        },
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.space) {
+    // RepaintBoundary prevents repaints from propagating to/from other cards
+    return RepaintBoundary(
+      child: SizedBox(
+        width: cardWidth,
+        height: rowHeight,
+        child: Focus(
+          focusNode: focusNode,
+          canRequestFocus: true,
+          onFocusChange: (hasFocus) {
+            if (hasFocus) {
+              // Update focused index without triggering full screen rebuild if possible
+              _focusedIndexBySection[sectionKey] = index;
+              _lastFocusedCardKey =
+                  '$sectionKey|${channel.tvgId ?? channel.id}|$index';
+              _scrollToHeroPeekOnFocus();
+              onItemFocus?.call();
+            } else if (_focusedIndexBySection[sectionKey] == index) {
+              // Clear the stored focus when the card loses focus so hero navigation
+              // can resume once all rows are unfocused.
+              _focusedIndexBySection[sectionKey] = -1;
+            }
+          },
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.select ||
+                  event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space) {
               _openChannelPlayer(channel);
               return KeyEventResult.handled;
             }
@@ -4441,6 +4435,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           },
         ),
       ),
+    ),
     );
   }
 
