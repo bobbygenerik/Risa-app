@@ -112,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _loadSettingsSync();
   }
 
-  void _loadSettingsSync() async {
+  Future<void> _loadSettingsSync() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
@@ -948,7 +948,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     return 'http://$trimmed';
   }
 
-  void _loadM3uPlaylist() async {
+  Future<void> _loadM3uPlaylist() async {
     final url = _normalizeHttpUrl(_m3uUrlController.text);
     if (url.isEmpty) {
       _showMessage(AppLocalizations.of(context)!.pleaseEnterPlaylistUrl);
@@ -997,7 +997,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  void _loadXtreamPlaylist() async {
+  Future<void> _loadXtreamPlaylist() async {
     final server = _normalizeHttpUrl(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
@@ -1118,6 +1118,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _showMessage('Updating EPG...');
     final service = Provider.of<IncrementalEpgService>(context, listen: false);
     await service.initialize();
+    if (!mounted) return;
     _showMessage('EPG update triggered.');
   }
 
@@ -1130,6 +1131,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     await prefs.remove('live_tv_program_artwork_title_cache_v1');
     await prefs.remove('live_tv_program_artwork_negative_cache_v1');
     await epgService.clearAllData();
+    if (!mounted) return;
     setState(() {});
     _showMessage('EPG cleared.');
   }
@@ -1137,13 +1139,16 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _browseStorage() async {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
+      if (!mounted) return;
       if (result != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('recording_storage_path', result);
+        if (!mounted) return;
         _showMessage('Storage path updated: $result');
         setState(() {});
       }
     } catch (e) {
+      if (!mounted) return;
       _showMessage('Failed to select directory: $e');
     }
   }
@@ -1312,7 +1317,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     try {
       if (await BackupService.importBackup()) {
         _showMessage('Import successful! Restarting...');
-        _loadSettingsSync();
+        unawaited(_loadSettingsSync());
       }
     } catch (e) {
       _showMessage('Import failed: $e');

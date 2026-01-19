@@ -1,0 +1,565 @@
+[  +23 ms] executing: uname -m
+[   +6 ms] Exit code 0 from: uname -m
+[        ] x86_64
+[   +8 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[        ] executing: [/home/ubuntu/flutter/] git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[   +5 ms] Exit code 0 from: git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[        ] 2026-01-08 10:49:17 -0800
+[  +10 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +1 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +29 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[  +15 ms] Skipping pub get: version match.
+[ +104 ms] Found plugin wakelock_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/wakelock_plus-1.4.0/
+[  +14 ms] Found plugin package_info_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/package_info_plus-9.0.0/
+[   +7 ms] Found plugin sqflite at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite-2.4.2/
+[   +4 ms] Found plugin sqflite_darwin at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2/
+[   +1 ms] Found plugin sqflite_android at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+2/
+[   +1 ms] Found plugin speech_to_text at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text-7.3.0/
+[   +1 ms] Found plugin speech_to_text_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text_windows-1.0.0+beta.8/
+[   +3 ms] Found plugin shared_preferences at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences-2.5.4/
+[   +1 ms] Found plugin shared_preferences_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1/
+[   +1 ms] Found plugin path_provider_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/
+[   +3 ms] Found plugin shared_preferences_web at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3/
+[   +5 ms] Found plugin shared_preferences_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/
+[   +1 ms] Found plugin path_provider_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/
+[   +1 ms] Found plugin shared_preferences_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/
+[   +1 ms] Found plugin shared_preferences_android at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.18/
+[   +1 ms] Found plugin record at /home/ubuntu/.pub-cache/hosted/pub.dev/record-6.1.2/
+[   +2 ms] Found plugin record_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/record_windows-1.0.7/
+[   +1 ms] Found plugin record_web at /home/ubuntu/.pub-cache/hosted/pub.dev/record_web-1.2.2/
+[        ] Found plugin record_macos at /home/ubuntu/.pub-cache/hosted/pub.dev/record_macos-1.1.2/
+[   +1 ms] Found plugin record_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/record_linux-1.2.1/
+[        ] Found plugin record_ios at /home/ubuntu/.pub-cache/hosted/pub.dev/record_ios-1.1.5/
+[        ] Found plugin record_android at /home/ubuntu/.pub-cache/hosted/pub.dev/record_android-1.4.5/
+[   +2 ms] Found plugin permission_handler at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler-12.0.1/
+[   +1 ms] Found plugin permission_handler_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1/
+[   +3 ms] Found plugin permission_handler_html at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+5/
+[   +1 ms] Found plugin permission_handler_apple at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/
+[   +1 ms] Found plugin permission_handler_android at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_android-13.0.1/
+[   +4 ms] Found plugin path_provider at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider-2.1.5/
+[   +1 ms] Found plugin path_provider_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.1/
+[   +1 ms] Found plugin path_provider_android at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_android-2.2.22/
+[   +1 ms] Found plugin media_kit_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_video-1.3.1/
+[   +1 ms] Found plugin volume_controller at /home/ubuntu/.pub-cache/hosted/pub.dev/volume_controller-3.4.1/
+[   +2 ms] Found plugin screen_brightness_android at /home/ubuntu/.pub-cache/hosted/pub.dev/screen_brightness_android-2.1.3/
+[   +3 ms] Found plugin media_kit_libs_android_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_libs_android_video-1.3.8/
+[   +2 ms] Found plugin google_mlkit_translation at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_translation-0.13.0/
+[        ] Found plugin google_mlkit_commons at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.0/
+[        ] Found plugin google_mlkit_language_id at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_language_id-0.13.0/
+[  +11 ms] Found plugin file_picker at /home/ubuntu/.pub-cache/hosted/pub.dev/file_picker-10.3.8/
+[   +1 ms] Found plugin flutter_plugin_android_lifecycle at /home/ubuntu/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.33/
+[  +67 ms] Found plugin wakelock_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/wakelock_plus-1.4.0/
+[   +3 ms] Found plugin package_info_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/package_info_plus-9.0.0/
+[   +4 ms] Found plugin sqflite at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite-2.4.2/
+[   +1 ms] Found plugin sqflite_darwin at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2/
+[        ] Found plugin sqflite_android at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+2/
+[        ] Found plugin speech_to_text at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text-7.3.0/
+[        ] Found plugin speech_to_text_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text_windows-1.0.0+beta.8/
+[   +1 ms] Found plugin shared_preferences at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences-2.5.4/
+[        ] Found plugin shared_preferences_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1/
+[   +1 ms] Found plugin path_provider_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/
+[   +1 ms] Found plugin shared_preferences_web at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3/
+[   +1 ms] Found plugin shared_preferences_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/
+[        ] Found plugin path_provider_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/
+[   +1 ms] Found plugin shared_preferences_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/
+[        ] Found plugin shared_preferences_android at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.18/
+[   +1 ms] Found plugin record at /home/ubuntu/.pub-cache/hosted/pub.dev/record-6.1.2/
+[   +1 ms] Found plugin record_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/record_windows-1.0.7/
+[   +2 ms] Found plugin record_web at /home/ubuntu/.pub-cache/hosted/pub.dev/record_web-1.2.2/
+[        ] Found plugin record_macos at /home/ubuntu/.pub-cache/hosted/pub.dev/record_macos-1.1.2/
+[        ] Found plugin record_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/record_linux-1.2.1/
+[        ] Found plugin record_ios at /home/ubuntu/.pub-cache/hosted/pub.dev/record_ios-1.1.5/
+[        ] Found plugin record_android at /home/ubuntu/.pub-cache/hosted/pub.dev/record_android-1.4.5/
+[   +1 ms] Found plugin permission_handler at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler-12.0.1/
+[        ] Found plugin permission_handler_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1/
+[   +1 ms] Found plugin permission_handler_html at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+5/
+[        ] Found plugin permission_handler_apple at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/
+[        ] Found plugin permission_handler_android at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_android-13.0.1/
+[        ] Found plugin path_provider at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider-2.1.5/
+[        ] Found plugin path_provider_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.1/
+[        ] Found plugin path_provider_android at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_android-2.2.22/
+[        ] Found plugin media_kit_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_video-1.3.1/
+[        ] Found plugin volume_controller at /home/ubuntu/.pub-cache/hosted/pub.dev/volume_controller-3.4.1/
+[   +2 ms] Found plugin screen_brightness_android at /home/ubuntu/.pub-cache/hosted/pub.dev/screen_brightness_android-2.1.3/
+[   +2 ms] Found plugin media_kit_libs_android_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_libs_android_video-1.3.8/
+[   +1 ms] Found plugin google_mlkit_translation at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_translation-0.13.0/
+[        ] Found plugin google_mlkit_commons at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.0/
+[        ] Found plugin google_mlkit_language_id at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_language_id-0.13.0/
+[   +5 ms] Found plugin file_picker at /home/ubuntu/.pub-cache/hosted/pub.dev/file_picker-10.3.8/
+[        ] Found plugin flutter_plugin_android_lifecycle at /home/ubuntu/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.33/
+[  +16 ms] Skipping generating web_plugin_registrant.dart because it is up-to-date.
+[  +32 ms] Found plugin wakelock_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/wakelock_plus-1.4.0/
+[   +2 ms] Found plugin package_info_plus at /home/ubuntu/.pub-cache/hosted/pub.dev/package_info_plus-9.0.0/
+[   +3 ms] Found plugin sqflite at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite-2.4.2/
+[   +2 ms] Found plugin sqflite_darwin at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2/
+[   +1 ms] Found plugin sqflite_android at /home/ubuntu/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+2/
+[   +1 ms] Found plugin speech_to_text at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text-7.3.0/
+[   +1 ms] Found plugin speech_to_text_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/speech_to_text_windows-1.0.0+beta.8/
+[   +1 ms] Found plugin shared_preferences at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences-2.5.4/
+[        ] Found plugin shared_preferences_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1/
+[   +1 ms] Found plugin path_provider_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/
+[   +1 ms] Found plugin shared_preferences_web at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3/
+[        ] Found plugin shared_preferences_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/
+[        ] Found plugin path_provider_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/
+[   +1 ms] Found plugin shared_preferences_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/
+[        ] Found plugin shared_preferences_android at /home/ubuntu/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.18/
+[        ] Found plugin record at /home/ubuntu/.pub-cache/hosted/pub.dev/record-6.1.2/
+[   +1 ms] Found plugin record_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/record_windows-1.0.7/
+[   +1 ms] Found plugin record_web at /home/ubuntu/.pub-cache/hosted/pub.dev/record_web-1.2.2/
+[        ] Found plugin record_macos at /home/ubuntu/.pub-cache/hosted/pub.dev/record_macos-1.1.2/
+[        ] Found plugin record_linux at /home/ubuntu/.pub-cache/hosted/pub.dev/record_linux-1.2.1/
+[        ] Found plugin record_ios at /home/ubuntu/.pub-cache/hosted/pub.dev/record_ios-1.1.5/
+[        ] Found plugin record_android at /home/ubuntu/.pub-cache/hosted/pub.dev/record_android-1.4.5/
+[   +2 ms] Found plugin permission_handler at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler-12.0.1/
+[        ] Found plugin permission_handler_windows at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1/
+[   +2 ms] Found plugin permission_handler_html at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+5/
+[        ] Found plugin permission_handler_apple at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/
+[        ] Found plugin permission_handler_android at /home/ubuntu/.pub-cache/hosted/pub.dev/permission_handler_android-13.0.1/
+[   +1 ms] Found plugin path_provider at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider-2.1.5/
+[        ] Found plugin path_provider_foundation at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.1/
+[        ] Found plugin path_provider_android at /home/ubuntu/.pub-cache/hosted/pub.dev/path_provider_android-2.2.22/
+[        ] Found plugin media_kit_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_video-1.3.1/
+[        ] Found plugin volume_controller at /home/ubuntu/.pub-cache/hosted/pub.dev/volume_controller-3.4.1/
+[   +1 ms] Found plugin screen_brightness_android at /home/ubuntu/.pub-cache/hosted/pub.dev/screen_brightness_android-2.1.3/
+[   +1 ms] Found plugin media_kit_libs_android_video at /home/ubuntu/.pub-cache/hosted/pub.dev/media_kit_libs_android_video-1.3.8/
+[   +1 ms] Found plugin google_mlkit_translation at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_translation-0.13.0/
+[        ] Found plugin google_mlkit_commons at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.0/
+[        ] Found plugin google_mlkit_language_id at /home/ubuntu/.pub-cache/hosted/pub.dev/google_mlkit_language_id-0.13.0/
+[   +5 ms] Found plugin file_picker at /home/ubuntu/.pub-cache/hosted/pub.dev/file_picker-10.3.8/
+[        ] Found plugin flutter_plugin_android_lifecycle at /home/ubuntu/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.33/
+[   +8 ms] Generating /home/ubuntu/projects/Risa-app/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.java because it is up-to-date.
+[   +4 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[        ] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugins.cmake because it is up-to-date.
+[ +233 ms] dart /home/ubuntu/flutter/bin/cache/dart-sdk/bin/snapshots/analysis_server.dart.snapshot --disable-server-feature-completion --disable-server-feature-search --sdk /home/ubuntu/flutter/bin/cache/dart-sdk --suppress-analytics
+[  +14 ms] ==> {"id":"1","method":"server.setSubscriptions","params":{"subscriptions":["STATUS"]}}
+[        ] ==> {"id":"2","method":"analysis.setAnalysisRoots","params":{"included":["/home/ubuntu/projects/Risa-app"],"excluded":[]}}
+[        ] Analyzing Risa-app...
+[ +112 ms] <== {"event":"server.connected","params":{"version":"1.40.0","pid":1481752}}
+[   +8 ms] <== {"id":"1"}
+[+2132 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/analysis_options.yaml","errors":[]}}
+[  +23 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/android/app/src/debug/AndroidManifest.xml","errors":[]}}
+[   +5 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/android/app/src/main/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/android/app/src/profile/AndroidManifest.xml","errors":[]}}
+[ +351 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/tmp/tivimate_base/original/AndroidManifest.xml","errors":[]}}
+[  +37 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/tmp/tivimate_base/AndroidManifest.xml","errors":[]}}
+[  +41 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/tmp/tivimate_jadx/resources/AndroidManifest.xml","errors":[]}}
+[ +279 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/pubspec.yaml","errors":[]}}
+[  +76 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +44 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_language_id/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +53 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +29 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/permission_handler_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[ +132 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/packaged_manifests/profile/processProfileManifestForPackage/AndroidManifest.xml","errors":[]}}
+[  +19 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/debug/outputDebugAppLinkSettings/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/release/outputReleaseAppLinkSettings/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/profile/processProfileMainManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifest/profile/outputProfileAppLinkSettings/AndroidManifest.xml","errors":[]}}
+[  +64 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/app/intermediates/merged_manifests/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +51 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +24 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[ +114 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +57 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/shared_preferences_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +76 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +25 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/wakelock_plus/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +45 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +23 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_commons/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +40 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +22 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/path_provider_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +59 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +21 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/speech_to_text/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +45 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +23 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_libs_android_video/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +46 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +24 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/media_kit_video/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +55 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +24 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/package_info_plus/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +52 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +21 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/file_picker/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +67 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +27 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/record_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +77 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +40 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/google_mlkit_translation/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +56 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +22 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/volume_controller/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +41 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +22 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/sqflite_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +64 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/merged_manifest/profile/processProfileManifest/AndroidManifest.xml","errors":[]}}
+[  +24 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/build/screen_brightness_android/intermediates/aapt_friendly_merged_manifests/profile/processProfileManifest/aapt/AndroidManifest.xml","errors":[]}}
+[  +15 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/pubspec.yaml","errors":[]}}
+[  +11 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/analysis_options.yaml","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/android/app/src/debug/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/android/app/src/main/AndroidManifest.xml","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/android/app/src/profile/AndroidManifest.xml","errors":[]}}
+[   +4 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/pubspec.yaml","errors":[]}}
+[   +3 ms] <== {"event":"server.status","params":{"analysis":{"isAnalyzing":true}}}
+[ +132 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test_stream.dart","errors":[]}}
+[  +61 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","errors":[{"severity":"ERROR","type":"COMPILE_TIME_ERROR","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":1535,"length":10,"startLine":57,"startColumn":62,"endLine":57,"endColumn":72},"message":"Undefined name 'i_sport_hd'.","correction":"Try correcting the name to one that is defined, or defining the name.","code":"undefined_identifier","url":"https://dart.dev/diagnostics/undefined_identifier","hasFix":false},{"severity":"WARNING","type":"STATIC_WARNING","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":1831,"length":11,"startLine":67,"startColumn":10,"endLine":67,"endColumn":21},"message":"The value of the local variable 'checksumOld' isn't used.","correction":"Try removing the variable or using it.","code":"unused_local_variable","url":"https://dart.dev/diagnostics/unused_local_variable","hasFix":false},{"severity":"WARNING","type":"STATIC_WARNING","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":2188,"length":11,"startLine":79,"startColumn":10,"endLine":79,"endColumn":21},"message":"The value of the local variable 'checksumNew' isn't used.","correction":"Try removing the variable or using it.","code":"unused_local_variable","url":"https://dart.dev/diagnostics/unused_local_variable","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":1642,"length":5,"startLine":61,"startColumn":3,"endLine":61,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":1689,"length":5,"startLine":62,"startColumn":3,"endLine":62,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":1730,"length":5,"startLine":63,"startColumn":3,"endLine":63,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":2059,"length":5,"startLine":75,"startColumn":3,"endLine":75,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":2640,"length":5,"startLine":91,"startColumn":3,"endLine":91,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false},{"severity":"INFO","type":"LINT","location":{"file":"/home/ubuntu/projects/Risa-app/benchmarks/trigram_benchmark.dart","offset":2705,"length":5,"startLine":93,"startColumn":3,"endLine":93,"endColumn":8},"message":"Don't invoke 'print' in production code.","correction":"Try using a logging framework.","code":"avoid_print","url":"https://dart.dev/diagnostics/avoid_print","hasFix":false}]}}
+[ +549 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/widget_test.dart","errors":[]}}
+[  +38 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/tmdb_normalization_benchmark_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/hash_utils_test.dart","errors":[]}}
+[   +4 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/optimized_channel_provider_test.dart","errors":[]}}
+[  +20 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/playlist_loader_test.dart","errors":[]}}
+[ +282 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/background_task_manager_test.dart","errors":[]}}
+[  +14 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/widgets/tv_friendly_text_field_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/user_profile_test.dart","errors":[]}}
+[  +21 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/services/integrated_transcription_service_test.dart","errors":[]}}
+[  +96 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/navigation_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/performance_benchmark_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/downloads_optimization_benchmark.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/profile_provider_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/epg_matcher_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/test/epg_normalization_test.dart","errors":[]}}
+[  +72 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/l10n/gen/app_localizations.dart","errors":[]}}
+[  +19 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/l10n/gen/app_localizations_en.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/omdb_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/oauth_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/fanart_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/tvdb_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/sportradar_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/thesportsdb_config.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/config/tmdb_config.dart","errors":[]}}
+[  +76 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/download_item.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/channel.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/content.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/program.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/profile_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/category.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/models/saved_playlist.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/sports_classifier.dart","errors":[]}}
+[  +48 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/crash_logger.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/image_url_helper.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/app_spacing.dart","errors":[]}}
+[  +39 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/memory_manager.dart","errors":[]}}
+[  +13 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/startup_probe.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/no_text_selection_controls.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/debouncer.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/epg_matching_utils.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/hash_utils.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/app_icons.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/app_typography.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/epg_matcher.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/image_load_probe.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/circuit_breaker.dart","errors":[]}}
+[  +62 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/snackbar_helper.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/network_error_logger.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/app_theme.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/performance_monitor.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/provider_normalizer.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/file_logger.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/logo_image_cache.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/app_colors.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/artwork_diagnostics.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/snackbar_utils.dart","errors":[]}}
+[  +22 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/debug_helper.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/utils/tv_focus_helper.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/startup_progress_widget.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/content_focus_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/brand_card.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/settings_layout.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/horizontal_channel_row.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/tv_friendly_text_field.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/optimized_channel_list.dart","errors":[]}}
+[  +52 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/brand_badge.dart","errors":[]}}
+[  +11 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/optimized_image.dart","errors":[]}}
+[  +23 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/settings_tile_widgets.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/hero_info_box.dart","errors":[]}}
+[   +7 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/sidebar_navigation.dart","errors":[]}}
+[  +25 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/channel_selection_dialog.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/compat_pop_scope.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/brand_button.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/search_popup.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/brand_text_field.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/whisper_model_manager.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/app_dialog.dart","errors":[]}}
+[  +44 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/main_shell.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/program_artwork_widget.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/focusable_card.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/live_subtitle_overlay.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/tv_focusable.dart","errors":[]}}
+[  +40 ms] <== {"id":"2"}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/skeleton_loader.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/cached_image.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/legal_disclaimer_dialog.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/epg_widgets.dart","errors":[]}}
+[ +134 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/exo_player_widget.dart","errors":[]}}
+[   +6 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/shimmer.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/hero_panel.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/brand_switch.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/content_hero.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/epg_mapping_dialogs.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/exoplayer_video_view.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/safe_pop_scope.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/go_to_settings_button.dart","errors":[]}}
+[   +2 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/voice_search_button.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/widgets/channel_logo_widget.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/providers/playlist_loader.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/providers/playlist_isolate.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/providers/channel_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/providers/optimized_channel_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/providers/settings_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/whisper_model_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/integrated_transcription_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/fast_startup_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/mlkit_translation_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/xtream_codes_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/whisper_transcription_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/m3u_parser_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/voice_search_service_stub.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/sportradar_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/whisper_ggml_service.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/fanart_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/focus_pool_service.dart","errors":[]}}
+[   +3 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/backup_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/optimized_epg_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/tmdb_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/whisper_platform_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/local_backup_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/timer_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/channel_logo_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/prewarm_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/tvdb_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/voice_search_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/ssl_handler.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/incremental_epg_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/local_db_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/ai_model_manager.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/provider_optimization_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/background_sync_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/service_validator.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/background_task_manager.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/native_capabilities_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/smart_cache_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/smart_learning_engine.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/logo_matching_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/http_client_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/google_drive_sync_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/whisper_speech_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/omdb_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/thesportsdb_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/parallel_processing_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/memory_mapped_file_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/cross_playlist_mapping_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/services/mlkit_translation_stub.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/state/epg_screen_state.dart","errors":[]}}
+[  +36 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/main.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/controllers/universal_player_controller.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/ai_models_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/recordings_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/playlist_manager_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/playlist_editor_screen.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/live_tv_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/favorites_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/epg_diagnostic_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/category_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/settings_screen.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/epg_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/exit_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/playlist_management_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/whisper_models_screen.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/epg_manager_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/search_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/epg_mapping_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/settings_screen_backup.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/ssl_settings_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/translation_models_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/enhanced_video_player_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/multi_view_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/debug_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/downloads_screen.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/exoplayer_fullscreen_screen.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/epg_screen_compact.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/live_tv_screen_minimal.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/lib/screens/video_player_router.dart","errors":[]}}
+[  +22 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/channel.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/content.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/program.dart","errors":[]}}
+[  +83 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/profile_provider.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/category.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/models/saved_playlist.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/utils/epg_matching_utils.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/utils/snackbar_helper.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/utils/app_theme.dart","errors":[]}}
+[   +5 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/risa_shared.dart","errors":[]}}
+[   +1 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/xtream_codes_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/m3u_parser_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/tmdb_service.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/epg_service.deprecated.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/ssl_handler.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/shared-code/lib/services/service_validator.dart","errors":[]}}
+[  +90 ms] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/test/widget_test.dart","errors":[]}}
+[        ] <== {"event":"analysis.errors","params":{"file":"/home/ubuntu/projects/Risa-app/platforms/companion-app/lib/main.dart","errors":[]}}
+[   +4 ms] <== {"event":"server.status","params":{"analysis":{"isAnalyzing":false}}}
+[   +2 ms] Analyzing Risa-app... (completed in 7.1s)
+[   +1 ms]   error • Undefined name 'i_sport_hd' • benchmarks/trigram_benchmark.dart:57:62 • undefined_identifier
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:61:3 • avoid_print
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:62:3 • avoid_print
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:63:3 • avoid_print
+[        ] warning • The value of the local variable 'checksumOld' isn't used • benchmarks/trigram_benchmark.dart:67:10 • unused_local_variable
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:75:3 • avoid_print
+[        ] warning • The value of the local variable 'checksumNew' isn't used • benchmarks/trigram_benchmark.dart:79:10 • unused_local_variable
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:91:3 • avoid_print
+[        ]    info • Don't invoke 'print' in production code • benchmarks/trigram_benchmark.dart:93:3 • avoid_print
+[   +2 ms] "flutter analyze" took 7,808ms.
+[  +13 ms] 9 issues found. (ran in 7.1s)
+[   +1 ms] 
+           #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
+           #1      AnalyzeOnce.analyze (package:flutter_tools/src/commands/analyze_once.dart:150:7)
+           <asynchronous suspension>
+           #2      AnalyzeCommand.runCommand (package:flutter_tools/src/commands/analyze.dart:381:7)
+           <asynchronous suspension>
+           #3      FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1559:27)
+           <asynchronous suspension>
+           #4      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #5      CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+           <asynchronous suspension>
+           #6      FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:487:9)
+           <asynchronous suspension>
+           #7      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #8      FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:422:5)
+           <asynchronous suspension>
+           #9      run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+           <asynchronous suspension>
+           #10     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #11     main (package:flutter_tools/executable.dart:103:3)
+           <asynchronous suspension>
+
+
+[        ] Running 1 shutdown hook
+[   +1 ms] Shutdown hooks complete
+[        ] <== {"event":"server.status","params":{"analysis":{"isAnalyzing":true}}}
+[        ] <== {"event":"server.status","params":{"analysis":{"isAnalyzing":false}}}
+[        ] exiting with code 1
