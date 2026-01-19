@@ -29,8 +29,7 @@ class CatchupInfo {
   const CatchupInfo({required this.streamId, required this.durationHours});
 }
 
-class IncrementalEpgService extends ChangeNotifier
-    with WidgetsBindingObserver {
+class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Set<String> _availableChannels = {};
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
@@ -49,6 +48,10 @@ class IncrementalEpgService extends ChangeNotifier
   bool _dbDisabled = false;
   bool _dbClosedDetected = false;
   bool _pendingAllowedRefresh = false;
+  double _epgProgress = 0.0;
+  String _epgProgressLabel = '';
+  int _lastParseDurationMs = 60000;
+  Timer? _parseProgressTimer;
   DateTime? _lastMappingsLoad;
   DateTime? _lastInitAttempt;
   Set<String> _allowedChannelIdsNormalized = {};
@@ -63,6 +66,14 @@ class IncrementalEpgService extends ChangeNotifier
   String? _xtreamServer;
   String? _xtreamUsername;
   String? _xtreamPassword;
+  bool _disposed = false; // Track if provider is disposed
+
+  /// Override notifyListeners to prevent "setState after dispose" crashes
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
@@ -98,6 +109,26 @@ class IncrementalEpgService extends ChangeNotifier
     'tsn1': ['tsn 1', 'tsn one'],
     'tsn2': ['tsn 2', 'tsn two'],
     'canalplus': ['canal+', 'canal plus', 'canal plus hd'],
+    // A&E and common ampersand channels
+    'ae': ['aetv', 'aande', 'aandenetwork', 'aehd', 'aetvhd', 'aandehd'],
+    'aetv': ['ae', 'aande', 'aandenetwork', 'aehd', 'aetvhd'],
+    // Other common ampersand-containing channels  
+    'hgtv': ['hgtvhd', 'hgtvus', 'homeandgarden'],
+    'tlc': ['tlchd', 'tlcus', 'thelearningchannel'],
+    'tnt': ['tnthd', 'tntus', 'turnernetworktelevision'],
+    'tbs': ['tbshd', 'tbsus', 'turnerbsystem'],
+    'usanetwork': ['usa', 'usahd', 'usanetworkhd'],
+    'syfy': ['syfyhd', 'syfyus', 'scifi', 'scifichannel'],
+    'bravo': ['bravohd', 'bravous', 'bravotv'],
+    'oxygen': ['oxygenhd', 'oxygenus', 'oxygentv'],
+    'history': ['historyhd', 'historyus', 'historychannel', 'histchannel'],
+    'discovery': ['discoveryhd', 'discoveryus', 'discoverychannel', 'disc'],
+    'nationalgeographic': ['natgeo', 'natgeohd', 'natgeowild', 'ngc'],
+    'foodnetwork': ['food', 'foodhd', 'foodus', 'foodtv'],
+    'hbo': ['hbohd', 'hbous', 'homeboxoffice'],
+    'showtime': ['showtimehd', 'sho', 'shohd'],
+    'starz': ['starzhd', 'starzus'],
+    'cinemax': ['cinemaxhd', 'max', 'maxhd'],
   };
 
   static final RegExp _httpSchemeRe =
@@ -203,6 +234,16 @@ class IncrementalEpgService extends ChangeNotifier
   int get allowedChannelCount => _allowedChannelCount;
   int get catchupChannelCount => _catchupByNormalizedId.length;
 
+  /// Returns true if programs are actively being loaded from DB
+  bool get isBatchLoading => _pendingBatch.isNotEmpty || _batchTimer != null;
+
+  /// Returns true if we have any loaded programs
+  bool get hasLoadedPrograms =>
+      _programsByChannel.values.any((list) => list.isNotEmpty);
+  double get epgProgress => _epgProgress;
+  String? get epgProgressLabel =>
+      _epgProgressLabel.isNotEmpty ? _epgProgressLabel : null;
+
   static String normalizeForFilter(String input) {
     return _normalizeForMatch(input);
   }
@@ -244,6 +285,41 @@ class IncrementalEpgService extends ChangeNotifier
     _isLoading = false;
     _isDownloading = false;
     _isParsing = false;
+    _stopParseProgressTimer();
+    _epgProgress = 0.0;
+    _epgProgressLabel = '';
+  }
+
+  void _setEpgProgress(double value, {String? label}) {
+    final clamped = value.clamp(0.0, 1.0);
+    final labelChanged = label != null && label != _epgProgressLabel;
+    if ((clamped - _epgProgress).abs() < 0.01 && !labelChanged) {
+      return;
+    }
+    _epgProgress = clamped;
+    if (label != null) {
+      _epgProgressLabel = label;
+    }
+    notifyListeners();
+  }
+
+  void _startParseProgressTimer() {
+    _stopParseProgressTimer();
+    final parseStart = DateTime.now();
+    _setEpgProgress(0.35, label: 'Parsing EPG');
+    _parseProgressTimer =
+        Timer.periodic(const Duration(milliseconds: 500), (_) {
+      final elapsed = DateTime.now().difference(parseStart).inMilliseconds;
+      final estimate = _lastParseDurationMs > 0 ? _lastParseDurationMs : 60000;
+      final ratio = (elapsed / estimate).clamp(0.0, 0.98);
+      final progress = 0.35 + (0.35 * ratio);
+      _setEpgProgress(progress);
+    });
+  }
+
+  void _stopParseProgressTimer() {
+    _parseProgressTimer?.cancel();
+    _parseProgressTimer = null;
   }
 
   void _invalidateProgramIndexCache() {
@@ -296,7 +372,7 @@ class IncrementalEpgService extends ChangeNotifier
 
     try {
       debugLog('EPG: Starting progressive EPG initialization...');
-      
+
       // Initialize DB with timeout
       try {
         await _db.init().timeout(const Duration(seconds: 5));
@@ -312,7 +388,7 @@ class IncrementalEpgService extends ChangeNotifier
           prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
       _cacheDuration = Duration(hours: userCacheHours);
       debugLog('EPG: Using cache duration of $userCacheHours hours');
-      
+
       // Get EPG URL
       final customEpgUrl = prefs.getString('custom_epg_url');
       final storedEpgUrl = prefs.getString('epg_url');
@@ -355,17 +431,16 @@ class IncrementalEpgService extends ChangeNotifier
 
       if (_epgUrl != null && _epgUrl!.isNotEmpty) {
         debugLog('EPG: Progressive initialization with URL: $_epgUrl');
-        
+
         // Try loading persisted normalized mapping early
         await _loadNormalizedMappingFromPrefs();
         await loadMappingsFromDb();
 
         // Load current day first for fast UI response
         await _loadCurrentDayPrograms(forceRefresh: forceRefresh);
-        
+
         // Load remaining days in background
         unawaited(_loadRemainingDaysInBackground());
-        
       } else {
         debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
         _error = 'No EPG URL configured';
@@ -484,7 +559,6 @@ class IncrementalEpgService extends ChangeNotifier
         allowStaleCache: !forceRefresh,
         currentDayOnly: true,
       );
-      
     } catch (e) {
       debugLog('EPG: Current day loading error: $e');
       if (_isDatabaseClosedError(e)) {
@@ -505,10 +579,10 @@ class IncrementalEpgService extends ChangeNotifier
   Future<void> _loadRemainingDaysInBackground() async {
     try {
       debugLog('EPG: Loading remaining EPG days in background...');
-      
+
       // Small delay to let current day render first
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       final start = DateTime.now();
       await _loadChannelList(
         forceRefresh: false,
@@ -518,7 +592,7 @@ class IncrementalEpgService extends ChangeNotifier
       );
       debugLog(
           'EPG: Background EPG load took ${DateTime.now().difference(start).inMilliseconds}ms');
-      
+
       debugLog('EPG: ✓ Full EPG loaded in background');
       // CRITICAL: Notify listeners so UI knows EPG data is ready
       notifyListeners();
@@ -530,7 +604,7 @@ class IncrementalEpgService extends ChangeNotifier
 
   /// Check if EPG service has usable data available
   bool get hasUsableData {
-    return _programsByChannel.isNotEmpty ||
+    return hasLoadedPrograms ||
         (_normalizedAvailableChannels?.isNotEmpty == true) ||
         _availableChannels.isNotEmpty;
   }
@@ -618,7 +692,8 @@ class IncrementalEpgService extends ChangeNotifier
     await _initializeProgressively(forceRefresh: forceRefresh);
   }
 
-  Future<void> clearAllData({bool clearUrls = true, bool clearSavedPlaylists = true}) async {
+  Future<void> clearAllData(
+      {bool clearUrls = true, bool clearSavedPlaylists = true}) async {
     _resetLoadingState();
     _error = null;
     _hasParsed = false;
@@ -834,6 +909,21 @@ class IncrementalEpgService extends ChangeNotifier
     return File('${dir.path}/$_epgCacheBackupFileName');
   }
 
+  Future<void> _purgeCacheFiles() async {
+    try {
+      final cacheFile = await _getCacheFile();
+      if (await cacheFile.exists()) {
+        await cacheFile.delete();
+      }
+    } catch (_) {}
+    try {
+      final backupFile = await _getCacheBackupFile();
+      if (await backupFile.exists()) {
+        await backupFile.delete();
+      }
+    } catch (_) {}
+  }
+
   Future<void> _restoreCacheFromBackupIfMissing() async {
     try {
       final cacheFile = await _getCacheFile();
@@ -899,6 +989,8 @@ class IncrementalEpgService extends ChangeNotifier
       _isDownloading = false;
       _isParsing = false;
       _isLoading = false;
+      _epgProgress = 0.0;
+      _epgProgressLabel = '';
       notifyListeners();
       return;
     }
@@ -913,7 +1005,8 @@ class IncrementalEpgService extends ChangeNotifier
     // use the stale cache for immediate loading and refresh in background
     if (!forceRefresh) {
       final hasCache = await _isCacheValid(allowStale: true);
-      if (hasCache && _programsByChannel.isNotEmpty) {
+      // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
+      if (hasCache && hasLoadedPrograms) {
         debugLog('EPG: Using existing cached data for immediate load.');
         return;
       }
@@ -934,6 +1027,7 @@ class IncrementalEpgService extends ChangeNotifier
     _isDownloading = true;
     _error = null;
     notifyListeners();
+    _setEpgProgress(0.05, label: 'Downloading EPG');
     debugLog('EPG: Starting EPG download from $_epgUrl...');
     final downloadStart = DateTime.now();
 
@@ -949,6 +1043,7 @@ class IncrementalEpgService extends ChangeNotifier
       request.headers.add('Accept-Encoding', 'gzip, deflate');
 
       final response = await request.close();
+      final contentLength = response.contentLength;
 
       // 1) HTTP status check — abort gracefully on non-200
       if (response.statusCode != 200) {
@@ -970,11 +1065,19 @@ class IncrementalEpgService extends ChangeNotifier
       final isGzip = contentTypeHeader != null &&
           (contentTypeHeader.contains('gzip') ||
               contentTypeHeader.contains('application/x-gzip'));
-      if (!isXml && !isGzip) {
+      final isAttachment =
+          contentTypeHeader != null && contentTypeHeader.contains('attachment');
+      final isOctetStream = contentTypeHeader != null &&
+          contentTypeHeader.contains('application/octet-stream');
+      if (!isXml && !isGzip && !isAttachment && !isOctetStream) {
         _error =
             'EPG response is not XML (Content-Type: ${contentTypeHeader ?? 'unknown'})';
         debugLog('EPG: $_error');
         throw Exception(_error);
+      }
+      if (isAttachment || isOctetStream) {
+        debugLog(
+            'EPG: Content-Type is ${contentTypeHeader ?? 'unknown'}; will sniff body for XML/GZIP.');
       }
 
       final file = await _getCacheFile();
@@ -1083,6 +1186,13 @@ class IncrementalEpgService extends ChangeNotifier
             }
 
             received += data.length;
+            if (contentLength > 0 &&
+                !isGzipHeader &&
+                !isGzipExt &&
+                !isDeflateHeader) {
+              final ratio = (received / contentLength).clamp(0.0, 1.0);
+              _setEpgProgress(0.05 + (0.25 * ratio));
+            }
             if (received % (5 * 1024 * 1024) < 100000) {
               debugLog(
                   'EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
@@ -1261,6 +1371,7 @@ class IncrementalEpgService extends ChangeNotifier
     notifyListeners();
 
     int retryCount = 0;
+    var forceRefreshAfterParseFailure = false;
     while (retryCount < _maxRetries) {
       try {
         var deferRefresh = false;
@@ -1282,7 +1393,9 @@ class IncrementalEpgService extends ChangeNotifier
 
         if (!deferRefresh) {
           final downloadStart = DateTime.now();
-          await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
+          final effectiveForceRefresh =
+              forceRefresh || forceRefreshAfterParseFailure;
+          await _downloadEpgIfNeeded(forceRefresh: effectiveForceRefresh);
           debugLog(
               'EPG: Download phase took ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
         }
@@ -1386,14 +1499,12 @@ class IncrementalEpgService extends ChangeNotifier
           }
         }
 
-        if (!forceRefresh && _allowedChannelIdsNormalized.isEmpty) {
+        // Note: We no longer defer when _allowedChannelIdsNormalized is empty.
+        // Instead, we parse all available EPG data (line ~1467 handles this).
+        // This prevents the UI from being stuck when playlist loads after EPG init.
+        if (_allowedChannelIdsNormalized.isEmpty) {
           debugLog(
-              'EPG: Allowed channels not ready; deferring parse until playlist loads.');
-          _pendingAllowedRefresh = true;
-          _isLoading = false;
-          _isParsing = false;
-          notifyListeners();
-          return;
+              'EPG: Allowed channels not ready yet - will parse all EPG data and filter later.');
         }
 
         // Legacy optimization for mappings only (fallback)
@@ -1404,7 +1515,9 @@ class IncrementalEpgService extends ChangeNotifier
             _db.isReady) {
           try {
             final mappingCount = await _db.mappingCount();
-            if (mappingCount > 0 && _programsByChannel.isNotEmpty) {
+            // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
+            // _programsByChannel may have keys with empty lists from failed batch loads
+            if (mappingCount > 0 && hasLoadedPrograms) {
               debugLog(
                   'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
 
@@ -1447,24 +1560,44 @@ class IncrementalEpgService extends ChangeNotifier
         debugLog('EPG: Starting background parsing...');
         _isParsing = true;
         notifyListeners();
+        _startParseProgressTimer();
 
-        // CRITICAL FIX: If no allowed channels are set, load all available EPG data
-        // and filter later when channels become available
-        final effectiveAllowedChannels = _allowedChannelIdsNormalized.isNotEmpty
-            ? _allowedChannelIdsNormalized
-            : <String>{}; // Empty set means load all
+        // CRITICAL FIX: If we have cached EPG channel IDs from a previous session,
+        // use those for parsing instead of playlist IDs (which may not match EPG IDs).
+        // The matching between EPG and playlist happens later via _findBestEpgId.
+        Set<String> effectiveAllowedChannels;
+        if (_normalizedAvailableChannels != null &&
+            _normalizedAvailableChannels!.isNotEmpty) {
+          // Use cached EPG channel IDs - these are the actual IDs in the EPG file
+          effectiveAllowedChannels = _normalizedAvailableChannels!.keys.toSet();
+          debugLog(
+              'EPG: Using ${effectiveAllowedChannels.length} cached EPG channel IDs for parsing');
+        } else if (_allowedChannelIdsNormalized.isNotEmpty) {
+          // Fall back to playlist IDs if no cache exists
+          effectiveAllowedChannels = _allowedChannelIdsNormalized;
+          debugLog(
+              'EPG: Using ${effectiveAllowedChannels.length} playlist channel IDs for parsing');
+        } else {
+          // No cache and no playlist - parse all
+          effectiveAllowedChannels = <String>{};
+          debugLog('EPG: No channel filter - parsing all EPG data');
+        }
 
         // Pass file path to isolate instead of content string to save memory
         Future<Map<String, dynamic>> parseEpg(
             Set<String> allowedChannels) async {
           final now = DateTime.now();
-          final windowStart = currentDayOnly 
+          // Widen time window significantly to catch programs
+          // Past: 24 hours back (to catch stale EPG data or timezone issues)
+          // Future: configurable hours
+          final windowStart = currentDayOnly
               ? DateTime(now.year, now.month, now.day)
-              : now.subtract(const Duration(hours: 12));
+              : now.subtract(const Duration(hours: 24));
           final windowEnd = currentDayOnly
-              ? DateTime(now.year, now.month, now.day).add(const Duration(days: 1))
-              : now.add(Duration(hours: _epgFutureHours));
-          
+              ? DateTime(now.year, now.month, now.day)
+                  .add(const Duration(days: 1))
+              : now.add(Duration(hours: _epgFutureHours + 24));
+
           return compute(_parseEpgInIsolate, {
             'filePath': file.path,
             'allowedChannels': allowedChannels.toList(),
@@ -1477,12 +1610,16 @@ class IncrementalEpgService extends ChangeNotifier
 
         final parseStart = DateTime.now();
         var parseResult = await parseEpg(effectiveAllowedChannels);
+        _stopParseProgressTimer();
+        _lastParseDurationMs =
+            DateTime.now().difference(parseStart).inMilliseconds;
         debugLog(
             'EPG: Parse compute took ${DateTime.now().difference(parseStart).inMilliseconds}ms');
         final initialProgramCount = parseResult['programCount'] as int? ?? 0;
         final initialChannelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
-        bool noMatchingIdsForPlaylist = false;
+        debugLog(
+            'EPG: Initial parse result: $initialProgramCount programs, ${initialChannelIds.length} channels');
 
         // If we have allowed channels but no results, try fallback strategies
         if (_allowedChannelIdsNormalized.isNotEmpty &&
@@ -1514,6 +1651,18 @@ class IncrementalEpgService extends ChangeNotifier
           }
           final targetedAllowed =
               _allowedChannelIdsNormalized.intersection(normalizedIds);
+          debugLog(
+              'EPG: Scan found ${normalizedIds.length} EPG channels, ${_allowedChannelIdsNormalized.length} playlist channels, ${targetedAllowed.length} intersecting');
+          if (targetedAllowed.isEmpty &&
+              normalizedIds.isNotEmpty &&
+              _allowedChannelIdsNormalized.isNotEmpty) {
+            // Log sample IDs to help debug mismatch
+            final sampleEpg = normalizedIds.take(5).toList();
+            final samplePlaylist =
+                _allowedChannelIdsNormalized.take(5).toList();
+            debugLog('EPG: Sample EPG IDs: $sampleEpg');
+            debugLog('EPG: Sample playlist IDs: $samplePlaylist');
+          }
           if (targetedAllowed.isNotEmpty) {
             parseResult = await parseEpg(targetedAllowed);
           } else if (matchedChannelIds.isNotEmpty) {
@@ -1523,20 +1672,17 @@ class IncrementalEpgService extends ChangeNotifier
                 .toSet();
             parseResult = await parseEpg(matchedAllowed);
           } else {
+            // Final fallback: parse ALL EPG data without filtering
+            // Matching will happen at query time using _findBestEpgId
             debugLog(
-                'EPG: Targeted fallback found no matching IDs; using available data.');
-            noMatchingIdsForPlaylist = true;
-            parseResult = {
-              'programFilePath': null,
-              'programCount': 0,
-              'channelIds': scannedChannelIds,
-              'normalizedChannels': scannedNormalizedChannels,
-            };
+                'EPG: No direct ID matches found; parsing all EPG data for runtime matching.');
+            parseResult = await parseEpg(<String>{});
           }
         }
 
         final programFilePath = parseResult['programFilePath'] as String?;
         final parsedProgramCount = parseResult['programCount'] as int? ?? 0;
+        final hadXmlErrors = parseResult['hadXmlErrors'] as bool? ?? false;
         final channelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
         final channelHashes = (parseResult['channelHashes'] as Map?)
@@ -1550,18 +1696,25 @@ class IncrementalEpgService extends ChangeNotifier
               'EPG: Parse produced no programs; checking if we should use fallback data.');
 
           // If we have existing data and this is just an empty filtered result, keep existing data
-          if (_programsByChannel.isNotEmpty &&
-              _allowedChannelIdsNormalized.isNotEmpty) {
+          // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
+          if (hasLoadedPrograms && _allowedChannelIdsNormalized.isNotEmpty) {
             debugLog('EPG: Keeping existing data due to filtered empty result');
             _isParsing = false;
             _error = null;
             break;
           }
 
+          if (hadXmlErrors && !forceRefreshAfterParseFailure) {
+            debugLog(
+                'EPG: Parse failed with XML errors; purging cache and retrying download.');
+            await _purgeCacheFiles();
+            forceRefreshAfterParseFailure = true;
+            retryCount++;
+            continue;
+          }
+
           _isParsing = false;
-          _error = noMatchingIdsForPlaylist
-              ? 'No matching EPG IDs for this playlist. Check tvg-id or mapping.'
-              : 'No EPG data available.';
+          _error = 'No EPG data available.';
           debugLog('EPG: Parse produced no programs; clearing data.');
           if (programFilePath != null && programFilePath.isNotEmpty) {
             try {
@@ -1605,10 +1758,17 @@ class IncrementalEpgService extends ChangeNotifier
         // For background refresh, use double-buffering (stagedPrograms) to avoid UI flicker.
         // For foreground load, write directly to _programsByChannel so UI updates live.
         final ingestStart = DateTime.now();
+        _setEpgProgress(0.7, label: 'Ingesting EPG');
         await _ingestProgramsFromFile(
           programFilePath,
           target: fromBackgroundRefresh ? stagedPrograms : _programsByChannel,
           skipChannels: skipChannels,
+          totalPrograms: parsedProgramCount,
+          onProgress: (processed, total) {
+            if (total <= 0) return;
+            final ratio = (processed / total).clamp(0.0, 1.0);
+            _setEpgProgress(0.7 + (0.3 * ratio));
+          },
         );
         debugLog(
             'EPG: Program ingest took ${DateTime.now().difference(ingestStart).inMilliseconds}ms');
@@ -1622,9 +1782,8 @@ class IncrementalEpgService extends ChangeNotifier
 
         _hasParsed = true;
         _isParsing = false;
-        _error = noMatchingIdsForPlaylist
-            ? 'No matching EPG IDs for this playlist. Check tvg-id or mapping.'
-            : null;
+        _setEpgProgress(1.0, label: 'EPG ready');
+        _error = null;
         debugLog(
             'EPG: Load (parse+ingest) total ${DateTime.now().difference(loadStart).inMilliseconds}ms');
 
@@ -1659,7 +1818,8 @@ class IncrementalEpgService extends ChangeNotifier
         }
 
         // PERSIST: Save parsed programs to DB for fast future loads
-        if (!_dbDisabled && _programsByChannel.isNotEmpty) {
+        // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
+        if (!_dbDisabled && hasLoadedPrograms) {
           try {
             debugLog('EPG: Persisting programs to DB...');
             final dbPayload = <String, List<Map<String, dynamic>>>{};
@@ -1695,6 +1855,7 @@ class IncrementalEpgService extends ChangeNotifier
         retryCount++;
         debugLog('EPG: Error loading (attempt $retryCount): $e');
         debugLog(stack.toString());
+        _stopParseProgressTimer();
 
         if (retryCount >= _maxRetries) {
           _error = 'Failed to load EPG: $e';
@@ -1769,21 +1930,45 @@ class IncrementalEpgService extends ChangeNotifier
     Map<String, int> catchupHoursByChannel,
     int nowMs,
     int futureEndMs,
-    String? normalizedChannelId,
-  ) {
+    String? normalizedChannelId, {
+    Map<String, int>? rejectStats,
+  }) {
     final normalized = normalizedChannelId ?? normalizeForFilter(channelId);
     if (allowedNormalized.isNotEmpty &&
         (normalized.isEmpty || !allowedNormalized.contains(normalized))) {
+      if (rejectStats != null) {
+        rejectStats['channelFiltered'] = (rejectStats['channelFiltered'] ?? 0) + 1;
+      }
       return false;
     }
 
-    if (startMs > futureEndMs) return false;
+    // Reject programs that start after our future window
+    if (startMs > futureEndMs) {
+      if (rejectStats != null) {
+        rejectStats['tooFarFuture'] = (rejectStats['tooFarFuture'] ?? 0) + 1;
+      }
+      return false;
+    }
 
-    if (endMs < nowMs) {
+    // Include any program that overlaps with current time or is in the future
+    // Also include past programs within 24 hours for timezone tolerance
+    final pastCutoff = nowMs - (24 * 3600000); // 24 hours back
+    if (endMs < pastCutoff) {
+      // Very old program - only include if catchup is enabled
       final catchupHours = catchupHoursByChannel[normalized] ?? 0;
-      if (catchupHours <= 0) return false;
+      if (catchupHours <= 0) {
+        if (rejectStats != null) {
+          rejectStats['tooOld'] = (rejectStats['tooOld'] ?? 0) + 1;
+        }
+        return false;
+      }
       final earliest = nowMs - (catchupHours * 3600000);
-      return endMs >= earliest;
+      if (endMs < earliest) {
+        if (rejectStats != null) {
+          rejectStats['beforeCatchup'] = (rejectStats['beforeCatchup'] ?? 0) + 1;
+        }
+        return false;
+      }
     }
 
     return true;
@@ -1825,11 +2010,13 @@ class IncrementalEpgService extends ChangeNotifier
     var tempFile = File(
         '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}.jsonl');
     int programCount = 0;
+    var hadXmlErrors = false;
 
     // Log the time window being processed
     final startTime = DateTime.fromMillisecondsSinceEpoch(nowMs);
     final endTime = DateTime.fromMillisecondsSinceEpoch(futureEndMs);
-    debugLog('EPG: Parsing ${currentDayOnly ? "current day" : "full"} programs from ${startTime.toString()} to ${endTime.toString()}');
+    debugLog(
+        'EPG: Parsing ${currentDayOnly ? "current day" : "full"} programs from ${startTime.toString()} to ${endTime.toString()}');
 
     // Try parsing using UTF-8 but allow malformed sequences (many EPGs
     // contain stray bytes). If that fails with a FormatException from the
@@ -2016,6 +2203,8 @@ class IncrementalEpgService extends ChangeNotifier
       final channelStart = _channelStartRe;
       final channelEnd = _channelEndRe;
       final channelIcons = <String, String>{};
+      final rejectStats = <String, int>{};
+      int totalProgrammes = 0;
 
       await for (final chunk in stream) {
         buffer += sanitizeXmlChunk(chunk);
@@ -2056,11 +2245,13 @@ class IncrementalEpgService extends ChangeNotifier
           if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) {
             return;
           }
+          totalProgrammes++;
           final start = _staticParseTime(startStr).millisecondsSinceEpoch;
           final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
           final normalizedChannelId = normalizeCached(channelId);
           if (!_shouldIncludeProgramme(channelId, start, end, allowedList,
-              catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId)) {
+              catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId,
+              rejectStats: rejectStats)) {
             return;
           }
           channelIds.add(channelId);
@@ -2104,6 +2295,13 @@ class IncrementalEpgService extends ChangeNotifier
 
       await sink.flush();
       await sink.close();
+      
+      // Log diagnostic stats
+      debugLog('EPG: Lenient parse stats - total programmes in file: $totalProgrammes, accepted: $programCount');
+      debugLog('EPG: Reject stats: $rejectStats');
+      if (totalProgrammes > 0 && programCount == 0) {
+        debugLog('EPG: All programs rejected! nowMs=$nowMs, futureEndMs=$futureEndMs');
+      }
     }
 
     var usedLenient = false;
@@ -2111,6 +2309,7 @@ class IncrementalEpgService extends ChangeNotifier
       // First attempt: UTF-8 but be lenient about malformed sequences
       await runParseWithDecoder(const Utf8Decoder(allowMalformed: true));
     } on FormatException catch (e) {
+      hadXmlErrors = true;
       debugLog('EPG: UTF-8 parse failed (will retry with Latin1): $e');
       channelIds.clear();
       normalizedChannels.clear();
@@ -2118,6 +2317,7 @@ class IncrementalEpgService extends ChangeNotifier
       try {
         await runParseWithDecoder(latin1.decoder);
       } catch (e2, s2) {
+        hadXmlErrors = true;
         debugLog('EPG: Latin1 retry also failed: $e2');
         debugLog(s2.toString());
         debugLog('EPG: Falling back to lenient parser after XML errors.');
@@ -2157,6 +2357,7 @@ class IncrementalEpgService extends ChangeNotifier
       'channelIds': channelIds.toList(),
       'normalizedChannels': normalizedChannels,
       'channelHashes': channelHashStrings,
+      'hadXmlErrors': hadXmlErrors,
     };
   }
 
@@ -2175,6 +2376,39 @@ class IncrementalEpgService extends ChangeNotifier
         (args['allowedNormalized'] as List<dynamic>? ?? const [])
             .map((e) => e.toString())
             .toSet();
+
+    // Build prefix lookup for fuzzy matching
+    final allowedPrefixes = <String>{};
+    for (final allowed in allowedNormalized) {
+      if (allowed.length >= 4) {
+        allowedPrefixes.add(allowed.substring(0, 4));
+      }
+      if (allowed.length >= 6) {
+        allowedPrefixes.add(allowed.substring(0, 6));
+      }
+    }
+
+    bool fuzzyMatch(String normalized) {
+      // Exact match
+      if (allowedNormalized.contains(normalized)) return true;
+
+      // Check if any allowed ID starts with this normalized ID
+      for (final allowed in allowedNormalized) {
+        if (allowed.startsWith(normalized) && normalized.length >= 4) {
+          return true;
+        }
+        if (normalized.startsWith(allowed) && allowed.length >= 4) return true;
+      }
+
+      // Check prefix match (first 6 chars)
+      if (normalized.length >= 6) {
+        final prefix = normalized.substring(0, 6);
+        if (allowedPrefixes.contains(prefix)) return true;
+      }
+
+      return false;
+    }
+
     final normalizeCache = <String, String>{};
     String normalizeCached(String input) {
       final cached = normalizeCache[input];
@@ -2188,8 +2422,15 @@ class IncrementalEpgService extends ChangeNotifier
     }
 
     try {
-      final stream =
-          file.openRead().transform(const Utf8Decoder(allowMalformed: true));
+      Stream<List<int>> rawStreamProvider() {
+        final base = file.openRead();
+        if (file.path.toLowerCase().endsWith('.gz')) {
+          return base.transform(gzip.decoder);
+        }
+        return base;
+      }
+      final stream = rawStreamProvider()
+          .transform(const Utf8Decoder(allowMalformed: true));
       final events = stream.toXmlEvents().withParentEvents();
       final channelSubtrees =
           events.selectSubtreeEvents((event) => event.name.endsWith('channel'));
@@ -2208,7 +2449,7 @@ class IncrementalEpgService extends ChangeNotifier
         final normalizedId = normalizeCached(id);
         if (normalizedId.isNotEmpty) {
           normalizedIds.add(normalizedId);
-          if (allowedNormalized.contains(normalizedId)) {
+          if (fuzzyMatch(normalizedId)) {
             matchedChannelIds.add(id);
           }
         }
@@ -2232,7 +2473,7 @@ class IncrementalEpgService extends ChangeNotifier
           final normalizedDisplay = normalizeForFilter(displayName);
           if (normalizedDisplay.isNotEmpty) {
             normalizedIds.add(normalizedDisplay);
-            if (allowedNormalized.contains(normalizedDisplay)) {
+            if (fuzzyMatch(normalizedDisplay)) {
               matchedChannelIds.add(id);
             }
           }
@@ -2483,7 +2724,12 @@ class IncrementalEpgService extends ChangeNotifier
       final g5 = m.group(5);
       final g6 = m.group(6);
 
-      if (g1 == null || g2 == null || g3 == null || g4 == null || g5 == null || g6 == null) {
+      if (g1 == null ||
+          g2 == null ||
+          g3 == null ||
+          g4 == null ||
+          g5 == null ||
+          g6 == null) {
         return DateTime.now();
       }
 
@@ -2690,8 +2936,7 @@ class IncrementalEpgService extends ChangeNotifier
   static String _translateCommonWords(String input) {
     if (input.isEmpty) return input;
 
-    return input.toLowerCase().replaceAllMapped(
-        _commonWordReplacementsRe,
+    return input.toLowerCase().replaceAllMapped(_commonWordReplacementsRe,
         (match) => _commonWordReplacements[match.group(0)!] ?? match.group(0)!);
   }
 
@@ -3007,6 +3252,10 @@ class IncrementalEpgService extends ChangeNotifier
     // Strip quality suffixes after normalization.
     clean = clean.replaceAll(_qualitySufRe, '');
 
+    // Convert ampersand to "and" before stripping non-alphanumeric
+    // This allows "A&E" to match "AandE" in EPG data
+    clean = clean.replaceAll('&', 'and');
+
     String normalized = clean.toLowerCase().replaceAll(_nonAlphaNumRe, '');
 
     // Strip technical channel prefixes like "ch_" or "channel" when followed
@@ -3207,7 +3456,8 @@ class IncrementalEpgService extends ChangeNotifier
           final targetTrigrams = _generateTrigramSet(normalizedName);
 
           for (final entry in _normalizedAvailableChannels!.entries) {
-            final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
+            final score =
+                _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             if (score >= 0.75) {
               if (score > highestTrigram) highestTrigram = score;
               allCandidates.addAll(entry.value);
@@ -3515,9 +3765,33 @@ class IncrementalEpgService extends ChangeNotifier
     // Do not return null just because we are loading/parsing.
     // Return potentially stale data if available to prevent UI flickering.
 
-
-    final epgId = _findBestEpgId(channelId, channelName,
+    var epgId = _findBestEpgId(channelId, channelName,
         countryHint: groupTitle, logIfMissing: false, allowLoose: false);
+    
+    // Fallback 1: Try direct lookup in _programsByChannel
+    if (epgId == null) {
+      final directPrograms = _programsByChannel[channelId];
+      if (directPrograms != null && directPrograms.isNotEmpty) {
+        epgId = channelId;
+        _cacheResolvedMapping(channelId, channelId);
+      }
+    }
+    
+    // Fallback 2: Try normalized key search through program keys
+    if (epgId == null) {
+      final normalizedId = _normalize(channelId);
+      for (final key in _programsByChannel.keys) {
+        if (_normalize(key) == normalizedId) {
+          final programs = _programsByChannel[key];
+          if (programs != null && programs.isNotEmpty) {
+            epgId = key;
+            _cacheResolvedMapping(channelId, key);
+            break;
+          }
+        }
+      }
+    }
+    
     if (epgId == null) {
       _maybeLogMissingEpgId(channelId, channelName);
       _recordChannelFailure(channelId);
@@ -3617,6 +3891,30 @@ class IncrementalEpgService extends ChangeNotifier
   final List<String> _pendingBatch = [];
   Timer? _batchTimer;
 
+  void _scheduleBatchRetry() {
+    _batchTimer?.cancel();
+    _batchTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (_pendingBatch.isEmpty) {
+        _batchTimer?.cancel();
+        _batchTimer = null;
+        return;
+      }
+      final retryBatch = List<String>.from(_pendingBatch);
+      debugLog(
+          'EPG: Batch timer retry after suspend, loading ${retryBatch.length} channels');
+      await _loadProgramsFromDbBatch(retryBatch);
+      if (!_suspendDbReads) {
+        _pendingBatch.removeWhere((id) => retryBatch.contains(id));
+        if (_pendingBatch.isEmpty) {
+          _batchTimer?.cancel();
+          _batchTimer = null;
+        }
+      } else {
+        _scheduleBatchRetry();
+      }
+    });
+  }
+
   Future<void> ensureChannelLoaded(String channelId,
       {String? channelName}) async {
     final epgId = _internalToEpgIdMapping[channelId] ??
@@ -3630,8 +3928,11 @@ class IncrementalEpgService extends ChangeNotifier
     // Cache the mapping
     _cacheResolvedMapping(channelId, epgId);
 
-    if (_programsByChannel.containsKey(epgId) ||
-        _pendingBatch.contains(epgId)) {
+    // Check if we have ACTUAL programs, not just an empty array
+    final existingPrograms = _programsByChannel[epgId];
+    final hasPrograms = existingPrograms != null && existingPrograms.isNotEmpty;
+
+    if (hasPrograms || _pendingBatch.contains(epgId)) {
       return;
     }
 
@@ -3645,7 +3946,7 @@ class IncrementalEpgService extends ChangeNotifier
     });
 
     // Ensure programs are populated from DB if not already
-    if (!_programsByChannel.containsKey(epgId)) {
+    if (!hasPrograms) {
       // Use the batch loader for single items too for consistency
       unawaited(_loadProgramsFromDbBatch([epgId]));
     }
@@ -3656,7 +3957,8 @@ class IncrementalEpgService extends ChangeNotifier
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
-    debugLog('EPG: ensureChannelsLoadedBatch called with ${channelIds.length} channels');
+    debugLog(
+        'EPG: ensureChannelsLoadedBatch called with ${channelIds.length} channels');
     final effectiveNames =
         channelNames != null && channelNames.length == channelIds.length
             ? channelNames
@@ -3672,8 +3974,13 @@ class IncrementalEpgService extends ChangeNotifier
       if (epgId == null) continue;
 
       _cacheResolvedMapping(channelId, epgId);
-      if (_programsByChannel.containsKey(epgId) ||
-          _pendingBatch.contains(epgId)) {
+
+      // Check if we have ACTUAL programs, not just an empty array
+      final existingPrograms = _programsByChannel[epgId];
+      final hasPrograms =
+          existingPrograms != null && existingPrograms.isNotEmpty;
+
+      if (hasPrograms || _pendingBatch.contains(epgId)) {
         continue;
       }
       if (!seen.add(epgId)) continue;
@@ -3682,10 +3989,12 @@ class IncrementalEpgService extends ChangeNotifier
     }
 
     if (epgIdsToLoad.isEmpty) {
-      debugLog('EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)');
+      debugLog(
+          'EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)');
       return;
     }
-    debugLog('EPG: ensureChannelsLoadedBatch - queueing ${epgIdsToLoad.length} channels for batch load');
+    debugLog(
+        'EPG: ensureChannelsLoadedBatch - queueing ${epgIdsToLoad.length} channels for batch load');
     _pendingBatch.addAll(epgIdsToLoad);
     _batchTimer?.cancel();
     _batchTimer = Timer(const Duration(milliseconds: 300), () async {
@@ -3695,17 +4004,13 @@ class IncrementalEpgService extends ChangeNotifier
       // Only clear if load succeeded (not suspended)
       if (!_suspendDbReads) {
         _pendingBatch.removeWhere((id) => batch.contains(id));
+        if (_pendingBatch.isEmpty) {
+          _batchTimer?.cancel();
+          _batchTimer = null;
+        }
       } else {
-        // Reschedule for later
-        _batchTimer?.cancel();
-        _batchTimer = Timer(const Duration(milliseconds: 500), () async {
-          final retryBatch = List<String>.from(_pendingBatch);
-          debugLog('EPG: Batch timer retry after suspend, loading ${retryBatch.length} channels');
-          await _loadProgramsFromDbBatch(retryBatch);
-          if (!_suspendDbReads) {
-            _pendingBatch.removeWhere((id) => retryBatch.contains(id));
-          }
-        });
+        // Reschedule for later until parsing completes.
+        _scheduleBatchRetry();
       }
     });
   }
@@ -3723,13 +4028,15 @@ class IncrementalEpgService extends ChangeNotifier
   }
 
   // Stub methods for EPG screen compatibility
-  bool hasManualMapping(String channelId) => _manualMappings.containsKey(channelId);
+  bool hasManualMapping(String channelId) =>
+      _manualMappings.containsKey(channelId);
   String? getManualMapping(String channelId) => _manualMappings[channelId];
   List<String> getEpgChannelIds() {
     final ids = _availableChannels.toList();
     ids.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return ids;
   }
+
   List<MapEntry<String, double>> getSuggestedMatches(
       String channelId, String? channelName,
       {int limit = 10}) {
@@ -3809,6 +4116,8 @@ class IncrementalEpgService extends ChangeNotifier
     String? path, {
     Map<String, List<Program>>? target,
     Set<String>? skipChannels,
+    int? totalPrograms,
+    void Function(int processed, int total)? onProgress,
   }) async {
     if (path == null || path.isEmpty) {
       debugLog('EPG: No program temp file path provided');
@@ -3896,10 +4205,18 @@ class IncrementalEpgService extends ChangeNotifier
         }
 
         processed++;
+        if (onProgress != null &&
+            totalPrograms != null &&
+            totalPrograms > 0 &&
+            (processed == 500 || processed % 5000 == 0)) {
+          onProgress(processed, totalPrograms);
+        }
         // Optimized throttling: Notify early for initial view, then throttle heavily.
         // Notify at 500 (initial screen population), then every 10k items or 500ms.
-        if (processed == 500 || 
-            (processed > 500 && processed % 10000 == 0 && yieldClock.elapsedMilliseconds >= 500)) {
+        if (processed == 500 ||
+            (processed > 500 &&
+                processed % 10000 == 0 &&
+                yieldClock.elapsedMilliseconds >= 500)) {
           // Brief yield to allow UI frame rendering
           await Future.delayed(const Duration(milliseconds: 0));
           notifyListeners();
@@ -3918,6 +4235,11 @@ class IncrementalEpgService extends ChangeNotifier
         } catch (e) {
           _handleDbError(e);
         }
+      }
+      if (onProgress != null &&
+          totalPrograms != null &&
+          totalPrograms > 0) {
+        onProgress(processed, totalPrograms);
       }
     } catch (e) {
       debugLog('EPG: Failed to ingest programs from temp file: $e');
@@ -3981,23 +4303,26 @@ class IncrementalEpgService extends ChangeNotifier
 
   Future<void> _loadProgramsFromDbBatch(List<String> epgIds) async {
     try {
-      debugLog('EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads');
+      debugLog(
+          'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads');
       // If suspended due to parsing, let it retry. Only cancel timer on permanent failures.
       if (_dbDisabled || epgIds.isEmpty || !_db.isReady) {
-        debugLog('EPG: _loadProgramsFromDbBatch returning early - dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads, emptyIds=${epgIds.isEmpty}');
+        debugLog(
+            'EPG: _loadProgramsFromDbBatch returning early - dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads, emptyIds=${epgIds.isEmpty}');
         _batchTimer?.cancel();
         _batchTimer = null;
         return;
       }
       // If suspended for parsing, just return - timer will retry automatically
       if (_suspendDbReads) {
-        debugLog('EPG: _loadProgramsFromDbBatch suspended (parsing in progress), timer will retry');
+        debugLog(
+            'EPG: _loadProgramsFromDbBatch suspended (parsing in progress), timer will retry');
         return;
       }
-      
+
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final endMs = nowMs + (_epgFutureHours * 3600000);
-      
+
       // Calculate start time based on max catchup to be safe, or just nowMs
       // For batch, we'll use a conservative start time
       final maxCatchupMs = 7 * 24 * 3600000; // 7 days max catchup assumption
@@ -4005,66 +4330,68 @@ class IncrementalEpgService extends ChangeNotifier
 
       final rows = await _db.getProgramsForEpgIds(epgIds,
           startMs: startMs, endMs: endMs);
-      
-      debugLog('EPG: DB query returned ${rows.length} program rows for ${epgIds.length} channels');
+
+      debugLog(
+          'EPG: DB query returned ${rows.length} program rows for ${epgIds.length} channels');
       if (rows.isEmpty) {
         debugLog('EPG: No programs found in DB for requested channels');
-        // Mark channels as loaded (even though empty) to prevent infinite retry loops
-        for (final epgId in epgIds) {
-          if (!_programsByChannel.containsKey(epgId)) {
-            _programsByChannel[epgId] = [];
+        // Only mark as empty if we're NOT currently parsing/loading
+        // Otherwise, data might still be coming in
+        if (!_isParsing && !_isDownloading && !_isLoading) {
+          for (final epgId in epgIds) {
+            if (!_programsByChannel.containsKey(epgId)) {
+              _programsByChannel[epgId] = [];
+            }
           }
+          notifyListeners();
         }
-        notifyListeners();
         return;
       }
 
       final byId = <String, List<Program>>{};
-      
+
       for (final r in rows) {
         final epgId = r['epgId'] as String;
         final startTs = r['startTs'] as int? ?? 0;
         final endTs = r['endTs'] as int? ?? 0;
-        
+
         // Filter out expired catchup if needed per channel
         final normalized = normalizeForFilter(epgId);
         final catchupHours = _catchupHoursByNormalizedId[normalized] ?? 0;
-        final safeStart = catchupHours > 0 
-           ? nowMs - (catchupHours * 3600000) 
-           : nowMs;
-           
+        final safeStart =
+            catchupHours > 0 ? nowMs - (catchupHours * 3600000) : nowMs;
+
         if (endTs < safeStart) continue;
 
         final catchupUrl =
             _buildCatchupUrl(epgId, startTs, endTs, nowMs: nowMs);
 
         byId.putIfAbsent(epgId, () => []).add(Program(
-          id: '${epgId}_$startTs',
-          channelId: epgId,
-          title: (r['title'] as String?) ?? '',
-          description: r['description'] as String?,
-          startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
-          endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
-          imageUrl: r['imageUrl'] as String?,
-          category: null,
-          isLive: null,
-          canRecord: null,
-          catchupUrl: catchupUrl,
-        ));
+              id: '${epgId}_$startTs',
+              channelId: epgId,
+              title: (r['title'] as String?) ?? '',
+              description: r['description'] as String?,
+              startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+              endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+              imageUrl: r['imageUrl'] as String?,
+              category: null,
+              isLive: null,
+              canRecord: null,
+              catchupUrl: catchupUrl,
+            ));
       }
 
       var added = false;
       for (final entry in byId.entries) {
-         _programsByChannel[entry.key] = entry.value;
-         _availableChannels.add(entry.key);
-         added = true;
+        _programsByChannel[entry.key] = entry.value;
+        _availableChannels.add(entry.key);
+        added = true;
       }
-      
+
       if (added) {
         debugLog('EPG: Batch loaded programs for ${byId.length} channels');
         notifyListeners();
       }
-
     } catch (e) {
       debugLog('EPG: Failed to load batch programs from DB: $e');
       // Stop the timer on error to prevent error spam
@@ -4078,7 +4405,8 @@ class IncrementalEpgService extends ChangeNotifier
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_restoreDbIfClosed());
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       // Cancel timers when app is backgrounded to prevent errors
       _batchTimer?.cancel();
       _batchTimer = null;
@@ -4087,7 +4415,9 @@ class IncrementalEpgService extends ChangeNotifier
 
   @override
   void dispose() {
+    _disposed = true;
     _batchTimer?.cancel();
+    _stopParseProgressTimer();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

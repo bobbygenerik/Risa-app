@@ -48,52 +48,196 @@ class EPGMatchingUtils {
         _callSignRe.hasMatch(title.trim());
   }
 
+  // Pre-compiled regexes for normalization (static to avoid recreation)
+  static final RegExp _dashColonRe = RegExp(r'\s*[-:]\s*');
+  static final RegExp _bracketedRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
+  static final RegExp _seasonEpisodeRe =
+      RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false);
+  static final RegExp _seasonRe =
+      RegExp(r'\bseason\s+\d+\b', caseSensitive: false);
+  static final RegExp _episodeRe =
+      RegExp(r'\bepisode\s+\d+\b', caseSensitive: false);
+  static final RegExp _partRe =
+      RegExp(r'\bpart\s+\d+\b', caseSensitive: false);
+  static final RegExp _ordinalHourRe =
+      RegExp(r'\b(\d+)(st|nd|rd|th)\s+hour\b', caseSensitive: false);
+  static final RegExp _hourRe =
+      RegExp(r'\b(\d+)\s*(st|nd|rd|th)?\s*hour\b', caseSensitive: false);
+  static final RegExp _yearSuffixRe = RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$');
+  static final RegExp _yearParenRe =
+      RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$');
+  static final RegExp _newsAtTimeRe = RegExp(
+      r'\bnews\s+at\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
+      caseSensitive: false);
+  static final RegExp _atTimeRe = RegExp(
+      r'\b(at|@)\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
+      caseSensitive: false);
+  static final RegExp _callSignLeadingRe = RegExp(r'^\s*[A-Z]{3,4}\b\s+');
+  static final RegExp _multiSpaceRe = RegExp(r'\s+');
+  static final RegExp _yearParensExactRe = RegExp(r'\s*\(\d{4}\)');
+  static final RegExp _yearSufExactRe = RegExp(r'\s+(19|20)\d{2}$');
+  static final RegExp _episodePartLabelRe =
+      RegExp(r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b', caseSensitive: false);
+  static final RegExp _artworkNoiseRe =
+      RegExp(r'\b(tv|hd|fhd|uhd|4k|channel|network)\b', caseSensitive: false);
+
+  // Cache for normalized title lookups
+  static final Map<String, String> _normalizeTitleCache = {};
+  static final Map<String, String> _normalizeArtworkCache = {};
+  static const int _maxNormalizeCacheSize = 5000;
+
   /// Normalize program/channel titles for external lookups.
   /// Use aggressiveForNews when the title is news-like.
   static String normalizeTitleForLookup(
     String title, {
     bool aggressiveForNews = false,
   }) {
+    // Check cache first (only for non-aggressive mode)
+    if (!aggressiveForNews) {
+      final cached = _normalizeTitleCache[title];
+      if (cached != null) return cached;
+    }
+
     var normalized = title;
-    normalized = normalized.replaceAll(RegExp(r'\s*[-:]\s*'), ' ');
-    normalized = normalized.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bseason\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bepisode\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bpart\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(\d+)(st|nd|rd|th)\s+hour\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(\d+)\s*(st|nd|rd|th)?\s*hour\b', caseSensitive: false), '');
-    normalized =
-        normalized.replaceAll(RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$'), '');
-    normalized =
-        normalized.replaceAll(RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$'), '');
+    normalized = normalized.replaceAll(_dashColonRe, ' ');
+    normalized = normalized.replaceAll(_bracketedRe, ' ');
+    normalized = normalized.replaceAll(_seasonEpisodeRe, '');
+    normalized = normalized.replaceAll(_seasonRe, '');
+    normalized = normalized.replaceAll(_episodeRe, '');
+    normalized = normalized.replaceAll(_partRe, '');
+    normalized = normalized.replaceAll(_ordinalHourRe, '');
+    normalized = normalized.replaceAll(_hourRe, '');
+    normalized = normalized.replaceAll(_yearSuffixRe, '');
+    normalized = normalized.replaceAll(_yearParenRe, '');
     normalized = normalized.replaceAll(_noiseTokensRe, '');
 
     if (aggressiveForNews || isLikelyNewsTitle(title)) {
-      normalized = normalized.replaceAll(
-          RegExp(r'\bnews\s+at\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
-              caseSensitive: false),
-          'news');
-      normalized = normalized.replaceAll(
-          RegExp(r'\b(at|@)\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
-              caseSensitive: false),
-          '');
+      normalized = normalized.replaceAll(_newsAtTimeRe, 'news');
+      normalized = normalized.replaceAll(_atTimeRe, '');
       normalized = normalized.replaceAll(_timeRe, '');
       normalized = normalized.replaceAll(_shortTimeRe, '');
-      normalized = normalized.replaceAll(RegExp(r'^\s*[A-Z]{3,4}\b\s+'), '');
+      normalized = normalized.replaceAll(_callSignLeadingRe, '');
     } else {
       normalized = normalized.replaceAll(_timeRe, '');
       normalized = normalized.replaceAll(_shortTimeRe, '');
     }
 
-    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return normalized.isEmpty ? title : normalized;
+    normalized = normalized.replaceAll(_multiSpaceRe, ' ').trim();
+    final result = normalized.isEmpty ? title : normalized;
+
+    // Cache the result (only for non-aggressive mode)
+    if (!aggressiveForNews) {
+      if (_normalizeTitleCache.length >= _maxNormalizeCacheSize) {
+        // Clear oldest half when full
+        final keys = _normalizeTitleCache.keys.toList();
+        for (int i = 0; i < keys.length ~/ 2; i++) {
+          _normalizeTitleCache.remove(keys[i]);
+        }
+      }
+      _normalizeTitleCache[title] = result;
+    }
+
+    return result;
+  }
+
+  /// Consolidated normalization for artwork lookups.
+  /// This combines all normalization steps needed for artwork queries.
+  /// Use this instead of calling multiple normalization functions.
+  static String normalizeForArtwork(String title) {
+    // Check cache first
+    final cached = _normalizeArtworkCache[title];
+    if (cached != null) return cached;
+
+    final aggressive = isLikelyNewsTitle(title);
+    var output = normalizeTitleForLookup(title, aggressiveForNews: aggressive);
+
+    // Additional artwork-specific normalizations
+    output = output.replaceAll(_yearParensExactRe, '');
+    output = output.replaceAll(_yearSufExactRe, '');
+    output = output.replaceAll(_qualitySufRe, '');
+    output = output.replaceAll(_seasonEpisodeRe, '');
+    output = output.replaceAll(_episodePartLabelRe, '');
+    output = output.replaceAll(_multiSpaceRe, ' ').trim();
+
+    final result = output.isEmpty ? title : output;
+
+    // Cache the result
+    if (_normalizeArtworkCache.length >= _maxNormalizeCacheSize) {
+      final keys = _normalizeArtworkCache.keys.toList();
+      for (int i = 0; i < keys.length ~/ 2; i++) {
+        _normalizeArtworkCache.remove(keys[i]);
+      }
+    }
+    _normalizeArtworkCache[title] = result;
+
+    return result;
+  }
+
+  /// Normalize title for artwork variant generation (handles & to 'and', etc.)
+  static String normalizeArtworkVariant(String title) {
+    var normalized = title;
+    normalized = normalized.replaceAll('&', ' and ');
+    normalized = normalized.replaceAll(RegExp(r'[^\w\s]'), ' ');
+    normalized = normalized.replaceAll(_artworkNoiseRe, '');
+    normalized = normalized.replaceAll(_multiSpaceRe, ' ').trim();
+    return normalized;
+  }
+
+  /// Calculate similarity score with length-aware thresholds.
+  /// For short titles (<=4 chars), requires higher similarity.
+  static double calculateSimilarityWithThreshold(
+    String a,
+    String b, {
+    double defaultThreshold = 0.55,
+    double shortTitleThreshold = 0.80,
+  }) {
+    final score = calculateSimilarity(a, b);
+    final minLength =
+        a.length < b.length ? a.length : b.length;
+    final threshold = minLength <= 4 ? shortTitleThreshold : defaultThreshold;
+    return score >= threshold ? score : 0.0;
+  }
+
+  /// Set of generic program titles that need disambiguation.
+  static const Set<String> genericTitles = {
+    'news',
+    'live',
+    'sports',
+    'sport',
+    'movie',
+    'paidprogramming',
+    'homeshopping',
+    'episode',
+    'program',
+    'show',
+    'channel',
+    'match',
+    'game',
+    'event',
+    'coverage',
+    'highlights',
+    'highlights show',
+    'morning',
+    'tonight',
+    'today',
+    'weekend',
+    'evening',
+    'afternoon',
+    'late night',
+    'latenight',
+    'prime time',
+    'primetime',
+    'special',
+    'premiere',
+    'finale',
+  };
+
+  /// Check if a title is too generic for reliable artwork matching.
+  static bool isGenericTitle(String title) {
+    final normalized = normalizeForFilter(title);
+    return normalized.isEmpty ||
+        normalized.length <= 3 ||
+        genericTitles.contains(normalized);
   }
 
   static String _stripCountryRegion(String text) {

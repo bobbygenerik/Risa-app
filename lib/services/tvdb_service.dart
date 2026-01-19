@@ -23,13 +23,8 @@ class TvdbService {
   static const int _kArtworkTypeMovieBackground = 15;
 
   static String _normalizeTitle(String title) {
-    final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
-    var output = EPGMatchingUtils.normalizeTitleForLookup(
-      title,
-      aggressiveForNews: aggressive,
-    );
-    output = output.replaceAll(RegExp(r'\s+'), ' ');
-    return output.trim();
+    // Use consolidated normalization from EPGMatchingUtils
+    return EPGMatchingUtils.normalizeForArtwork(title);
   }
 
   static String _cacheKey(String title) {
@@ -100,15 +95,23 @@ class TvdbService {
     if (results is List) {
       final normalizedTitle = _normalizeTitle(title);
       final isNews = EPGMatchingUtils.isLikelyNewsTitle(normalizedTitle);
-      final minScore = isNews ? 0.7 : 0.55;
+      // Use length-aware thresholds: stricter for short titles to avoid false positives
+      final baseThreshold = isNews ? 0.7 : 0.55;
+      final shortTitleThreshold = isNews ? 0.85 : 0.80;
       for (final entry in results) {
         if (entry is! Map<String, dynamic>) continue;
         final candidateTitle = _extractTitle(entry);
         if (candidateTitle.isEmpty) continue;
+        final normalizedCandidate = _normalizeTitle(candidateTitle);
         final score = EPGMatchingUtils.calculateSimilarity(
           normalizedTitle,
-          _normalizeTitle(candidateTitle),
+          normalizedCandidate,
         );
+        // Require higher score for short titles (<=4 chars) to prevent false matches
+        final minLength = normalizedTitle.length < normalizedCandidate.length
+            ? normalizedTitle.length
+            : normalizedCandidate.length;
+        final minScore = minLength <= 4 ? shortTitleThreshold : baseThreshold;
         if (score < minScore) {
           continue;
         }

@@ -93,6 +93,13 @@ class MediaKitPlayerController extends UniversalPlayerController {
   final bool autoPlay;
   bool _isDisposed = false;
   UniversalPlayerValue _value = const UniversalPlayerValue();
+  
+  // Store stream subscriptions to cancel them on dispose
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<bool>? _playingSubscription;
+  StreamSubscription<bool>? _bufferingSubscription;
+  StreamSubscription<String>? _errorSubscription;
 
   MediaKitPlayerController(String url, {this.autoPlay = true, bool hardwareAcceleration = true})
       : _player = Player(configuration: PlayerConfiguration(
@@ -110,11 +117,12 @@ class MediaKitPlayerController extends UniversalPlayerController {
       ),
     );
 
-    _player.stream.position.listen(_onPositionChanged);
-    _player.stream.duration.listen(_onDurationChanged);
-    _player.stream.playing.listen(_onPlayingChanged);
-    _player.stream.buffering.listen(_onBufferingChanged);
-    _player.stream.error.listen(_onError);
+    // Store subscriptions to cancel them on dispose - prevents memory leaks
+    _positionSubscription = _player.stream.position.listen(_onPositionChanged);
+    _durationSubscription = _player.stream.duration.listen(_onDurationChanged);
+    _playingSubscription = _player.stream.playing.listen(_onPlayingChanged);
+    _bufferingSubscription = _player.stream.buffering.listen(_onBufferingChanged);
+    _errorSubscription = _player.stream.error.listen(_onError);
     
     // Load the media
     _player.open(
@@ -184,6 +192,12 @@ class MediaKitPlayerController extends UniversalPlayerController {
   @override
   Future<void> dispose() async {
     _isDisposed = true;
+    // Cancel all stream subscriptions to prevent memory leaks
+    await _positionSubscription?.cancel();
+    await _durationSubscription?.cancel();
+    await _playingSubscription?.cancel();
+    await _bufferingSubscription?.cancel();
+    await _errorSubscription?.cancel();
     await _player.dispose();
     super.dispose();
   }

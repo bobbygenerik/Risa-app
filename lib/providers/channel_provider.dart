@@ -509,8 +509,12 @@ class ChannelProvider with ChangeNotifier {
         : List<Map<String, dynamic>>.from(_channelMaps);
 
     // Offload heavy string normalization to isolate
-    final allowed = await compute(_buildAllowedSet, mapsSubset);
-    service.setAllowedChannelIds(allowed, triggerRefresh: true);
+    try {
+      final allowed = await compute(_buildAllowedSet, mapsSubset);
+      service.setAllowedChannelIds(allowed, triggerRefresh: true);
+    } catch (e) {
+      debugLog('ChannelProvider: compute(_buildAllowedSet) failed: $e');
+    }
   }
 
   static Set<String> _buildAllowedSet(List<Map<String, dynamic>> maps) {
@@ -1490,18 +1494,23 @@ class ChannelProvider with ChangeNotifier {
   }) async {
     // Fallback to isolate filtering when DB not ready or favorites filtering
     if (!_dbReady || favoriteIds != null) {
-      final indices = await compute(_filterChannelIndicesInIsolate, {
-        'titles': _getCategoryTitleCache(),
-        'ids': _getChannelIdCache(),
-        'hidden': _getHiddenFlagCache(),
-        'category': category,
-        'favoriteIds': favoriteIds?.toList() ?? const [],
-        'excludeHidden': excludeHidden,
-        'limit': limit,
-        'offset': offset,
-      });
-      if (indices.isEmpty) return const [];
-      return indices.map(_getChannelAt).toList();
+      try {
+        final indices = await compute(_filterChannelIndicesInIsolate, {
+          'titles': _getCategoryTitleCache(),
+          'ids': _getChannelIdCache(),
+          'hidden': _getHiddenFlagCache(),
+          'category': category,
+          'favoriteIds': favoriteIds?.toList() ?? const [],
+          'excludeHidden': excludeHidden,
+          'limit': limit,
+          'offset': offset,
+        });
+        if (indices.isEmpty) return const [];
+        return indices.map(_getChannelAt).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: compute(_filterChannelIndicesInIsolate) failed: $e');
+        return const [];
+      }
     }
 
     // Use category paging or general paging
@@ -2637,14 +2646,19 @@ class ChannelProvider with ChangeNotifier {
     }
 
     final titles = _getCategoryTitleCache();
-    final indices = await compute(_filterCategoryIndicesInIsolate, {
-      'titles': titles,
-      'category': category,
-      'offset': offset,
-      'limit': limit,
-    });
-    if (indices.isEmpty) return const [];
-    return indices.map(_getChannelAt).toList();
+    try {
+      final indices = await compute(_filterCategoryIndicesInIsolate, {
+        'titles': titles,
+        'category': category,
+        'offset': offset,
+        'limit': limit,
+      });
+      if (indices.isEmpty) return const [];
+      return indices.map(_getChannelAt).toList();
+    } catch (e) {
+      debugLog('ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: $e');
+      return const [];
+    }
   }
 
   Future<Map<String, List<Channel>>> getCategoryPreviewBatch(

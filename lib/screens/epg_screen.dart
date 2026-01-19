@@ -787,7 +787,6 @@ class _EPGScreenState extends State<EPGScreen>
                                     isLoading: isCategoryLoading,
                                     showCenteredUpdating: showCenteredUpdating,
                                   ),
-                                  const SizedBox(width: 4),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
                                     child:
@@ -999,14 +998,8 @@ class _EPGScreenState extends State<EPGScreen>
   }) {
     return Container(
       width: context.categoryBarWidth(),
-      decoration: BoxDecoration(
-        color: AppTheme.sidebarBackground,
-        border: Border(
-          right: BorderSide(
-            color: Colors.white.withValues(alpha: 0.06),
-            width: 1,
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Column(
         children: [
@@ -1105,59 +1098,44 @@ class _EPGScreenState extends State<EPGScreen>
             duration: const Duration(milliseconds: 90),
             curve: Curves.easeOut,
             scale: isFocused ? 1.05 : 1.0,
-            child: AnimatedContainer(
+              child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
-              height: AppSpacing.epgRowHeight,
-              margin: EdgeInsets.symmetric(
-                horizontal: context.spacingXs(),
-                vertical: context.spacingXs() * 0.25,
+              height: AppSpacing.epgRowHeight, // Base row height
+              margin: EdgeInsets.only(
+                left: context.spacingXs(),
+                right: context.spacingXs(),
+                bottom: 4.0, // 4px gap between rows like other EPG boxes
               ),
               padding: EdgeInsets.symmetric(
                 horizontal: context.spacingXs(),
                 vertical: context.spacingXs(),
               ),
               decoration: BoxDecoration(
+                color: (isFocused || isSelected)
+                    ? const Color(0xFF2a2a3e).withValues(alpha: 0.85)
+                    : const Color(0xFF2a2a3e).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused
                     ? Border.all(color: AppTheme.focusBorder, width: 2)
-                    : Border.all(
-                        color: Colors.white.withValues(alpha: 0.1), width: 1),
+                    : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 90),
-                    curve: Curves.easeOut,
-                    width: 3,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color:
-                          isFocused ? AppTheme.primaryBlue : Colors.transparent,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(4),
-                        bottomRight: Radius.circular(4),
-                      ),
-                    ),
+              child: Center(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    color: isFocused || isSelected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.7),
+                    fontSize: 14,
+                    fontWeight: (isFocused || isSelected)
+                        ? FontWeight.w600
+                        : FontWeight.w500,
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: TextStyle(
-                        color: isFocused || isSelected
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.7),
-                        fontSize: 14,
-                        fontWeight: (isFocused || isSelected)
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
