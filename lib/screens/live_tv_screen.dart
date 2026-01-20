@@ -5786,6 +5786,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _pauseArtworkFetching = false;
         _suspendArtworkCaches = false;
         _suspendHeroBackground = false;
+        // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
+        unawaited(_prefetchInitialRows(force: true));
       }
     }
   }
