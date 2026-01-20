@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../utils/throttled_notifier.dart';
 import '../models/channel.dart';
 import '../utils/debug_helper.dart';
 import '../providers/playlist_loader.dart';
 
 /// Optimized channel provider using fast startup techniques
-class OptimizedChannelProvider extends ChangeNotifier {
+class OptimizedChannelProvider extends ChangeNotifier with ThrottledNotifier {
   final List<Channel> _channels = [];
   final Map<String, List<int>> _indicesByCategory = {};
 
@@ -31,7 +32,7 @@ class OptimizedChannelProvider extends ChangeNotifier {
     
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    notifyListenersThrottled();
     
     try {
       debugLog('OptimizedChannelProvider: Starting fast channel load from $m3uUrl');
@@ -63,22 +64,22 @@ class OptimizedChannelProvider extends ChangeNotifier {
             }
 
             if (!_criticalDataLoaded && _channels.isNotEmpty) {
-                _criticalDataLoaded = true;
+              _criticalDataLoaded = true;
             }
-            notifyListeners();
+            notifyListenersThrottled();
         }
       );
       
       _criticalDataLoaded = true;
       _isLoading = false;
-      notifyListeners();
+      notifyListenersThrottled();
       
       debugLog('OptimizedChannelProvider: Channels loaded (${_channels.length} channels)');
       
     } catch (e) {
       _errorMessage = 'Failed to load channels: $e';
       _isLoading = false;
-      notifyListeners();
+      notifyListenersThrottled();
       debugLog('OptimizedChannelProvider: Error loading channels: $e');
     }
   }
