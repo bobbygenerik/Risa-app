@@ -65,12 +65,21 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       });
     }
 
+    final initStart = DateTime.now();
     _controller?.initialize().then((_) {
+      final initDuration = DateTime.now().difference(initStart);
+      debugLog('Player initialize completed in ${initDuration.inMilliseconds}ms for ${widget.url}');
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
-        _controller?.play();
+        final playStart = DateTime.now();
+        _controller?.play().then((_) {
+          final playDuration = DateTime.now().difference(playStart);
+          debugLog('Player play() returned in ${playDuration.inMilliseconds}ms for ${widget.url}');
+        }).catchError((e) {
+          debugLog('Player play() error: $e');
+        });
       }
     }).catchError((error) {
       debugLog('Player initialization failed: $error');
