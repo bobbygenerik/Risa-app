@@ -3581,9 +3581,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   List<Program> getProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
-    final epgId = _internalToEpgIdMapping[channelId] ??
+    // First try strict matching for fast exact lookups
+    var epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName,
             countryHint: groupTitle, allowLoose: false);
+    // If strict matching fails but we have a channel name, try loose matching
+    if (epgId == null && channelName != null && channelName.trim().isNotEmpty) {
+      epgId = _findBestEpgId(channelId, channelName,
+          countryHint: groupTitle, allowLoose: true);
+    }
     if (epgId != null) {
       return _programsByChannel[epgId] ?? [];
     }
@@ -3642,9 +3648,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   bool hasProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
-    final epgId = _internalToEpgIdMapping[channelId] ??
+    // First try strict matching for fast exact lookups
+    var epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName,
             countryHint: groupTitle, allowLoose: false);
+    // If strict matching fails but we have a channel name, try loose matching
+    if (epgId == null && channelName != null && channelName.trim().isNotEmpty) {
+      epgId = _findBestEpgId(channelId, channelName,
+          countryHint: groupTitle, allowLoose: true);
+    }
     if (epgId != null) {
       final programs = _programsByChannel[epgId];
       if (programs != null && programs.isNotEmpty) {
