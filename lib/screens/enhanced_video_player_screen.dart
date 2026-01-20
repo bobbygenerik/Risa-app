@@ -511,20 +511,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _detachPlayerController();
     _playerController = controller;
     if (controller == null) return;
-    // Start a short watchdog to detect if no video frames appear
+    // Start a watchdog to detect if no video frames appear after reasonable time
+    // Use 8 seconds to account for slow connections and buffering
     _videoAvailabilityTimer?.cancel();
     _videoUnavailable = false;
-    _videoAvailabilityTimer = Timer(const Duration(seconds: 4), () {
+    _videoAvailabilityTimer = Timer(const Duration(seconds: 8), () {
       if (!mounted) return;
       final value = controller.value;
-      // If renderer size is zero after timeout, consider video unavailable
-      if (value.size == Size.zero) {
+      // If renderer size is zero after timeout AND not buffering, consider video unavailable
+      // Also check if the player has any error state
+      if (value.size == Size.zero && !value.isBuffering) {
+        debugLog('Video watchdog: No frames after 8s, size=${value.size}, buffering=${value.isBuffering}');
         setState(() => _videoUnavailable = true);
       }
     });
     _playerListener = () {
       final value = controller.value;
       if (!mounted) return;
+      
+      // Clear "no video" overlay as soon as we get valid video frames
+      if (_videoUnavailable && value.size != Size.zero) {
+        debugLog('Video watchdog: Video became available, size=${value.size}');
+        _videoAvailabilityTimer?.cancel();
+        setState(() => _videoUnavailable = false);
+        return; // Skip the rest to avoid redundant setState
+      }
+      
       setState(() {
         _isPlaying = value.isPlaying;
         _position = value.position;
