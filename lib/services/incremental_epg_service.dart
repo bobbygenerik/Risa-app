@@ -190,8 +190,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
   static final RegExp _techChPrefixRe =
       RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
-  static final RegExp _countryCodeSufRe =
-      RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$');
+  static final RegExp _countryCodeSufRe = RegExp(
+      r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es|in|se|ru|mx|br|nl|no|dk|fi|pl|cz|sk|ro|bg|gr|tr|il|sa|ae|eg|za|nz|cn|jp|kr|tw|vn|th|id|my|sg|ph|pk|bd|ar|cl|co|pe|ve|ch|be|at)$');
   static final RegExp _regionSufRe = RegExp(
       r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$');
   static final RegExp _plusOneSufRe = RegExp(r'(plus1|plusone|\+1|\+2)$');
@@ -3007,6 +3007,21 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     return null;
   }
 
+  String? _matchStrippedToAvailable(String normalized, {String? countryCode}) {
+    if (normalized.isEmpty) return null;
+    _ensureStrippedNormalizedMap();
+    final strippedMap = _normalizedAvailableChannelsStripped;
+    if (strippedMap == null || strippedMap.isEmpty) return null;
+    final candidates = strippedMap[normalized];
+    if (candidates == null || candidates.isEmpty) return null;
+    final best = _selectBestFromCandidates(candidates, countryCode, normalized);
+    if (best == null) return null;
+    if (countryCode != null && _epgIdDisagreesWithCountry(best, countryCode)) {
+      return null;
+    }
+    return best;
+  }
+
   /// Select the best EPG ID from a list of candidates based on country and similarity.
   String? _selectBestFromCandidates(
       List<String> candidates, String? countryCode, String normalizedTarget) {
@@ -3077,12 +3092,54 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       'ca',
       'au',
       'ie',
+      'pt',
+      'hk',
       'fr',
       'de',
       'es',
       'it',
+      'in',
+      'se',
+      'ru',
+      'mx',
       'br',
-      'mx'
+      'nl',
+      'no',
+      'dk',
+      'fi',
+      'pl',
+      'cz',
+      'sk',
+      'ro',
+      'bg',
+      'gr',
+      'tr',
+      'il',
+      'sa',
+      'ae',
+      'eg',
+      'za',
+      'nz',
+      'cn',
+      'jp',
+      'kr',
+      'tw',
+      'vn',
+      'th',
+      'id',
+      'my',
+      'sg',
+      'ph',
+      'pk',
+      'bd',
+      'ar',
+      'cl',
+      'co',
+      'pe',
+      've',
+      'ch',
+      'be',
+      'at',
     ];
     final normalizedId = epgId.toLowerCase();
 
@@ -3164,6 +3221,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     'russia': 'ru', 'russian': 'ru',
     'poland': 'pl', 'polish': 'pl',
     'sweden': 'se', 'swedish': 'se',
+    'switzerland': 'ch', 'swiss': 'ch',
+    'austria': 'at', 'austrian': 'at',
     'norway': 'no', 'norwegian': 'no',
     'denmark': 'dk', 'danish': 'dk',
     'finland': 'fi', 'finnish': 'fi',
@@ -3294,9 +3353,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     // Strip quality suffixes after normalization.
     clean = clean.replaceAll(_qualitySufRe, '');
 
-    // Convert ampersand to "and" before stripping non-alphanumeric
-    // This allows "A&E" to match "AandE" in EPG data
+    // Convert ampersand and plus before stripping non-alphanumeric.
+    // This allows "A&E" to match "AandE" and "AMC+" to match "AMC Plus".
     clean = clean.replaceAll('&', 'and');
+    clean = clean.replaceAll('+', ' plus ');
 
     String normalized = clean.toLowerCase().replaceAll(_nonAlphaNumRe, '');
 
@@ -3368,6 +3428,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     if (aliasId != null) {
       return _cacheResolvedMapping(channelId, aliasId);
     }
+    final strippedId = _stripCountryRegion(normalizedId);
+    final strippedFromId =
+        _matchStrippedToAvailable(strippedId, countryCode: countryCode);
+    if (strippedFromId != null) {
+      return _cacheResolvedMapping(channelId, strippedFromId);
+    }
 
     // Match without domain suffix (e.g., "BBC1.uk" -> "BBC1")
     if (channelId.contains('.')) {
@@ -3386,6 +3452,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           _matchAliasToAvailable(withoutDomain, countryCode: countryCode);
       if (aliasWithoutDomain != null) {
         return _cacheResolvedMapping(channelId, aliasWithoutDomain);
+      }
+      final strippedFromDomain =
+          _matchStrippedToAvailable(withoutDomain, countryCode: countryCode);
+      if (strippedFromDomain != null) {
+        return _cacheResolvedMapping(channelId, strippedFromDomain);
       }
     }
 
@@ -3407,6 +3478,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       if (aliasFromName != null) {
         return _cacheResolvedMapping(channelId, aliasFromName);
       }
+      final strippedFromName =
+          _matchStrippedToAvailable(normalizedName, countryCode: countryCode);
+      if (strippedFromName != null) {
+        return _cacheResolvedMapping(channelId, strippedFromName);
+      }
 
       final strippedName = _normalize(_stripSuffixes(channelName));
       if (strippedName.isNotEmpty &&
@@ -3424,6 +3500,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           _matchAliasToAvailable(strippedName, countryCode: countryCode);
       if (aliasFromStripped != null) {
         return _cacheResolvedMapping(channelId, aliasFromStripped);
+      }
+      if (strippedName != normalizedName) {
+        final strippedFromStripped =
+            _matchStrippedToAvailable(strippedName, countryCode: countryCode);
+        if (strippedFromStripped != null) {
+          return _cacheResolvedMapping(channelId, strippedFromStripped);
+        }
       }
 
       if (allowLoose) {
