@@ -4,13 +4,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
+import '../utils/throttled_notifier.dart';
+import 'logo_matching_isolate.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../utils/debug_helper.dart';
 
 /// Service for logo-based channel matching using computer vision techniques
 /// Compares channel logos to improve EPG matching accuracy
-class LogoMatchingService extends ChangeNotifier {
+class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
   static const String _logoCacheDir = 'channel_logos';
   static const String _logoIndexFile = 'logo_index.json';
   static const int _maxCacheSize = 500; // Maximum number of logos to cache
@@ -245,7 +247,7 @@ class LogoMatchingService extends ChangeNotifier {
       }
 
       debugLog('Logo cache cleared');
-      notifyListeners();
+      notifyListenersThrottled();
     } catch (e) {
       debugLog('Error clearing logo cache: $e');
     }
@@ -315,24 +317,20 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<LogoData?> _processLogo(Uint8List bytes, String url) async {
     try {
-      // Decode image
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      final image = frame.image;
+      // Offload processing (decode/resize/encode) to a pure-Dart isolate worker
+      final params = {'bytes': bytes, 'maxLogoSize': _maxLogoSize};
+      final map = await compute(processLogoIsolate, params);
+      final processedBytes = map['bytes'] as Uint8List;
+      final procWidth = (map['width'] as num).toInt();
+      final procHeight = (map['height'] as num).toInt();
 
-      // Resize if too large
-      final processedImage = await _resizeImageIfNeeded(image);
-
-      // Convert back to bytes
-      final processedBytes = await _imageToBytes(processedImage);
-
-      // Calculate hash for deduplication
+      // Calculate hash for deduplication based on original bytes
       final hash = sha256.convert(bytes).toString();
 
       return LogoData(
         bytes: processedBytes,
-        width: processedImage.width,
-        height: processedImage.height,
+        width: procWidth,
+        height: procHeight,
         format: 'PNG',
         url: url,
         hash: hash,
@@ -390,7 +388,7 @@ class LogoMatchingService extends ChangeNotifier {
       // Update index
       await _saveLogoIndex();
 
-      notifyListeners();
+      notifyListenersThrottled();
     } catch (e) {
       debugLog('Error saving logo to cache: $e');
     }
@@ -407,18 +405,14 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<LogoFeatures> _extractLogoFeaturesFromBytes(Uint8List bytes) async {
     try {
-      // Decode image
+      // Decode image using engine codec (keeps pixel fidelity) and extract features
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
       final image = frame.image;
 
-      // Extract color histogram
+      // Extract features on the engine side (existing implementation)
       final colorHistogram = await _extractColorHistogram(image);
-
-      // Extract edge features
       final edgeFeatures = await _extractEdgeFeatures(image);
-
-      // Extract texture features (simplified)
       final textureFeatures = await _extractTextureFeatures(image);
 
       return LogoFeatures(
