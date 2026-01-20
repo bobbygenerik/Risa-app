@@ -3556,44 +3556,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             _normalizedAvailableChannels != null) {
           final List<String> candidates = [];
           for (final entry in _normalizedAvailableChannels!.entries) {
-            final epgNorm = entry.key;
-            // Prefix match or containment
-            if (epgNorm.startsWith(normalizedName) ||
-                normalizedName.startsWith(epgNorm)) {
-              // Reject prefix matches that are too short (e.g. "TNT" matching "TNT Sports" is only ok if diff is small)
-              final diff = (epgNorm.length - normalizedName.length).abs();
-              if (diff < 10) {
-                candidates.addAll(entry.value);
-              }
-            }
-          }
-
-          if (candidates.isNotEmpty) {
-            final best = _selectBestFromCandidates(
-                candidates, countryCode, normalizedName);
-            // Strict check for loose matches: if we have a country code, don't match a disagreeing country
-            if (best != null) {
-              if (countryCode != null &&
-                  _epgIdDisagreesWithCountry(best, countryCode)) {
-                // Reject this loose match as it belongs to another country
-              } else {
-                return _cacheResolvedMapping(channelId, best);
-              }
-            }
-          }
-        }
-
-        // 5. Conservative fuzzy-match fallback using trigram similarity
-        if (channelName.length >= 4 && _normalizedAvailableChannels != null) {
-          final List<String> allCandidates = [];
-          double highestTrigram = 0.0;
-
-          // Optimization: Pre-calculate trigrams for the target name once
-          final targetTrigrams = _generateTrigramSet(normalizedName);
-
-          for (final entry in _normalizedAvailableChannels!.entries) {
-            final score =
-                _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             if (score >= 0.75) {
               if (score > highestTrigram) highestTrigram = score;
