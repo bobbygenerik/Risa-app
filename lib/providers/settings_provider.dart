@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
+import '../utils/throttled_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SettingsProvider extends ChangeNotifier {
+class SettingsProvider extends ChangeNotifier with ThrottledNotifier {
   SettingsProvider();
 
   SharedPreferences? _prefs;
@@ -63,7 +64,7 @@ class SettingsProvider extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     _loadFromPrefs();
     _isInitialized = true;
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<SharedPreferences> _ensurePrefs() async {
@@ -121,112 +122,112 @@ class SettingsProvider extends ChangeNotifier {
     if (_hardwareAcceleration == value) return;
     _hardwareAcceleration = value;
     await _prefs?.setBool('hardware_acceleration', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setHardwareDecoding(bool value) async {
     if (_hardwareDecoding == value) return;
     _hardwareDecoding = value;
     await _prefs?.setBool('hardware_decoding', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setHardwarePostProcessing(bool value) async {
     if (_hardwarePostProcessing == value) return;
     _hardwarePostProcessing = value;
     await _prefs?.setBool('hardware_postprocessing', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setDecoderType(String value) async {
     if (_decoderType == value) return;
     _decoderType = value;
     await _prefs?.setString('decoder_type', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setRenderingEngine(String value) async {
     if (_renderingEngine == value) return;
     _renderingEngine = value;
     await _prefs?.setString('rendering_engine', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setAudioDecoderType(String value) async {
     if (_audioDecoderType == value) return;
     _audioDecoderType = value;
     await _prefs?.setString('audio_decoder_type', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setAudioPassthrough(bool value) async {
     if (_audioPassthrough == value) return;
     _audioPassthrough = value;
     await _prefs?.setBool('audio_passthrough', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setAudioBoost(bool value) async {
     if (_audioBoost == value) return;
     _audioBoost = value;
     await _prefs?.setBool('audio_boost', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setNormalizeAudio(bool value) async {
     if (_normalizeAudio == value) return;
     _normalizeAudio = value;
     await _prefs?.setBool('normalize_audio', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setAudioChannels(int channels) async {
     if (_audioChannels == channels) return;
     _audioChannels = channels;
     await _prefs?.setInt('audio_channels', channels);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setPreferredAudioLanguage(String value) async {
     if (_preferredAudioLanguage == value) return;
     _preferredAudioLanguage = value;
     await _prefs?.setString('preferred_audio_language', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setAutoPlayNextEpisode(bool value) async {
     if (_autoPlayNextEpisode == value) return;
     _autoPlayNextEpisode = value;
     await _prefs?.setBool('auto_play_next', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setRememberPlaybackPosition(bool value) async {
     if (_rememberPlaybackPosition == value) return;
     _rememberPlaybackPosition = value;
     await _prefs?.setBool('remember_playback_position', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setSkipIntro(bool value) async {
     if (_skipIntro == value) return;
     _skipIntro = value;
     await _prefs?.setBool('skip_intro', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setVideoQuality(String value) async {
     if (_videoQuality == value) return;
     _videoQuality = value;
     await _prefs?.setString('video_quality', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setPlaybackQuality(String value) async {
     if (_playbackQuality == value) return;
     _playbackQuality = value;
     await _prefs?.setString('playback_quality', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setVideoBufferSize(double value) async {
@@ -234,14 +235,14 @@ class SettingsProvider extends ChangeNotifier {
     if ((_videoBufferSize - clamped).abs() < 0.01) return;
     _videoBufferSize = clamped;
     await _prefs?.setDouble('video_buffer_size', clamped);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setHeroVideoPreview(bool value) async {
     if (_heroVideoPreview == value) return;
     _heroVideoPreview = value;
     await _prefs?.setBool('hero_video_preview', value);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setVideoPlayerBackend(String value) async {
@@ -249,7 +250,7 @@ class SettingsProvider extends ChangeNotifier {
     if (_videoPlayerBackend == resolved) return;
     _videoPlayerBackend = resolved;
     await _prefs?.setString('video_player_backend', resolved);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setExoPlayerSurfaceType(String value) async {
@@ -257,7 +258,7 @@ class SettingsProvider extends ChangeNotifier {
     if (_exoPlayerSurfaceType == resolved) return;
     _exoPlayerSurfaceType = resolved;
     await _prefs?.setString('exo_player_surface_type', resolved);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<Map<String, String?>> getProfileData(
@@ -316,19 +317,19 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> refreshProfileData() async {
     _profileCache = null;
     await getProfileData(forceRefresh: true);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> refreshSavedPlaylists() async {
     _savedPlaylistsCache = null;
     await getSavedPlaylists(forceRefresh: true);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> refreshEpgData() async {
     _epgCache = null;
     await getEpgData(forceRefresh: true);
-    notifyListeners();
+    notifyListenersThrottled();
   }
 
   Future<void> setCustomEpgUrl(String value) async {

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import 'dart:math' as math;
+// no-op
 
 // NOTE: Feature extraction worker intentionally omitted for now.
 // We keep a dedicated logo processing worker (`processLogoIsolate`) which
