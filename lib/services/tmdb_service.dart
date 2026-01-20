@@ -74,29 +74,13 @@ class TMDBService {
     37: 'Western',
   };
 
+  // Regex patterns for title normalization - now consolidated in EPGMatchingUtils
+  // Keeping these for backwards compatibility but _normalizeTitle now uses
+  // the centralized normalizeForArtwork function
+
   static String _normalizeTitle(String title) {
-    final aggressive = EPGMatchingUtils.isLikelyNewsTitle(title);
-    var output = EPGMatchingUtils.normalizeTitleForLookup(
-      title,
-      aggressiveForNews: aggressive,
-    );
-    output =
-        output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
-    output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
-    output = output.replaceAll(
-        RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
-            caseSensitive: false),
-        '');
-    output = output.replaceAll(
-        RegExp(r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b', caseSensitive: false),
-        '');
-    output = output.replaceAll(
-        RegExp(
-            r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
-            caseSensitive: false),
-        '');
-    output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return output;
+    // Use consolidated normalization from EPGMatchingUtils
+    return EPGMatchingUtils.normalizeForArtwork(title);
   }
 
   static String _cacheKey(String prefix, String query, {int? year}) {

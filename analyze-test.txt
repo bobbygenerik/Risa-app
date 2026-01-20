@@ -1,0 +1,17 @@
+Analyzing test...                                               
+
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:18:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:27:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:58:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:92:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:98:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/downloads_optimization_benchmark.dart:99:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:106:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:107:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:108:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:109:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:110:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:113:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/tmdb_normalization_benchmark_test.dart:114:5 • avoid_print
+
+13 issues found. (ran in 1.3s)

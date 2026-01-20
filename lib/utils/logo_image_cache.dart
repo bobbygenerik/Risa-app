@@ -31,7 +31,7 @@ class LogoImageCache {
     _cache[key] = _LogoCacheEntry(resized);
     _order.add(key);
     _trim();
-    return provider;
+    return resized;
   }
 
   static String _cacheKey(String url, Map<String, String>? headers) {

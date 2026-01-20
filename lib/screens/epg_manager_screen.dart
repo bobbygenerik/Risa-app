@@ -77,10 +77,10 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
         });
         return AlertDialog(
           backgroundColor: AppTheme.darkBackground,
-          title: const Text('Clear All EPG Data',
+          title: const Text('Clear EPG Cache',
               style: TextStyle(color: AppTheme.textPrimary)),
           content: const Text(
-            'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
+            'This will clear cached EPG programs and channel mappings. Your EPG URLs will be kept.',
             style: TextStyle(color: AppTheme.textSecondary),
           ),
           actions: [
@@ -110,7 +110,10 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
       try {
         final epgService =
             Provider.of<IncrementalEpgService>(context, listen: false);
-        await epgService.clearAllData();
+        await epgService.clearAllData(
+          clearUrls: false,
+          clearSavedPlaylists: false,
+        );
         if (mounted) {
           _showMessage('All EPG data cleared successfully!');
         }
@@ -432,7 +435,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
               : BrandSecondaryButton(
                   onPressed: _clearAllEpgData,
                   icon: Icons.delete_forever,
-                  label: 'Clear All EPG Data',
+                  label: 'Clear EPG Cache',
                   expand: true,
                 ),
         ],

@@ -290,23 +290,11 @@ class EPGProgramRow extends StatelessWidget {
     const cellWidth = 240.0;
     const totalWidth = 12 * cellWidth;
 
-    // Check if EPG data is available for this channel
-    final hasEpgData = epgService.hasEpgData(channelKey);
-    if (!hasEpgData) {
-      return Container(
-        height: rowHeight,
-        width: totalWidth,
-        margin: const EdgeInsets.only(bottom: rowGap, left: 0),
-        child: _buildFocusablePlaceholder(
-          label: 'Loading EPG...',
-          focusNode: currentProgramFocusNode,
-          onMoveLeft: onMoveLeft,
-        ),
-      );
-    }
-    
-    final programs =
-        epgService.getProgramsForChannel(channelKey, channelName: channel.name);
+    final programs = epgService.getProgramsForChannel(
+      channelKey,
+      channelName: channel.name,
+      groupTitle: channel.groupTitle,
+    );
 
     final now = DateTime.now();
     final startHour = now.hour;
@@ -322,13 +310,15 @@ class EPGProgramRow extends StatelessWidget {
       return program.isCurrentlyPlaying;
     });
 
+    final isBusy =
+        epgService.isLoading || epgService.isParsing || epgService.isDownloading;
     return Container(
       height: rowHeight,
       width: totalWidth,
       margin: const EdgeInsets.only(bottom: rowGap, left: 0),
       child: dayPrograms.isEmpty
           ? _buildFocusablePlaceholder(
-              label: 'No EPG data',
+              label: isBusy ? 'Loading EPG...' : 'No EPG data',
               focusNode: currentProgramFocusNode,
               onMoveLeft: onMoveLeft,
             )

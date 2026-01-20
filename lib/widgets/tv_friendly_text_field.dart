@@ -49,12 +49,14 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
   }
 
   void _handleFocusChange() {
-    // If we lose focus, we must exit edit mode
-    if (!widget.focusNode.hasFocus && _isEditing) {
-      setState(() {
+    // Always trigger rebuild to update focus-dependent UI (like suffixIcon)
+    setState(() {
+      // If we lose focus, we must exit edit mode
+      if (!widget.focusNode.hasFocus && _isEditing) {
         _isEditing = false;
-      });
-    }
+      }
+    });
+
     if (widget.focusNode.hasFocus) {
       final text = widget.controller.text;
       widget.controller.selection =
@@ -195,11 +197,10 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
               readOnly: !_isEditing, // Only writable when in edit mode
               onChanged: widget.onChanged,
               isFocusedOverride: widget.focusNode.hasFocus || _isEditing,
-              // We want to show the "Edit" icon when we are focused but NOT editing
-              // BrandTextField doesn't natively support a distinct "suffix icon" param for this state
-              // without modification, but we can rely on standard verified visual for now.
-              // If strictly needed, we can wrap or modify BrandTextField later.
-              // For now, the crash fix is the priority.
+              // Show an edit icon when focused but not editing, to indicate action is needed to edit
+              suffixIcon: (widget.focusNode.hasFocus && !_isEditing)
+                  ? Icons.edit
+                  : null,
             ),
           );
         },

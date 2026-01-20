@@ -323,8 +323,9 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> getChannelsForCategoryPage(String category,
       {int offset = 0, int limit = 50}) async {
     final safeLimit = limit.clamp(0, 500);
+    final trimmedCategory = category.trim();
     final rows = await _withDbRead((db) {
-      if (category.trim().toLowerCase() == 'uncategorized') {
+      if (trimmedCategory.toLowerCase() == 'uncategorized') {
         return db.query(
           'channels',
           where:
@@ -335,13 +336,10 @@ class LocalDbService {
           offset: offset,
         );
       }
-      return db.query(
-        'channels',
-        where: 'groupTitle = ?',
-        whereArgs: [category],
-        orderBy: 'idx ASC',
-        limit: safeLimit,
-        offset: offset,
+      // Use TRIM() on groupTitle to match normalized category names
+      return db.rawQuery(
+        'SELECT * FROM channels WHERE TRIM(groupTitle) = ? ORDER BY idx ASC LIMIT ? OFFSET ?',
+        [trimmedCategory, safeLimit, offset],
       );
     });
     return rows.map(_hydrateAttrs).toList();
@@ -359,7 +357,8 @@ class LocalDbService {
     final results = await _withDbRead((db) async {
       final batch = db.batch();
       for (final category in categories) {
-        if (category.trim().toLowerCase() == 'uncategorized') {
+        final trimmedCategory = category.trim();
+        if (trimmedCategory.toLowerCase() == 'uncategorized') {
           batch.query(
             'channels',
             where:
@@ -371,13 +370,10 @@ class LocalDbService {
           );
           continue;
         }
-        batch.query(
-          'channels',
-          where: 'groupTitle = ?',
-          whereArgs: [category],
-          orderBy: 'idx ASC',
-          limit: safeLimit,
-          offset: safeOffset,
+        // Use rawQuery with TRIM() to match normalized category names
+        batch.rawQuery(
+          'SELECT * FROM channels WHERE TRIM(groupTitle) = ? ORDER BY idx ASC LIMIT ? OFFSET ?',
+          [trimmedCategory, safeLimit, safeOffset],
         );
       }
       return batch.commit(noResult: false);
@@ -429,10 +425,15 @@ class LocalDbService {
   }
 
   Future<int> channelCountForCategory(String category) async {
+    final trimmedCategory = category.trim();
     final result = await _withDbRead((db) {
+      if (trimmedCategory.toLowerCase() == 'uncategorized') {
+        return db.rawQuery(
+            'SELECT COUNT(*) as c FROM channels WHERE groupTitle IS NULL OR TRIM(groupTitle) = \'\' OR groupTitle = \'Uncategorized\'');
+      }
       return db.rawQuery(
-          'SELECT COUNT(*) as c FROM channels WHERE groupTitle = ?',
-          [category]);
+          'SELECT COUNT(*) as c FROM channels WHERE TRIM(groupTitle) = ?',
+          [trimmedCategory]);
     });
     return Sqflite.firstIntValue(result) ?? 0;
   }

@@ -1,0 +1,63 @@
+local NO-VOD: f11f92bd
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+\norigin/NO-VOD: 1b542417
+1b542417 Ubuntu 2026-01-14 23:35:19 +0000 Enhance artwork selection logic across all metadata services
+\norigin/master: f11f92bd
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+\n--- last 10 commits on local NO-VOD ---
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+1b542417 Ubuntu 2026-01-14 23:35:19 +0000 Enhance artwork selection logic across all metadata services
+57f72d82 Ubuntu 2026-01-13 16:50:19 +0000 Refine startup UX and artwork matching
+1c9a7839 Ubuntu 2026-01-12 18:16:22 +0000 Improve cold-start loading UX and defer EPG parse
+a73f3c37 Ubuntu 2026-01-12 05:38:31 +0000 Add category fallback for Live TV and EPG
+c16a1f60 Ubuntu 2026-01-12 05:31:09 +0000 Fix category normalization and Uncategorized handling
+3f8d1d37 Ubuntu 2026-01-12 05:18:31 +0000 Update tvdb/tmdb config and diagnostics
+a3461f18 Ubuntu 2026-01-12 05:14:38 +0000 Improve on-device metadata caching and warm snapshots
+17878c9d Ubuntu 2026-01-11 19:32:02 +0000 Stabilize category loading and artwork retries
+be8c11c3 Ubuntu 2026-01-11 19:16:24 +0000 Polish hero scrim and category updating\n--- files changed in last 5 commits on local NO-VOD ---
+f11f92bd Ubuntu 2026-01-15 17:28:47 +0000 Fix EPG loading and LiveTV skeleton gating
+M	lib/main.dart
+M	lib/providers/channel_provider.dart
+M	lib/screens/epg_screen.dart
+M	lib/screens/live_tv_screen.dart
+M	lib/services/incremental_epg_service.dart
+M	lib/services/local_db_service.dart
+---
+1b542417 Ubuntu 2026-01-14 23:35:19 +0000 Enhance artwork selection logic across all metadata services
+A	docs/artwork_selection_improvements.md
+A	docs/badstate.txt
+A	docs/epg_cache.xml.gz
+A	docs/flutterlogs.txt
+A	docs/logs10.txt
+A	docs/logs9.txt
+A	docs/ratelimits.txt
+M	lib/l10n/gen/app_localizations.dart
+M	lib/l10n/gen/app_localizations_en.dart
+M	lib/providers/channel_provider.dart
+M	lib/screens/live_tv_screen.dart
+M	lib/services/fanart_service.dart
+M	lib/services/incremental_epg_service.dart
+M	lib/services/local_db_service.dart
+M	lib/services/thesportsdb_service.dart
+M	lib/services/tmdb_service.dart
+M	lib/services/tvdb_service.dart
+M	lib/widgets/program_artwork_widget.dart
+---
+57f72d82 Ubuntu 2026-01-13 16:50:19 +0000 Refine startup UX and artwork matching
+M	lib/l10n/app_en.arb
+M	lib/screens/live_tv_screen.dart
+M	lib/services/tmdb_service.dart
+M	lib/services/tvdb_service.dart
+M	lib/utils/epg_matching_utils.dart
+---
+1c9a7839 Ubuntu 2026-01-12 18:16:22 +0000 Improve cold-start loading UX and defer EPG parse
+M	lib/main.dart
+M	lib/providers/channel_provider.dart
+M	lib/screens/live_tv_screen.dart
+M	lib/services/incremental_epg_service.dart
+---
+a73f3c37 Ubuntu 2026-01-12 05:38:31 +0000 Add category fallback for Live TV and EPG
+M	lib/screens/epg_screen.dart
+M	lib/screens/live_tv_screen.dart
+---
+\n--- commits unique (NO-VOD ... origin/master) ---

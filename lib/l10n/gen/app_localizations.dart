@@ -265,7 +265,7 @@ abstract class AppLocalizations {
   /// No description provided for @clearEpgData.
   ///
   /// In en, this message translates to:
-  /// **'Clear EPG Data'**
+  /// **'Clear EPG Cache'**
   String get clearEpgData;
 
   /// No description provided for @autoRefreshInterval.

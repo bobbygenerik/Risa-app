@@ -212,8 +212,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               channelProvider.getChannelSampleMapsByStride(sampleSize);
           if (sample.isNotEmpty) {
             final matched = epgService.estimateMatchesFast(sample);
-            mappingCount = matched *
-                (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
+            // Guard against division by zero - use sample.length if not empty, else 1
+            final divisor = sample.isNotEmpty ? sample.length : 1;
+            mappingCount = matched * (totalChannels ~/ divisor);
           }
         } catch (e, st) {
           debugLog('EPG Diagnostic: sampling failed: $e\n$st');
@@ -421,7 +422,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
-                        'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle"}',
+                        'EPG: ${_formatEpgStatus(epgService)}',
                         style: const TextStyle(color: Colors.white70),
                       ),
                     ),
@@ -695,6 +696,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         ),
       ),
     );
+  }
+
+  String _formatEpgStatus(IncrementalEpgService epgService) {
+    final pct = (epgService.epgProgress * 100).round().clamp(0, 100);
+    if (epgService.isDownloading) return 'Downloading ($pct%)';
+    if (epgService.isParsing) return 'Parsing ($pct%)';
+    if (epgService.isLoading) return 'Loading ($pct%)';
+    return 'Idle';
   }
 
   void _deliverSnackBar(ScaffoldMessengerState? messenger, SnackBar snackBar) {

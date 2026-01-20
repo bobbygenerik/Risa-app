@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -46,7 +47,7 @@ class LocalBackupService {
       }
 
       final content = await file.readAsString();
-      final decoded = jsonDecode(content) as Map<String, dynamic>;
+      final decoded = await compute(jsonDecode, content) as Map<String, dynamic>;
       return decoded;
     } catch (e) {
       // Swallow plugin / I/O exceptions and return null so callers can handle

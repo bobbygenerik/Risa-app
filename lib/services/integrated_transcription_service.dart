@@ -253,9 +253,32 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     // This would use your Whisper model to transcribe the audio file
     debugLog('Transcribing audio file: $filePath');
 
-    // Placeholder - integrate with your actual Whisper implementation
-    await Future.delayed(const Duration(seconds: 2));
-    await _addSubtitle('Transcription result from file: $filePath');
+    final whisper = _whisperService;
+    if (whisper == null) {
+      debugLog('Whisper service not attached, cannot transcribe file.');
+      _lastError = 'Whisper service not ready';
+      notifyListeners();
+      return;
+    }
+
+    // Ensure initialized
+    if (!whisper.isInitialized) {
+      await whisper.initialize();
+    }
+
+    final result = await whisper.transcribeFile(filePath);
+
+    if (result != null && result.isNotEmpty) {
+      await _addSubtitle(result);
+    } else {
+      if (whisper.lastError.isNotEmpty) {
+        debugLog('Transcription error: ${whisper.lastError}');
+        _lastError = whisper.lastError;
+        notifyListeners();
+      } else {
+        debugLog('Transcription returned empty result');
+      }
+    }
   }
 
   /// Stop transcription

@@ -63,6 +63,11 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
     final viewportWidth = widget.controller.position.viewportDimension;
     // Estimate how many items cover the offset + viewport
     final itemWidth = widget.cardWidth + widget.cardGap;
+    // Guard against division by zero
+    if (itemWidth <= 0) {
+      _resetToInitial();
+      return;
+    }
     // items visible based on scroll + buffer
     final needed = ((offset + viewportWidth) / itemWidth).ceil() + _buffer;
     
@@ -79,7 +84,10 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
   int _getInitialCount() {
      final screenWidth = MediaQuery.of(context).size.width;
      final availableWidth = screenWidth - widget.padding.horizontal;
-     final perRow = (availableWidth / (widget.cardWidth + widget.cardGap)).floor();
+     final itemWidth = widget.cardWidth + widget.cardGap;
+     // Guard against division by zero
+     if (itemWidth <= 0) return 6;
+     final perRow = (availableWidth / itemWidth).floor();
      return (perRow + _buffer).clamp(6, 12);
   }
 
@@ -140,6 +148,8 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
         padding: widget.padding,
         clipBehavior: Clip.none,
         itemCount: count,
+        // addRepaintBoundaries is true by default, which helps with scroll perf
+        addAutomaticKeepAlives: false, // Disable to reduce memory pressure
         itemBuilder: widget.itemBuilder,
         separatorBuilder: (context, index) => SizedBox(width: widget.cardGap),
       ),

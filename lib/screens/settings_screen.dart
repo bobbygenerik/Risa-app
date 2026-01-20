@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -9,6 +10,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/utils/snackbar_utils.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
@@ -111,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _loadSettingsSync();
   }
 
-  void _loadSettingsSync() async {
+  Future<void> _loadSettingsSync() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
@@ -331,18 +333,35 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildActiveContent() {
+    Widget content;
     switch (_selectedIndex) {
       case 0:
-        return _buildGeneralSettings();
+        content = _buildGeneralSettings();
+        break;
       case 1:
-        return _buildPlaybackSettings();
+        content = _buildPlaybackSettings();
+        break;
       case 2:
-        return _buildAISettings();
+        content = _buildAISettings();
+        break;
       case 3:
-        return _buildRecordingsSettings();
+        content = _buildRecordingsSettings();
+        break;
       default:
-        return _buildGeneralSettings();
+        content = _buildGeneralSettings();
     }
+
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          _layoutController.requestMenuFocus();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: content,
+    );
   }
 
   Widget _buildGeneralSettings() {
@@ -930,7 +949,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     return 'http://$trimmed';
   }
 
-  void _loadM3uPlaylist() async {
+  Future<void> _loadM3uPlaylist() async {
     final url = _normalizeHttpUrl(_m3uUrlController.text);
     if (url.isEmpty) {
       _showMessage(AppLocalizations.of(context)!.pleaseEnterPlaylistUrl);
@@ -979,7 +998,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  void _loadXtreamPlaylist() async {
+  Future<void> _loadXtreamPlaylist() async {
     final server = _normalizeHttpUrl(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
@@ -1100,18 +1119,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     _showMessage('Updating EPG...');
     final service = Provider.of<IncrementalEpgService>(context, listen: false);
     await service.initialize();
+    if (!mounted) return;
     _showMessage('EPG update triggered.');
   }
 
   Future<void> _handleClearEpg() async {
-    _customEpgUrlController.clear();
-    _secondaryEpgUrlController.clear();
-    _detectedEpgUrl = '';
     final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('live_tv_program_artwork_title_cache_v1');
     await prefs.remove('live_tv_program_artwork_negative_cache_v1');
-    await epgService.clearAllData();
+    await epgService.clearAllData(
+      clearUrls: false,
+      clearSavedPlaylists: false,
+    );
+    if (!mounted) return;
     setState(() {});
     _showMessage('EPG cleared.');
   }
@@ -1119,13 +1140,16 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _browseStorage() async {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
+      if (!mounted) return;
       if (result != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('recording_storage_path', result);
+        if (!mounted) return;
         _showMessage('Storage path updated: $result');
         setState(() {});
       }
     } catch (e) {
+      if (!mounted) return;
       _showMessage('Failed to select directory: $e');
     }
   }
@@ -1217,8 +1241,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     final existingJson = prefs.getString('saved_playlists');
     List<SavedPlaylist> list = [];
     if (existingJson != null && existingJson.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(existingJson) as List<dynamic>;
+        try {
+        final decoded = await compute(jsonDecode, existingJson) as List<dynamic>;
         list = decoded
             .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
             .toList();
@@ -1294,7 +1318,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     try {
       if (await BackupService.importBackup()) {
         _showMessage('Import successful! Restarting...');
-        _loadSettingsSync();
+        unawaited(_loadSettingsSync());
       }
     } catch (e) {
       _showMessage('Import failed: $e');

@@ -879,12 +879,11 @@ class M3UParserService {
 
   /// Optimized parser that directly returns maps (avoids object creation/conversion overhead)
   /// Used by isolate parsing for better performance with large playlists
+  /// VOD detection is SKIPPED for maximum speed - all entries treated as live channels.
   Future<Map<String, dynamic>> parseM3UStreamToMaps(
       Stream<List<int>> byteStream,
       {SendPort? progressPort}) async {
     final List<Map<String, dynamic>> channelMaps = [];
-    final List<Map<String, dynamic>> movieMaps = [];
-    final List<Map<String, dynamic>> seriesMaps = [];
     final lineStream =
         byteStream.transform(utf8.decoder).transform(const LineSplitter());
 
@@ -893,7 +892,6 @@ class M3UParserService {
     String? currentInfo;
     Map<String, String> currentAttributes = {};
     int channelCount = 0;
-    int logicalIndex = 0;
     bool headerProcessed = false;
     final seenUrls = <String>{};
     int epgLinesChecked = 0;
@@ -926,69 +924,33 @@ class M3UParserService {
             }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle = currentAttributes['group-title'] ?? '';
-            final resolvedType = _resolveVodType(
-              channelName,
-              currentAttributes,
-              groupTitle,
-              inlineUrl,
-            );
-            final isVod =
-                resolvedType != null || _isVodUrl(inlineUrl, groupTitle);
-            final isSeries = resolvedType == 'series' ||
-                (resolvedType == null &&
-                    isVod &&
-                    _looksLikeSeriesFast(channelName, groupTitle));
-            final isMovie = resolvedType == 'movie' ||
-                (resolvedType == null && isVod && !isSeries);
 
-            if (isSeries) {
-              seriesMaps.add({
-                'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
-                'title': channelName,
-                'videoUrl': inlineUrl,
-                'imageUrl': currentAttributes['tvg-logo'],
-                'type': 'series',
-                'genres': [groupTitle],
-                'sortOrder': logicalIndex,
-              });
-            } else if (isMovie) {
-              movieMaps.add({
-                'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
-                'title': channelName,
-                'videoUrl': inlineUrl,
-                'imageUrl': currentAttributes['tvg-logo'],
-                'type': 'movie',
-                'genres': [groupTitle],
-                'sortOrder': logicalIndex,
-              });
-            } else {
-              channelMaps.add({
-                'id': currentAttributes['tvg-id'] ??
-                    stableChannelId(
-                        tvgId: currentAttributes['tvg-id'],
-                        name: channelName,
-                        url: inlineUrl),
-                'name': channelName,
-                'url': inlineUrl,
-                'logoUrl': currentAttributes['tvg-logo'],
-                'groupTitle': groupTitle,
-                'tvgId': currentAttributes['tvg-id'],
-                'attributes': currentAttributes,
-                'sortOrder': channelCount,
-                'isFavorite': false,
-                'isHidden': false,
-              });
-              channelCount++;
-              if (progressPort != null && channelCount % 50 == 0) {
-                try {
-                  progressPort
-                      .send({'type': 'progress', 'channels': channelCount});
-                } catch (_) {}
-              }
+            // FAST PATH: Skip all VOD detection - treat everything as live channel
+            channelMaps.add({
+              'id': currentAttributes['tvg-id'] ??
+                  stableChannelId(
+                      tvgId: currentAttributes['tvg-id'],
+                      name: channelName,
+                      url: inlineUrl),
+              'name': channelName,
+              'url': inlineUrl,
+              'logoUrl': currentAttributes['tvg-logo'],
+              'groupTitle': groupTitle,
+              'tvgId': currentAttributes['tvg-id'],
+              'attributes': currentAttributes,
+              'sortOrder': channelCount,
+              'isFavorite': false,
+              'isHidden': false,
+            });
+            channelCount++;
+            if (progressPort != null && channelCount % 200 == 0) {
+              try {
+                progressPort
+                    .send({'type': 'progress', 'channels': channelCount});
+              } catch (_) {}
             }
             currentInfo = null;
             currentAttributes = {};
-            logicalIndex++;
           }
         }
       }
@@ -1018,68 +980,31 @@ class M3UParserService {
         final channelName = _extractChannelName(currentInfo!);
         final groupTitle = currentAttributes['group-title'] ?? '';
 
-        final resolvedType = _resolveVodType(
-          channelName,
-          currentAttributes,
-          groupTitle,
-          channelUrl,
-        );
-        final isVod = resolvedType != null || _isVodUrl(channelUrl, groupTitle);
-        final isSeries = resolvedType == 'series' ||
-            (resolvedType == null &&
-                isVod &&
-                _looksLikeSeriesFast(channelName, groupTitle));
-        final isMovie = resolvedType == 'movie' ||
-            (resolvedType == null && isVod && !isSeries);
-
-        if (isSeries) {
-          seriesMaps.add({
-            'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
-            'title': channelName,
-            'videoUrl': channelUrl,
-            'imageUrl': currentAttributes['tvg-logo'],
-            'type': 'series',
-            'genres': [groupTitle],
-            'sortOrder': logicalIndex,
-          });
-        } else if (isMovie) {
-          movieMaps.add({
-            'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
-            'title': channelName,
-            'videoUrl': channelUrl,
-            'imageUrl': currentAttributes['tvg-logo'],
-            'type': 'movie',
-            'genres': [groupTitle],
-            'sortOrder': logicalIndex,
-          });
-        } else {
-          // Live TV channel
-          channelMaps.add({
-            'id': currentAttributes['tvg-id'] ??
-                stableChannelId(
-                    tvgId: currentAttributes['tvg-id'],
-                    name: channelName,
-                    url: channelUrl),
-            'name': channelName,
-            'url': channelUrl,
-            'logoUrl': currentAttributes['tvg-logo'],
-            'groupTitle': groupTitle,
-            'tvgId': currentAttributes['tvg-id'],
-            'attributes': currentAttributes,
-            'sortOrder': channelCount,
-            'isFavorite': false,
-            'isHidden': false,
-          });
-          channelCount++;
-          if (progressPort != null && channelCount % 50 == 0) {
-            try {
-              progressPort.send({'type': 'progress', 'channels': channelCount});
-            } catch (_) {}
-          }
+        // FAST PATH: Skip all VOD detection - treat everything as live channel
+        channelMaps.add({
+          'id': currentAttributes['tvg-id'] ??
+              stableChannelId(
+                  tvgId: currentAttributes['tvg-id'],
+                  name: channelName,
+                  url: channelUrl),
+          'name': channelName,
+          'url': channelUrl,
+          'logoUrl': currentAttributes['tvg-logo'],
+          'groupTitle': groupTitle,
+          'tvgId': currentAttributes['tvg-id'],
+          'attributes': currentAttributes,
+          'sortOrder': channelCount,
+          'isFavorite': false,
+          'isHidden': false,
+        });
+        channelCount++;
+        if (progressPort != null && channelCount % 200 == 0) {
+          try {
+            progressPort.send({'type': 'progress', 'channels': channelCount});
+          } catch (_) {}
         }
         currentInfo = null;
         currentAttributes = {};
-        logicalIndex++;
       }
     }
 
@@ -1119,8 +1044,9 @@ class M3UParserService {
 
     return {
       'channels': channelMaps,
-      'movies': movieMaps,
-      'series': seriesMaps,
+      'movies': const <Map<String, dynamic>>[],  // VOD detection skipped
+      'series': const <Map<String, dynamic>>[],  // VOD detection skipped
+      'channelCount': channelCount,
       'epgUrl': _epgUrl,
     };
   }
@@ -1356,9 +1282,15 @@ class M3UParserService {
 
   /// Clean series title by removing S##E## pattern
   String _cleanSeriesTitle(String title) {
-    return title
-        .replaceAll(RegExp(r'S\d+E\d+', caseSensitive: false), '')
-        .trim();
+    final seasonEpisodeRe = RegExp(r'\bS\d+E\d+\b', caseSensitive: false);
+    final match = seasonEpisodeRe.firstMatch(title);
+    var cleaned = match != null ? title.substring(0, match.start) : title;
+
+    // Strip trailing separators left behind by removing episode tokens.
+    cleaned = cleaned.replaceAll(RegExp(r'\s*[\-–—:|]\s*$'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return cleaned.isEmpty ? title.trim() : cleaned;
   }
 
   /// Extract genres from group title

@@ -1,0 +1,102 @@
+Found 14 commits authored by 'jules'
+
+--- Commit list (most recent first) ---
+1d0cfeb5 google-labs-jules[bot] 2026-01-17 06:23:23 +0000 Implement actual EPG loading in OptimizedEpgService
+6433d04f google-labs-jules[bot] 2026-01-17 06:22:00 +0000 Optimize channel search to use isolate and avoid blocking main thread
+8d533ca0 google-labs-jules[bot] 2026-01-17 06:21:07 +0000 Implement real channel loading in OptimizedChannelProvider
+85cd3138 google-labs-jules[bot] 2026-01-17 06:20:40 +0000 Implement real channel loading in OptimizedChannelProvider
+ab1235b3 google-labs-jules[bot] 2026-01-17 06:20:12 +0000 perf: Optimize trigram similarity in EPG matching
+a1cb1184 google-labs-jules[bot] 2026-01-17 06:20:01 +0000 Implement manual mapping logic in OptimizedEpgService
+be658d9c google-labs-jules[bot] 2026-01-17 06:19:42 +0000 feat: Integrate actual Whisper implementation in transcription service
+97e4c5ea google-labs-jules[bot] 2026-01-17 06:18:42 +0000 Implement suffix icon support in TVFriendlyTextField
+d4a01e7e google-labs-jules[bot] 2026-01-17 06:18:32 +0000 Refactor DownloadsScreen to use async file stats for sorting
+763339ff google-labs-jules[bot] 2026-01-17 06:18:05 +0000 Implement favorite channels loading in AutoMediaService
+6108e156 google-labs-jules[bot] 2026-01-17 06:17:42 +0000 ⚡ Improve TMDB title normalization performance
+9b36f9f1 google-labs-jules[bot] 2026-01-17 06:17:06 +0000 ⚡ Optimize regex usage in EPG service
+0a0fa351 google-labs-jules[bot] 2026-01-17 05:27:39 +0000 feat(ux): add explicit left arrow navigation in settings
+7e285a1b google-labs-jules[bot] 2026-01-17 05:06:56 +0000 ⚡ Optimize memory usage for channel logos
+--- Per-commit file changes ---
+1d0cfeb5 google-labs-jules[bot] 2026-01-17 06:23:23 +0000 Implement actual EPG loading in OptimizedEpgService
+M	lib/services/optimized_epg_service.dart
+---
+6433d04f google-labs-jules[bot] 2026-01-17 06:22:00 +0000 Optimize channel search to use isolate and avoid blocking main thread
+M	lib/providers/channel_provider.dart
+M	lib/widgets/search_popup.dart
+A	test/channel_search_benchmark_test.dart
+---
+8d533ca0 google-labs-jules[bot] 2026-01-17 06:21:07 +0000 Implement real channel loading in OptimizedChannelProvider
+M	lib/providers/optimized_channel_provider.dart
+A	test/optimized_channel_provider_test.dart
+---
+85cd3138 google-labs-jules[bot] 2026-01-17 06:20:40 +0000 Implement real channel loading in OptimizedChannelProvider
+M	lib/providers/optimized_channel_provider.dart
+A	test/optimized_channel_provider_test.dart
+---
+ab1235b3 google-labs-jules[bot] 2026-01-17 06:20:12 +0000 perf: Optimize trigram similarity in EPG matching
+A	benchmarks/trigram_benchmark.dart
+M	lib/services/incremental_epg_service.dart
+---
+a1cb1184 google-labs-jules[bot] 2026-01-17 06:20:01 +0000 Implement manual mapping logic in OptimizedEpgService
+M	lib/services/optimized_epg_service.dart
+---
+be658d9c google-labs-jules[bot] 2026-01-17 06:19:42 +0000 feat: Integrate actual Whisper implementation in transcription service
+M	lib/services/integrated_transcription_service.dart
+M	lib/services/whisper_transcription_service.dart
+A	test/services/integrated_transcription_service_test.dart
+---
+97e4c5ea google-labs-jules[bot] 2026-01-17 06:18:42 +0000 Implement suffix icon support in TVFriendlyTextField
+M	lib/widgets/brand_text_field.dart
+M	lib/widgets/tv_friendly_text_field.dart
+---
+d4a01e7e google-labs-jules[bot] 2026-01-17 06:18:32 +0000 Refactor DownloadsScreen to use async file stats for sorting
+A	lib/models/download_item.dart
+M	lib/screens/downloads_screen.dart
+A	test/downloads_optimization_benchmark.dart
+---
+763339ff google-labs-jules[bot] 2026-01-17 06:18:05 +0000 Implement favorite channels loading in AutoMediaService
+M	android/app/src/main/kotlin/com/risa/app/AutoMediaService.kt
+---
+6108e156 google-labs-jules[bot] 2026-01-17 06:17:42 +0000 ⚡ Improve TMDB title normalization performance
+M	lib/services/tmdb_service.dart
+A	test/tmdb_normalization_benchmark_test.dart
+---
+9b36f9f1 google-labs-jules[bot] 2026-01-17 06:17:06 +0000 ⚡ Optimize regex usage in EPG service
+M	lib/services/incremental_epg_service.dart
+---
+0a0fa351 google-labs-jules[bot] 2026-01-17 05:27:39 +0000 feat(ux): add explicit left arrow navigation in settings
+A	.Jules/palette.md
+M	lib/screens/settings_screen.dart
+---
+7e285a1b google-labs-jules[bot] 2026-01-17 05:06:56 +0000 ⚡ Optimize memory usage for channel logos
+A	.jules/bolt.md
+M	lib/utils/logo_image_cache.dart
+M	lib/widgets/cached_image.dart
+M	lib/widgets/optimized_channel_list.dart
+---
+
+--- Unique files changed by Jules ---
+.Jules/palette.md
+.jules/bolt.md
+android/app/src/main/kotlin/com/risa/app/AutoMediaService.kt
+benchmarks/trigram_benchmark.dart
+lib/models/download_item.dart
+lib/providers/channel_provider.dart
+lib/providers/optimized_channel_provider.dart
+lib/screens/downloads_screen.dart
+lib/screens/settings_screen.dart
+lib/services/incremental_epg_service.dart
+lib/services/integrated_transcription_service.dart
+lib/services/optimized_epg_service.dart
+lib/services/tmdb_service.dart
+lib/services/whisper_transcription_service.dart
+lib/utils/logo_image_cache.dart
+lib/widgets/brand_text_field.dart
+lib/widgets/cached_image.dart
+lib/widgets/optimized_channel_list.dart
+lib/widgets/search_popup.dart
+lib/widgets/tv_friendly_text_field.dart
+test/channel_search_benchmark_test.dart
+test/downloads_optimization_benchmark.dart
+test/optimized_channel_provider_test.dart
+test/services/integrated_transcription_service_test.dart
+test/tmdb_normalization_benchmark_test.dart

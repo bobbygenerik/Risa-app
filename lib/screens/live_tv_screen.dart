@@ -3,6 +3,7 @@ import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -194,11 +195,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
   bool _snapshotApplied = false;
-  final bool _canPop = false;
 
   // Timer for EPG loading timeout fallback
   late final DateTime _initTime;
-  bool _epgTimeoutLogged = false;
   Timer? _skeletonWatchdog;
   DateTime? _skeletonShownAt;
   DateTime? _lastRecoveryAttempt;
@@ -215,7 +214,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Timer? _artworkRetryWindowTimer;
   bool _artworkRetryWindowActive = false;
   DateTime? _lastArtworkRetryWindow;
-
 
   @override
   void initState() {
@@ -266,6 +264,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  // Helper: replace the word 'EPG' with 'data' in the status (second) line.
+  String? _replaceEpgWithData(String? s) {
+    if (s == null) return null;
+    return s.replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data').trim();
+  }
+
   Future<String?> _readPlaylistIdentity() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -283,7 +287,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_liveTvSnapshotKey);
       if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
+      final decoded = await compute(jsonDecode, raw);
       if (decoded is! Map<String, dynamic>) return;
       final savedAt = decoded['savedAt'] as int?;
       if (savedAt == null) return;
@@ -372,14 +376,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ..addAll(cache);
       _categoryOffsets
         ..clear()
-        ..addEntries(cache.entries.map((entry) =>
-            MapEntry(entry.key, entry.value.length)));
+        ..addEntries(cache.entries
+            .map((entry) => MapEntry(entry.key, entry.value.length)));
       _categoryHasMore
         ..clear()
-        ..addEntries(cache.entries.map((entry) =>
-            MapEntry(entry.key, entry.value.length >= _liveTvSnapshotRowLimit)));
-      _visibleCategoryCount =
-          math.min(_categoryNames.length, _liveTvSnapshotCategoryLimit);
+        ..addEntries(cache.entries.map((entry) => MapEntry(
+            entry.key, entry.value.length >= _liveTvSnapshotRowLimit)));
+      // Show all snapshot categories, not limited to _liveTvSnapshotCategoryLimit
+      _visibleCategoryCount = _categoryNames.length;
 
       if (mounted) {
         setState(() {});
@@ -388,6 +392,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         final epgService =
             Provider.of<IncrementalEpgService>(context, listen: false);
         epgService.applyProgramSnapshot(programSnapshot);
+      }
+      // Immediately merge any additional categories from the provider
+      // This ensures we don't stay stuck on just the snapshot categories
+      if (mounted) {
+        final channelProvider =
+            Provider.of<ChannelProvider>(context, listen: false);
+        final providerCategories = channelProvider.getAllCategoryNames();
+        if (providerCategories.isNotEmpty) {
+          for (final name in providerCategories) {
+            if (_categoryNameSet.add(name)) {
+              _categoryNames.add(name);
+            }
+          }
+          if (_categoryNames.length > _visibleCategoryCount) {
+            _visibleCategoryCount = _categoryNames.length;
+            setState(() {});
+          }
+        }
       }
       unawaited(_prefetchInitialRows(force: true));
     } catch (_) {
@@ -410,8 +432,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     Program? current;
     Program? next;
     for (final program in programs) {
-      if (program.startTime.isBefore(now) &&
-          program.endTime.isAfter(now)) {
+      if (program.startTime.isBefore(now) && program.endTime.isAfter(now)) {
         current = program;
       } else if (program.startTime.isAfter(now)) {
         final nextProgram = next;
@@ -442,7 +463,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
       final categories = <Map<String, dynamic>>[];
-      for (final category in _categoryNames.take(_liveTvSnapshotCategoryLimit)) {
+      for (final category
+          in _categoryNames.take(_liveTvSnapshotCategoryLimit)) {
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) continue;
         final payload = <Map<String, dynamic>>[];
@@ -492,15 +514,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void _requestInitialFocus() {
     if (_initialFocusRequested) return;
     _initialFocusRequested = true;
+    _tryInitialFocus();
+  }
+  
+  void _tryInitialFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Start with first channel focus for better UX
-      if (_firstChannelFocus.canRequestFocus) {
-        _firstChannelFocus.requestFocus();
-      } else if (_watchButtonFocus.canRequestFocus) {
+      // Start with Watch Now button for better UX - user sees hero first
+      if (_watchButtonFocus.canRequestFocus) {
         _watchButtonFocus.requestFocus();
+      } else if (_firstFeaturedFocus.canRequestFocus) {
+        _firstFeaturedFocus.requestFocus();
+      } else if (_firstChannelFocus.canRequestFocus) {
+        _firstChannelFocus.requestFocus();
       } else if (_skeletonFocus.canRequestFocus) {
         _skeletonFocus.requestFocus();
+      } else {
+        // None of the focus nodes are ready yet, retry after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _tryInitialFocus();
+        });
       }
     });
   }
@@ -513,8 +546,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _startIdleTimer() {
-    _idleTimer ??=
-        Timer.periodic(_idleCheckInterval, (_) => _checkIdleState());
+    _idleTimer ??= Timer.periodic(_idleCheckInterval, (_) => _checkIdleState());
   }
 
   void _stopIdleTimer() {
@@ -609,8 +641,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final now = DateTime.now();
     if (!userInitiated &&
         _lastRecoveryAttempt != null &&
-        now.difference(_lastRecoveryAttempt!) <
-            const Duration(seconds: 12)) {
+        now.difference(_lastRecoveryAttempt!) < const Duration(seconds: 12)) {
       return;
     }
     _recoveryInFlight = true;
@@ -657,13 +688,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
-
   Future<void> _maybeRefreshCategories(int channelCount) async {
     if (channelCount <= 0) return;
-    if (_categoryNames.isNotEmpty) return;
     if (_loadingCategories) return;
-    
-    debugLog('LiveTV: Categories empty but channels present ($channelCount), requesting prefetch...');
+
+    // Skip if we already have categories and they match what the provider has
+    if (_categoryNames.isNotEmpty) {
+      // Still allow refresh if provider might have more categories
+      // The actual comparison happens in didChangeDependencies
+      return;
+    }
+
+    debugLog(
+        'LiveTV: Categories empty but channels present ($channelCount), requesting prefetch...');
     _categoryPrefetchRequested = false;
     _requestCategoryPrefetch();
   }
@@ -693,6 +730,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
       ready.add(channel);
     }
+
+    // Log EPG state for debugging skeleton issues
+    if (ready.isEmpty && channels.isNotEmpty) {
+      final isLoading = epgService.isLoading ||
+          epgService.isParsing ||
+          epgService.isDownloading;
+      debugLog(
+          'LiveTV: _filterChannelsWithLoadedEpg returned 0 of ${channels.length} channels. '
+          'EPG isLoading=$isLoading, availableChannels=${epgService.availableChannels.length}, '
+          'error=${epgService.error}, isDbReady=${epgService.isDbReady}');
+    }
+
     if (missingIds.isNotEmpty) {
       unawaited(epgService.ensureChannelsLoadedBatch(
         missingIds,
@@ -711,7 +760,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   // Removed _rowVisibleCountFor and _bumpRowVisibleCount as logic is now handled in HorizontalChannelRow widget
-
 
   void _requestMoreCategoryChannels(String category) {
     final hasMore = _categoryHasMore[category] ?? true;
@@ -811,13 +859,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _snapshotSaveDebounce?.cancel();
     _featuredRotationTimer?.cancel();
 
-    _epgTimeoutLogged = false;
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
     }
     _rowScrollControllers.clear();
     _rowScrollInitialized.clear();
+
+    // Dispose category row notifiers to prevent memory leaks
+    for (final notifier in _categoryRowNotifiers.values) {
+      notifier.dispose();
+    }
+    _categoryRowNotifiers.clear();
 
     _focusPool.returnFocusNodes(
       [
@@ -903,7 +956,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _categoryNameSet
         ..clear()
         ..addAll(_categoryNames);
-      
+
       // Initialize random featured index/ID for cold start variety
       if (!_heroIndexInitialized) {
         final channelCount = channelProvider.channelCount;
@@ -916,12 +969,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           debugLog('LiveTV: Initialized featured index to $_featuredIndex');
         }
       }
-      
+
       _categoryRowNotifiers.clear();
       _rowScrollInitialized.clear();
       _lastPrefetchAnchor = -1;
-      _visibleCategoryCount =
-          math.min(_initialCategoryPrefetchCount, _categoryNames.length);
+      // Only limit visible count on initial load, not when we already have categories
+      // This prevents resetting a properly expanded list back to 8
+      if (_visibleCategoryCount < _categoryNames.length) {
+        _visibleCategoryCount = _categoryNames.length;
+      }
       setState(() {});
       await _prefetchInitialCategoryRows();
     } catch (e) {
@@ -993,6 +1049,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _categoryLoadQueue.contains(category)) {
       return;
     }
+    _categoryChannelLoading.add(category); // Mark as loading
     _categoryLoadQueue.add(category);
     if (append) {
       _categoryAppendQueue.add(category);
@@ -1018,11 +1075,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Provider.of<ChannelProvider>(context, listen: false);
       final offset = append ? (_categoryOffsets[category] ?? 0) : 0;
       final limit = append ? _rowFetchStep : _rowInitialFetch;
-      final channels = await channelProvider.getChannelsForCategoryAsync(
+
+      // Add timeout to prevent infinite waiting
+      final channels = await channelProvider
+          .getChannelsForCategoryAsync(
         category,
         offset: offset,
         limit: limit,
+      )
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugLog('LiveTV: Timeout loading category "$category"');
+          return <Channel>[];
+        },
       );
+
       if (!mounted) return;
       if (channels.isNotEmpty) {
         if (append && _categoryChannelCache.containsKey(category)) {
@@ -1042,6 +1110,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
         _categoryOffsets[category] = offset + channels.length;
         _trackCachedCategory(category);
+      } else if (!append) {
+        // Mark empty categories so we don't show infinite loading spinner
+        _categoryChannelCache[category] = [];
       }
       if (channels.length < limit) {
         _categoryHasMore[category] = false;
@@ -1051,6 +1122,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _scheduleLiveTvSnapshotSave();
     } catch (e) {
       debugLog('LiveTV: Failed to load category "$category": $e');
+      // On error, mark as empty to stop infinite loading spinner
+      if (!_categoryChannelCache.containsKey(category)) {
+        _categoryChannelCache[category] = [];
+      }
     } finally {
       if (mounted) {
         _categoryChannelLoading.remove(category);
@@ -1079,10 +1154,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = Provider.of<ChannelProvider>(context);
-    
-    // Only refresh categories if we have channels but no categories loaded
-    if (provider.hasChannels && _categoryNames.isEmpty && !_loadingCategories) {
-      _maybeRefreshCategories(provider.channelCount);
+
+    // Refresh categories if we have channels but no categories loaded,
+    // or if we have fewer categories than the provider knows about
+    if (provider.hasChannels && !_loadingCategories) {
+      final providerCategories = provider.getAllCategoryNames();
+      if (_categoryNames.isEmpty) {
+        _maybeRefreshCategories(provider.channelCount);
+      } else if (providerCategories.length > _categoryNames.length) {
+        // Provider has more categories than we're showing - merge them
+        var updated = false;
+        for (final name in providerCategories) {
+          if (_categoryNameSet.add(name)) {
+            _categoryNames.add(name);
+            updated = true;
+          }
+        }
+        if (updated) {
+          _visibleCategoryCount = _categoryNames.length;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() {});
+          });
+        }
+      }
     }
 
     final routePath = GoRouterState.of(context).uri.path;
@@ -1095,10 +1189,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
         _resetRowScrollOffsets();
         _requestInitialFocus();
-        // Force category refresh on app restart if we have channels but no categories
-        if (provider.hasChannels && _categoryNames.isEmpty && !_loadingCategories) {
-          _categoryPrefetchRequested = false;
-          _requestCategoryPrefetch();
+        // Force category refresh if we have channels but incomplete categories
+        if (provider.hasChannels && !_loadingCategories) {
+          final providerCats = provider.getAllCategoryNames();
+          if (_categoryNames.isEmpty ||
+              providerCats.length > _categoryNames.length) {
+            _categoryPrefetchRequested = false;
+            _requestCategoryPrefetch();
+          }
         }
       });
     }
@@ -1199,7 +1297,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget build(BuildContext context) {
     super.build(context);
     _restoreCardFocusIfMissing();
-    final bool shouldScrollFirst = _scrollController.hasClients && _safeScrollOffset() > 100;
+    final bool shouldScrollFirst =
+        _scrollController.hasClients && _safeScrollOffset() > 100;
     return PopScope(
       canPop: !shouldScrollFirst,
       onPopInvokedWithResult: (didPop, result) {
@@ -1218,274 +1317,309 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
         child: Consumer<ChannelProvider>(
           builder: (context, channelProvider, _) {
+            final hasChannels = channelProvider.hasChannels;
 
-          final hasChannels = channelProvider.hasChannels;
-
-
-          final latestCategories = channelProvider.getAllCategoryNames();
-          if (latestCategories.isNotEmpty) {
-            final newNames = _categoryNames.isEmpty
-                ? latestCategories
-                : latestCategories
-                    .where((name) => !_categoryNameSet.contains(name))
-                    .toList();
-            if (newNames.isNotEmpty) {
-              debugLog('LiveTV: Processing ${newNames.length} new categories (total: ${latestCategories.length}, current: ${_categoryNames.length})');
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (_categoryNames.isEmpty) {
-                  _categoryNames = List<String>.from(newNames);
-                  _categoryNameSet
-                    ..clear()
-                    ..addAll(_categoryNames);
-                } else {
-                  for (final name in newNames) {
-                    if (_categoryNameSet.add(name)) {
-                      _categoryNames.add(name);
+            final latestCategories = channelProvider.getAllCategoryNames();
+            if (latestCategories.isNotEmpty) {
+              final newNames = _categoryNames.isEmpty
+                  ? latestCategories
+                  : latestCategories
+                      .where((name) => !_categoryNameSet.contains(name))
+                      .toList();
+              if (newNames.isNotEmpty) {
+                debugLog(
+                    'LiveTV: Processing ${newNames.length} new categories (total: ${latestCategories.length}, current: ${_categoryNames.length})');
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  if (_categoryNames.isEmpty) {
+                    _categoryNames = List<String>.from(newNames);
+                    _categoryNameSet
+                      ..clear()
+                      ..addAll(_categoryNames);
+                  } else {
+                    for (final name in newNames) {
+                      if (_categoryNameSet.add(name)) {
+                        _categoryNames.add(name);
+                      }
                     }
                   }
-                }
-                _startArtworkRetryWindow();
-                if (_visibleCategoryCount < _initialCategoryPrefetchCount) {
-                  _visibleCategoryCount = math.min(
-                    _initialCategoryPrefetchCount,
-                    _categoryNames.length,
-                  );
-                } else {
-                  // While scrolling/parsing, ensure we are showing up to the full available list
-                  // This is crucial for progressive update - as new categories come in, extend visibility!
+                  _startArtworkRetryWindow();
+                  // Always update visible count to show all available categories
                   _visibleCategoryCount = _categoryNames.length;
+                  _lastPrefetchAnchor = -1;
+                  debugLog(
+                      'LiveTV: Updated _categoryNames to ${_categoryNames.length}, visibleCount: $_visibleCategoryCount');
+                  setState(() {});
+                  unawaited(_prefetchInitialCategoryRows());
+                });
+              } else if (_visibleCategoryCount < _categoryNames.length) {
+                // No new categories but we're not showing all of them yet
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _visibleCategoryCount = _categoryNames.length;
+                  setState(() {});
+                });
+              }
+            }
+
+            final epgService = context.watch<IncrementalEpgService>();
+            final overlayBusy = channelProvider.isLoading ||
+                epgService.isDownloading ||
+                epgService.isParsing ||
+                epgService.isLoading;
+            // Only show startup overlay on cold starts - warm starts use skeleton loaders
+            final showStartupOverlay =
+                channelProvider.isColdStartLoad &&
+                    _startupOverlayActive &&
+                    overlayBusy;
+            if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                if (!_startupOverlayActive) {
+                  setState(() => _startupOverlayActive = true);
                 }
-                _lastPrefetchAnchor = -1;
-                debugLog('LiveTV: Updated _categoryNames to ${_categoryNames.length}, visibleCount: $_visibleCategoryCount');
-                setState(() {});
-                unawaited(_prefetchInitialCategoryRows());
               });
             }
-          }
-
-          final epgService = context.watch<IncrementalEpgService>();
-          final overlayBusy = channelProvider.isLoading ||
-              epgService.isDownloading ||
-              epgService.isParsing ||
-              epgService.isLoading;
-          final showStartupOverlay =
-              (channelProvider.isColdStartLoad || _startupOverlayActive) &&
-                  overlayBusy;
-          if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              if (!_startupOverlayActive) {
-                setState(() => _startupOverlayActive = true);
-              }
-            });
-          }
-          if (_startupOverlayActive && !overlayBusy) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              if (_startupOverlayActive) {
-                setState(() => _startupOverlayActive = false);
-              }
-            });
-          }
-          final epgStatus = epgService.isDownloading
-              ? 'Downloading EPG data...'
-              : epgService.isParsing
-                  ? 'Parsing EPG data...'
-                  : epgService.isLoading
-                      ? 'Loading EPG cache...'
-                      : null;
-          Widget wrapWithOverlay(Widget child) {
-            if (!showStartupOverlay) return child;
-            return Stack(
-              children: [
-                child,
-                Positioned.fill(
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                      child: Container(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        alignment: Alignment.center,
-                        child: _buildColdStartOverlayCard(
-                          statusText: channelProvider.loadingStatus,
-                          secondaryStatusText: epgStatus,
-                          progress: channelProvider.loadingProgress,
+            if (_startupOverlayActive && !overlayBusy) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                if (_startupOverlayActive) {
+                  setState(() => _startupOverlayActive = false);
+                }
+              });
+            }
+            final epgStatus = epgService.isDownloading
+                ? 'Downloading EPG data...'
+                : epgService.isParsing
+                    ? 'Parsing EPG data...'
+                    : epgService.isLoading
+                        ? 'Loading EPG cache...'
+                        : null;
+            Widget wrapWithOverlay(Widget child) {
+              if (!showStartupOverlay) return child;
+              return Stack(
+                children: [
+                  child,
+                  Positioned.fill(
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        // Reduced blur sigma for better performance on low-end/TV GPUs
+                        // (was 18, lowered to 6 to avoid long GPU queue/dequeue delays).
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          alignment: Alignment.center,
+                          child: _buildColdStartOverlayCard(
+                            titleText: epgStatus != null ? 'Loading EPG' : null,
+                            statusText: _replaceEpgWithData(channelProvider.loadingStatus),
+                            secondaryStatusText: epgStatus,
+                            progress: channelProvider.loadingProgress,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          }
-          Widget buildSkeleton() => _buildSkeletonLoaderTracked(
-                showColdStartOverlay: showStartupOverlay,
-                statusText: channelProvider.loadingStatus,
-                secondaryStatusText: epgStatus,
-                progress: channelProvider.loadingProgress,
+                ],
               );
-
-          // Improved EPG loading detection - only show skeleton if truly loading
-
-          if (!hasChannels &&
-              channelProvider.isLoading &&
-              !channelProvider.noPlaylistConfigured) {
-            return buildSkeleton();
-          }
-
-          // If we have categories (data), SHOW THE UI! The EPG can populate later.
-          // FIX: If we have channels but no categories yet, allow loading to continue
-          // BUT if we have categories, we MUST show the UI.
-          final hasCategories = _categoryNames.isNotEmpty;
-          
-            if (!hasCategories &&
-              channelProvider.isLoading &&
-              !channelProvider.noPlaylistConfigured &&
-              !hasChannels) {
-             // Still initial load with no channels
-             return buildSkeleton();
             }
 
-          if (!hasChannels) {
-            final errorMessage = channelProvider.errorMessage;
-            if (!channelProvider.noPlaylistConfigured &&
-                (!channelProvider.hasLoadedPlaylist ||
-                    channelProvider.isLoading)) {
+            Widget buildSkeleton() => _buildSkeletonLoaderTracked(
+                  showColdStartOverlay: showStartupOverlay,
+                  titleText: epgStatus != null ? 'Loading EPG' : null,
+                  statusText: _replaceEpgWithData(channelProvider.loadingStatus),
+                  secondaryStatusText: epgStatus,
+                  progress: channelProvider.loadingProgress,
+                );
+
+            // Improved EPG loading detection - only show skeleton if truly loading
+
+            if (!hasChannels &&
+                channelProvider.isLoading &&
+                !channelProvider.noPlaylistConfigured) {
               return buildSkeleton();
             }
-            _markSkeletonVisibility(false);
-            return wrapWithOverlay(Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    context.iconXxl(
-                      AppIcons.liveTV,
-                      color:
-                          AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                    ),
-                    SizedBox(height: context.tvSpacing(24)),
-                    Text(
-                      AppLocalizations.of(context)!.noLiveTvAvailable,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    SizedBox(height: context.tvSpacing(8)),
-                    Text(
-                      errorMessage != null && errorMessage.isNotEmpty
-                          ? errorMessage
-                          : AppLocalizations.of(context)!.loadPlaylistMessage,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: context.tvSpacing(32)),
-                    GoToSettingsButton(
-                      onPressed: _goToSettings,
-                      focusNode: _settingsButtonFocus,
-                    ),
-                  ],
-                ),
-              ),
-            ));
-          }
 
-          _requestCategoryPrefetch();
-          _maybeRefreshCategories(channelProvider.channelCount);
-          final previewCount = channelProvider.channelCount;
-          if (_previewFuture == null ||
-              _lastPreviewChannelCount != previewCount) {
-            _lastPreviewChannelCount = previewCount;
-            _previewFuture = channelProvider.getChannelsPage(
-              offset: 0,
-              limit: 60,
-            );
-          }
+            // If we have categories (data), SHOW THE UI! The EPG can populate later.
+            // FIX: If we have channels but no categories yet, allow loading to continue
+            // BUT if we have categories, we MUST show the UI.
+            final hasCategories = _categoryNames.isNotEmpty;
 
-          // Load featured + preview list asynchronously from DB when available
-          return FutureBuilder<List<Channel>>(
-            future: _previewFuture,
-            builder: (context, snapshot) {
-              final previewList =
-                  (snapshot.data != null && snapshot.data!.isNotEmpty)
-                      ? snapshot.data!
-                      : channelProvider.channels;
-              if (previewList.isEmpty) {
+            if (!hasCategories &&
+                channelProvider.isLoading &&
+                !channelProvider.noPlaylistConfigured &&
+                !hasChannels) {
+              // Still initial load with no channels
+              return buildSkeleton();
+            }
+
+            if (!hasChannels) {
+              final errorMessage = channelProvider.errorMessage;
+              if (!channelProvider.noPlaylistConfigured &&
+                  (!channelProvider.hasLoadedPlaylist ||
+                      channelProvider.isLoading)) {
                 return buildSkeleton();
               }
-              
-              // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
-              return wrapWithOverlay(Consumer<IncrementalEpgService>(
-                builder: (context, epgService, _) {
-                  // Try to find channels with EPG data ready
-                  final readyChannels =
-                      _filterChannelsWithLoadedEpg(previewList, epgService);
-
-                  // Only show channels that have EPG data or allow fallback for Shield performance
-                  final timeSinceInit = DateTime.now().difference(_initTime);
-                  
-                  // Force show all channels after 20 seconds even if EPG not loaded
-                  List<Channel> displayChannels = readyChannels;
-                  if (displayChannels.isEmpty && timeSinceInit.inSeconds > 20) {
-                    if (!_epgTimeoutLogged) {
-                      debugLog(
-                          'LiveTV: EPG load timeout (${timeSinceInit.inMilliseconds}ms), showing all channels');
-                      _epgTimeoutLogged = true;
-                    }
-                    displayChannels = previewList;
-                  }
-                  
-                  if (displayChannels.isEmpty) {
-                    if (epgService.error != null &&
-                        epgService.error!.isNotEmpty) {
-                      _markSkeletonVisibility(false);
-                      return _buildEpgError(epgService.error!);
-                    }
-                    final isEpgLoading = epgService.isLoading ||
-                        epgService.isParsing ||
-                        epgService.isDownloading;
-
-                    if (isEpgLoading) {
-                      debugLog(
-                          'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
-                    }
-                    return buildSkeleton();
-                  }
-                  _markSkeletonVisibility(false);
-
-                  // displayChannels already defined above
-                  
-                  // Handle Stable ID vs Index
-                  if (_featuredChannelId != null) {
-                    final idx = displayChannels.indexWhere((c) => (c.tvgId ?? c.id) == _featuredChannelId);
-                    if (idx != -1) {
-                      _featuredIndex = idx;
-                    }
-                  }
-
-                  final safeFeaturedIndex = _featuredIndex % displayChannels.length;
-                  final featuredChannel = displayChannels[safeFeaturedIndex];
-                  
-                  // Update current ID for stability
-                  _featuredChannelId = featuredChannel.tvgId ?? featuredChannel.id;
-                  
-                  // Ensure EPG is triggered for the selected hero
-                  if (_featuredChannelId != null && _featuredChannelId!.isNotEmpty) {
-                    unawaited(epgService.ensureChannelLoaded(
-                        _featuredChannelId!,
-                        channelName: featuredChannel.name));
-                  }
-                  
-                  return _buildFullScreenHero(
-                    context,
-                    featuredChannel,
-                    displayChannels,
-                  );
-                },
+              _markSkeletonVisibility(false);
+              return wrapWithOverlay(Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      context.iconXxl(
+                        AppIcons.liveTV,
+                        color:
+                            AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                      ),
+                      SizedBox(height: context.tvSpacing(24)),
+                      Text(
+                        AppLocalizations.of(context)!.noLiveTvAvailable,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      SizedBox(height: context.tvSpacing(8)),
+                      Text(
+                        errorMessage != null && errorMessage.isNotEmpty
+                            ? errorMessage
+                            : AppLocalizations.of(context)!.loadPlaylistMessage,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: context.tvSpacing(32)),
+                      GoToSettingsButton(
+                        onPressed: _goToSettings,
+                        focusNode: _settingsButtonFocus,
+                      ),
+                    ],
+                  ),
+                ),
               ));
-            },
-          );
+            }
+
+            _requestCategoryPrefetch();
+            _maybeRefreshCategories(channelProvider.channelCount);
+            final previewCount = channelProvider.channelCount;
+            if (_previewFuture == null ||
+                _lastPreviewChannelCount != previewCount) {
+              _lastPreviewChannelCount = previewCount;
+              _previewFuture = channelProvider.getChannelsPage(
+                offset: 0,
+                limit: 60,
+              );
+            }
+
+            // Load featured + preview list asynchronously from DB when available
+            return FutureBuilder<List<Channel>>(
+              future: _previewFuture,
+              builder: (context, snapshot) {
+                final previewList =
+                    (snapshot.data != null && snapshot.data!.isNotEmpty)
+                        ? snapshot.data!
+                        : channelProvider.channels;
+                if (previewList.isEmpty) {
+                  return buildSkeleton();
+                }
+
+                // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
+                return wrapWithOverlay(Consumer<IncrementalEpgService>(
+                  builder: (context, epgService, _) {
+                    // Try to find channels with EPG data ready
+                    final readyChannels =
+                        _filterChannelsWithLoadedEpg(previewList, epgService);
+
+                    // Only show channels that have EPG data
+                    final timeSinceInit = DateTime.now().difference(_initTime);
+
+                    List<Channel> displayChannels = readyChannels;
+
+                    if (displayChannels.isEmpty) {
+                      // Check for explicit EPG errors first
+                      if (epgService.error != null &&
+                          epgService.error!.isNotEmpty) {
+                        _markSkeletonVisibility(false);
+                        return _buildEpgError(epgService.error!);
+                      }
+
+                      final isEpgLoading = epgService.isLoading ||
+                          epgService.isParsing ||
+                          epgService.isDownloading;
+
+                      // Also check if batch loading is in progress
+                      final isBatchLoading = epgService.isBatchLoading;
+
+                      if (isEpgLoading || isBatchLoading) {
+                        debugLog(
+                            'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
+                        return buildSkeleton();
+                      }
+
+                      // Give EPG more time to load programs - only show error after 30 seconds
+                      if (timeSinceInit.inSeconds < 30) {
+                        debugLog(
+                            'LiveTV: EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
+                        return buildSkeleton();
+                      }
+
+                      // EPG NOT loading, no error, but still no channels with data after timeout
+                      if (!epgService.hasEpgUrl) {
+                        _markSkeletonVisibility(false);
+                        return _buildEpgError(
+                            'No EPG URL configured. Please add an EPG URL in Settings.');
+                      }
+
+                      // Check if EPG has any loaded programs at all
+                      if (!epgService.hasLoadedPrograms) {
+                        _markSkeletonVisibility(false);
+                        return _buildEpgError(
+                            'EPG data could not be loaded. Check your EPG URL in Settings.');
+                      }
+
+                      // EPG has programs but none matched - show error about mappings
+                      _markSkeletonVisibility(false);
+                      debugLog(
+                          'LiveTV: EPG has ${epgService.availableChannels.length} channels but none matched ${previewList.length} playlist channels');
+                      return _buildEpgError(
+                          'EPG channels did not match playlist. Check EPG mappings in Settings.');
+                    }
+
+                    _markSkeletonVisibility(false);
+
+                    // displayChannels already defined above
+
+                    // Handle Stable ID vs Index
+                    if (_featuredChannelId != null) {
+                      final idx = displayChannels.indexWhere(
+                          (c) => (c.tvgId ?? c.id) == _featuredChannelId);
+                      if (idx != -1) {
+                        _featuredIndex = idx;
+                      }
+                    }
+
+                    final safeFeaturedIndex =
+                        _featuredIndex % displayChannels.length;
+                    final featuredChannel = displayChannels[safeFeaturedIndex];
+
+                    // Update current ID for stability
+                    _featuredChannelId =
+                        featuredChannel.tvgId ?? featuredChannel.id;
+
+                    // Ensure EPG is triggered for the selected hero
+                    if (_featuredChannelId != null &&
+                        _featuredChannelId!.isNotEmpty) {
+                      unawaited(epgService.ensureChannelLoaded(
+                          _featuredChannelId!,
+                          channelName: featuredChannel.name));
+                    }
+
+                    return _buildFullScreenHero(
+                      context,
+                      featuredChannel,
+                      displayChannels,
+                    );
+                  },
+                ));
+              },
+            );
           },
         ),
       ),
@@ -1636,7 +1770,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ));
     }
 
-    if (featuredChannels.isNotEmpty) {
+    // Only stabilize featured list when EPG is ready and we have enough channels
+    // This prevents locking in a sparse list before EPG finishes loading
+    final epgReady = !epgService.isLoading && !epgService.isParsing && !epgService.isDownloading;
+    final hasEnoughChannels = featuredChannels.length >= 5;
+    if (featuredChannels.isNotEmpty && epgReady && hasEnoughChannels) {
       _stableFeaturedChannels = List.from(featuredChannels);
       _featuredChannelsInitialized = true;
     }
@@ -1685,12 +1823,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final isEpgLoading = epgService.isLoading ||
           epgService.isParsing ||
           epgService.isDownloading;
+      final isBatchLoading = epgService.isBatchLoading;
       final timeSinceInit = DateTime.now().difference(_initTime);
-      if (isEpgLoading) {
+
+      if (isEpgLoading || isBatchLoading) {
         debugLog(
-            'LiveTV: Hero waiting for EPG (${timeSinceInit.inMilliseconds}ms)');
+            'LiveTV: Hero waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
+        return _buildSkeletonLoaderTracked();
       }
-      return _buildSkeletonLoaderTracked();
+
+      // Give EPG more time to load - only show error after 30 seconds
+      if (timeSinceInit.inSeconds < 30) {
+        debugLog(
+            'LiveTV: Hero EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
+        return _buildSkeletonLoaderTracked();
+      }
+
+      // EPG not loading but still no data after timeout
+      debugLog(
+          'LiveTV: EPG NOT loading but no hero candidates! availableChannels=${epgService.availableChannels.length}, error=${epgService.error}');
+
+      if (!epgService.hasEpgUrl) {
+        return _buildEpgError(
+            'No EPG URL configured. Please add an EPG URL in Settings.');
+      }
+      if (!epgService.hasLoadedPrograms) {
+        return _buildEpgError(
+            'EPG data could not be loaded. Check your EPG URL in Settings.');
+      }
+      return _buildEpgError(
+          'EPG channels did not match playlist. Check EPG mappings in Settings.');
     }
 
     final selectionPool = epgHeroCandidates;
@@ -1717,9 +1879,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         highPriority: true,
       );
     }
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
         // Hero Background & Gradient
         Positioned(
           top: 0,
@@ -1729,7 +1891,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           child: AnimatedBuilder(
             animation: _scrollController,
             child: Builder(builder: (context) {
-                final scrollPos = _safeScrollOffset();
+              final scrollPos = _safeScrollOffset();
               final fadeProgress =
                   (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
 
@@ -1752,10 +1914,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               begin: const Alignment(-1.0, -0.2),
                               end: const Alignment(0.6, 0.4),
                               colors: [
-                                AppTheme.darkBackground
-                                    .withValues(alpha: 0.88),
-                                AppTheme.darkBackground
-                                    .withValues(alpha: 0.52),
+                                AppTheme.darkBackground.withValues(alpha: 0.88),
+                                AppTheme.darkBackground.withValues(alpha: 0.52),
                                 Colors.transparent,
                               ],
                               stops: const [0.0, 0.35, 0.7],
@@ -1790,7 +1950,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }),
             builder: (context, child) {
-                final scrollPos = _safeScrollOffset();
+              final scrollPos = _safeScrollOffset();
               return Transform.translate(
                 offset: Offset(0, -scrollPos),
                 child: child,
@@ -1799,8 +1959,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         // Content Background Gradient (behind channel rows)
+        // Start gradient halfway down the first card row for better visual blend
         Positioned(
-          top: contentTop,
+          top: contentTop + (_estimateRowHeight(context) * 0.5),
           left: 0,
           right: 0,
           bottom: 0,
@@ -1814,7 +1975,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   AppTheme.darkBackground,
                   AppTheme.darkBackground,
                 ],
-                stops: [0.0, 0.5, 1.0], // More gradual fade (was 0.2)
+                stops: [0.0, 0.3, 1.0], // Faster fade since starting lower
               ),
             ),
           ),
@@ -1843,36 +2004,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 padding: EdgeInsets.only(
                   left: 0,
                   right: rightInset,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: KeyedSubtree(
+                    key: const ValueKey<String>('live_tv_featured_row'),
+                    child: _buildFeaturedRow(context, allChannels),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  left: 0,
+                  right: rightInset,
                   bottom: context.spacingXl(),
                 ),
-                sliver: SliverList(
+                sliver: SliverFixedExtentList(
+                  itemExtent: _estimateRowHeight(context),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      if (index == 0) {
-                        return KeyedSubtree(
-                          key: const ValueKey<String>('live_tv_featured_row'),
-                          child: _buildFeaturedRow(context, allChannels),
-                        );
-                      }
-                      final categoryIndex = index - 1;
-                      if (categoryIndex < 0 ||
-                          categoryIndex >= _categoryNames.length) {
+                      if (index < 0 || index >= _categoryNames.length) {
                         return const SizedBox.shrink();
                       }
-                      final categoryName = _categoryNames[categoryIndex];
+                      final categoryName = _categoryNames[index];
                       return KeyedSubtree(
                         key: ValueKey<String>('live_tv_row_$categoryName'),
                         child: _buildCategoryRowWidget(
                           context,
                           categoryName,
-                          categoryIndex,
-                          isFirstRow: categoryIndex == 0,
+                          index,
+                          // Category rows don't filter by EPG, but first one gets special focus
+                          isFirstRow: false,
+                          isFirstCategoryRow: index == 0,
                         ),
                       );
                     },
                     childCount:
-                        math.min(_visibleCategoryCount, _categoryNames.length) +
-                            1,
+                        math.min(_visibleCategoryCount, _categoryNames.length),
                   ),
                 ),
               ),
@@ -1937,7 +2104,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     alignment: Alignment.bottomLeft,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Stack(
+                      child: Stack(
                         children: [
                           Padding(
                             padding: EdgeInsets.only(left: contentInset),
@@ -2183,7 +2350,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _firstChannelFocus.requestFocus();
+              // Focus the first card in the featured row, not a regular category row
+              _firstFeaturedFocus.requestFocus();
               return KeyEventResult.handled;
             }
           }
@@ -2343,7 +2511,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _isLikelyPosterUrl(String url) {
     if (url.isEmpty) return false;
     final lower = url.toLowerCase();
-    
+
     // Explicit keywords in path or query
     if (lower.contains('/poster') ||
         lower.contains('/portrait') ||
@@ -2358,11 +2526,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // TMDB poster/logo sizes
     if (lower.contains('tmdb.org') &&
         (lower.contains('/w92/') ||
-         lower.contains('/w154/') ||
-         lower.contains('/w185/') ||
-         lower.contains('/w342/') ||
-         lower.contains('/w500/') ||
-         lower.contains('/w780/'))) {
+            lower.contains('/w154/') ||
+            lower.contains('/w185/') ||
+            lower.contains('/w342/') ||
+            lower.contains('/w500/') ||
+            lower.contains('/w780/'))) {
       return true;
     }
 
@@ -2473,7 +2641,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   bool _isLikelySmallImage(String url) {
     final lower = url.toLowerCase();
-    
+
     // Check for small size indicators in URL
     if (lower.contains('_small') ||
         lower.contains('_thumb') ||
@@ -2483,7 +2651,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         lower.contains('/icon/')) {
       return true;
     }
-    
+
     // Check for specific small dimensions in URL
     final dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
     final match = dimensionPattern.firstMatch(lower);
@@ -2495,7 +2663,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -2748,65 +2916,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   String _canonicalArtworkTitle(String title) {
-    var normalized = title;
-    normalized = normalized.replaceAll(RegExp(r'\s*[-:]\s*'), ' ');
-    normalized = normalized.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bseason\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bepisode\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\bpart\s+\d+\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(\d+)(st|nd|rd|th)\s+hour\b', caseSensitive: false), '');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(\d+)\s*(st|nd|rd|th)?\s*hour\b', caseSensitive: false), '');
-    normalized =
-        normalized.replaceAll(RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$'), '');
-    normalized = normalized
-        .replaceAll(RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$'), '');
-    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return normalized.isEmpty ? title : normalized;
+    // Use consolidated normalization from EPGMatchingUtils
+    return EPGMatchingUtils.normalizeForArtwork(title);
   }
 
   String _normalizeArtworkVariant(String title) {
-    var normalized = title;
-    normalized = normalized.replaceAll('&', ' and ');
-    normalized = normalized.replaceAll(RegExp(r'[^\w\s]'), ' ');
-    normalized = normalized.replaceAll(
-        RegExp(r'\b(tv|hd|fhd|uhd|4k|channel|network)\b',
-            caseSensitive: false),
-        '');
-    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return normalized;
+    // Use consolidated utility from EPGMatchingUtils
+    return EPGMatchingUtils.normalizeArtworkVariant(title);
   }
 
   bool _isGenericTitle(String title) {
-    final normalized = normalizeForFilter(title);
-    const generic = <String>{
-      'news',
-      'live',
-      'sports',
-      'sport',
-      'movie',
-      'paidprogramming',
-      'homeshopping',
-      'episode',
-      'program',
-      'show',
-      'channel',
-      'match',
-      'game',
-      'event',
-      'coverage',
-      'highlights',
-      'highlights show',
-    };
-    return normalized.isEmpty ||
-        normalized.length <= 3 ||
-        generic.contains(normalized);
+    // Use consolidated utility from EPGMatchingUtils
+    return EPGMatchingUtils.isGenericTitle(title);
   }
 
   String _cleanChannelNameForQuery(String name) {
@@ -2838,6 +2959,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (value.isEmpty || titles.contains(value)) return;
       titles.add(value);
     }
+
     void addVariant(String value) {
       if (value.isEmpty) return;
       add(value);
@@ -2892,7 +3014,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     // REMOVED: Truncated title variants (3-5 words) causing false positives/negatives for specific movies
     // We now rely on the full canonical title, original title, and channel-name appended variants.
-    
+
     if (groupTitle.isNotEmpty) {
       final lowerGroup = groupTitle.toLowerCase();
       if (lowerGroup.contains('sports')) {
@@ -2933,6 +3055,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _programArtworkNegativeTitleOrder.remove(key);
       return true;
     }
+    debugLog(
+      'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
+      'reason=negative_cache_hit (blocked until ${until.toIso8601String()})',
+    );
     return false;
   }
 
@@ -3272,7 +3398,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 2. Trigger a fetch if any image service is enabled
-      if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled) &&
+      if ((_tmdbEnabled ||
+              _fanartEnabled ||
+              _sportsDbEnabled ||
+              _tvdbEnabled) &&
           allowFetch) {
         _ensureFreshProgramArtwork(
           program,
@@ -3299,7 +3428,39 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _logArtworkDecision(
           'LiveTV artwork: skip low-res epg program="${program.title}" url=$normalized',
         );
+      } else {
+        // Log why EPG image was rejected or missing
+        final rawEpgUrl = program.imageUrl;
+        if (rawEpgUrl == null || rawEpgUrl.isEmpty) {
+          debugLog(
+            'LiveTV artwork NONE: program="${program.title}" channel="${channel.name}" '
+            'reason=no_epg_image_url',
+          );
+        } else if (direct == null || direct.isEmpty) {
+          debugLog(
+            'LiveTV artwork NONE: program="${program.title}" channel="${channel.name}" '
+            'reason=epg_url_normalization_failed (raw="$rawEpgUrl")',
+          );
+        }
       }
+    } else {
+      // Log more details about why no program was found
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
+      final channelId = channel.tvgId ?? channel.id;
+      final hasPrograms = epgService.hasProgramsForChannel(
+        channelId,
+        channelName: channel.name,
+        groupTitle: channel.groupTitle,
+      );
+      debugLog(
+        'LiveTV artwork NONE: channel="${channel.name}" (id=$channelId) '
+        'reason=no_current_program_from_epg '
+        '(hasProgramsForChannel=$hasPrograms, '
+        'isLoading=${epgService.isLoading}, '
+        'isParsing=${epgService.isParsing}, '
+        'availableChannels=${epgService.availableChannels.length})',
+      );
     }
 
     return null;
@@ -3311,9 +3472,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool highPriority = false,
   }) {
     if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
+      debugLog(
+        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
+        'reason=all_services_disabled (tmdb=$_tmdbEnabled fanart=$_fanartEnabled sports=$_sportsDbEnabled tvdb=$_tvdbEnabled)',
+      );
       return;
     }
-    if (_artworkRequests.contains(program.id)) return;
+    if (_artworkRequests.contains(program.id)) {
+      debugLog(
+        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
+        'reason=request_already_in_flight',
+      );
+      return;
+    }
     if (!_shouldAttemptArtworkByTitle(program, channel)) return;
     final existing = _programArtwork[program.id];
     if (existing != null &&
@@ -3432,7 +3603,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   void _scheduleArtworkDrain() {
     if (_pauseArtworkFetching || _suspendArtworkCaches || _isIdle) {
-      debugLog('LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
+      debugLog(
+          'LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
       return;
     }
     _artworkThrottle ??=
@@ -3783,8 +3955,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     )) {
       return false;
     }
-    final window =
-        MemoryManager.isLowMemory ? 1 : (isFirstRow ? _heroPrefetchWindow : _rowPrefetchWindow);
+    final window = MemoryManager.isLowMemory
+        ? 1
+        : (isFirstRow ? _heroPrefetchWindow : _rowPrefetchWindow);
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
       return index < window;
@@ -3830,7 +4003,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelSection(
       BuildContext context, String title, List<Channel> channels,
-      {bool isFirstRow = false, bool allowCategoryPaging = true}) {
+      {bool isFirstRow = false, 
+       bool isFirstCategoryRow = false,
+       bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
     final epgService = context.watch<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
@@ -3851,11 +4026,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // Only skip channels without program data in the featured row (Hero section)
         // For regular rows, show the channel card with "No Information" instead of hiding it
         if (isFirstRow) {
-            continue;
+          continue;
         }
       }
 
-      // Removed shouldHideChannel check strictly hiding channels. 
+      // Removed shouldHideChannel check strictly hiding channels.
       // We always show available channels, even if EPG is missing or failed.
 
       if (isFirstRow && program != null) {
@@ -3890,25 +4065,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cardHeight = cardWidth * 0.6;
     final isMobile = screenWidth < 800;
     final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
-    final titleStyle = AppTypography.programTitle(context);
-    final timeStyle = AppTypography.programTime(context);
-    final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
-        (titleStyle.height ?? 1.2);
-    final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
-        (timeStyle.height ?? 1.2);
-    // Tighter spacing - minimal gaps between elements
-    final infoSpacing = context.spacingXs() + context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + infoSpacing;
-    // Minimal vertical padding, just enough for focus scaling
+    // Match actual card content spacing: 4dp gap + title + 2dp gap + time
+    const infoGapAboveTitle = 4.0;
+    const infoGapBelowTitle = 2.0;
+    const titleFontSize = 11.0;
+    const timeFontSize = 10.0;
+    const lineHeight = 1.1;
+    final infoHeight = infoGapAboveTitle + 
+        (titleFontSize * lineHeight) + 
+        infoGapBelowTitle + 
+        (timeFontSize * lineHeight);
+    // Tight row height - no extra padding
     final rowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
+        cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
     // Visible count logic moved to HorizontalChannelRow widget
 
     if (allowCategoryPaging) {
-      final initialVisible = _initialRowVisibleCount(context, cardWidth, rowInset);
+      final initialVisible =
+          _initialRowVisibleCount(context, cardWidth, rowInset);
       if (filteredChannels.length <= initialVisible &&
           (_categoryHasMore[sectionKey] ?? true)) {
         _requestMoreCategoryChannels(sectionKey);
@@ -3931,23 +4108,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 1),
+          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingXs() * 0.5),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
               color: AppTheme.textPrimary,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 2),
-          child: Container(
-            height: 3,
-            width: context.spacingXl(),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(999),
             ),
           ),
         ),
@@ -3964,14 +4130,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               right: context.spacingLg(),
             ),
             onLoadMore: allowCategoryPaging
-              ? () => _requestMoreCategoryChannels(sectionKey)
-              : null,
+                ? () => _requestMoreCategoryChannels(sectionKey)
+                : null,
             itemBuilder: (context, index) {
               final focusNode = _focusNodeForCard(
                 sectionKey,
                 filteredChannels[index],
                 index,
-                isFirstRow: isFirstRow,
+                // Use isFirstRow OR isFirstCategoryRow for focus node assignment
+                isFirstRow: isFirstRow || isFirstCategoryRow,
                 allowCategoryPaging: allowCategoryPaging,
               );
               final allowPrefetch = _shouldPrefetchArt(
@@ -4007,7 +4174,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        SizedBox(height: context.spacingXs()),
+        SizedBox(height: context.spacingXs() * 0.5),
       ],
     );
   }
@@ -4017,16 +4184,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String category,
     int index, {
     bool isFirstRow = false,
+    bool isFirstCategoryRow = false,
   }) {
     final notifier = _categoryRowNotifierFor(category);
     return ValueListenableBuilder<int>(
       valueListenable: notifier,
       builder: (context, _, __) {
         final channels = _categoryChannelCache[category];
-        if (channels == null || channels.isEmpty) {
+        if (channels == null) {
+          // Still loading - show placeholder
           _enqueueCategoryLoad(category);
-          // Show a loading placeholder row instead of nothing
           return _buildCategoryRowLoading(context, category);
+        }
+        if (channels.isEmpty) {
+          // Category has no channels - hide the row
+          return const SizedBox.shrink();
         }
         _prefetchEpgForRow(category, channels);
         return _buildChannelSection(
@@ -4034,6 +4206,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           category,
           channels,
           isFirstRow: isFirstRow,
+          isFirstCategoryRow: isFirstCategoryRow,
         );
       },
     );
@@ -4079,7 +4252,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   width: cardWidth,
                   height: cardHeight,
                   decoration: BoxDecoration(
-                    color: AppTheme.cardBackground.withAlpha((0.5 * 255).round()),
+                    color:
+                        AppTheme.cardBackground.withAlpha((0.5 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Center(
@@ -4111,26 +4285,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // On mobile, focus scale is minimal/transient, so don't reserve huge space
     final isMobile = screenWidth < 800;
     final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
-    final titleStyle = AppTypography.programTitle(context);
-    final timeStyle = AppTypography.programTime(context);
-    final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
-        (titleStyle.height ?? 1.2);
-    final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
-        (timeStyle.height ?? 1.2);
-    // Match the tighter spacing used in _buildChannelSection
-    final infoSpacing = context.spacingXs() + context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + infoSpacing;
-    // Account for category header + underline + spacers
+    // Match actual card content spacing: 4dp gap + title + 2dp gap + time
+    const infoGapAboveTitle = 4.0;
+    const infoGapBelowTitle = 2.0;
+    const titleFontSize = 11.0;
+    const timeFontSize = 10.0;
+    const lineHeight = 1.1;
+    final infoHeight = infoGapAboveTitle + 
+        (titleFontSize * lineHeight) + 
+        infoGapBelowTitle + 
+        (timeFontSize * lineHeight);
+    // Account for category header + spacers (no underline anymore)
     final captionStyle = AppTypography.caption(context);
     final captionHeight =
         (captionStyle.fontSize ?? 13.0) * (captionStyle.height ?? 1.2);
-    // Header spacing structure: title bottom(2) + underline height(3) + underline bottom(8)
-    const headerSpacing = 1 + 3 + 2;
-    final rowBottomSpacing = context.spacingSm();
+    // Header spacing: title bottom padding only
+    final headerSpacing = context.spacingXs() * 0.5;
+    final rowBottomSpacing = context.spacingXs() * 0.5;
 
     // Total calculated height of one full row block in the list
     final cardRowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5 + context.spacingXs();
+        cardHeight + infoHeight + focusExtra * 0.5;
     return cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
   }
 
@@ -4168,30 +4343,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       required double rowHeight,
       FocusNode? focusNode,
       VoidCallback? onItemFocus}) {
-    return SizedBox(
-      width: cardWidth,
-      height: rowHeight,
-      child: Focus(
-        focusNode: focusNode,
-        canRequestFocus: true,
-        onFocusChange: (hasFocus) {
-          if (hasFocus) {
-            // Update focused index without triggering full screen rebuild if possible
-            _focusedIndexBySection[sectionKey] = index;
-            _lastFocusedCardKey = '$sectionKey|${channel.tvgId ?? channel.id}|$index';
-            _scrollToHeroPeekOnFocus();
-            onItemFocus?.call();
-          } else if (_focusedIndexBySection[sectionKey] == index) {
-            // Clear the stored focus when the card loses focus so hero navigation
-            // can resume once all rows are unfocused.
-            _focusedIndexBySection[sectionKey] = -1;
-          }
-        },
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.space) {
+    // RepaintBoundary prevents repaints from propagating to/from other cards
+    return RepaintBoundary(
+      child: SizedBox(
+        width: cardWidth,
+        height: rowHeight,
+        child: Focus(
+          focusNode: focusNode,
+          canRequestFocus: true,
+          onFocusChange: (hasFocus) {
+            if (hasFocus) {
+              // Update focused index without triggering full screen rebuild if possible
+              _focusedIndexBySection[sectionKey] = index;
+              _lastFocusedCardKey =
+                  '$sectionKey|${channel.tvgId ?? channel.id}|$index';
+              _scrollToHeroPeekOnFocus();
+              onItemFocus?.call();
+            } else if (_focusedIndexBySection[sectionKey] == index) {
+              // Clear the stored focus when the card loses focus so hero navigation
+              // can resume once all rows are unfocused.
+              _focusedIndexBySection[sectionKey] = -1;
+            }
+          },
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.select ||
+                  event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space) {
               _openChannelPlayer(channel);
               return KeyEventResult.handled;
             }
@@ -4295,18 +4473,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           },
         ),
       ),
+    ),
     );
   }
 
   Widget _buildCardContent(
-    BuildContext context,
-    Channel channel,
-    Program? currentProgram,
-    bool isFocused,
-    double cardWidth,
-    double cardHeight,
-    bool allowPrefetch,
-    {required bool isFirstRow}) {
+      BuildContext context,
+      Channel channel,
+      Program? currentProgram,
+      bool isFocused,
+      double cardWidth,
+      double cardHeight,
+      bool allowPrefetch,
+      {required bool isFirstRow}) {
     final progress = currentProgram?.progressPercentage ?? 0.0;
     final imageUrl = _getChannelCardImage(
       currentProgram,
@@ -4896,10 +5075,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildChannelCardFallback(Program? program, Channel channel) {
-    return _buildMissingArtworkFallback();
+    // Try to use channel logo as fallback instead of showing an empty card
+    final logoUrl = channel.logoUrl;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return _buildLogoAsFallback(logoUrl, channel.name);
+    }
+    return _buildMissingArtworkFallback(channel.name);
   }
 
-  Widget _buildMissingArtworkFallback() {
+  Widget _buildLogoAsFallback(String logoUrl, String channelName) {
+    final normalizedUrl = normalizeImageUrl(logoUrl);
+    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
+        normalizedUrl.toLowerCase().contains('.svg?');
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -4913,11 +5101,67 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ),
       child: Center(
-        child: Icon(
-          Icons.image_not_supported,
-          color: Colors.white.withValues(alpha: 0.55),
-          size: 36,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: isSvg
+              ? SvgPicture.network(
+                  normalizedUrl,
+                  fit: BoxFit.contain,
+                  headers: HttpClientService().imageHeaders,
+                  placeholderBuilder: (_) =>
+                      _buildChannelNameFallback(channelName),
+                )
+              : CachedNetworkImage(
+                  imageUrl: normalizedUrl,
+                  httpHeaders: HttpClientService().imageHeaders,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) =>
+                      _buildChannelNameFallback(channelName),
+                  errorWidget: (_, __, ___) =>
+                      _buildChannelNameFallback(channelName),
+                ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChannelNameFallback(String channelName) {
+    return Center(
+      child: Text(
+        channelName.isNotEmpty ? channelName : 'Channel',
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingArtworkFallback([String? channelName]) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2A2A36),
+            Color(0xFF1B1B24),
+            AppTheme.darkBackground,
+          ],
+        ),
+      ),
+      child: Center(
+        child: channelName != null && channelName.isNotEmpty
+            ? _buildChannelNameFallback(channelName)
+            : Icon(
+                Icons.tv,
+                color: Colors.white.withValues(alpha: 0.55),
+                size: 36,
+              ),
       ),
     );
   }
@@ -4938,7 +5182,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (effectiveLogoUrl != null && effectiveLogoUrl.isNotEmpty) {
       final url = normalizeImageUrl(effectiveLogoUrl);
       final isSvg = url.toLowerCase().endsWith('.svg') ||
-              url.toLowerCase().contains('.svg?');
+          url.toLowerCase().contains('.svg?');
 
       if (isSvg) {
         return SvgPicture.network(
@@ -4966,7 +5210,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           size: 16,
         ),
       );
-      
+
       return Image(
         image: provider,
         fit: BoxFit.contain,
@@ -4982,7 +5226,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         },
       );
     }
-    
+
     // No logo found
     return Container(
       decoration: BoxDecoration(
@@ -5478,8 +5722,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _containsKeywords(channelInfo, keywords);
   }
 
-
-
   bool _isBlacklistedNewsArtwork(
     Map<String, dynamic>? details,
     String programTitle,
@@ -5548,6 +5790,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _pauseArtworkFetching = false;
         _suspendArtworkCaches = false;
         _suspendHeroBackground = false;
+        // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
+        unawaited(_prefetchInitialRows(force: true));
       }
     }
   }
@@ -5888,15 +6132,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildColdStartOverlayCard({
+    String? titleText,
     String? statusText,
     String? secondaryStatusText,
     double? progress,
   }) {
+    final trimmedTitle = (titleText ?? '').trim();
+    final resolvedTitle =
+        trimmedTitle.isNotEmpty ? trimmedTitle : 'Loading playlist';
     final trimmedStatus = (statusText ?? '').trim();
     final resolvedStatus =
         trimmedStatus.isNotEmpty ? trimmedStatus : 'Preparing playlist...';
     final trimmedSecondary = (secondaryStatusText ?? '').trim();
-    final resolvedSecondary = trimmedSecondary.isNotEmpty ? trimmedSecondary : '';
+    final resolvedSecondary =
+        trimmedSecondary.isNotEmpty ? trimmedSecondary : '';
     final resolvedProgress = (progress ?? 0.0).clamp(0.0, 1.0);
     final showProgressValue = resolvedProgress > 0.02;
     return ConstrainedBox(
@@ -5905,7 +6154,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Loading playlist',
+            resolvedTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -5958,29 +6207,47 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  
+
   Widget _buildSkeletonLoaderTracked({
     bool? showColdStartOverlay,
+    String? titleText,
     String? statusText,
     String? secondaryStatusText,
     double? progress,
   }) {
     _markSkeletonVisibility(true);
     final channelProvider = context.read<ChannelProvider>();
-    final hasChannels = channelProvider.hasChannels;
+    final epgService = context.watch<IncrementalEpgService>();
     final resolvedOverlay = showColdStartOverlay ??
         (channelProvider.isColdStartLoad && channelProvider.isLoading);
-    final resolvedStatus = statusText ?? channelProvider.loadingStatus;
-    final resolvedProgress = progress ?? channelProvider.loadingProgress;
+    var resolvedTitle = titleText;
+    String? resolvedStatus = statusText ?? channelProvider.loadingStatus;
+    var resolvedProgress = progress ?? channelProvider.loadingProgress;
+    var resolvedSecondary = secondaryStatusText;
+    var resolvedOverlayFinal = resolvedOverlay;
+    final epgBusy = epgService.isParsing ||
+        epgService.isDownloading ||
+        epgService.isLoading;
+    if (!resolvedOverlayFinal && epgBusy) {
+      resolvedOverlayFinal = true;
+      resolvedTitle = 'Loading EPG';
+      resolvedStatus = _replaceEpgWithData(epgService.epgProgressLabel ?? 'EPG loading');
+      resolvedProgress = epgService.epgProgress;
+      resolvedSecondary ??= 'Parsing guide data...';
+    }
     return _buildSkeletonLoader(
-      showColdStartOverlay: resolvedOverlay,
+      showColdStartOverlay: resolvedOverlayFinal,
+      titleText: resolvedTitle,
       statusText: resolvedStatus,
-      secondaryStatusText: secondaryStatusText,
+      secondaryStatusText: resolvedSecondary,
       progress: resolvedProgress,
     );
   }
 
   Widget _buildSkeletonLoader({
     bool showColdStartOverlay = false,
+    String? titleText,
     String? statusText,
     String? secondaryStatusText,
     double? progress,
@@ -6125,6 +6392,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     color: Colors.black.withValues(alpha: 0.45),
                     alignment: Alignment.center,
                     child: _buildColdStartOverlayCard(
+                      titleText: titleText,
                       statusText: statusText,
                       secondaryStatusText: secondaryStatusText,
                       progress: progress,
@@ -6138,8 +6406,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildAdaptiveImage(BuildContext context, String url, BoxFit defaultFit,
-      int? cacheWidth, int? cacheHeight, Widget fallback) {
+  Widget _buildAdaptiveImage(BuildContext context, String url,
+      BoxFit defaultFit, int? cacheWidth, int? cacheHeight, Widget fallback) {
     final isPoster = _isLikelyPosterUrl(url);
 
     if (isPoster) {

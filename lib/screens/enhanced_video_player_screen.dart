@@ -41,6 +41,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
+  final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
   bool _isLoading = true;
   final ValueNotifier<UniversalPlayerController?> _playerControllerNotifier =
       ValueNotifier(null);
@@ -57,6 +58,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
   bool _playerReady = false;
   bool _playerLoadScheduled = false;
+  bool _videoUnavailable = false;
+  Timer? _videoAvailabilityTimer;
 
   @override
   void initState() {
@@ -64,6 +67,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _playerControllerNotifier.addListener(_handleControllerUpdate);
     _initializePlayer();
     _schedulePlayerWarmup();
+    // Ensure our player focus node is ready and request focus once built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        FocusScope.of(context).requestFocus(_playerFocusNode);
+      }
+    });
   }
 
   IntegratedTranscriptionService? _transcriptionServiceRef;
@@ -101,6 +110,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   void dispose() {
+    _playerFocusNode.dispose();
     try {
       if (_transcriptionServiceRef != null && _transcriptionListener != null) {
         _transcriptionServiceRef!.removeListener(_transcriptionListener!);
@@ -183,6 +193,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Focus(
+        focusNode: _playerFocusNode,
         autofocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
@@ -207,17 +218,45 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     // Player fills the available area
                     if (_playerReady)
                       Positioned.fill(
-                        child: ExoPlayerWidget(
-                          url: widget.videoUrl ??
-                              widget.streamUrl ??
-                              widget.channel?.url ??
-                              '',
-                          isLive: widget.isLive,
-                          transcriptionService:
-                              Provider.of<IntegratedTranscriptionService>(context,
-                                  listen: false),
-                          controllerNotifier: _playerControllerNotifier,
-                          fit: _videoFit,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ExoPlayerWidget(
+                              url: widget.videoUrl ??
+                                  widget.streamUrl ??
+                                  widget.channel?.url ??
+                                  '',
+                              isLive: widget.isLive,
+                              transcriptionService:
+                                  Provider.of<IntegratedTranscriptionService>(context,
+                                      listen: false),
+                              controllerNotifier: _playerControllerNotifier,
+                              fit: _videoFit,
+                            ),
+                            if (_videoUnavailable)
+                              Positioned.fill(
+                                child: Container(
+                                  color: Colors.black,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.broken_image,
+                                            size: 96, color: Colors.white24),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No video frames',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.copyWith(color: Colors.white70),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       )
                     else
@@ -472,9 +511,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _detachPlayerController();
     _playerController = controller;
     if (controller == null) return;
+    // Start a watchdog to detect if no video frames appear after reasonable time
+    // Use 8 seconds to account for slow connections and buffering
+    _videoAvailabilityTimer?.cancel();
+    _videoUnavailable = false;
+    _videoAvailabilityTimer = Timer(const Duration(seconds: 8), () {
+      if (!mounted) return;
+      final value = controller.value;
+      // If renderer size is zero after timeout AND not buffering, consider video unavailable
+      // Also check if the player has any error state
+      if (value.size == Size.zero && !value.isBuffering) {
+        debugLog('Video watchdog: No frames after 8s, size=${value.size}, buffering=${value.isBuffering}');
+        setState(() => _videoUnavailable = true);
+      }
+    });
     _playerListener = () {
       final value = controller.value;
       if (!mounted) return;
+      
+      // Clear "no video" overlay as soon as we get valid video frames
+      if (_videoUnavailable && value.size != Size.zero) {
+        debugLog('Video watchdog: Video became available, size=${value.size}');
+        _videoAvailabilityTimer?.cancel();
+        setState(() => _videoUnavailable = false);
+        return; // Skip the rest to avoid redundant setState
+      }
+      
       setState(() {
         _isPlaying = value.isPlaying;
         _position = value.position;
@@ -496,6 +558,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
     _playerController = null;
     _playerListener = null;
+    _videoAvailabilityTimer?.cancel();
+    _videoUnavailable = false;
   }
 
   void _hideControlsAfterDelay() {
