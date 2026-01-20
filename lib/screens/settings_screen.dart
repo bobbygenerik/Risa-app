@@ -10,6 +10,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/utils/snackbar_utils.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
@@ -1240,8 +1241,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     final existingJson = prefs.getString('saved_playlists');
     List<SavedPlaylist> list = [];
     if (existingJson != null && existingJson.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(existingJson) as List<dynamic>;
+        try {
+        final decoded = await compute(jsonDecode, existingJson) as List<dynamic>;
         list = decoded
             .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
             .toList();

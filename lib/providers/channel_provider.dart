@@ -1663,11 +1663,11 @@ class ChannelProvider with ChangeNotifier {
         final savedJson = prefs.getString('saved_playlists');
         if (savedJson != null && savedJson.trim().isNotEmpty) {
           try {
-            final List<dynamic> decoded = jsonDecode(savedJson);
+            final List<dynamic> decoded = await compute(jsonDecode, savedJson) as List<dynamic>;
             final saved = decoded
-                .map(
-                    (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
-                .toList();
+              .map(
+                (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+              .toList();
             if (saved.isNotEmpty) {
               final activeId = prefs.getString('active_playlist_id');
               final chosen = saved.firstWhere((p) => p.id == activeId,

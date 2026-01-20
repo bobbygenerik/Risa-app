@@ -3,6 +3,7 @@ import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -286,7 +287,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_liveTvSnapshotKey);
       if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
+      final decoded = await compute(jsonDecode, raw);
       if (decoded is! Map<String, dynamic>) return;
       final savedAt = decoded['savedAt'] as int?;
       if (savedAt == null) return;
@@ -6215,7 +6216,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final resolvedOverlay = showColdStartOverlay ??
         (channelProvider.isColdStartLoad && channelProvider.isLoading);
     var resolvedTitle = titleText;
-    var resolvedStatus = statusText ?? channelProvider.loadingStatus;
+    String? resolvedStatus = statusText ?? channelProvider.loadingStatus;
     var resolvedProgress = progress ?? channelProvider.loadingProgress;
     var resolvedSecondary = secondaryStatusText;
     var resolvedOverlayFinal = resolvedOverlay;

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
@@ -90,7 +91,7 @@ class TvdbService {
       return null;
     }
 
-    final decoded = jsonDecode(searchResponse.body) as Map<String, dynamic>;
+    final decoded = await compute(jsonDecode, searchResponse.body) as Map<String, dynamic>;
     final results = decoded['data'];
     if (results is List) {
       final normalizedTitle = _normalizeTitle(title);
@@ -210,7 +211,7 @@ class TvdbService {
       final uri = Uri.parse('$_baseUrl/series/$id/artworks');
       final response = await http.get(uri, headers: _authHeaders(token));
       if (response.statusCode != 200) return null;
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = await compute(jsonDecode, response.body) as Map<String, dynamic>;
       final data = decoded['data'];
       if (data is Map<String, dynamic>) {
         final artworks = data['artworks'] as List?;
@@ -230,7 +231,7 @@ class TvdbService {
       final uri = Uri.parse('$_baseUrl/movies/$id/artworks');
       final response = await http.get(uri, headers: _authHeaders(token));
       if (response.statusCode != 200) return null;
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = await compute(jsonDecode, response.body) as Map<String, dynamic>;
       final data = decoded['data'];
       if (data is Map<String, dynamic>) {
         final artworks = data['artworks'] as List?;
@@ -305,7 +306,7 @@ class TvdbService {
         debugLog('TVDB login failed: ${response.statusCode}');
         return null;
       }
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = await compute(jsonDecode, response.body) as Map<String, dynamic>;
       final data = decoded['data'];
       if (data is Map<String, dynamic>) {
         final token = data['token'];
