@@ -54,7 +54,7 @@ double _calculateTrigramSetSimilarity(Set<int> aSet, String b) {
 
 void main() {
   const iterations = 10000;
-  final channels = List.generate(1000, (i) => "channel_name_${i}_sport_hd");
+  final channels = List.generate(1000, (i) => "channel_name_$i_sport_hd");
   final target = "channel_name_500_sport";
   final normalizedTarget = _normalize(target);
 

@@ -3594,6 +3594,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           for (final entry in _normalizedAvailableChannels!.entries) {
             final score =
                 _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
+            final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             if (score >= 0.75) {
               if (score > highestTrigram) highestTrigram = score;
               allCandidates.addAll(entry.value);
