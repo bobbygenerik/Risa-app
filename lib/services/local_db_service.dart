@@ -73,7 +73,7 @@ class LocalDbService {
       debugLog('LocalDbService: Opening database at $dbPath');
       _db = await openDatabase(
         dbPath,
-        version: 3,
+        version: 4,
         onConfigure: (db) async {
           try {
             // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
@@ -104,8 +104,9 @@ class LocalDbService {
             idx INTEGER
           )
         ''');
+          // Composite index for efficient category paging (WHERE groupTitle = ? ORDER BY idx)
           await db.execute(
-              'CREATE INDEX IF NOT EXISTS idx_channels_group ON channels(groupTitle)');
+              'CREATE INDEX IF NOT EXISTS idx_channels_group_idx ON channels(groupTitle, idx)');
           await db.execute(
               'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)');
           await db.execute(
@@ -150,6 +151,12 @@ class LocalDbService {
           if (oldVersion < 3) {
             await db.execute('DROP TABLE IF EXISTS vod_movies');
             await db.execute('DROP TABLE IF EXISTS vod_series');
+          }
+          if (oldVersion < 4) {
+            // Replace simple group index with composite index for faster paging
+            await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_channels_group_idx ON channels(groupTitle, idx)');
+            await db.execute('DROP INDEX IF EXISTS idx_channels_group');
           }
         },
       );
