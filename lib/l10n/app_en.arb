@@ -41,7 +41,7 @@
   "detectedEpgUrl": "Detected EPG URL (from playlist)",
   "noneDetected": "None detected",
   "updateEpgNow": "Update EPG Now",
-  "clearEpgData": "Clear EPG Data",
+  "clearEpgData": "Clear EPG Cache",
   "autoRefreshInterval": "Auto-refresh Interval",
   "refreshEveryHours": "Refresh every {hours} hours",
   "@refreshEveryHours": {

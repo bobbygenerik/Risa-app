@@ -99,7 +99,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateEpgNow => 'Update EPG Now';
 
   @override
-  String get clearEpgData => 'Clear EPG Data';
+  String get clearEpgData => 'Clear EPG Cache';
 
   @override
   String get autoRefreshInterval => 'Auto-refresh Interval';

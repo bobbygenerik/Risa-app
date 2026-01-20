@@ -1663,6 +1663,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         debugLog(
             'EPG: Initial parse result: $initialProgramCount programs, ${initialChannelIds.length} channels');
 
+        final allowedCount = _allowedChannelIdsNormalized.length;
+        final sparseMatch = _allowedChannelIdsNormalized.isNotEmpty &&
+            initialChannelIds.isNotEmpty &&
+            allowedCount >= 500 &&
+            (initialChannelIds.length * 20 < allowedCount);
+        if (sparseMatch) {
+          debugLog(
+              'EPG: Filtered parse matched only ${initialChannelIds.length}/$allowedCount channels; parsing full EPG to avoid under-matching.');
+          parseResult = await parseEpg(<String>{});
+        }
+
         // If we have allowed channels but no results, try fallback strategies
         if (_allowedChannelIdsNormalized.isNotEmpty &&
             (initialProgramCount == 0 || initialChannelIds.isEmpty)) {
@@ -3610,6 +3621,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _findUniqueStrippedFallback(normalizedId, channelName);
     if (strippedFallback != null) {
       return _cacheResolvedMapping(channelId, strippedFallback);
+    }
+
+    // If country hint was too restrictive, retry once without it.
+    if (countryCode != null) {
+      return _findBestEpgId(
+        channelId,
+        channelName,
+        logIfMissing: logIfMissing,
+        allowLoose: allowLoose,
+        countryHint: null,
+      );
     }
 
     // No match found - only cache the negative result if we are confident data is complete
