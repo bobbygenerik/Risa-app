@@ -31,7 +31,6 @@ class CachedImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Conservative default mem cache sizing to avoid large synchronous decodes
-    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio.round();
     int? finalMemCacheWidth = memCacheWidth;
     int? finalMemCacheHeight = memCacheHeight;
     if (finalMemCacheWidth == null && width != null && width!.isFinite) {

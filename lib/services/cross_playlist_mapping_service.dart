@@ -568,7 +568,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_crossPlaylistMappingsKey);
     if (data != null) {
-      final Map<String, dynamic> decoded = jsonDecode(data);
+      final Map<String, dynamic> decoded = await compute(jsonDecode, data) as Map<String, dynamic>;
       _crossPlaylistMappings.clear();
       decoded.forEach((key, value) {
         _crossPlaylistMappings[key] = CrossPlaylistMapping.fromJson(value);
@@ -587,7 +587,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_sharedMappingsKey);
     if (data != null) {
-      final Map<String, dynamic> decoded = jsonDecode(data);
+      final Map<String, dynamic> decoded = await compute(jsonDecode, data) as Map<String, dynamic>;
       _sharedMappings.clear();
       decoded.forEach((key, value) {
         _sharedMappings[key] = SharedMapping.fromJson(value);
@@ -606,7 +606,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_mappingHistoryKey);
     if (data != null) {
-      final List<dynamic> decoded = jsonDecode(data);
+      final List<dynamic> decoded = await compute(jsonDecode, data) as List<dynamic>;
       _mappingHistory.clear();
       for (final entryData in decoded) {
         _mappingHistory.add(MappingHistoryEntry.fromJson(entryData));
