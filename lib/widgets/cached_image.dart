@@ -30,14 +30,31 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Re-enable image loading with conservative caching
+    // Conservative default mem cache sizing to avoid large synchronous decodes
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio.round();
+    int? finalMemCacheWidth = memCacheWidth;
+    int? finalMemCacheHeight = memCacheHeight;
+    if (finalMemCacheWidth == null && width != null && width!.isFinite) {
+      finalMemCacheWidth = (width! * MediaQuery.of(context).devicePixelRatio).round();
+    }
+    if (finalMemCacheHeight == null && height != null && height!.isFinite) {
+      finalMemCacheHeight = (height! * MediaQuery.of(context).devicePixelRatio).round();
+    }
+    // If still null (e.g. full-screen hero), limit to screen size to avoid huge decodes
+    final screen = MediaQuery.of(context).size;
+    final screenWidthPx = (screen.width * MediaQuery.of(context).devicePixelRatio).round();
+    final screenHeightPx = (screen.height * MediaQuery.of(context).devicePixelRatio).round();
+    finalMemCacheWidth ??= screenWidthPx;
+    finalMemCacheHeight ??= screenHeightPx;
+
+    // Re-enable image loading with conservative caching and downscaling
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
       width: width,
       height: height,
       fit: fit,
-      memCacheWidth: memCacheWidth,
-      memCacheHeight: memCacheHeight,
+      memCacheWidth: finalMemCacheWidth,
+      memCacheHeight: finalMemCacheHeight,
       imageBuilder: (context, imageProvider) {
         ImageLoadProbe.recordSuccess(imageUrl, 'cached_image');
         return Image(
@@ -45,6 +62,7 @@ class CachedImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
+          filterQuality: FilterQuality.low,
         );
       },
       placeholder: (context, url) => placeholder ??

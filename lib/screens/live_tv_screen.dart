@@ -263,6 +263,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  // Helper: replace the word 'EPG' with 'data' in the status (second) line.
+  String? _replaceEpgWithData(String? s) {
+    if (s == null) return null;
+    return s.replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data').trim();
+  }
+
   Future<String?> _readPlaylistIdentity() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -507,6 +513,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void _requestInitialFocus() {
     if (_initialFocusRequested) return;
     _initialFocusRequested = true;
+    _tryInitialFocus();
+  }
+  
+  void _tryInitialFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Start with Watch Now button for better UX - user sees hero first
@@ -518,6 +528,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _firstChannelFocus.requestFocus();
       } else if (_skeletonFocus.canRequestFocus) {
         _skeletonFocus.requestFocus();
+      } else {
+        // None of the focus nodes are ready yet, retry after a short delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _tryInitialFocus();
+        });
       }
     });
   }
@@ -1387,13 +1402,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   Positioned.fill(
                     child: ClipRect(
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        // Reduced blur sigma for better performance on low-end/TV GPUs
+                        // (was 18, lowered to 6 to avoid long GPU queue/dequeue delays).
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.45),
                           alignment: Alignment.center,
                           child: _buildColdStartOverlayCard(
                             titleText: epgStatus != null ? 'Loading EPG' : null,
-                            statusText: channelProvider.loadingStatus,
+                            statusText: _replaceEpgWithData(channelProvider.loadingStatus),
                             secondaryStatusText: epgStatus,
                             progress: channelProvider.loadingProgress,
                           ),
@@ -1408,7 +1425,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             Widget buildSkeleton() => _buildSkeletonLoaderTracked(
                   showColdStartOverlay: showStartupOverlay,
                   titleText: epgStatus != null ? 'Loading EPG' : null,
-                  statusText: channelProvider.loadingStatus,
+                  statusText: _replaceEpgWithData(channelProvider.loadingStatus),
                   secondaryStatusText: epgStatus,
                   progress: channelProvider.loadingProgress,
                 );
@@ -1752,7 +1769,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ));
     }
 
-    if (featuredChannels.isNotEmpty) {
+    // Only stabilize featured list when EPG is ready and we have enough channels
+    // This prevents locking in a sparse list before EPG finishes loading
+    final epgReady = !epgService.isLoading && !epgService.isParsing && !epgService.isDownloading;
+    final hasEnoughChannels = featuredChannels.length >= 5;
+    if (featuredChannels.isNotEmpty && epgReady && hasEnoughChannels) {
       _stableFeaturedChannels = List.from(featuredChannels);
       _featuredChannelsInitialized = true;
     }
@@ -1937,8 +1958,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         // Content Background Gradient (behind channel rows)
+        // Start gradient halfway down the first card row for better visual blend
         Positioned(
-          top: contentTop,
+          top: contentTop + (_estimateRowHeight(context) * 0.5),
           left: 0,
           right: 0,
           bottom: 0,
@@ -1952,7 +1974,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   AppTheme.darkBackground,
                   AppTheme.darkBackground,
                 ],
-                stops: [0.0, 0.5, 1.0], // More gradual fade (was 0.2)
+                stops: [0.0, 0.3, 1.0], // Faster fade since starting lower
               ),
             ),
           ),
@@ -2004,7 +2026,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           context,
                           categoryName,
                           categoryIndex,
-                          isFirstRow: categoryIndex == 0,
+                          // Category rows don't filter by EPG, but first one gets special focus
+                          isFirstRow: false,
+                          isFirstCategoryRow: categoryIndex == 0,
                         ),
                       );
                     },
@@ -3974,7 +3998,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelSection(
       BuildContext context, String title, List<Channel> channels,
-      {bool isFirstRow = false, bool allowCategoryPaging = true}) {
+      {bool isFirstRow = false, 
+       bool isFirstCategoryRow = false,
+       bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
     final epgService = context.watch<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
@@ -4106,7 +4132,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 sectionKey,
                 filteredChannels[index],
                 index,
-                isFirstRow: isFirstRow,
+                // Use isFirstRow OR isFirstCategoryRow for focus node assignment
+                isFirstRow: isFirstRow || isFirstCategoryRow,
                 allowCategoryPaging: allowCategoryPaging,
               );
               final allowPrefetch = _shouldPrefetchArt(
@@ -4152,6 +4179,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String category,
     int index, {
     bool isFirstRow = false,
+    bool isFirstCategoryRow = false,
   }) {
     final notifier = _categoryRowNotifierFor(category);
     return ValueListenableBuilder<int>(
@@ -4173,6 +4201,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           category,
           channels,
           isFirstRow: isFirstRow,
+          isFirstCategoryRow: isFirstCategoryRow,
         );
       },
     );
@@ -6171,6 +6200,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  
+
   Widget _buildSkeletonLoaderTracked({
     bool? showColdStartOverlay,
     String? titleText,
@@ -6194,7 +6225,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (!resolvedOverlayFinal && epgBusy) {
       resolvedOverlayFinal = true;
       resolvedTitle = 'Loading EPG';
-      resolvedStatus = epgService.epgProgressLabel ?? 'EPG loading';
+      resolvedStatus = _replaceEpgWithData(epgService.epgProgressLabel ?? 'EPG loading');
       resolvedProgress = epgService.epgProgress;
       resolvedSecondary ??= 'Parsing guide data...';
     }
