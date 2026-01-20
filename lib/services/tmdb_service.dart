@@ -103,7 +103,6 @@ class TMDBService {
     output = output.replaceAll(_whitespaceRe, ' ').trim();
     return output;
   }
-  }
 
   static String _cacheKey(String prefix, String query, {int? year}) {
     final normalized = _normalizeTitle(query);
