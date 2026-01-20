@@ -77,7 +77,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
         });
         return AlertDialog(
           backgroundColor: AppTheme.darkBackground,
-          title: const Text('Clear All EPG Data',
+          title: const Text('Clear EPG Cache',
               style: TextStyle(color: AppTheme.textPrimary)),
           content: const Text(
             'This will clear cached EPG programs and channel mappings. Your EPG URLs will be kept.',
@@ -435,7 +435,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
               : BrandSecondaryButton(
                   onPressed: _clearAllEpgData,
                   icon: Icons.delete_forever,
-                  label: 'Clear All EPG Data',
+                  label: 'Clear EPG Cache',
                   expand: true,
                 ),
         ],
