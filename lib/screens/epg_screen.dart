@@ -615,6 +615,13 @@ class _EPGScreenState extends State<EPGScreen>
     final favorites = _epgState.epgFavoriteChannelIds;
     final favoritesKey = favorites.isEmpty ? '0' : favorites.take(8).join('|');
     final pageKey = '$categoryKey|${_epgState.currentPage}|$favoritesKey';
+    if (_epgState.selectedCategory == '⭐ Favorites' && favorites.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _epgState.setSelectedCategory(null);
+        }
+      });
+    }
     if (_channelPageFuture == null || _channelPageKey != pageKey) {
       _channelPageKey = pageKey;
       _channelPageFuture = () async {
@@ -1101,11 +1108,11 @@ class _EPGScreenState extends State<EPGScreen>
               child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
-              height: AppSpacing.epgRowHeight, // Base row height
+              height: AppSpacing.epgRowHeight + 4.0, // Match header row height
               margin: EdgeInsets.only(
                 left: context.spacingXs(),
                 right: context.spacingXs(),
-                bottom: 4.0, // 4px gap between rows like other EPG boxes
+                bottom: 0,
               ),
               padding: EdgeInsets.symmetric(
                 horizontal: context.spacingXs(),

@@ -700,9 +700,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
   String _formatEpgStatus(IncrementalEpgService epgService) {
     final pct = (epgService.epgProgress * 100).round().clamp(0, 100);
-    if (epgService.isDownloading) return 'Downloading (${pct}%)';
-    if (epgService.isParsing) return 'Parsing (${pct}%)';
-    if (epgService.isLoading) return 'Loading (${pct}%)';
+    if (epgService.isDownloading) return 'Downloading ($pct%)';
+    if (epgService.isParsing) return 'Parsing ($pct%)';
+    if (epgService.isLoading) return 'Loading ($pct%)';
     return 'Idle';
   }
 
