@@ -1282,9 +1282,15 @@ class M3UParserService {
 
   /// Clean series title by removing S##E## pattern
   String _cleanSeriesTitle(String title) {
-    return title
-        .replaceAll(RegExp(r'S\d+E\d+', caseSensitive: false), '')
-        .trim();
+    final seasonEpisodeRe = RegExp(r'\bS\d+E\d+\b', caseSensitive: false);
+    final match = seasonEpisodeRe.firstMatch(title);
+    var cleaned = match != null ? title.substring(0, match.start) : title;
+
+    // Strip trailing separators left behind by removing episode tokens.
+    cleaned = cleaned.replaceAll(RegExp(r'\s*[\-–—:|]\s*$'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return cleaned.isEmpty ? title.trim() : cleaned;
   }
 
   /// Extract genres from group title
