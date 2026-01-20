@@ -24,6 +24,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/smart_cache_service.dart';
 import 'playlist_loader.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../utils/throttled_notifier.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -134,7 +135,7 @@ Future<void> clearPlaylistCache() async {
   debugLog('ChannelProvider: Playlist cache cleared');
 }
 
-class ChannelProvider with ChangeNotifier {
+class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
   static const int _playlistCacheVersion = 3;
@@ -1640,7 +1641,7 @@ class ChannelProvider with ChangeNotifier {
     _noPlaylistConfigured = false;
     _loadingStatus = 'Checking local cache...';
     _loadingProgress = 0.05;
-    notifyListeners();
+    notifyListenersThrottled();
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     try {
@@ -1650,7 +1651,7 @@ class ChannelProvider with ChangeNotifier {
       try {
         _loadingStatus = 'Opening local database...';
         _loadingProgress = 0.1;
-        notifyListeners();
+        notifyListenersThrottled();
         await _ensureDb().timeout(const Duration(seconds: 4));
       } catch (e) {
         debugLog('ChannelProvider: DB init timeout or failure: $e');
