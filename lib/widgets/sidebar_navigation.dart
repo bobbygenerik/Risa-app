@@ -242,12 +242,12 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          // Always move focus to content when pressing right (expanded or collapsed)
+          widget.onFocusContent?.call();
           if (_isExpanded) {
             _setExpanded(false);
-            widget.onFocusContent?.call();
-            return KeyEventResult.handled;
           }
-          return KeyEventResult.ignored;
+          return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {
@@ -352,12 +352,12 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          // Always move focus to content when pressing right (expanded or collapsed)
+          widget.onFocusContent?.call();
           if (_isExpanded) {
             _setExpanded(false);
-            widget.onFocusContent?.call();
-            return KeyEventResult.handled;
           }
-          return KeyEventResult.ignored;
+          return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {
@@ -449,7 +449,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     required Widget icon,
     Widget? label,
   }) {
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
@@ -473,6 +473,12 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         ],
       ],
     );
+    
+    // Center the row when collapsed for better visual alignment
+    if (!_isExpanded) {
+      return Center(child: row);
+    }
+    return row;
   }
 
   @override
@@ -560,11 +566,12 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          // Always move focus to content when pressing right (expanded or collapsed)
+          widget.onFocusContent?.call();
           if (_isExpanded) {
             _setExpanded(false);
-            return KeyEventResult.handled;
           }
-          return KeyEventResult.ignored;
+          return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {

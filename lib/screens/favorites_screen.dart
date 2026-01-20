@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,16 +23,20 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen>
     with ContentFocusRegistrant<FavoritesScreen> {
+  Timer? _updateTimer;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 1), _updateTime);
+    _updateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
-  void _updateTime() {
-    if (!mounted) return;
-    setState(() {});
-    Future.delayed(const Duration(seconds: 1), _updateTime);
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
   }
 
   @override

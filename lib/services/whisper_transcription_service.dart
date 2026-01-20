@@ -68,6 +68,46 @@ class WhisperTranscriptionService extends ChangeNotifier {
     }
   }
 
+  Future<String?> transcribeFile(String filePath) async {
+    if (!_isInitialized) {
+      _lastError = 'Whisper not initialized';
+      notifyListeners();
+      return null;
+    }
+
+    try {
+      final modelAvailable =
+          await WhisperPlatformService.isModelAvailable(_selectedModel);
+      if (!modelAvailable) {
+        _lastError =
+            'Whisper model $_selectedModel not downloaded. Downloading now...';
+        _isDownloadingModel = true;
+        notifyListeners();
+
+        final downloaded =
+            await WhisperPlatformService.downloadModel(_selectedModel);
+        _isDownloadingModel = false;
+        if (!downloaded) {
+          _lastError =
+              'Whisper model $_selectedModel not downloaded. Open Settings > Manage Speech Models to download.';
+          notifyListeners();
+          return null;
+        }
+      }
+      _lastError = '';
+
+      final result = await WhisperPlatformService.transcribe(
+        audioPath: filePath,
+        modelName: _selectedModel,
+      );
+      return result;
+    } catch (e) {
+      _lastError = 'Transcription failed: $e';
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> startTranscription({String? streamUrl}) async {
     if (!_isInitialized) {
       _lastError = 'Whisper not initialized';

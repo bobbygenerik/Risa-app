@@ -24,6 +24,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/smart_cache_service.dart';
 import 'playlist_loader.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../utils/throttled_notifier.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -46,6 +47,37 @@ List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
     categories.add('Uncategorized');
   }
   return categories;
+}
+
+/// Isolate function to rebuild channel caches (expensive work off main thread)
+/// Returns a map with 'indexById', 'indicesByGroup', 'lowerNames', 'lowerGroups'
+Map<String, dynamic> _rebuildChannelCachesInIsolate(List<Map<String, dynamic>> channelMaps) {
+  final Map<String, int> indexById = {};
+  final Map<String, List<int>> indicesByGroup = {};
+  final List<String> lowerNames = List<String>.filled(channelMaps.length, '');
+  final List<String> lowerGroups = List<String>.filled(channelMaps.length, '');
+  
+  for (int i = 0; i < channelMaps.length; i++) {
+    final map = channelMaps[i];
+    final id = (map['id'] ?? '').toString();
+    if (id.isNotEmpty) {
+      indexById[id] = i;
+    }
+    final name = (map['name'] as String?) ?? '';
+    final normalizedName = name.toLowerCase();
+    lowerNames[i] = normalizedName;
+    final group = ((map['groupTitle'] ?? '').toString()).toLowerCase();
+    lowerGroups[i] = group;
+    final groupKey = group.isNotEmpty ? group : 'uncategorized';
+    (indicesByGroup[groupKey] ??= []).add(i);
+  }
+  
+  return {
+    'indexById': indexById,
+    'indicesByGroup': indicesByGroup,
+    'lowerNames': lowerNames,
+    'lowerGroups': lowerGroups,
+  };
 }
 
 List<int> _filterCategoryIndicesInIsolate(Map<String, dynamic> args) {
@@ -134,7 +166,7 @@ Future<void> clearPlaylistCache() async {
   debugLog('ChannelProvider: Playlist cache cleared');
 }
 
-class ChannelProvider with ChangeNotifier {
+class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
   static const int _playlistCacheVersion = 3;
@@ -147,12 +179,13 @@ class ChannelProvider with ChangeNotifier {
   List<Map<String, dynamic>> _channelMaps = [];
   // Cache of converted Channel objects (populated on-demand)
   final Map<int, Channel> _channelCache = {};
-  final Map<String, int> _channelIndexById = {};
-  final Map<String, List<int>> _channelIndicesByGroup = {};
+  Map<String, int> _channelIndexById = {};
+  Map<String, List<int>> _channelIndicesByGroup = {};
   List<String> _channelLowerNames = [];
   List<String> _channelLowerGroups = [];
 
-  void _rebuildChannelCaches() {
+  /// Lightweight sync cache rebuild for small playlists or when isolate not available
+  void _rebuildChannelCachesSync() {
     _channelIndexById.clear();
     _channelIndicesByGroup.clear();
     _channelLowerNames = List<String>.filled(_channelMaps.length, '');
@@ -164,13 +197,41 @@ class ChannelProvider with ChangeNotifier {
         _channelIndexById[id] = i;
       }
       final name = (map['name'] as String?) ?? '';
-      final normalizedName = name.toLowerCase().trim();
-      _channelLowerNames[i] = normalizedName;
-      final group = ((map['groupTitle'] ?? '').toString()).toLowerCase().trim();
+      _channelLowerNames[i] = name.toLowerCase();
+      final group = ((map['groupTitle'] ?? '').toString()).toLowerCase();
       _channelLowerGroups[i] = group;
       final groupKey = group.isNotEmpty ? group : 'uncategorized';
-      _channelIndicesByGroup.putIfAbsent(groupKey, () => []).add(i);
+      (_channelIndicesByGroup[groupKey] ??= []).add(i);
     }
+  }
+
+  /// Async cache rebuild that uses isolate for large playlists (>1000 channels)
+  Future<void> _rebuildChannelCachesAsync() async {
+    if (_channelMaps.length < 1000) {
+      // Small playlist - do it synchronously (faster than isolate overhead)
+      _rebuildChannelCachesSync();
+      return;
+    }
+    
+    final start = DateTime.now();
+    try {
+      final result = await compute(_rebuildChannelCachesInIsolate, _channelMaps);
+      _channelIndexById = Map<String, int>.from(result['indexById'] as Map);
+      _channelIndicesByGroup = (result['indicesByGroup'] as Map).map(
+        (k, v) => MapEntry(k as String, List<int>.from(v as List)),
+      );
+      _channelLowerNames = List<String>.from(result['lowerNames'] as List);
+      _channelLowerGroups = List<String>.from(result['lowerGroups'] as List);
+      debugLog('ChannelProvider: Async cache rebuild took ${DateTime.now().difference(start).inMilliseconds}ms');
+    } catch (e) {
+      debugLog('ChannelProvider: Async cache rebuild failed, falling back to sync: $e');
+      _rebuildChannelCachesSync();
+    }
+  }
+
+  /// Compatibility wrapper - calls sync version (use _rebuildChannelCachesAsync for large playlists)
+  void _rebuildChannelCaches() {
+    _rebuildChannelCachesSync();
   }
 
   void _refreshSmartChannelCache({bool allowConversion = true}) {
@@ -287,7 +348,8 @@ class ChannelProvider with ChangeNotifier {
   List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
     if (_channelMaps.isEmpty || limit <= 0) return const [];
     final total = _channelMaps.length;
-    final count = limit.clamp(0, total);
+    final count = limit.clamp(1, total); // Ensure count >= 1 to prevent division by zero
+    if (count <= 0) return const []; // Extra safety check
     final step = (total / count).ceil().clamp(1, total);
     final sampled = <Map<String, dynamic>>[];
     for (int i = 0; i < total && sampled.length < count; i += step) {
@@ -509,8 +571,12 @@ class ChannelProvider with ChangeNotifier {
         : List<Map<String, dynamic>>.from(_channelMaps);
 
     // Offload heavy string normalization to isolate
-    final allowed = await compute(_buildAllowedSet, mapsSubset);
-    service.setAllowedChannelIds(allowed, triggerRefresh: true);
+    try {
+      final allowed = await compute(_buildAllowedSet, mapsSubset);
+      service.setAllowedChannelIds(allowed, triggerRefresh: true);
+    } catch (e) {
+      debugLog('ChannelProvider: compute(_buildAllowedSet) failed: $e');
+    }
   }
 
   static Set<String> _buildAllowedSet(List<Map<String, dynamic>> maps) {
@@ -1490,18 +1556,23 @@ class ChannelProvider with ChangeNotifier {
   }) async {
     // Fallback to isolate filtering when DB not ready or favorites filtering
     if (!_dbReady || favoriteIds != null) {
-      final indices = await compute(_filterChannelIndicesInIsolate, {
-        'titles': _getCategoryTitleCache(),
-        'ids': _getChannelIdCache(),
-        'hidden': _getHiddenFlagCache(),
-        'category': category,
-        'favoriteIds': favoriteIds?.toList() ?? const [],
-        'excludeHidden': excludeHidden,
-        'limit': limit,
-        'offset': offset,
-      });
-      if (indices.isEmpty) return const [];
-      return indices.map(_getChannelAt).toList();
+      try {
+        final indices = await compute(_filterChannelIndicesInIsolate, {
+          'titles': _getCategoryTitleCache(),
+          'ids': _getChannelIdCache(),
+          'hidden': _getHiddenFlagCache(),
+          'category': category,
+          'favoriteIds': favoriteIds?.toList() ?? const [],
+          'excludeHidden': excludeHidden,
+          'limit': limit,
+          'offset': offset,
+        });
+        if (indices.isEmpty) return const [];
+        return indices.map(_getChannelAt).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: compute(_filterChannelIndicesInIsolate) failed: $e');
+        return const [];
+      }
     }
 
     // Use category paging or general paging
@@ -1630,7 +1701,7 @@ class ChannelProvider with ChangeNotifier {
     _noPlaylistConfigured = false;
     _loadingStatus = 'Checking local cache...';
     _loadingProgress = 0.05;
-    notifyListeners();
+    notifyListenersThrottled();
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     try {
@@ -1640,7 +1711,7 @@ class ChannelProvider with ChangeNotifier {
       try {
         _loadingStatus = 'Opening local database...';
         _loadingProgress = 0.1;
-        notifyListeners();
+        notifyListenersThrottled();
         await _ensureDb().timeout(const Duration(seconds: 4));
       } catch (e) {
         debugLog('ChannelProvider: DB init timeout or failure: $e');
@@ -1653,11 +1724,11 @@ class ChannelProvider with ChangeNotifier {
         final savedJson = prefs.getString('saved_playlists');
         if (savedJson != null && savedJson.trim().isNotEmpty) {
           try {
-            final List<dynamic> decoded = jsonDecode(savedJson);
+            final List<dynamic> decoded = await compute(jsonDecode, savedJson) as List<dynamic>;
             final saved = decoded
-                .map(
-                    (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
-                .toList();
+              .map(
+                (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+              .toList();
             if (saved.isNotEmpty) {
               final activeId = prefs.getString('active_playlist_id');
               final chosen = saved.firstWhere((p) => p.id == activeId,
@@ -2155,9 +2226,7 @@ class ChannelProvider with ChangeNotifier {
       _channelMaps.clear();
       _channelCache.clear();
       _invalidateCategoryCaches();
-      if (_dbReady) {
-        await _db.clearChannels();
-      }
+      // NOTE: DB clear is now deferred to _deferredDbInsert() for faster startup
       _channelCountDb = 0;
 
       DateTime lastUiUpdate = DateTime.now();
@@ -2201,12 +2270,8 @@ class ChannelProvider with ChangeNotifier {
            notifyListeners();
         }
         
-        if (_dbReady) {
-          // Offload to DB in background, catch errors silently
-          _db.insertChannels(chunk).catchError((e) {
-            debugLog('ChannelProvider: Background chunk insert failed: $e');
-          });
-        }
+        // NOTE: DB writes are now DEFERRED to after UI is shown for faster startup
+        // See _deferredDbInsert() call after playlist load completes
       });
 
       var channelsFile = parsed['channelsFile'] as String?;
@@ -2281,6 +2346,9 @@ class ChannelProvider with ChangeNotifier {
       debugLog(
           'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
 
+      // Use async cache rebuild for large playlists (runs in isolate)
+      unawaited(_rebuildChannelCachesAsync());
+
       _loadingStatus = 'Finalizing...';
       _loadingProgress = 0.95;
       notifyListeners();
@@ -2302,6 +2370,11 @@ class ChannelProvider with ChangeNotifier {
       _hasLoadedPlaylist = true;
       _isColdStartLoad = false;
       notifyListeners();
+      
+      // DEFERRED: Write all channels to DB in background AFTER UI is shown
+      // This dramatically improves perceived startup time
+      unawaited(_deferredDbInsert());
+      
       _refreshSmartChannelCache();
 
       PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
@@ -2637,14 +2710,19 @@ class ChannelProvider with ChangeNotifier {
     }
 
     final titles = _getCategoryTitleCache();
-    final indices = await compute(_filterCategoryIndicesInIsolate, {
-      'titles': titles,
-      'category': category,
-      'offset': offset,
-      'limit': limit,
-    });
-    if (indices.isEmpty) return const [];
-    return indices.map(_getChannelAt).toList();
+    try {
+      final indices = await compute(_filterCategoryIndicesInIsolate, {
+        'titles': titles,
+        'category': category,
+        'offset': offset,
+        'limit': limit,
+      });
+      if (indices.isEmpty) return const [];
+      return indices.map(_getChannelAt).toList();
+    } catch (e) {
+      debugLog('ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: $e');
+      return const [];
+    }
   }
 
   Future<Map<String, List<Channel>>> getCategoryPreviewBatch(
@@ -2678,6 +2756,30 @@ class ChannelProvider with ChangeNotifier {
       );
     }
     return result;
+  }
+
+  /// Deferred DB insert - runs AFTER UI is shown for faster perceived startup
+  /// Uses microtask scheduling to avoid blocking the main thread
+  Future<void> _deferredDbInsert() async {
+    if (!_dbReady || _channelMaps.isEmpty) return;
+    
+    final start = DateTime.now();
+    debugLog('ChannelProvider: Starting deferred DB insert for ${_channelMaps.length} channels');
+    
+    try {
+      // Clear existing channels first
+      await _db.clearChannels();
+      
+      // Insert all channels in one batch - happens entirely in background
+      // The DB service uses a write queue so this won't block
+      await _db.insertChannels(_channelMaps);
+      
+      final duration = DateTime.now().difference(start);
+      debugLog('ChannelProvider: Deferred DB insert completed in ${duration.inMilliseconds}ms');
+    } catch (e) {
+      debugLog('ChannelProvider: Deferred DB insert failed: $e');
+      _handleDbError(e);
+    }
   }
 
   /// Save parsed playlist data to JSON cache for fast loading

@@ -2,15 +2,16 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
+import '../utils/throttled_notifier.dart';
+import 'logo_matching_isolate.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../utils/debug_helper.dart';
 
 /// Service for logo-based channel matching using computer vision techniques
 /// Compares channel logos to improve EPG matching accuracy
-class LogoMatchingService extends ChangeNotifier {
+class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
   static const String _logoCacheDir = 'channel_logos';
   static const String _logoIndexFile = 'logo_index.json';
   static const int _maxCacheSize = 500; // Maximum number of logos to cache
@@ -25,6 +26,7 @@ class LogoMatchingService extends ChangeNotifier {
 
   final Map<String, LogoData> _logoCache = {};
   final Map<String, LogoFeatures> _logoFeatures = {};
+  final Map<String, LogoFeatures> _featuresByHash = {};
   final Map<String, double> _similarityCache = {};
 
   Directory? _cacheDirectory;
@@ -245,7 +247,7 @@ class LogoMatchingService extends ChangeNotifier {
       }
 
       debugLog('Logo cache cleared');
-      notifyListeners();
+      notifyListenersThrottled();
     } catch (e) {
       debugLog('Error clearing logo cache: $e');
     }
@@ -315,24 +317,20 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<LogoData?> _processLogo(Uint8List bytes, String url) async {
     try {
-      // Decode image
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      final image = frame.image;
+      // Offload processing (decode/resize/encode) to a pure-Dart isolate worker
+      final params = {'bytes': bytes, 'maxLogoSize': _maxLogoSize};
+      final map = await compute(processLogoIsolate, params);
+      final processedBytes = map['bytes'] as Uint8List;
+      final procWidth = (map['width'] as num).toInt();
+      final procHeight = (map['height'] as num).toInt();
 
-      // Resize if too large
-      final processedImage = await _resizeImageIfNeeded(image);
-
-      // Convert back to bytes
-      final processedBytes = await _imageToBytes(processedImage);
-
-      // Calculate hash for deduplication
+      // Calculate hash for deduplication based on original bytes
       final hash = sha256.convert(bytes).toString();
 
       return LogoData(
         bytes: processedBytes,
-        width: processedImage.width,
-        height: processedImage.height,
+        width: procWidth,
+        height: procHeight,
         format: 'PNG',
         url: url,
         hash: hash,
@@ -344,37 +342,7 @@ class LogoMatchingService extends ChangeNotifier {
     }
   }
 
-  Future<ui.Image> _resizeImageIfNeeded(ui.Image image) async {
-    if (image.width <= _maxLogoSize && image.height <= _maxLogoSize) {
-      return image;
-    }
-
-    final scale = _maxLogoSize / math.max(image.width, image.height);
-    final newWidth = (image.width * scale).round();
-    final newHeight = (image.height * scale).round();
-
-    final recorder = ui.PictureRecorder();
-    final canvas = ui.Canvas(recorder);
-
-    final paint = Paint()..filterQuality = ui.FilterQuality.high;
-
-    canvas.drawImageRect(
-      image,
-      ui.Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble()),
-      ui.Rect.fromLTRB(0, 0, newWidth.toDouble(), newHeight.toDouble()),
-      paint,
-    );
-
-    final picture = recorder.endRecording();
-    return await picture.toImage(newWidth, newHeight);
-  }
-
-  Future<Uint8List> _imageToBytes(ui.Image image) async {
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    final data = byteData;
-    if (data == null) throw Exception('Failed to convert image to bytes');
-    return data.buffer.asUint8List();
-  }
+  
 
   Future<void> _saveLogoToCache(String channelId, LogoData logo) async {
     try {
@@ -390,7 +358,7 @@ class LogoMatchingService extends ChangeNotifier {
       // Update index
       await _saveLogoIndex();
 
-      notifyListeners();
+      notifyListenersThrottled();
     } catch (e) {
       debugLog('Error saving logo to cache: $e');
     }
@@ -398,8 +366,15 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<void> _extractLogoFeatures(String channelId, LogoData logo) async {
     try {
+      // Reuse features if we've already processed this exact bytes/hash
+      if (_featuresByHash.containsKey(logo.hash)) {
+        _logoFeatures[channelId] = _featuresByHash[logo.hash]!;
+        return;
+      }
+
       final features = await _extractLogoFeaturesFromBytes(logo.bytes);
       _logoFeatures[channelId] = features;
+      _featuresByHash[logo.hash] = features;
     } catch (e) {
       debugLog('Error extracting logo features for $channelId: $e');
     }
@@ -407,26 +382,38 @@ class LogoMatchingService extends ChangeNotifier {
 
   Future<LogoFeatures> _extractLogoFeaturesFromBytes(Uint8List bytes) async {
     try {
-      // Decode image
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      final image = frame.image;
+      // Prefer pure-Dart isolate-based extraction to keep work off UI isolate
+      try {
+        final map = await compute(extractLogoFeaturesIsolate, bytes);
+        final colorHistogram = (map['colorHistogram'] as List).cast<double>();
+        final edgeFeatures = (map['edgeFeatures'] as List).cast<double>();
+        final textureFeatures = (map['textureFeatures'] as List).cast<double>();
+        final width = (map['width'] as num).toDouble();
+        final height = (map['height'] as num).toDouble();
 
-      // Extract color histogram
-      final colorHistogram = await _extractColorHistogram(image);
+        return LogoFeatures(
+          colorHistogram: colorHistogram,
+          edgeFeatures: edgeFeatures,
+          textureFeatures: textureFeatures,
+          dimensions: Point(width, height),
+        );
+      } catch (e) {
+        // Fallback to engine-based extraction on failure
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final image = frame.image;
 
-      // Extract edge features
-      final edgeFeatures = await _extractEdgeFeatures(image);
+        final colorHistogram = await _extractColorHistogram(image);
+        final edgeFeatures = await _extractEdgeFeatures(image);
+        final textureFeatures = await _extractTextureFeatures(image);
 
-      // Extract texture features (simplified)
-      final textureFeatures = await _extractTextureFeatures(image);
-
-      return LogoFeatures(
-        colorHistogram: colorHistogram,
-        edgeFeatures: edgeFeatures,
-        textureFeatures: textureFeatures,
-        dimensions: Point(image.width.toDouble(), image.height.toDouble()),
-      );
+        return LogoFeatures(
+          colorHistogram: colorHistogram,
+          edgeFeatures: edgeFeatures,
+          textureFeatures: textureFeatures,
+          dimensions: Point(image.width.toDouble(), image.height.toDouble()),
+        );
+      }
     } catch (e) {
       debugLog('Error extracting logo features: $e');
       rethrow;
