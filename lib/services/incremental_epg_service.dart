@@ -3554,7 +3554,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         // Collect all potential matches first
         if (normalizedName.length >= 4 &&
             _normalizedAvailableChannels != null) {
-          final List<String> candidates = [];
+          final List<String> allCandidates = [];
+          double highestTrigram = 0.0;
+
+          // Optimization: Pre-calculate trigrams for the target name once
+          final targetTrigrams = _generateTrigramSet(normalizedName);
+
           for (final entry in _normalizedAvailableChannels!.entries) {
             final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
             if (score >= 0.75) {
