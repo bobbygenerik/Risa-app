@@ -1879,9 +1879,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         highPriority: true,
       );
     }
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
         // Hero Background & Gradient
         Positioned(
           top: 0,
@@ -2004,38 +2004,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 padding: EdgeInsets.only(
                   left: 0,
                   right: rightInset,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: KeyedSubtree(
+                    key: const ValueKey<String>('live_tv_featured_row'),
+                    child: _buildFeaturedRow(context, allChannels),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  left: 0,
+                  right: rightInset,
                   bottom: context.spacingXl(),
                 ),
-                sliver: SliverList(
+                sliver: SliverFixedExtentList(
+                  itemExtent: _estimateRowHeight(context),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      if (index == 0) {
-                        return KeyedSubtree(
-                          key: const ValueKey<String>('live_tv_featured_row'),
-                          child: _buildFeaturedRow(context, allChannels),
-                        );
-                      }
-                      final categoryIndex = index - 1;
-                      if (categoryIndex < 0 ||
-                          categoryIndex >= _categoryNames.length) {
+                      if (index < 0 || index >= _categoryNames.length) {
                         return const SizedBox.shrink();
                       }
-                      final categoryName = _categoryNames[categoryIndex];
+                      final categoryName = _categoryNames[index];
                       return KeyedSubtree(
                         key: ValueKey<String>('live_tv_row_$categoryName'),
                         child: _buildCategoryRowWidget(
                           context,
                           categoryName,
-                          categoryIndex,
+                          index,
                           // Category rows don't filter by EPG, but first one gets special focus
                           isFirstRow: false,
-                          isFirstCategoryRow: categoryIndex == 0,
+                          isFirstCategoryRow: index == 0,
                         ),
                       );
                     },
                     childCount:
-                        math.min(_visibleCategoryCount, _categoryNames.length) +
-                            1,
+                        math.min(_visibleCategoryCount, _categoryNames.length),
                   ),
                 ),
               ),
