@@ -19,3 +19,23 @@ String stableChannelId(
   final key = '${normalizedUrl.toLowerCase()}|${name.trim().toLowerCase()}';
   return 'ch_${fnv1aHex(key)}';
 }
+
+/// Generate a stable playlist id based on the playlist source.
+String stablePlaylistId({
+  required String type,
+  String? url,
+  String? server,
+  String? username,
+}) {
+  final normalizedType = type.trim().toLowerCase();
+  String key;
+  if (normalizedType == 'xtream') {
+    final normalizedServer = (server ?? '').trim().toLowerCase();
+    final normalizedUser = (username ?? '').trim().toLowerCase();
+    key = '$normalizedType|$normalizedServer|$normalizedUser';
+  } else {
+    final normalizedUrl = (url ?? '').trim().toLowerCase();
+    key = '$normalizedType|$normalizedUrl';
+  }
+  return 'pl_${fnv1aHex(key)}';
+}

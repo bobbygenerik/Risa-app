@@ -144,7 +144,7 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
         key: ValueKey('row_${widget.sectionKey}'),
         scrollDirection: Axis.horizontal,
         physics: const ClampingScrollPhysics(),
-        cacheExtent: widget.cardWidth * 2, // Moderate cache extent
+        cacheExtent: widget.cardWidth * 4, // Keep more cards alive to reduce flicker
         padding: widget.padding,
         clipBehavior: Clip.none,
         itemCount: count,

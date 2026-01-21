@@ -399,6 +399,102 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     return 'playlist_counts_${Uri.encodeComponent(keyBase)}';
   }
 
+  Future<String?> _ensureStablePlaylistIdentity(
+    SharedPreferences prefs, {
+    String? playlistUrl,
+  }) async {
+    final type = prefs.getString('playlist_type') ?? 'm3u';
+    final normalizedType = type.trim().toLowerCase();
+    String? server;
+    String? username;
+    String? url = playlistUrl;
+    if (normalizedType == 'xtream') {
+      server = prefs.getString('xtream_server');
+      username = prefs.getString('xtream_username');
+      url ??= server;
+    } else {
+      url ??= prefs.getString('m3u_url');
+    }
+
+    final stableId = stablePlaylistId(
+      type: normalizedType,
+      url: url,
+      server: server,
+      username: username,
+    );
+
+    final activeId = prefs.getString('active_playlist_id');
+    if (activeId != stableId) {
+      await prefs.setString('active_playlist_id', stableId);
+    }
+
+    await _migrateSavedPlaylistIds(
+      prefs,
+      normalizedType: normalizedType,
+      url: url,
+      server: server,
+      username: username,
+      stableId: stableId,
+    );
+
+    _epgService?.setPlaylistIdentity(stableId);
+    return stableId;
+  }
+
+  Future<void> _migrateSavedPlaylistIds(
+    SharedPreferences prefs, {
+    required String normalizedType,
+    required String? url,
+    required String? server,
+    required String? username,
+    required String stableId,
+  }) async {
+    final playlistsJson = prefs.getString('saved_playlists');
+    if (playlistsJson == null || playlistsJson.trim().isEmpty) return;
+    final List<dynamic> decoded = jsonDecode(playlistsJson);
+    final saved = decoded
+        .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+        .toList();
+
+    var updated = false;
+    final next = <SavedPlaylist>[];
+    for (final playlist in saved) {
+      final type = playlist.type.trim().toLowerCase();
+      final matches = type == normalizedType &&
+          (type == 'xtream'
+              ? (playlist.server ?? '').trim().toLowerCase() ==
+                      (server ?? '').trim().toLowerCase() &&
+                  (playlist.username ?? '').trim().toLowerCase() ==
+                      (username ?? '').trim().toLowerCase()
+              : playlist.url.trim().toLowerCase() ==
+                  (url ?? '').trim().toLowerCase());
+      if (matches && playlist.id != stableId) {
+        next.add(SavedPlaylist(
+          id: stableId,
+          name: playlist.name,
+          type: playlist.type,
+          url: playlist.url,
+          server: playlist.server,
+          username: playlist.username,
+          password: playlist.password,
+          epgUrl: playlist.epgUrl,
+          epgUrlSecondary: playlist.epgUrlSecondary,
+          addedDate: playlist.addedDate,
+        ));
+        updated = true;
+      } else {
+        next.add(playlist);
+      }
+    }
+
+    if (updated) {
+      await prefs.setString(
+        'saved_playlists',
+        jsonEncode(next.map((p) => p.toJson()).toList()),
+      );
+    }
+  }
+
   Future<void> _persistPlaylistCounts({
     required SharedPreferences prefs,
     required String? playlistUrl,
@@ -1130,6 +1226,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   void setEpgService(IncrementalEpgService service) {
     if (_epgService == service) return;
     _epgService = service;
+    unawaited(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await _ensureStablePlaylistIdentity(prefs);
+    }());
     // Trigger EPG initialization when service is set
     if (_channelMaps.isNotEmpty) {
       _updateEpgAllowedChannels();
@@ -1284,6 +1384,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     required int channelCount,
     String? channelsFile,
   }) async {
+    await _ensureStablePlaylistIdentity(prefs, playlistUrl: playlistUrl);
     final keySource = prefs.getString('active_playlist_id')?.trim();
     final keyBase = (keySource != null && keySource.isNotEmpty)
         ? keySource
@@ -1756,6 +1857,15 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               } else {
                 await prefs.remove('secondary_epg_url');
               }
+              final playlistKey = chosen.type == 'xtream'
+                  ? (chosen.server ?? '')
+                  : chosen.url;
+              unawaited(
+                _ensureStablePlaylistIdentity(
+                  prefs,
+                  playlistUrl: playlistKey,
+                ),
+              );
             }
           } catch (_) {
             // ignore malformed saved playlists
@@ -2892,10 +3002,17 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
 
       final now = DateTime.now();
-      final id = existingIndex >= 0
-          ? list[existingIndex].id
-          : prefs.getString('active_playlist_id') ??
-              now.millisecondsSinceEpoch.toString();
+      final stableId = stablePlaylistId(
+        type: type,
+        url: url,
+        server: server,
+        username: username,
+      );
+      final existingId =
+          existingIndex >= 0 ? list[existingIndex].id : null;
+      final id = (existingId != null && existingId.isNotEmpty)
+          ? existingId
+          : stableId;
 
       final normalized = SavedPlaylist(
         id: id,
@@ -2911,14 +3028,41 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       );
 
       if (existingIndex >= 0) {
-        list[existingIndex] = normalized;
+        list[existingIndex] = normalized.id == stableId
+            ? normalized
+            : SavedPlaylist(
+                id: stableId,
+                name: normalized.name,
+                type: normalized.type,
+                url: normalized.url,
+                server: normalized.server,
+                username: normalized.username,
+                password: normalized.password,
+                epgUrl: normalized.epgUrl,
+                epgUrlSecondary: normalized.epgUrlSecondary,
+                addedDate: normalized.addedDate,
+              );
       } else {
-        list.add(normalized);
+        list.add(normalized.id == stableId
+            ? normalized
+            : SavedPlaylist(
+                id: stableId,
+                name: normalized.name,
+                type: normalized.type,
+                url: normalized.url,
+                server: normalized.server,
+                username: normalized.username,
+                password: normalized.password,
+                epgUrl: normalized.epgUrl,
+                epgUrlSecondary: normalized.epgUrlSecondary,
+                addedDate: normalized.addedDate,
+              ));
       }
 
       await prefs.setString(
           'saved_playlists', jsonEncode(list.map((p) => p.toJson()).toList()));
-      await prefs.setString('active_playlist_id', id);
+      await prefs.setString('active_playlist_id', stableId);
+      _epgService?.setPlaylistIdentity(stableId);
     } catch (e) {
       debugLog('ChannelProvider: Failed to upsert saved playlist: $e');
     }

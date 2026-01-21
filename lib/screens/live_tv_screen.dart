@@ -177,6 +177,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, double> _heroAspectRatios = {};
   final Set<String> _heroAspectRatioInFlight = {};
   bool _userHasScrolled = false;
+  Timer? _artworkUiDebounce;
+  bool _artworkUiDirty = false;
 
   int _lastHeroCandidateCount = 0;
 
@@ -858,6 +860,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _artworkNegativeSaveDebounce?.cancel();
     _snapshotSaveDebounce?.cancel();
     _featuredRotationTimer?.cancel();
+    _artworkUiDebounce?.cancel();
 
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
@@ -1070,6 +1073,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Future<void> _loadCategoryRowInternal(String category,
       {bool append = false}) async {
+    var timedOut = false;
+    var retryLoad = false;
+    var removeCategory = false;
     try {
       final channelProvider =
           Provider.of<ChannelProvider>(context, listen: false);
@@ -1087,11 +1093,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         const Duration(seconds: 10),
         onTimeout: () {
           debugLog('LiveTV: Timeout loading category "$category"');
+          timedOut = true;
           return <Channel>[];
         },
       );
 
       if (!mounted) return;
+      if (timedOut) {
+        retryLoad = true;
+      }
       if (channels.isNotEmpty) {
         if (append && _categoryChannelCache.containsKey(category)) {
           _categoryChannelCache[category] = [
@@ -1111,27 +1121,48 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _categoryOffsets[category] = offset + channels.length;
         _trackCachedCategory(category);
       } else if (!append) {
-        // Mark empty categories so we don't show infinite loading spinner
-        _categoryChannelCache[category] = [];
+        final channelCount =
+            channelProvider.getChannelCountForCategory(category);
+        if (channelCount == 0) {
+          removeCategory = true;
+        } else {
+          retryLoad = true;
+        }
       }
-      if (channels.length < limit) {
+      if (!timedOut && channels.length < limit) {
         _categoryHasMore[category] = false;
-      } else {
+      } else if (!timedOut) {
         _categoryHasMore[category] = true;
       }
-      _scheduleLiveTvSnapshotSave();
+      if (channels.isNotEmpty) {
+        _scheduleLiveTvSnapshotSave();
+      }
     } catch (e) {
       debugLog('LiveTV: Failed to load category "$category": $e');
-      // On error, mark as empty to stop infinite loading spinner
-      if (!_categoryChannelCache.containsKey(category)) {
-        _categoryChannelCache[category] = [];
-      }
+      retryLoad = true;
     } finally {
       if (mounted) {
         _categoryChannelLoading.remove(category);
         _activeCategoryLoads = (_activeCategoryLoads - 1).clamp(0, 9999);
         _drainCategoryLoadQueue();
-        _notifyCategoryRow(category);
+        if (removeCategory) {
+          _removeCategoryRow(category);
+        } else {
+          if (retryLoad &&
+              _categoryChannelCache[category]?.isEmpty == true) {
+            _categoryChannelCache.remove(category);
+          }
+          _notifyCategoryRow(category);
+        }
+        if (retryLoad && !removeCategory) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            if (!_categoryNameSet.contains(category)) return;
+            if (_categoryChannelLoading.contains(category)) return;
+            if (_categoryChannelCache.containsKey(category)) return;
+            _enqueueCategoryLoad(category);
+          });
+        }
       }
     }
   }
@@ -1150,6 +1181,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  void _replaceCategories(List<String> categories) {
+    final next = List<String>.from(categories);
+    final nextSet = next.toSet();
+    _categoryNames = next;
+    _categoryNameSet
+      ..clear()
+      ..addAll(nextSet);
+    _visibleCategoryCount = _categoryNames.length;
+    _lastPrefetchAnchor = -1;
+    _purgeCategoryState(nextSet);
+    _startArtworkRetryWindow();
+  }
+
+  void _purgeCategoryState(Set<String> keep) {
+    _categoryChannelCache.removeWhere((key, _) => !keep.contains(key));
+    _categoryOffsets.removeWhere((key, _) => !keep.contains(key));
+    _categoryHasMore.removeWhere((key, _) => !keep.contains(key));
+    _categoryChannelLoading.removeWhere((key) => !keep.contains(key));
+    _categoryLoadQueue.removeWhere((key) => !keep.contains(key));
+    _categoryAppendQueue.removeWhere((key) => !keep.contains(key));
+    _categoryRowNotifiers.removeWhere((key, _) => !keep.contains(key));
+    _rowScrollControllers.removeWhere((key, _) => !keep.contains(key));
+    _rowScrollInitialized.removeWhere((key) => !keep.contains(key));
+  }
+
+  void _removeCategoryRow(String category) {
+    final removed = _categoryNameSet.remove(category);
+    if (!removed) return;
+    _categoryNames.remove(category);
+    _purgeCategoryState(_categoryNameSet);
+    if (_visibleCategoryCount > _categoryNames.length) {
+      _visibleCategoryCount = _categoryNames.length;
+    }
+    _lastPrefetchAnchor = -1;
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -1159,23 +1226,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // or if we have fewer categories than the provider knows about
     if (provider.hasChannels && !_loadingCategories) {
       final providerCategories = provider.getAllCategoryNames();
-      if (_categoryNames.isEmpty) {
+      if (providerCategories.isEmpty) {
         _maybeRefreshCategories(provider.channelCount);
-      } else if (providerCategories.length > _categoryNames.length) {
-        // Provider has more categories than we're showing - merge them
-        var updated = false;
-        for (final name in providerCategories) {
-          if (_categoryNameSet.add(name)) {
-            _categoryNames.add(name);
-            updated = true;
-          }
-        }
-        if (updated) {
-          _visibleCategoryCount = _categoryNames.length;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() {});
-          });
-        }
+      } else if (_categoryNames.isEmpty ||
+          !listEquals(_categoryNames, providerCategories)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _replaceCategories(providerCategories);
+          setState(() {});
+        });
       }
     }
 
@@ -1321,34 +1380,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
             final latestCategories = channelProvider.getAllCategoryNames();
             if (latestCategories.isNotEmpty) {
-              final newNames = _categoryNames.isEmpty
-                  ? latestCategories
-                  : latestCategories
-                      .where((name) => !_categoryNameSet.contains(name))
-                      .toList();
-              if (newNames.isNotEmpty) {
+              final shouldReplace = _categoryNames.isEmpty ||
+                  !listEquals(_categoryNames, latestCategories);
+              if (shouldReplace) {
                 debugLog(
-                    'LiveTV: Processing ${newNames.length} new categories (total: ${latestCategories.length}, current: ${_categoryNames.length})');
+                    'LiveTV: Syncing categories (provider: ${latestCategories.length}, current: ${_categoryNames.length})');
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
-                  if (_categoryNames.isEmpty) {
-                    _categoryNames = List<String>.from(newNames);
-                    _categoryNameSet
-                      ..clear()
-                      ..addAll(_categoryNames);
-                  } else {
-                    for (final name in newNames) {
-                      if (_categoryNameSet.add(name)) {
-                        _categoryNames.add(name);
-                      }
-                    }
-                  }
-                  _startArtworkRetryWindow();
-                  // Always update visible count to show all available categories
-                  _visibleCategoryCount = _categoryNames.length;
-                  _lastPrefetchAnchor = -1;
-                  debugLog(
-                      'LiveTV: Updated _categoryNames to ${_categoryNames.length}, visibleCount: $_visibleCategoryCount');
+                  _replaceCategories(latestCategories);
                   setState(() {});
                   unawaited(_prefetchInitialCategoryRows());
                 });
@@ -2886,12 +2925,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _scheduleProgramArtworkNegativeSave();
   }
 
+  void _scheduleArtworkUiRefresh() {
+    if (!mounted) return;
+    _artworkUiDirty = true;
+    if (_artworkUiDebounce?.isActive ?? false) return;
+    _artworkUiDebounce = Timer(const Duration(milliseconds: 80), () {
+      if (!mounted) return;
+      if (_artworkUiDirty) {
+        setState(() {});
+        _artworkUiDirty = false;
+      }
+    });
+  }
+
   void _setProgramArtwork(String key, String value) {
-    if (mounted) {
-      setState(() => _registerProgramArtworkEntry(key, value));
-    } else {
-      _registerProgramArtworkEntry(key, value);
-    }
+    _registerProgramArtworkEntry(key, value);
+    _scheduleArtworkUiRefresh();
   }
 
   String _titleCacheKey(Program program, [Channel? channel]) {
@@ -3191,11 +3240,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _setProgramTitleLogo(String key, String value) {
-    if (mounted) {
-      setState(() => _registerProgramTitleLogoEntry(key, value));
-    } else {
-      _registerProgramTitleLogoEntry(key, value);
-    }
+    _registerProgramTitleLogoEntry(key, value);
+    _scheduleArtworkUiRefresh();
   }
 
   void _trackCachedCategory(String category) {
@@ -4197,8 +4243,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           return _buildCategoryRowLoading(context, category);
         }
         if (channels.isEmpty) {
-          // Category has no channels - hide the row
-          return const SizedBox.shrink();
+          // Treat empty as transient unless the provider confirms no channels.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final channelProvider =
+                Provider.of<ChannelProvider>(context, listen: false);
+            final channelCount =
+                channelProvider.getChannelCountForCategory(category);
+            if (channelCount == 0) {
+              _removeCategoryRow(category);
+              setState(() {});
+            } else {
+              _categoryChannelCache.remove(category);
+              _enqueueCategoryLoad(category);
+            }
+          });
+          return _buildCategoryRowLoading(context, category);
         }
         _prefetchEpgForRow(category, channels);
         return _buildChannelSection(
@@ -5215,6 +5275,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         image: provider,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
         frameBuilder: (context, child, frame, wasSync) {
           if (wasSync || frame != null) return child;
           return placeholder;
@@ -6420,6 +6481,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             httpHeaders: HttpClientService().imageHeaders,
             fit: BoxFit.cover,
             alignment: Alignment.center,
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            useOldImageOnUrlChange: true,
             memCacheWidth: (cacheWidth ?? 400) ~/ 4,
             memCacheHeight: (cacheHeight ?? 240) ~/ 4,
             imageBuilder: (context, imageProvider) {
@@ -6453,11 +6517,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             fit: BoxFit.contain,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            useOldImageOnUrlChange: true,
             imageBuilder: (context, imageProvider) {
               ImageLoadProbe.recordSuccess(url, 'live_tv_poster');
               return Image(
                 image: imageProvider,
                 fit: BoxFit.contain,
+                gaplessPlayback: true,
               );
             },
             placeholder: (context, url) => fallback,
@@ -6476,11 +6544,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       fit: defaultFit,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      useOldImageOnUrlChange: true,
       imageBuilder: (context, imageProvider) {
         ImageLoadProbe.recordSuccess(url, 'live_tv_card');
         return Image(
           image: imageProvider,
           fit: defaultFit,
+          gaplessPlayback: true,
         );
       },
       placeholder: (context, url) => fallback,
@@ -6489,7 +6561,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         logHandshakeIfNeeded(url, err, context: 'LiveTV Adaptive');
         return fallback;
       },
-      fadeInDuration: const Duration(milliseconds: 240),
     );
   }
 }

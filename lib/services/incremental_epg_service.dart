@@ -111,6 +111,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final LocalDbService _db = LocalDbService.instance;
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
+  String? _playlistIdentity;
   bool get _suspendDbReads => _isParsing || _isDownloading || _isLoading;
 
   IncrementalEpgService() {
@@ -713,6 +714,20 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _xtreamPassword = password;
   }
 
+  void setPlaylistIdentity(String? identity) {
+    final normalized = identity?.trim();
+    final next = (normalized != null && normalized.isNotEmpty) ? normalized : null;
+    if (next == _playlistIdentity) return;
+    _playlistIdentity = next;
+    _manualMappings.clear();
+    unawaited(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await _loadManualMappings(prefs);
+      _applyManualMappings();
+      notifyListeners();
+    }());
+  }
+
   Future<void> initialize({bool forceRefresh = false}) async {
     // Use progressive initialization for better startup performance
     await _initializeProgressively(forceRefresh: forceRefresh);
@@ -764,8 +779,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_normalizedMapFileName');
+      final file = File('${dir.path}/${_normalizedMapFileNameForPlaylist()}');
       if (await file.exists()) await file.delete();
+      if (_normalizedMapFileNameForPlaylist() != _normalizedMapFileName) {
+        final legacy = File('${dir.path}/$_normalizedMapFileName');
+        if (await legacy.exists()) await legacy.delete();
+      }
     } catch (e) {
       debugLog('EPG: Failed to delete normalized mapping file: $e');
     }
@@ -775,6 +794,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       await prefs.remove(_epgCacheTimeKey);
       await prefs.remove(_epgCacheUrlKey);
       await prefs.remove(_manualMappingsKey);
+      final scopedKey = _manualMappingsStorageKey();
+      if (scopedKey != _manualMappingsKey) {
+        await prefs.remove(scopedKey);
+      }
       if (clearUrls) {
         await prefs.remove('custom_epg_url');
         await prefs.remove('epg_url');
@@ -839,7 +862,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _loadManualMappings(SharedPreferences prefs) async {
     try {
-      final jsonStr = prefs.getString(_manualMappingsKey);
+      final key = _manualMappingsStorageKey();
+      var jsonStr = prefs.getString(key);
+      if (jsonStr == null || jsonStr.trim().isEmpty) {
+        if (key != _manualMappingsKey) {
+          jsonStr = prefs.getString(_manualMappingsKey);
+        }
+      }
       if (jsonStr == null || jsonStr.trim().isEmpty) return;
       final Map<String, dynamic> decoded = jsonDecode(jsonStr);
       _manualMappings
@@ -847,6 +876,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         ..addAll(decoded.map(
           (key, value) => MapEntry(key, value.toString()),
         ));
+      if (key != _manualMappingsKey) {
+        await prefs.setString(key, jsonEncode(_manualMappings));
+      }
     } catch (e) {
       debugLog('EPG: Failed to load manual mappings: $e');
     }
@@ -855,7 +887,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _saveManualMappings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_manualMappingsKey, jsonEncode(_manualMappings));
+      await prefs.setString(
+        _manualMappingsStorageKey(),
+        jsonEncode(_manualMappings),
+      );
     } catch (e) {
       debugLog('EPG: Failed to save manual mappings: $e');
     }
@@ -874,7 +909,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       Map<String, List<String>>? mapping) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_normalizedMapFileName');
+      final file = File('${dir.path}/${_normalizedMapFileNameForPlaylist()}');
       if (mapping == null || mapping.isEmpty) {
         if (await file.exists()) await file.delete();
         return;
@@ -886,6 +921,22 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       debugLog('EPG: Failed to save normalized mapping: $e');
     }
+  }
+
+  String _manualMappingsStorageKey() {
+    final identity = _playlistIdentity?.trim();
+    if (identity == null || identity.isEmpty) {
+      return _manualMappingsKey;
+    }
+    return '${_manualMappingsKey}_$identity';
+  }
+
+  String _normalizedMapFileNameForPlaylist() {
+    final identity = _playlistIdentity?.trim();
+    if (identity == null || identity.isEmpty) {
+      return _normalizedMapFileName;
+    }
+    return 'epg_normalized_$identity.json';
   }
 
   void _queueMappingPersist(String channelId, String epgId) {
@@ -909,9 +960,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _loadNormalizedMappingFromPrefs() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_normalizedMapFileName');
-      if (!await file.exists()) return;
-      final jsonStr = await file.readAsString();
+      final file = File('${dir.path}/${_normalizedMapFileNameForPlaylist()}');
+      File? legacyFile;
+      if (!await file.exists()) {
+        final legacy = File('${dir.path}/$_normalizedMapFileName');
+        if (await legacy.exists()) {
+          legacyFile = legacy;
+        } else {
+          return;
+        }
+      }
+      final sourceFile = await file.exists() ? file : legacyFile!;
+      final jsonStr = await sourceFile.readAsString();
       if (jsonStr.isEmpty) return;
       final data = await compute(json.decode, jsonStr) as Map<String, dynamic>;
       _normalizedAvailableChannels = data.map((k, v) =>
@@ -921,6 +981,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
       debugLog(
           'EPG: Loaded normalized mapping from file (${_normalizedAvailableChannels!.length} entries)');
+      if (sourceFile.path != file.path) {
+        await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
+      }
     } catch (e) {
       debugLog('EPG: Failed to load normalized mapping from file: $e');
     }

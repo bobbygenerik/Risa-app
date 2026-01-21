@@ -14,6 +14,7 @@ import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/utils/hash_utils.dart';
 
 class PlaylistManagerScreen extends StatefulWidget {
   const PlaylistManagerScreen({super.key});
@@ -54,7 +55,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     final playlistsJson = prefs.getString('saved_playlists');
-    final activeId = prefs.getString('active_playlist_id');
+    var activeId = prefs.getString('active_playlist_id');
 
     if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
       final List<dynamic> decoded = jsonDecode(playlistsJson);
@@ -65,6 +66,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     }
 
     await _migrateLegacyPlaylistsIfNeeded(prefs);
+    await _normalizePlaylistIds(prefs);
+    activeId = prefs.getString('active_playlist_id');
 
     setState(() {
       _activePlaylistId = activeId;
@@ -93,7 +96,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       final secondary = prefs.getString('m3u_secondary_epg_$enc') ?? '';
       migrated.add(
         SavedPlaylist(
-          id: '${url.hashCode}',
+          id: stablePlaylistId(type: 'm3u', url: url),
           name: name,
           type: 'm3u',
           url: url,
@@ -119,7 +122,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       final secondary = prefs.getString('xtream_secondary_epg_$enc') ?? '';
       migrated.add(
         SavedPlaylist(
-          id: '${server.hashCode}',
+          id: stablePlaylistId(
+            type: 'xtream',
+            server: server,
+            username: username,
+          ),
           name: name,
           type: 'xtream',
           url: server,
@@ -139,6 +146,54 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     }
 
     await prefs.setBool('legacy_playlists_migrated', true);
+  }
+
+  Future<void> _normalizePlaylistIds(SharedPreferences prefs) async {
+    if (_playlists.isEmpty) return;
+    final activeId = prefs.getString('active_playlist_id');
+    var updated = false;
+    String? nextActiveId = activeId;
+    final next = <SavedPlaylist>[];
+
+    for (final playlist in _playlists) {
+      final stableId = stablePlaylistId(
+        type: playlist.type,
+        url: playlist.url,
+        server: playlist.server,
+        username: playlist.username,
+      );
+      if (playlist.id != stableId) {
+        updated = true;
+        if (activeId == playlist.id) {
+          nextActiveId = stableId;
+        }
+        next.add(SavedPlaylist(
+          id: stableId,
+          name: playlist.name,
+          type: playlist.type,
+          url: playlist.url,
+          server: playlist.server,
+          username: playlist.username,
+          password: playlist.password,
+          epgUrl: playlist.epgUrl,
+          epgUrlSecondary: playlist.epgUrlSecondary,
+          addedDate: playlist.addedDate,
+        ));
+      } else {
+        next.add(playlist);
+      }
+    }
+
+    if (updated) {
+      await prefs.setString(
+        'saved_playlists',
+        jsonEncode(next.map((p) => p.toJson()).toList()),
+      );
+      if (nextActiveId != null && nextActiveId.isNotEmpty) {
+        await prefs.setString('active_playlist_id', nextActiveId);
+      }
+      _playlists = next;
+    }
   }
 
   void _syncPlaylistFocusNodes() {
