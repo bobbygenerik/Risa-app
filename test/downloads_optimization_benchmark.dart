@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print
 
 import 'dart:io';
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 

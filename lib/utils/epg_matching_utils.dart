@@ -173,6 +173,53 @@ class EPGMatchingUtils {
     return result;
   }
 
+  /// Normalize a program title for display by removing episode suffixes.
+  static String normalizeForDisplayTitle(String title) {
+    var cleaned = title.trim();
+    if (cleaned.isEmpty) return title;
+
+    final hasEpisodeMarker = _seasonEpisodeRe.hasMatch(cleaned) ||
+        _episodePartLabelRe.hasMatch(cleaned) ||
+        _episodeRe.hasMatch(cleaned) ||
+        _partRe.hasMatch(cleaned) ||
+        _seasonRe.hasMatch(cleaned);
+
+    cleaned = cleaned.replaceAll(_seasonEpisodeRe, '');
+    cleaned = cleaned.replaceAll(_episodePartLabelRe, '');
+    cleaned = cleaned.replaceAll(_episodeRe, '');
+    cleaned = cleaned.replaceAll(_partRe, '');
+    cleaned = cleaned.replaceAll(_seasonRe, '');
+
+    if (hasEpisodeMarker || _looksLikeEpisodeSuffix(title)) {
+      final sep = RegExp(r'\s*[-–—:|]\s*').firstMatch(cleaned);
+      if (sep != null) {
+        cleaned = cleaned.substring(0, sep.start);
+      }
+    }
+
+    cleaned = cleaned.replaceAll(_multiSpaceRe, ' ').trim();
+    return cleaned.isEmpty ? title : cleaned;
+  }
+
+  static bool _looksLikeEpisodeSuffix(String title) {
+    final match = RegExp(r'\s*[-–—:|]\s*').firstMatch(title);
+    if (match == null) return false;
+    final parts = title.split(RegExp(r'\s*[-–—:|]\s*'));
+    if (parts.length < 2) return false;
+    final left = parts.first.trim();
+    final right = parts.sublist(1).join(' ').trim();
+    if (left.isEmpty || right.isEmpty) return false;
+    final rightWords = right.split(RegExp(r'\s+'));
+    if (rightWords.length < 2) return false;
+    if (right.length < 6 || left.length > 40) return false;
+    final lowerRight = right.toLowerCase();
+    return lowerRight.contains('episode') ||
+        lowerRight.contains('part') ||
+        lowerRight.contains('chapter') ||
+        lowerRight.contains('ep ') ||
+        lowerRight.contains('ep.');
+  }
+
   /// Normalize title for artwork variant generation (handles & to 'and', etc.)
   static String normalizeArtworkVariant(String title) {
     var normalized = title;

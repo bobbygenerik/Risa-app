@@ -149,7 +149,7 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
         clipBehavior: Clip.none,
         itemCount: count,
         // addRepaintBoundaries is true by default, which helps with scroll perf
-        addAutomaticKeepAlives: false, // Disable to reduce memory pressure
+        addAutomaticKeepAlives: true, // Keep cards alive to avoid image flicker
         itemBuilder: widget.itemBuilder,
         separatorBuilder: (context, index) => SizedBox(width: widget.cardGap),
       ),

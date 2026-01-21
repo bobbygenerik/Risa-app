@@ -1,2 +1,0 @@
-01-18 16:28:11.154 I/vendor.rmt_storage( 1745): wakelock acquired: 1, error no: 11
-01-18 16:28:11.223 I/vendor.rmt_storage( 1745): rmt_storage_client_thread: /boot/modem_fs2: About to block rmt_storage client thread (th_id: 534672567424) wakelock released: 1, error no: 0
