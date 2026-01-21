@@ -3,6 +3,7 @@ import 'package:iptv_player/services/channel_logo_service.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 /// A widget that displays a channel logo with fallback support
 /// It will try to enrich the logo from known databases if the original is missing
@@ -107,14 +108,29 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                 frameBuilder: (context, child, frame, wasSync) {
                   if (wasSync || frame != null) return child;
                   return widget.placeholder ??
-                      Icon(Icons.tv, size: context.tvIconSize(32));
+                      _buildGradientFallback(context, tvWidth, tvHeight);
                 },
                 errorBuilder: (context, error, stackTrace) =>
                     widget.errorWidget ??
-                    Icon(Icons.tv, size: context.tvIconSize(32)),
+                    _buildGradientFallback(context, tvWidth, tvHeight),
               )
             : (widget.placeholder ??
-                Icon(Icons.tv, size: context.tvIconSize(32))),
+                _buildGradientFallback(context, tvWidth, tvHeight)),
+      ),
+    );
+  }
+
+  Widget _buildGradientFallback(
+      BuildContext context, double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: AppColors.channelCardFallbackDecoration,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.tv,
+        size: context.tvIconSize(32),
+        color: Colors.white70,
       ),
     );
   }

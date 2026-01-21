@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -65,27 +66,11 @@ class CachedImage extends StatelessWidget {
         );
       },
       placeholder: (context, url) => placeholder ??
-          Container(
-            width: width,
-            height: height,
-            color: Colors.grey.withAlpha((0.1 * 255).round()),
-            child: const Icon(
-              Icons.image,
-              color: Colors.white24,
-            ),
-          ),
+          _buildGradientFallback(width, height, Icons.image),
       errorWidget: (context, url, error) {
         ImageLoadProbe.recordFailure(url, 'cached_image', error);
         return errorWidget ??
-            Container(
-              width: width,
-              height: height,
-              color: Colors.grey.withAlpha((0.1 * 255).round()),
-              child: const Icon(
-                Icons.broken_image,
-                color: Colors.white24,
-              ),
-            );
+            _buildGradientFallback(width, height, Icons.broken_image);
       },
     );
 
@@ -98,6 +83,19 @@ class CachedImage extends StatelessWidget {
 
     return image;
   }
+}
+
+Widget _buildGradientFallback(double? width, double? height, IconData icon) {
+  return Container(
+    width: width,
+    height: height,
+    decoration: AppColors.channelCardFallbackDecoration,
+    alignment: Alignment.center,
+    child: Icon(
+      icon,
+      color: Colors.white.withAlpha((0.65 * 255).round()),
+    ),
+  );
 }
 
 /// Specialized cached image for channel logos
@@ -119,7 +117,7 @@ class CachedChannelLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (logoUrl == null || logoUrl!.isEmpty) {
+  if (logoUrl == null || logoUrl!.isEmpty) {
       return _buildLogoPlaceholder(size, fallbackIcon);
     }
     
@@ -152,14 +150,13 @@ Widget _buildLogoPlaceholder(double size, IconData fallbackIcon) {
   return Container(
     width: size,
     height: size,
-    decoration: BoxDecoration(
-      color: Colors.grey.withAlpha((0.2 * 255).round()),
+    decoration: AppColors.channelCardFallbackDecoration.copyWith(
       borderRadius: BorderRadius.circular(8),
     ),
     child: Icon(
       fallbackIcon,
       size: size * 0.6,
-      color: Colors.white54,
+      color: Colors.white.withAlpha((0.75 * 255).round()),
     ),
   );
 }

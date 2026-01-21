@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 /// Optimized image widget with progressive loading and memory management
 class OptimizedImage extends StatelessWidget {
@@ -78,14 +79,13 @@ class OptimizedImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
+      decoration: AppColors.channelCardFallbackDecoration.copyWith(
         borderRadius: BorderRadius.circular(4),
       ),
       child: const Center(
         child: Icon(
           Icons.image,
-          color: Colors.grey,
+          color: Colors.white70,
           size: 32,
         ),
       ),
@@ -96,14 +96,13 @@ class OptimizedImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
+      decoration: AppColors.channelCardFallbackDecoration.copyWith(
         borderRadius: BorderRadius.circular(4),
       ),
       child: const Center(
         child: Icon(
           Icons.broken_image,
-          color: Colors.grey,
+          color: Colors.white70,
           size: 32,
         ),
       ),
@@ -137,13 +136,12 @@ class OptimizedThumbnail extends StatelessWidget {
       placeholder: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
+        decoration: AppColors.channelCardFallbackDecoration.copyWith(
           borderRadius: BorderRadius.circular(4),
         ),
         child: Icon(
           Icons.image,
-          color: Colors.grey[600],
+          color: Colors.white70,
           size: size * 0.4,
         ),
       ),
@@ -200,8 +198,11 @@ class _ProgressiveImageState extends State<ProgressiveImage> {
           errorWidget: Container(
             width: widget.width,
             height: widget.height,
-            color: Colors.grey[300],
-            child: const Icon(Icons.broken_image),
+            decoration: AppColors.channelCardFallbackDecoration,
+            child: const Icon(
+              Icons.broken_image,
+              color: Colors.white70,
+            ),
           ),
         ),
       ],

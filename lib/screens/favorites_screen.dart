@@ -8,6 +8,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -384,22 +385,23 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   }
 
   Widget _buildChannelPlaceholder(String name) {
-    return Center(
+    return Container(
+      decoration: AppColors.channelCardFallbackDecoration,
+      alignment: Alignment.center,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.live_tv,
             size: 40,
-            color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+            color: Colors.white.withAlpha((0.7 * 255).round()),
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               name.substring(0, name.length > 15 ? 15 : name.length),
-              style:
-                  const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

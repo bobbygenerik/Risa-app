@@ -33,7 +33,7 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     // ExoPlayer can cause OOM errors on some devices, so only use it when explicitly selected.
     final effectiveBackend = backend ?? 'MediaKit';
     if (effectiveBackend == 'ExoPlayer') {
-       return NativeExoPlayerController(url, autoPlay: autoPlay);
+      return NativeExoPlayerController(url, autoPlay: autoPlay);
     }
     
     // Default to MediaKit (mpv) for maximum codec compatibility, stability, and memory efficiency
@@ -101,9 +101,12 @@ class MediaKitPlayerController extends UniversalPlayerController {
   StreamSubscription<bool>? _bufferingSubscription;
   StreamSubscription<String>? _errorSubscription;
 
-  MediaKitPlayerController(String url, {this.autoPlay = true, bool hardwareAcceleration = true})
-      : _player = Player(configuration: PlayerConfiguration(
+  MediaKitPlayerController(String url,
+      {this.autoPlay = true, bool hardwareAcceleration = true})
+      : _player = Player(
+            configuration: PlayerConfiguration(
           title: 'IPTV Player',
+          bufferSize: 64 * 1024 * 1024,
         )) {
     
     // Fix for "Black Screen" on some Android devices:
@@ -124,11 +127,30 @@ class MediaKitPlayerController extends UniversalPlayerController {
     _bufferingSubscription = _player.stream.buffering.listen(_onBufferingChanged);
     _errorSubscription = _player.stream.error.listen(_onError);
     
-    // Load the media
-    _player.open(
-      Media(url, httpHeaders: HttpClientService().videoHeaders),
-      play: autoPlay,
-    );
+    // Load the media once platform properties are configured.
+    Future.microtask(() async {
+      if (_isDisposed) return;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final platform = _player.platform;
+        if (platform is NativePlayer) {
+          try {
+            // Force AudioTrack to avoid OpenSLES config errors on some devices.
+            await platform.setProperty('ao', 'audiotrack');
+            await platform.setProperty('audio-device', 'auto');
+            await platform.setProperty('audio-channels', 'stereo');
+            try {
+              final actualAo = await platform.getProperty('ao');
+              debugPrint('MediaKit: audio output is $actualAo');
+            } catch (_) {}
+          } catch (_) {}
+        }
+      }
+      if (_isDisposed) return;
+      await _player.open(
+        Media(url, httpHeaders: HttpClientService().videoHeaders),
+        play: autoPlay,
+      );
+    });
   }
 
   /// Expose the video controller for Video widget

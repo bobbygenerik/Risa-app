@@ -5149,17 +5149,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         normalizedUrl.toLowerCase().contains('.svg?');
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2A2A36),
-            Color(0xFF1B1B24),
-            AppTheme.darkBackground,
-          ],
-        ),
-      ),
+      decoration: AppColors.channelCardFallbackDecoration,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -5203,17 +5193,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildMissingArtworkFallback([String? channelName]) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2A2A36),
-            Color(0xFF1B1B24),
-            AppTheme.darkBackground,
-          ],
-        ),
-      ),
+      decoration: AppColors.channelCardFallbackDecoration,
       child: Center(
         child: channelName != null && channelName.isNotEmpty
             ? _buildChannelNameFallback(channelName)
@@ -5223,6 +5203,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 size: 36,
               ),
       ),
+    );
+  }
+
+  Widget _buildGradientPlaceholder({Widget? child}) {
+    return Container(
+      decoration: AppColors.channelCardFallbackDecoration,
+      child: child,
     );
   }
 
@@ -5975,15 +5962,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           ),
                         );
                       },
-                      placeholder: (_, __) => Container(
-                        color: AppTheme.darkBackground,
-                      ),
+                      placeholder: (_, __) => _buildGradientPlaceholder(),
                       errorWidget: (_, url, error) {
                         ImageLoadProbe.recordFailure(
                             url, 'hero_logo_bg', error);
-                        return Container(
-                          color: AppTheme.darkBackground,
-                        );
+                        return _buildGradientPlaceholder();
                       },
                     ),
                   ),
@@ -6048,9 +6031,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       filterQuality: FilterQuality.high,
                     );
                   },
-                  placeholder: (_, __) => Container(
-                    color: AppTheme.darkBackground,
-                  ),
+                  placeholder: (_, __) => _buildGradientPlaceholder(),
                   errorWidget: (_, url, error) {
                     ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
                     logHandshakeIfNeeded(url, error,
@@ -6094,14 +6075,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                     );
                   },
-                  placeholder: (_, __) => Container(
-                    color: AppTheme.darkBackground,
-                  ),
+                  placeholder: (_, __) => _buildGradientPlaceholder(),
                   errorWidget: (_, url, error) {
                     ImageLoadProbe.recordFailure(url, 'hero_poster_bg', error);
-                    return Container(
-                      color: AppTheme.darkBackground,
-                    );
+                    return _buildGradientPlaceholder();
                   },
                 ),
                 // Main Image (Contained - shows full content)
@@ -6280,8 +6257,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _markSkeletonVisibility(true);
     final channelProvider = context.read<ChannelProvider>();
     final epgService = context.watch<IncrementalEpgService>();
-    final resolvedOverlay = showColdStartOverlay ??
-        (channelProvider.isColdStartLoad && channelProvider.isLoading);
+    final resolvedOverlay = showColdStartOverlay ?? true;
     var resolvedTitle = titleText;
     String? resolvedStatus = statusText ?? channelProvider.loadingStatus;
     var resolvedProgress = progress ?? channelProvider.loadingProgress;
@@ -6290,11 +6266,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgBusy = epgService.isParsing ||
         epgService.isDownloading ||
         epgService.isLoading;
-    if (!resolvedOverlayFinal && epgBusy) {
-      resolvedOverlayFinal = true;
-      resolvedTitle = 'Loading EPG';
-      resolvedStatus = _replaceEpgWithData(epgService.epgProgressLabel ?? 'EPG loading');
-      resolvedProgress = epgService.epgProgress;
+    if (epgBusy) {
+      resolvedTitle ??= 'Loading EPG';
+      resolvedStatus = _replaceEpgWithData(
+          epgService.epgProgressLabel ?? resolvedStatus ?? 'EPG loading');
+      if (epgService.epgProgress > 0.0) {
+        resolvedProgress = epgService.epgProgress;
+      }
       resolvedSecondary ??= 'Parsing guide data...';
     }
     return _buildSkeletonLoader(
@@ -6504,7 +6482,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 ),
               );
             },
-            placeholder: (context, url) => Container(color: Colors.black12),
+            placeholder: (context, url) => _buildGradientPlaceholder(),
             errorWidget: (context, url, err) {
               ImageLoadProbe.recordFailure(url, 'live_tv_poster_bg', err);
               return fallback;

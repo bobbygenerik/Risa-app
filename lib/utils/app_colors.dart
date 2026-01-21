@@ -58,6 +58,16 @@ class AppColors {
     colors: [Color(0xFF2A2A3E), Color(0xFF1A1A2E), AppTheme.cardBackground],
   );
 
+  static const LinearGradient channelCardFallbackGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF22609B), Color(0xFFA23464)],
+  );
+
+  static const BoxDecoration channelCardFallbackDecoration = BoxDecoration(
+    gradient: channelCardFallbackGradient,
+  );
+
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
