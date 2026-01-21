@@ -5149,29 +5149,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
         normalizedUrl.toLowerCase().contains('.svg?');
 
-    return Container(
-      child: ChannelCardFallbackBackground(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: isSvg
-                ? SvgPicture.network(
-                    normalizedUrl,
-                    fit: BoxFit.contain,
-                    headers: HttpClientService().imageHeaders,
-                    placeholderBuilder: (_) =>
-                        _buildChannelNameFallback(channelName),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: normalizedUrl,
-                    httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) =>
-                        _buildChannelNameFallback(channelName),
-                    errorWidget: (_, __, ___) =>
-                        _buildChannelNameFallback(channelName),
-                  ),
-          ),
+    return ChannelCardFallbackBackground(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: isSvg
+              ? SvgPicture.network(
+                  normalizedUrl,
+                  fit: BoxFit.contain,
+                  headers: HttpClientService().imageHeaders,
+                  placeholderBuilder: (_) =>
+                      _buildChannelNameFallback(channelName),
+                )
+              : CachedNetworkImage(
+                  imageUrl: normalizedUrl,
+                  httpHeaders: HttpClientService().imageHeaders,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => _buildChannelNameFallback(channelName),
+                  errorWidget: (_, __, ___) =>
+                      _buildChannelNameFallback(channelName),
+                ),
         ),
       ),
     );
@@ -5194,17 +5191,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildMissingArtworkFallback([String? channelName]) {
-    return Container(
-      child: ChannelCardFallbackBackground(
-        child: Center(
-          child: channelName != null && channelName.isNotEmpty
-              ? _buildChannelNameFallback(channelName)
-              : Icon(
-                  Icons.tv,
-                  color: Colors.white.withValues(alpha: 0.55),
-                  size: 36,
-                ),
-        ),
+    return ChannelCardFallbackBackground(
+      child: Center(
+        child: channelName != null && channelName.isNotEmpty
+            ? _buildChannelNameFallback(channelName)
+            : Icon(
+                Icons.tv,
+                color: Colors.white.withValues(alpha: 0.55),
+                size: 36,
+              ),
       ),
     );
   }
@@ -6269,7 +6264,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (epgBusy) {
       resolvedTitle ??= 'Loading EPG';
       resolvedStatus = _replaceEpgWithData(
-          epgService.epgProgressLabel ?? resolvedStatus ?? 'EPG loading');
+          epgService.epgProgressLabel ?? resolvedStatus);
       if (epgService.epgProgress > 0.0) {
         resolvedProgress = epgService.epgProgress;
       }
