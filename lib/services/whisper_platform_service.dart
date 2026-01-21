@@ -138,7 +138,7 @@ class WhisperPlatformService {
         final started = await _startExoCapture(streamUrl.trim(), modelName);
         if (started) return true;
         _lastError =
-            'ExoPlayer audio capture failed. Switch player backend to ExoPlayer.';
+            'Audio capture failed. Switch player backend to VLC.';
         return false;
       }
       final permissionGranted = await requestAudioCapturePermission();

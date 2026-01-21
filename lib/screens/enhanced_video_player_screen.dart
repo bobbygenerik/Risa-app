@@ -14,7 +14,7 @@ import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../controllers/universal_player_controller.dart';
-import '../widgets/exo_player_widget.dart';
+import '../widgets/vlc_player_widget.dart';
 import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
@@ -221,7 +221,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            ExoPlayerWidget(
+                            VlcPlayerWidget(
                               url: widget.videoUrl ??
                                   widget.streamUrl ??
                                   widget.channel?.url ??
@@ -819,7 +819,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _showRegularSubtitlePicker() async {
     Navigator.pop(context);
     String captionText = '';
-    // MediaKit doesn't expose embedded captions the same way
+    // VLC doesn't expose embedded captions through this UI yet.
     if (captionText.isEmpty) {
       showAppSnackBar(
         context,
@@ -865,7 +865,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildRegularSubtitleOverlay() {
-    // MediaKit handles subtitles internally
+    // VLC handles subtitles internally
     return const SizedBox.shrink();
   }
 

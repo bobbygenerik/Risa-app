@@ -76,7 +76,7 @@ class OptimizedImage extends StatelessWidget {
   }
 
   Widget _buildShimmerPlaceholder() {
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
       child: ChannelCardFallbackBackground(
@@ -93,7 +93,7 @@ class OptimizedImage extends StatelessWidget {
   }
 
   Widget _buildErrorWidget(BuildContext context, String url, dynamic error) {
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
       child: ChannelCardFallbackBackground(
@@ -133,7 +133,7 @@ class OptimizedThumbnail extends StatelessWidget {
       // Limit memory usage for thumbnails
       memCacheWidth: (size * 2).round(), // 2x for high DPI
       memCacheHeight: (size * 2).round(),
-      placeholder: Container(
+      placeholder: SizedBox(
         width: size,
         height: size,
         child: ChannelCardFallbackBackground(
@@ -197,7 +197,7 @@ class _ProgressiveImageState extends State<ProgressiveImage> {
           placeholder: widget.lowResImageUrl != null
               ? const SizedBox.shrink() // No placeholder if we have low-res
               : null,
-          errorWidget: Container(
+          errorWidget: SizedBox(
             width: widget.width,
             height: widget.height,
             child: ChannelCardFallbackBackground(

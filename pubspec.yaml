@@ -34,9 +34,7 @@ dependencies:
   go_router: ^17.0.1
   intl: ^0.20.2
   wakelock_plus: ^1.2.8
-  media_kit: ^1.1.10+1
-  media_kit_video: ^1.2.4
-  media_kit_libs_android_video: ^1.2.0
+  flutter_vlc_player: ^7.4.1
 
 
   animations: ^2.0.11

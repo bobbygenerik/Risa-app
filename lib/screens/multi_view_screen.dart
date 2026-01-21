@@ -218,7 +218,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                     return Container(
                       color: Colors.black,
                       child: const Center(
-                        child: Text('Multi-view not supported with media_kit',
+                        child: Text('Multi-view not supported with VLC',
                             style: TextStyle(color: Colors.white54)),
                       ),
                     );

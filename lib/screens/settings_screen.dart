@@ -59,7 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _heroVideoPreview = false;
-  String _videoPlayerBackend = 'MediaKit';
+  String _videoPlayerBackend = 'VLC';
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -142,12 +142,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       }
       final storedBackend = prefs.getString('video_player_backend');
       if (storedBackend == null || storedBackend == 'Auto') {
-        _videoPlayerBackend = 'MediaKit';
+        _videoPlayerBackend = 'VLC';
         if (storedBackend == 'Auto') {
-          unawaited(prefs.setString('video_player_backend', 'MediaKit'));
+          unawaited(prefs.setString('video_player_backend', 'VLC'));
         }
       } else {
-        _videoPlayerBackend = storedBackend;
+        _videoPlayerBackend = 'VLC';
       }
     });
   }
@@ -787,18 +787,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               onTap: _cycleVideoPlayerBackend,
             ),
-            if (_videoPlayerBackend == 'ExoPlayer')
-              SettingsActionTile(
-                title: AppLocalizations.of(context)!.exoPlayerSurface,
-                subtitle: '${AppLocalizations.of(context)!.surfaceViewDescription} (TextureView disabled on Shield).',
-                trailing: Text(
-                  'SurfaceView',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
           ],
         ),
         SettingsGroup(
@@ -1221,11 +1209,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _cycleVideoPlayerBackend() async {
-    final backends = ['MediaKit', 'ExoPlayer'];
-    final currentIndex = backends.indexOf(_videoPlayerBackend);
-    final nextIndex = (currentIndex + 1) % backends.length;
-    final nextValue = backends[nextIndex];
-    
+    const nextValue = 'VLC';
     setState(() => _videoPlayerBackend = nextValue);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('video_player_backend', nextValue);

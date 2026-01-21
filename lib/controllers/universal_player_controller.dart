@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 
 /// Abstract interface for a video player controller.
-/// This allows switching between the stock `video_player` (Texture-based)
-/// and a custom native `ExoPlayer` (Surface-based) implementation.
+/// This allows swapping player backends behind a single API.
 abstract class UniversalPlayerController extends ChangeNotifier {
   UniversalPlayerValue get value;
 
@@ -19,29 +16,25 @@ abstract class UniversalPlayerController extends ChangeNotifier {
   Future<void> setMuted(bool muted);
   @override
   Future<void> dispose();
-  
-  /// Factory to pick the best implementation for the current platform
+
+  /// Factory to pick the best implementation for the current platform.
   static UniversalPlayerController create({
     required String url,
     bool autoPlay = true,
     bool isLive = false,
     bool preferStockOnLive = true,
-    String? backend, // Optional backend selection
+    String? backend,
     bool hardwareAcceleration = true,
   }) {
-    // Default behavior: prefer MediaKit for stability and memory efficiency.
-    // ExoPlayer can cause OOM errors on some devices, so only use it when explicitly selected.
-    final effectiveBackend = backend ?? 'MediaKit';
-    if (effectiveBackend == 'ExoPlayer') {
-      return NativeExoPlayerController(url, autoPlay: autoPlay);
-    }
-    
-    // Default to MediaKit (mpv) for maximum codec compatibility, stability, and memory efficiency
-    return MediaKitPlayerController(url, autoPlay: autoPlay, hardwareAcceleration: hardwareAcceleration);
+    return VlcUniversalPlayerController(
+      url,
+      autoPlay: autoPlay,
+      hardwareAcceleration: hardwareAcceleration,
+    );
   }
 }
 
-/// Unified state value for the player
+/// Unified state value for the player.
 class UniversalPlayerValue {
   final Duration duration;
   final Duration position;
@@ -86,104 +79,58 @@ class UniversalPlayerValue {
   }
 }
 
-/// Implementation wrapping media_kit (libmpv)
-class MediaKitPlayerController extends UniversalPlayerController {
-  final Player _player;
-  late final VideoController _videoController;
-  final bool autoPlay;
-  bool _isDisposed = false;
+/// Implementation wrapping VLC.
+class VlcUniversalPlayerController extends UniversalPlayerController {
+  final VlcPlayerController _controller;
   UniversalPlayerValue _value = const UniversalPlayerValue();
-  
-  // Store stream subscriptions to cancel them on dispose
-  StreamSubscription<Duration>? _positionSubscription;
-  StreamSubscription<Duration>? _durationSubscription;
-  StreamSubscription<bool>? _playingSubscription;
-  StreamSubscription<bool>? _bufferingSubscription;
-  StreamSubscription<String>? _errorSubscription;
+  bool _isDisposed = false;
 
-  MediaKitPlayerController(String url,
-      {this.autoPlay = true, bool hardwareAcceleration = true})
-      : _player = Player(
-            configuration: PlayerConfiguration(
-          title: 'IPTV Player',
-          bufferSize: 64 * 1024 * 1024,
-        )) {
-    
-    // Fix for "Black Screen" on some Android devices:
-    // androidAttachSurfaceAfterVideoOutput: true prevents surface race conditions.
-    _videoController = VideoController(
-      _player,
-      configuration: VideoControllerConfiguration(
-        enableHardwareAcceleration: hardwareAcceleration,
-        // Helps avoid black/blank video on some Android TV devices (e.g. Shield).
-        androidAttachSurfaceAfterVideoParameters: true,
-      ),
+  VlcUniversalPlayerController(
+    String url, {
+    bool autoPlay = true,
+    bool hardwareAcceleration = true,
+  }) : _controller = VlcPlayerController.network(
+          url,
+          autoPlay: autoPlay,
+          hwAcc: hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
+          options: VlcPlayerOptions(
+            http: VlcHttpOptions([
+              VlcHttpOptions.httpUserAgent(
+                HttpClientService().videoHeaders['User-Agent'] ??
+                    'VLC/3.0.0 LibVLC/3.0.0',
+              ),
+              VlcHttpOptions.httpReconnect(true),
+              VlcHttpOptions.httpContinuous(true),
+            ]),
+          ),
+        ) {
+    _controller.addListener(_onVlcUpdate);
+  }
+
+  VlcPlayerController get vlcController => _controller;
+
+  void _syncValue(VlcPlayerValue vlcValue) {
+    if (_isDisposed) return;
+    final bufferPercent = vlcValue.bufferPercent.clamp(0.0, 100.0);
+    final buffered = Duration(
+      milliseconds:
+          (vlcValue.duration.inMilliseconds * (bufferPercent / 100)).round(),
     );
-
-    // Store subscriptions to cancel them on dispose - prevents memory leaks
-    _positionSubscription = _player.stream.position.listen(_onPositionChanged);
-    _durationSubscription = _player.stream.duration.listen(_onDurationChanged);
-    _playingSubscription = _player.stream.playing.listen(_onPlayingChanged);
-    _bufferingSubscription = _player.stream.buffering.listen(_onBufferingChanged);
-    _errorSubscription = _player.stream.error.listen(_onError);
-    
-    // Load the media once platform properties are configured.
-    Future.microtask(() async {
-      if (_isDisposed) return;
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final platform = _player.platform;
-        if (platform is NativePlayer) {
-          try {
-            // Force AudioTrack to avoid OpenSLES config errors on some devices.
-            await platform.setProperty('ao', 'audiotrack');
-            await platform.setProperty('audio-device', 'auto');
-            await platform.setProperty('audio-channels', 'stereo');
-            try {
-              final actualAo = await platform.getProperty('ao');
-              debugPrint('MediaKit: audio output is $actualAo');
-            } catch (_) {}
-          } catch (_) {}
-        }
-      }
-      if (_isDisposed) return;
-      await _player.open(
-        Media(url, httpHeaders: HttpClientService().videoHeaders),
-        play: autoPlay,
-      );
-    });
-  }
-
-  /// Expose the video controller for Video widget
-  VideoController get videoController => _videoController;
-
-  void _onPositionChanged(Duration position) {
-    if (_isDisposed) return;
-    _value = _value.copyWith(position: position);
+    _value = _value.copyWith(
+      duration: vlcValue.duration,
+      position: vlcValue.position,
+      buffered: buffered,
+      isPlaying: vlcValue.isPlaying,
+      isBuffering: vlcValue.isBuffering,
+      isInitialized: vlcValue.isInitialized,
+      errorDescription: vlcValue.hasError ? vlcValue.errorDescription : null,
+      size: vlcValue.size,
+    );
     notifyListeners();
   }
 
-  void _onDurationChanged(Duration duration) {
-    if (_isDisposed) return;
-    _value = _value.copyWith(duration: duration);
-    notifyListeners();
-  }
-
-  void _onPlayingChanged(bool isPlaying) {
-    if (_isDisposed) return;
-    _value = _value.copyWith(isPlaying: isPlaying);
-    notifyListeners();
-  }
-
-  void _onBufferingChanged(bool isBuffering) {
-    if (_isDisposed) return;
-    _value = _value.copyWith(isBuffering: isBuffering);
-    notifyListeners();
-  }
-
-  void _onError(String error) {
-    if (_isDisposed) return;
-    _value = _value.copyWith(errorDescription: error);
-    notifyListeners();
+  void _onVlcUpdate() {
+    _syncValue(_controller.value);
   }
 
   @override
@@ -191,154 +138,48 @@ class MediaKitPlayerController extends UniversalPlayerController {
 
   @override
   Future<void> initialize() async {
-    // Media kit initializes automatically
-    _value = _value.copyWith(isInitialized: true);
-    notifyListeners();
-  }
-
-  @override
-  Future<void> play() => _player.play();
-
-  @override
-  Future<void> pause() => _player.pause();
-
-  @override
-  Future<void> seekTo(Duration position) => _player.seek(position);
-
-  @override
-  Future<void> setVolume(double volume) => _player.setVolume(volume * 100);
-  
-  @override
-  Future<void> setMuted(bool muted) => _player.setVolume(muted ? 0 : 100);
-
-  @override
-  Future<void> dispose() async {
-    _isDisposed = true;
-    // Cancel all stream subscriptions to prevent memory leaks
-    await _positionSubscription?.cancel();
-    await _durationSubscription?.cancel();
-    await _playingSubscription?.cancel();
-    await _bufferingSubscription?.cancel();
-    await _errorSubscription?.cancel();
-    await _player.dispose();
-    super.dispose();
-  }
-}
-
-/// Implementation wrapping the custom Native ExoPlayer (MethodChannel)
-class NativeExoPlayerController extends UniversalPlayerController {
-  final String url;
-  final bool autoPlay;
-  MethodChannel? _channel;
-  UniversalPlayerValue _value = const UniversalPlayerValue();
-  bool _isDisposed = false;
-  bool _pendingPlay = false;
-  
-  // A unique ID is assigned by the view, but we are a controller *before* the view is created.
-  // Strategy: The Controller holds the state, and the View (when created) connects to this controller.
-  // HOWEVER, PlatformViews on Android are usually self-contained.
-  // To bridge this, the `ExoPlayerVideoView` widget will accept this controller
-  // and register its MethodChannel with us once the platform view is created.
-  
-  NativeExoPlayerController(this.url, {this.autoPlay = true});
-
-  /// Called by the `ExoPlayerVideoView` when the platform view is ready
-  void onPlatformViewCreated(int id) {
-    _channel = MethodChannel('com.streamhub.iptv/exoplayer_$id');
-    _channel!.setMethodCallHandler(_handleMethodCall);
-    _value = _value.copyWith(isInitialized: true);
-    notifyListeners();
-    
-    // Initial load
-    final shouldAutoPlay = autoPlay || _pendingPlay;
-    _pendingPlay = false;
-    _channel!.invokeMethod('loadVideo', {
-      'videoUrl': url,
-      'autoPlay': shouldAutoPlay,
-    });
-  }
-
-  Future<void> _handleMethodCall(MethodCall call) async {
-    if (_isDisposed) return;
-    
-    switch (call.method) {
-      case 'onPlaybackStateChanged':
-        final state = call.arguments['state'];
-
-        final isBuffering = state == 'buffering';
-        _value = _value.copyWith(
-          isBuffering: isBuffering,
-        );
-        notifyListeners();
-        break;
-      case 'onPlayingChanged':
-        final isPlaying = call.arguments['isPlaying'] as bool;
-        _value = _value.copyWith(isPlaying: isPlaying);
-        notifyListeners();
-        break;
-      case 'onPositionUpdate':
-        final pos = call.arguments['position'] as int;
-        final dur = call.arguments['duration'] as int;
-        final buf = call.arguments['bufferedPosition'] as int;
-        _value = _value.copyWith(
-          position: Duration(milliseconds: pos),
-          duration: Duration(milliseconds: dur),
-          buffered: Duration(milliseconds: buf),
-        );
-        notifyListeners();
-        break;
-      case 'onPlayerError':
-        final error = call.arguments['error'];
-        _value = _value.copyWith(errorDescription: error.toString());
-        notifyListeners();
-        break;
-    }
-  }
-
-  @override
-  UniversalPlayerValue get value => _value;
-
-  @override
-  Future<void> initialize() async {
-    // Initialization happens when the View is created and calls onPlatformViewCreated
-    // For API consistency, we can just return here.
-    return;
-  }
-
-  @override
-  Future<void> play() async {
-    if (_channel == null) {
-      _pendingPlay = true;
+    if (_controller.value.isInitialized) {
+      _syncValue(_controller.value);
       return;
     }
-    await _channel?.invokeMethod('play');
+    final completer = Completer<void>();
+    void listener() {
+      if (_controller.value.isInitialized) {
+        _controller.removeListener(listener);
+        _syncValue(_controller.value);
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    }
+    _controller.addListener(listener);
+    listener();
+    await completer.future;
   }
 
   @override
-  Future<void> pause() async {
-    _pendingPlay = false;
-    await _channel?.invokeMethod('pause');
+  Future<void> play() => _controller.play();
+
+  @override
+  Future<void> pause() => _controller.pause();
+
+  @override
+  Future<void> seekTo(Duration position) => _controller.seekTo(position);
+
+  @override
+  Future<void> setVolume(double volume) {
+    final scaled = (volume * 100).round().clamp(0, 100);
+    return _controller.setVolume(scaled);
   }
 
   @override
-  Future<void> seekTo(Duration position) async {
-    await _channel?.invokeMethod('seekTo', {'position': position.inMilliseconds});
-  }
-
-  @override
-  Future<void> setVolume(double volume) async {
-    await _channel?.invokeMethod('setVolume', {'volume': volume});
-  }
-  
-  @override
-  Future<void> setMuted(bool muted) async {
-    await _channel?.invokeMethod('setMuted', {'muted': muted});
-  }
+  Future<void> setMuted(bool muted) => _controller.setVolume(muted ? 0 : 100);
 
   @override
   Future<void> dispose() async {
     _isDisposed = true;
-    await _channel?.invokeMethod('stop');
+    _controller.removeListener(_onVlcUpdate);
+    await _controller.dispose();
     super.dispose();
   }
 }

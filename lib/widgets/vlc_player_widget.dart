@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/controllers/universal_player_controller.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
-import 'package:iptv_player/widgets/exoplayer_video_view.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
-class ExoPlayerWidget extends StatefulWidget {
+class VlcPlayerWidget extends StatefulWidget {
   final String url;
   final bool isLive;
   final IntegratedTranscriptionService? transcriptionService;
   final ValueNotifier<UniversalPlayerController?>? controllerNotifier;
   final BoxFit fit;
 
-  const ExoPlayerWidget({
+  const VlcPlayerWidget({
     super.key,
     required this.url,
     this.isLive = false,
@@ -24,21 +23,20 @@ class ExoPlayerWidget extends StatefulWidget {
   });
 
   @override
-  State<ExoPlayerWidget> createState() => _ExoPlayerWidgetState();
+  State<VlcPlayerWidget> createState() => _VlcPlayerWidgetState();
 }
 
-class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
+class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   UniversalPlayerController? _controller;
-  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeController();
   }
-  
+
   @override
-  void didUpdateWidget(ExoPlayerWidget oldWidget) {
+  void didUpdateWidget(VlcPlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.url != oldWidget.url) {
       _controller?.dispose();
@@ -48,46 +46,39 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
 
   void _initializeController() {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    final backend = settings.videoPlayerBackend;
 
     _controller = UniversalPlayerController.create(
       url: widget.url,
       autoPlay: false,
       isLive: widget.isLive,
       preferStockOnLive: true,
-      backend: backend,
+      backend: 'VLC',
       hardwareAcceleration: settings.hardwareAcceleration,
     );
-    
+
     if (widget.controllerNotifier != null) {
       Future.microtask(() {
-         if (mounted) widget.controllerNotifier!.value = _controller;
+        if (mounted) widget.controllerNotifier!.value = _controller;
       });
     }
 
     final initStart = DateTime.now();
     _controller?.initialize().then((_) {
       final initDuration = DateTime.now().difference(initStart);
-      debugLog('Player initialize completed in ${initDuration.inMilliseconds}ms for ${widget.url}');
+      debugLog(
+          'Player initialize completed in ${initDuration.inMilliseconds}ms for ${widget.url}');
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
         final playStart = DateTime.now();
         _controller?.play().then((_) {
           final playDuration = DateTime.now().difference(playStart);
-          debugLog('Player play() returned in ${playDuration.inMilliseconds}ms for ${widget.url}');
+          debugLog(
+              'Player play() returned in ${playDuration.inMilliseconds}ms for ${widget.url}');
         }).catchError((e) {
           debugLog('Player play() error: $e');
         });
       }
     }).catchError((error) {
       debugLog('Player initialization failed: $error');
-      if (mounted) {
-        setState(() {
-          _isInitialized = false;
-        });
-      }
     });
 
     _controller?.addListener(_onControllerUpdate);
@@ -95,7 +86,8 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
 
   void _onControllerUpdate() {
     if (widget.transcriptionService != null && mounted && _controller != null) {
-       widget.transcriptionService!.updatePlaybackPosition(_controller!.value.position);
+      widget.transcriptionService!
+          .updatePlaybackPosition(_controller!.value.position);
     }
   }
 
@@ -108,25 +100,41 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized || _controller == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     final controller = _controller;
-    if (controller is MediaKitPlayerController) {
-      return Video(
-        controller: controller.videoController,
-        fit: widget.fit,
-      );
-    } else if (controller is NativeExoPlayerController) {
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-      return ExoPlayerVideoView(
-        controller: controller,
-        fit: widget.fit,
-        surfaceType: settings.exoPlayerSurfaceType,
-      );
+    if (controller is! VlcUniversalPlayerController) {
+      return const Center(child: Text('Unsupported player controller'));
     }
 
-    return const Center(child: Text('Unsupported player controller'));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fallbackAspect = (constraints.maxWidth > 0 &&
+                constraints.maxHeight > 0)
+            ? (constraints.maxWidth / constraints.maxHeight)
+            : (16 / 9);
+        return ValueListenableBuilder<VlcPlayerValue>(
+          valueListenable: controller.vlcController,
+          builder: (context, value, _) {
+            final aspectRatio = value.isInitialized
+                ? value.aspectRatio
+                : fallbackAspect;
+            return FittedBox(
+              fit: widget.fit,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxWidth / aspectRatio,
+                child: VlcPlayer(
+                  controller: controller.vlcController,
+                  aspectRatio: aspectRatio,
+                  placeholder: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

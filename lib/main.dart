@@ -16,7 +16,6 @@ import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/crash_logger.dart';
-import 'package:media_kit/media_kit.dart';
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/fast_startup_service.dart';
@@ -129,9 +128,6 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
-
-      MediaKit.ensureInitialized();
-      StartupProbe.mark('MediaKit initialized');
 
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();

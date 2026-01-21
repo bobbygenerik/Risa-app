@@ -29,7 +29,7 @@ class SettingsProvider extends ChangeNotifier with ThrottledNotifier {
   String _playbackQuality = 'Auto';
   double _videoBufferSize = 50;
   bool _heroVideoPreview = false;
-  String _videoPlayerBackend = 'MediaKit'; // ExoPlayer, MediaKit
+  String _videoPlayerBackend = 'VLC';
   String _exoPlayerSurfaceType = 'surface'; // surface
 
   Map<String, String?>? _profileCache;
@@ -102,12 +102,12 @@ class SettingsProvider extends ChangeNotifier with ThrottledNotifier {
     _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
     final storedBackend = prefs.getString('video_player_backend');
     if (storedBackend == null || storedBackend == 'Auto') {
-      _videoPlayerBackend = 'MediaKit';
+      _videoPlayerBackend = 'VLC';
       if (storedBackend == 'Auto') {
         prefs.setString('video_player_backend', _videoPlayerBackend);
       }
     } else {
-      _videoPlayerBackend = storedBackend;
+      _videoPlayerBackend = storedBackend == 'VLC' ? 'VLC' : 'VLC';
     }
     final storedSurface = prefs.getString('exo_player_surface_type');
     if (storedSurface == null || storedSurface == 'surface') {
@@ -246,7 +246,7 @@ class SettingsProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   Future<void> setVideoPlayerBackend(String value) async {
-    final resolved = value == 'Auto' ? 'MediaKit' : value;
+    final resolved = value == 'Auto' ? 'VLC' : 'VLC';
     if (_videoPlayerBackend == resolved) return;
     _videoPlayerBackend = resolved;
     await _prefs?.setString('video_player_backend', resolved);

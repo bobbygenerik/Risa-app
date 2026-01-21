@@ -246,7 +246,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
 
   Widget _buildGradientFallback(
       BuildContext context, double? width, double? height) {
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
       child: ChannelCardFallbackBackground(
