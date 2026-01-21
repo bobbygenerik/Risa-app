@@ -84,6 +84,9 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   final VlcPlayerController _controller;
   UniversalPlayerValue _value = const UniversalPlayerValue();
   bool _isDisposed = false;
+  bool _pendingPlay = false;
+  Duration? _pendingSeek;
+  int? _pendingVolume;
 
   VlcUniversalPlayerController(
     String url, {
@@ -131,6 +134,22 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
 
   void _onVlcUpdate() {
     _syncValue(_controller.value);
+    if (_controller.value.isInitialized) {
+      if (_pendingVolume != null) {
+        final volume = _pendingVolume!;
+        _pendingVolume = null;
+        _controller.setVolume(volume);
+      }
+      if (_pendingSeek != null) {
+        final position = _pendingSeek!;
+        _pendingSeek = null;
+        _controller.seekTo(position);
+      }
+      if (_pendingPlay) {
+        _pendingPlay = false;
+        _controller.play();
+      }
+    }
   }
 
   @override
@@ -158,22 +177,45 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   }
 
   @override
-  Future<void> play() => _controller.play();
+  Future<void> play() {
+    if (!_controller.value.isInitialized) {
+      _pendingPlay = true;
+      return Future.value();
+    }
+    return _controller.play();
+  }
 
   @override
-  Future<void> pause() => _controller.pause();
+  Future<void> pause() {
+    _pendingPlay = false;
+    if (!_controller.value.isInitialized) {
+      return Future.value();
+    }
+    return _controller.pause();
+  }
 
   @override
-  Future<void> seekTo(Duration position) => _controller.seekTo(position);
+  Future<void> seekTo(Duration position) {
+    if (!_controller.value.isInitialized) {
+      _pendingSeek = position;
+      return Future.value();
+    }
+    return _controller.seekTo(position);
+  }
 
   @override
   Future<void> setVolume(double volume) {
     final scaled = (volume * 100).round().clamp(0, 100);
+    if (!_controller.value.isInitialized) {
+      _pendingVolume = scaled;
+      return Future.value();
+    }
     return _controller.setVolume(scaled);
   }
 
   @override
-  Future<void> setMuted(bool muted) => _controller.setVolume(muted ? 0 : 100);
+  Future<void> setMuted(bool muted) =>
+      setVolume(muted ? 0.0 : 1.0);
 
   @override
   Future<void> dispose() async {

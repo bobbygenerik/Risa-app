@@ -129,6 +129,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
                   placeholder: const Center(
                     child: CircularProgressIndicator(),
                   ),
+                  virtualDisplay: false,
                 ),
               ),
             );
