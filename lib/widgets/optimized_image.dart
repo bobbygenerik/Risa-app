@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
-import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// Optimized image widget with progressive loading and memory management
 class OptimizedImage extends StatelessWidget {
@@ -79,14 +79,14 @@ class OptimizedImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: AppColors.channelCardFallbackDecoration.copyWith(
+      child: ChannelCardFallbackBackground(
         borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.image,
-          color: Colors.white70,
-          size: 32,
+        child: const Center(
+          child: Icon(
+            Icons.image,
+            color: Colors.white70,
+            size: 32,
+          ),
         ),
       ),
     );
@@ -96,14 +96,14 @@ class OptimizedImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: AppColors.channelCardFallbackDecoration.copyWith(
+      child: ChannelCardFallbackBackground(
         borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.broken_image,
-          color: Colors.white70,
-          size: 32,
+        child: const Center(
+          child: Icon(
+            Icons.broken_image,
+            color: Colors.white70,
+            size: 32,
+          ),
         ),
       ),
     );
@@ -136,13 +136,15 @@ class OptimizedThumbnail extends StatelessWidget {
       placeholder: Container(
         width: size,
         height: size,
-        decoration: AppColors.channelCardFallbackDecoration.copyWith(
+        child: ChannelCardFallbackBackground(
           borderRadius: BorderRadius.circular(4),
-        ),
-        child: Icon(
-          Icons.image,
-          color: Colors.white70,
-          size: size * 0.4,
+          child: Center(
+            child: Icon(
+              Icons.image,
+              color: Colors.white70,
+              size: size * 0.4,
+            ),
+          ),
         ),
       ),
     );
@@ -198,10 +200,13 @@ class _ProgressiveImageState extends State<ProgressiveImage> {
           errorWidget: Container(
             width: widget.width,
             height: widget.height,
-            decoration: AppColors.channelCardFallbackDecoration,
-            child: const Icon(
-              Icons.broken_image,
-              color: Colors.white70,
+            child: ChannelCardFallbackBackground(
+              child: const Center(
+                child: Icon(
+                  Icons.broken_image,
+                  color: Colors.white70,
+                ),
+              ),
             ),
           ),
         ),

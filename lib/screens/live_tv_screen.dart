@@ -38,6 +38,7 @@ import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
@@ -5149,27 +5150,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         normalizedUrl.toLowerCase().contains('.svg?');
 
     return Container(
-      decoration: AppColors.channelCardFallbackDecoration,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: isSvg
-              ? SvgPicture.network(
-                  normalizedUrl,
-                  fit: BoxFit.contain,
-                  headers: HttpClientService().imageHeaders,
-                  placeholderBuilder: (_) =>
-                      _buildChannelNameFallback(channelName),
-                )
-              : CachedNetworkImage(
-                  imageUrl: normalizedUrl,
-                  httpHeaders: HttpClientService().imageHeaders,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) =>
-                      _buildChannelNameFallback(channelName),
-                  errorWidget: (_, __, ___) =>
-                      _buildChannelNameFallback(channelName),
-                ),
+      child: ChannelCardFallbackBackground(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: isSvg
+                ? SvgPicture.network(
+                    normalizedUrl,
+                    fit: BoxFit.contain,
+                    headers: HttpClientService().imageHeaders,
+                    placeholderBuilder: (_) =>
+                        _buildChannelNameFallback(channelName),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: normalizedUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) =>
+                        _buildChannelNameFallback(channelName),
+                    errorWidget: (_, __, ___) =>
+                        _buildChannelNameFallback(channelName),
+                  ),
+          ),
         ),
       ),
     );
@@ -5193,24 +5195,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildMissingArtworkFallback([String? channelName]) {
     return Container(
-      decoration: AppColors.channelCardFallbackDecoration,
-      child: Center(
-        child: channelName != null && channelName.isNotEmpty
-            ? _buildChannelNameFallback(channelName)
-            : Icon(
-                Icons.tv,
-                color: Colors.white.withValues(alpha: 0.55),
-                size: 36,
-              ),
+      child: ChannelCardFallbackBackground(
+        child: Center(
+          child: channelName != null && channelName.isNotEmpty
+              ? _buildChannelNameFallback(channelName)
+              : Icon(
+                  Icons.tv,
+                  color: Colors.white.withValues(alpha: 0.55),
+                  size: 36,
+                ),
+        ),
       ),
     );
   }
 
   Widget _buildGradientPlaceholder({Widget? child}) {
-    return Container(
-      decoration: AppColors.channelCardFallbackDecoration,
-      child: child,
-    );
+    return ChannelCardFallbackBackground(child: child);
   }
 
   Widget _buildChannelLogoWidget(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
-import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -86,14 +86,16 @@ class CachedImage extends StatelessWidget {
 }
 
 Widget _buildGradientFallback(double? width, double? height, IconData icon) {
-  return Container(
+  return SizedBox(
     width: width,
     height: height,
-    decoration: AppColors.channelCardFallbackDecoration,
-    alignment: Alignment.center,
-    child: Icon(
-      icon,
-      color: Colors.white.withAlpha((0.65 * 255).round()),
+    child: ChannelCardFallbackBackground(
+      child: Center(
+        child: Icon(
+          icon,
+          color: Colors.white.withAlpha((0.65 * 255).round()),
+        ),
+      ),
     ),
   );
 }
@@ -147,16 +149,18 @@ class CachedChannelLogo extends StatelessWidget {
 }
 
 Widget _buildLogoPlaceholder(double size, IconData fallbackIcon) {
-  return Container(
+  return SizedBox(
     width: size,
     height: size,
-    decoration: AppColors.channelCardFallbackDecoration.copyWith(
+    child: ChannelCardFallbackBackground(
       borderRadius: BorderRadius.circular(8),
-    ),
-    child: Icon(
-      fallbackIcon,
-      size: size * 0.6,
-      color: Colors.white.withAlpha((0.75 * 255).round()),
+      child: Center(
+        child: Icon(
+          fallbackIcon,
+          size: size * 0.6,
+          color: Colors.white.withAlpha((0.75 * 255).round()),
+        ),
+      ),
     ),
   );
 }

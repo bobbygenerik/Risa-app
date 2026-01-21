@@ -12,7 +12,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
-import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
 /// Uses EPG data to get the current program, then fetches artwork from TMDB.
@@ -249,12 +249,14 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     return Container(
       width: width,
       height: height,
-      decoration: AppColors.channelCardFallbackDecoration,
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.tv,
-        size: context.tvIconSize(32),
-        color: Colors.white70,
+      child: ChannelCardFallbackBackground(
+        child: Center(
+          child: Icon(
+            Icons.tv,
+            size: context.tvIconSize(32),
+            color: Colors.white70,
+          ),
+        ),
       ),
     );
   }
