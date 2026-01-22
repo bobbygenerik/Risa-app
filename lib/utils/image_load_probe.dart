@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
 class ImageLoadProbe {
@@ -12,8 +11,20 @@ class ImageLoadProbe {
   static final Map<String, int> _failuresByKind = {};
   static final Map<String, int> _failuresByError = {};
   static final Map<String, int> _failureLogBudgetByHost = {};
+  static final Set<String> _loggedUrls = {};
 
-  static bool get _enabled => kDebugMode || kProfileMode;
+  static bool get _enabled => true;
+
+  static void recordAttempt(String url, String kind) {
+    if (!_enabled || url.isEmpty) return;
+    if (_loggedUrls.contains(url)) return;
+    _loggedUrls.add(url);
+    final message = 'ImageLoadProbe: attempt kind=$kind url=$url';
+    debugLog(message);
+    logToSystem(message, name: 'RisaImage');
+    // ignore: avoid_print
+    print(message);
+  }
 
   static void recordSuccess(String url, String kind) {
     if (!_enabled || url.isEmpty) return;
@@ -32,20 +43,29 @@ class ImageLoadProbe {
     final errorKey = error.runtimeType.toString();
     _failuresByError[errorKey] = (_failuresByError[errorKey] ?? 0) + 1;
     _ensureSummaryTimer();
-    _maybeLogFailure(host, kind, error);
+    _maybeLogFailure(host, kind, error, url: url);
   }
 
   static void _ensureSummaryTimer() {
     _summaryTimer ??= Timer.periodic(_summaryInterval, (_) => _logSummary());
   }
 
-  static void _maybeLogFailure(String host, String kind, Object error) {
+  static void _maybeLogFailure(
+    String host,
+    String kind,
+    Object error, {
+    required String url,
+  }) {
     final budget = (_failureLogBudgetByHost[host] ?? 0) + 1;
     _failureLogBudgetByHost[host] = budget;
     if (budget <= 3 || budget % 50 == 0) {
-      debugLog(
-        'ImageLoadProbe: fail kind=$kind host=$host error=${error.runtimeType}',
-      );
+      final message =
+          'ImageLoadProbe: fail kind=$kind host=$host url=$url error=${error.runtimeType}';
+      debugLog(message);
+      logToSystem(message, name: 'RisaImage');
+      // Ensure visibility in profile builds via standard flutter logcat tag.
+      // ignore: avoid_print
+      print(message);
     }
   }
 

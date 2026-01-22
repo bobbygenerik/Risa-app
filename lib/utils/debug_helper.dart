@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/file_logger.dart';
 
@@ -11,4 +12,8 @@ void debugLog(String message) {
   if (kDebugMode) {
     debugPrint(message);
   }
+}
+
+void logToSystem(String message, {String name = 'Risa'}) {
+  developer.log(message, name: name);
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
@@ -28,6 +29,10 @@ class VlcPlayerWidget extends StatefulWidget {
 
 class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   UniversalPlayerController? _controller;
+  bool _hardwareAccelerationEnabled = true;
+  bool _fallbackAttempted = false;
+  Timer? _initTimeoutTimer;
+  VoidCallback? _vlcInitListener;
 
   @override
   void initState() {
@@ -46,6 +51,8 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
 
   void _initializeController() {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    _hardwareAccelerationEnabled = settings.hardwareAcceleration;
+    _fallbackAttempted = false;
 
     _controller = UniversalPlayerController.create(
       url: widget.url,
@@ -53,7 +60,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       isLive: widget.isLive,
       preferStockOnLive: true,
       backend: 'VLC',
-      hardwareAcceleration: settings.hardwareAcceleration,
+      hardwareAcceleration: _hardwareAccelerationEnabled,
     );
 
     if (widget.controllerNotifier != null) {
@@ -62,26 +69,9 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       });
     }
 
-    final initStart = DateTime.now();
-    _controller?.initialize().then((_) {
-      final initDuration = DateTime.now().difference(initStart);
-      debugLog(
-          'Player initialize completed in ${initDuration.inMilliseconds}ms for ${widget.url}');
-      if (mounted) {
-        final playStart = DateTime.now();
-        _controller?.play().then((_) {
-          final playDuration = DateTime.now().difference(playStart);
-          debugLog(
-              'Player play() returned in ${playDuration.inMilliseconds}ms for ${widget.url}');
-        }).catchError((e) {
-          debugLog('Player play() error: $e');
-        });
-      }
-    }).catchError((error) {
-      debugLog('Player initialization failed: $error');
-    });
-
     _controller?.addListener(_onControllerUpdate);
+    _attachVlcInitListener();
+    _startInitTimeout();
   }
 
   void _onControllerUpdate() {
@@ -89,11 +79,87 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       widget.transcriptionService!
           .updatePlaybackPosition(_controller!.value.position);
     }
+    if (_controller != null &&
+        !_controller!.value.isInitialized &&
+        _controller!.value.errorDescription != null) {
+      final message =
+          'VLC error: ${_controller!.value.errorDescription} url=${widget.url}';
+      logToSystem(message, name: 'RisaVLC');
+      // ignore: avoid_print
+      print(message);
+      _attemptFallback('player_error:${_controller!.value.errorDescription}');
+    }
+  }
+
+  void _attemptFallback(String reason) {
+    if (!mounted) return;
+    if (!_hardwareAccelerationEnabled || _fallbackAttempted) return;
+    _fallbackAttempted = true;
+    debugLog('Player fallback to software decode: $reason');
+    _controller?.removeListener(_onControllerUpdate);
+    _detachVlcInitListener();
+    _controller?.dispose();
+    _controller = UniversalPlayerController.create(
+      url: widget.url,
+      autoPlay: false,
+      isLive: widget.isLive,
+      preferStockOnLive: true,
+      backend: 'VLC',
+      hardwareAcceleration: false,
+    );
+    if (widget.controllerNotifier != null) {
+      Future.microtask(() {
+        if (mounted) widget.controllerNotifier!.value = _controller;
+      });
+    }
+    _controller?.addListener(_onControllerUpdate);
+    _attachVlcInitListener();
+    _startInitTimeout();
+  }
+
+  void _startInitTimeout() {
+    _initTimeoutTimer?.cancel();
+    _initTimeoutTimer = Timer(const Duration(seconds: 15), () {
+      if (!mounted || _controller == null) return;
+      if (!_controller!.value.isInitialized) {
+        _attemptFallback('init_timeout');
+      }
+    });
+  }
+
+  void _attachVlcInitListener() {
+    final controller = _controller;
+    if (controller is! VlcUniversalPlayerController) return;
+    _detachVlcInitListener();
+    final initStart = DateTime.now();
+    _vlcInitListener = () {
+      if (!mounted) return;
+      _initTimeoutTimer?.cancel();
+      final initDuration = DateTime.now().difference(initStart);
+      debugLog(
+          'Player init ready in ${initDuration.inMilliseconds}ms for ${widget.url}');
+      controller.vlcController.play().catchError((e) {
+        debugLog('Player play() error: $e');
+      });
+    };
+    controller.vlcController.addOnInitListener(_vlcInitListener!);
+  }
+
+  void _detachVlcInitListener() {
+    final controller = _controller;
+    if (controller is! VlcUniversalPlayerController) return;
+    final listener = _vlcInitListener;
+    if (listener != null) {
+      controller.vlcController.removeOnInitListener(listener);
+    }
+    _vlcInitListener = null;
   }
 
   @override
   void dispose() {
+    _initTimeoutTimer?.cancel();
     _controller?.removeListener(_onControllerUpdate);
+    _detachVlcInitListener();
     _controller?.dispose();
     super.dispose();
   }

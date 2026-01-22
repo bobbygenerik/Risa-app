@@ -14,6 +14,7 @@ import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -240,6 +241,11 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                           300,
                                           (constraints.maxHeight * dpr).round(),
                                         );
+                                        if (ImageFailureCache.shouldSkip(
+                                            channel.logoUrl!)) {
+                                          return _buildChannelPlaceholder(
+                                              channel.name);
+                                        }
                                         return CachedNetworkImage(
                                           imageUrl: channel.logoUrl!,
                                           httpHeaders: {
@@ -252,12 +258,28 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                           height: double.infinity,
                                           memCacheWidth: cacheWidth,
                                           memCacheHeight: cacheHeight,
+                                          imageBuilder:
+                                              (context, imageProvider) {
+                                            ImageFailureCache.recordSuccess(
+                                                channel.logoUrl!);
+                                            return Image(
+                                              image: imageProvider,
+                                              fit: BoxFit.contain,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              gaplessPlayback: true,
+                                            );
+                                          },
                                           placeholder: (context, url) =>
                                               _buildChannelPlaceholder(
                                                   channel.name),
-                                          errorWidget: (context, url, error) =>
-                                              _buildChannelPlaceholder(
-                                                  channel.name),
+                                          errorWidget: (context, url, error) {
+                                            ImageFailureCache.recordFailure(
+                                                url, error);
+                                            return _buildChannelPlaceholder(
+                                                channel.name);
+                                          },
+                                          useOldImageOnUrlChange: true,
                                         );
                                       },
                                     ),

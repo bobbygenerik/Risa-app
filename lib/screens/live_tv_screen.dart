@@ -48,10 +48,12 @@ import 'package:iptv_player/widgets/hero_panel.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/services/image_validation_service.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
@@ -2431,6 +2433,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Center(
         child: Builder(builder: (context) {
           final url = normalizeImageUrl(channel.logoUrl!);
+          if (ImageFailureCache.shouldSkip(url)) {
+            return const SizedBox.shrink();
+          }
           final isSvg = url.toLowerCase().endsWith('.svg') ||
               url.toLowerCase().contains('.svg?');
           if (isSvg) {
@@ -2454,10 +2459,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
             frameBuilder: (context, child, frame, wasSync) {
-              if (wasSync || frame != null) return child;
+              if (wasSync || frame != null) {
+                ImageFailureCache.recordSuccess(url);
+                return child;
+              }
               return const SizedBox.shrink();
             },
             errorBuilder: (context, error, stackTrace) {
+              ImageFailureCache.recordFailure(url, error);
               ImageLoadProbe.recordFailure(url, 'channel_logo', error);
               return const SizedBox.shrink();
             },
@@ -2612,6 +2621,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
+    if (ImageValidationService.isKnownInvalid(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_invalid_cached',
+      );
+      return false;
+    }
     if (_isLikelyChannelLogoUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo_hint',
@@ -2714,6 +2729,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
+    if (ImageValidationService.isKnownInvalid(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_invalid_cached',
+      );
+      return false;
+    }
     if (_isLikelyTitleLogoUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_title_logo',
@@ -2831,6 +2852,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   void _ensureHeroAspectRatio(String url) {
     if (url.isEmpty) return;
+    if (ImageFailureCache.shouldSkip(url)) return;
     if (_heroAspectRatios.containsKey(url)) return;
     if (_heroAspectRatioInFlight.contains(url)) return;
     _heroAspectRatioInFlight.add(url);
@@ -2849,9 +2871,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _heroAspectRatios[url] = width / height;
         });
       }
+      ImageFailureCache.recordSuccess(url);
       _heroAspectRatioInFlight.remove(url);
       stream.removeListener(listener);
     }, onError: (_, __) {
+      ImageFailureCache.recordFailure(url, 'hero_aspect_ratio');
       _heroAspectRatioInFlight.remove(url);
       stream.removeListener(listener);
     });
@@ -2911,6 +2935,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final removed = _programArtworkTitleOrder.removeFirst();
       _programArtworkByTitle.remove(removed);
     }
+    _scheduleProgramArtworkTitleSave();
+  }
+
+  void _removeProgramArtworkTitle(String key) {
+    if (key.isEmpty) return;
+    final removed = _programArtworkByTitle.remove(key);
+    if (removed == null) return;
+    _programArtworkTitleOrder.remove(key);
     _scheduleProgramArtworkTitleSave();
   }
 
@@ -3093,6 +3125,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     Channel? channel,
   ]) {
     if (value.isEmpty) return;
+    if (ImageValidationService.isKnownInvalid(value)) return;
     _registerProgramArtworkTitle(_titleCacheKey(program, channel), value);
   }
 
@@ -3567,9 +3600,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Future<String?> _fetchProgramArtwork(Program program) async {
     final existing = _programArtwork[program.id];
-    if (_artworkRequests.contains(program.id) ||
-        (existing != null && existing.isNotEmpty)) {
+    if (_artworkRequests.contains(program.id)) {
       return existing ?? '';
+    }
+    if (existing != null && existing.isNotEmpty) {
+      if (!ImageValidationService.isKnownInvalid(existing)) {
+        return existing;
+      }
+      _setProgramArtwork(program.id, '');
     }
 
     if (_suspendArtworkCaches) return '';
@@ -3585,8 +3623,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final titleKey = _titleCacheKey(program, channel);
     final cachedByTitle = _getProgramArtworkByTitle(program, channel);
     if (cachedByTitle != null && cachedByTitle.isNotEmpty) {
-      _setProgramArtwork(program.id, cachedByTitle);
-      return cachedByTitle;
+      if (ImageValidationService.isKnownInvalid(cachedByTitle)) {
+        _removeProgramArtworkTitle(titleKey);
+      } else if (await ImageValidationService.isValid(cachedByTitle)) {
+        _setProgramArtwork(program.id, cachedByTitle);
+        return cachedByTitle;
+      } else {
+        _removeProgramArtworkTitle(titleKey);
+      }
     }
 
     if (titleKey.isNotEmpty) {
@@ -3614,11 +3658,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     try {
       final result = await future;
       final normalized = _normalizeArtworkUrl(result, isHero: true);
-      _setProgramArtwork(program.id, normalized ?? '');
-      if (normalized != null && normalized.isNotEmpty) {
+      String? validated = normalized;
+      if (validated != null && validated.isNotEmpty) {
+        if (!ImageValidationService.isKnownValid(validated) &&
+            !await ImageValidationService.isValid(validated)) {
+          _logArtworkDecision(
+            'LiveTV artwork: source=final_validation program="${program.title}" url=$validated result=reject_invalid',
+          );
+          validated = null;
+        }
+      }
+      _setProgramArtwork(program.id, validated ?? '');
+      if (validated != null && validated.isNotEmpty) {
         _setProgramArtworkByTitle(
           program,
-          normalized,
+          validated,
           channel,
         );
         _clearArtworkNoMatch(program, channel);
@@ -3626,7 +3680,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       } else {
         _markArtworkNoMatch(program, channel);
       }
-      return normalized ?? '';
+      return validated ?? '';
     } finally {
       // Removing the stored future object is synchronous; don't pass it to unawaited
       await _pendingArtworkRequests.remove(program.id);
@@ -3742,7 +3796,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           preferLandscape: preferLandscape,
           programTitle: title,
           source: 'sportradar',
-        )) {
+        ) &&
+            await ImageValidationService.isValid(sportRadarImage)) {
           _logArtworkDecision(
             'LiveTV artwork: source=sportradar program="$title" query="$queryTitle" url=$sportRadarImage',
           );
@@ -3763,7 +3818,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           preferLandscape: preferLandscape,
           programTitle: title,
           source: 'thesportsdb',
-        )) {
+        ) &&
+            await ImageValidationService.isValid(sportsDbImage)) {
           _logArtworkDecision(
             'LiveTV artwork: source=thesportsdb program="$title" query="$queryTitle" url=$sportsDbImage',
           );
@@ -3785,7 +3841,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             preferLandscape: preferLandscape,
             programTitle: title,
             source: 'tvdb_sports',
-          )) {
+          ) &&
+              await ImageValidationService.isValid(tvdbImage)) {
             _logArtworkDecision(
               'LiveTV artwork: source=tvdb_sports program="$title" query="$queryTitle" url=$tvdbImage',
             );
@@ -3838,7 +3895,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             preferLandscape: preferLandscape,
             programTitle: title,
             source: 'tvdb',
-          )) {
+          ) &&
+              await ImageValidationService.isValid(tvdbImage)) {
             _logArtworkDecision(
               'LiveTV artwork: source=tvdb program="$title" query="$queryTitle" url=$tvdbImage',
             );
@@ -3863,7 +3921,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               preferLandscape: preferLandscape,
               programTitle: title,
               source: 'tmdb_news',
-            )) {
+            ) &&
+                await ImageValidationService.isValid(tmdbImage)) {
               _logArtworkDecision(
                 'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" url=$tmdbImage',
               );
@@ -3882,7 +3941,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             preferLandscape: preferLandscape,
             programTitle: title,
             source: 'tmdb',
-          )) {
+          ) &&
+              await ImageValidationService.isValid(tmdbImage)) {
             _logArtworkDecision(
               'LiveTV artwork: source=tmdb program="$title" query="$queryTitle" url=$tmdbImage',
             );
@@ -3902,7 +3962,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         preferLandscape: preferLandscape,
         programTitle: title,
         source: 'fanart',
-      )) {
+      ) &&
+          await ImageValidationService.isValid(fanartImage)) {
         _logArtworkDecision(
           'LiveTV artwork: source=fanart program="$title" url=$fanartImage',
         );
@@ -5161,14 +5222,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   placeholderBuilder: (_) =>
                       _buildChannelNameFallback(channelName),
                 )
-              : CachedNetworkImage(
-                  imageUrl: normalizedUrl,
-                  httpHeaders: HttpClientService().imageHeaders,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => _buildChannelNameFallback(channelName),
-                  errorWidget: (_, __, ___) =>
-                      _buildChannelNameFallback(channelName),
-                ),
+              : (ImageFailureCache.shouldSkip(normalizedUrl)
+                  ? _buildChannelNameFallback(channelName)
+                  : CachedNetworkImage(
+                      imageUrl: normalizedUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.contain,
+                      imageBuilder: (context, imageProvider) {
+                        ImageFailureCache.recordSuccess(normalizedUrl);
+                        return Image(
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        );
+                      },
+                      placeholder: (_, __) =>
+                          _buildChannelNameFallback(channelName),
+                      errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
+                        return _buildChannelNameFallback(channelName);
+                      },
+                      useOldImageOnUrlChange: true,
+                    )),
         ),
       ),
     );
@@ -5223,6 +5298,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     if (effectiveLogoUrl != null && effectiveLogoUrl.isNotEmpty) {
       final url = normalizeImageUrl(effectiveLogoUrl);
+      if (ImageFailureCache.shouldSkip(url)) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha((0.1 * 255).round()),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Icon(
+            Icons.tv,
+            color: Colors.white.withAlpha((0.6 * 255).round()),
+            size: 16,
+          ),
+        );
+      }
       final isSvg = url.toLowerCase().endsWith('.svg') ||
           url.toLowerCase().contains('.svg?');
 
@@ -5259,10 +5347,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         filterQuality: FilterQuality.high,
         gaplessPlayback: true,
         frameBuilder: (context, child, frame, wasSync) {
-          if (wasSync || frame != null) return child;
+          if (wasSync || frame != null) {
+            ImageFailureCache.recordSuccess(url);
+            return child;
+          }
           return placeholder;
         },
         errorBuilder: (context, error, stackTrace) {
+          ImageFailureCache.recordFailure(url, error);
           // If the image fails to load, we can try to return the placeholder
           // or just swallow the error.
           return placeholder;
@@ -5416,7 +5508,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
           }
 
-          if (normalizedLogoUrl == null || normalizedLogoUrl.isEmpty) {
+          if (normalizedLogoUrl == null ||
+              normalizedLogoUrl.isEmpty ||
+              ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
             return buildFallbackContent();
           }
 
@@ -5429,11 +5523,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             memCacheWidth: logoCacheWidth,
             memCacheHeight: logoCacheHeight,
             imageBuilder: (context, imageProvider) {
+              ImageFailureCache.recordSuccess(normalizedLogoUrl);
               final logo = Image(
                 image: imageProvider,
                 fit: BoxFit.contain,
                 width: maxLogoWidth,
                 height: maxLogoHeight,
+                gaplessPlayback: true,
               );
               final labelText = label;
               if (labelText == null || labelText.isEmpty) {
@@ -5458,9 +5554,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
             placeholder: (_, __) => buildFallbackContent(),
             errorWidget: (_, url, error) {
+              ImageFailureCache.recordFailure(url, error);
               logHandshakeIfNeeded(url, error, context: 'LiveTV hero logo');
               return buildFallbackContent();
             },
+            useOldImageOnUrlChange: true,
           );
         },
       ),
@@ -5913,6 +6011,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             if (!hasHeroImage) {
               return heroFallback;
             }
+            if (ImageFailureCache.shouldSkip(normalizedHeroUrl)) {
+              return heroFallback;
+            }
+            ImageLoadProbe.recordAttempt(normalizedHeroUrl, 'hero_image');
             if (!_heroImageCacheHits.containsKey(normalizedHeroUrl)) {
               _checkHeroImageCache(normalizedHeroUrl);
             }
@@ -5959,10 +6061,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       },
                       placeholder: (_, __) => _buildGradientPlaceholder(),
                       errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
                         ImageLoadProbe.recordFailure(
                             url, 'hero_logo_bg', error);
                         return _buildGradientPlaceholder();
                       },
+                      useOldImageOnUrlChange: true,
                     ),
                   ),
                   // Centered logo
@@ -5978,21 +6082,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       memCacheHeight:
                           (constraints.maxHeight * 0.25 * dpr).round(),
                       imageBuilder: (context, imageProvider) {
+                        ImageFailureCache.recordSuccess(normalizedHeroUrl);
                         ImageLoadProbe.recordSuccess(
                             normalizedHeroUrl, 'hero_logo');
                         return Image(
                           image: imageProvider,
                           fit: BoxFit.contain,
                           filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
                         );
                       },
                       placeholder: (_, __) => const SizedBox.shrink(),
                       errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
                         ImageLoadProbe.recordFailure(url, 'hero_logo', error);
                         logHandshakeIfNeeded(url, error,
                             context: 'LiveTV hero logo');
                         return heroFallback;
                       },
+                      useOldImageOnUrlChange: true,
                     ),
                   ),
                 ],
@@ -6018,22 +6126,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   memCacheHeight: cacheHeight,
                   imageBuilder: (context, imageProvider) {
                     _markHeroImageCached(normalizedHeroUrl);
+                    ImageFailureCache.recordSuccess(normalizedHeroUrl);
                     ImageLoadProbe.recordSuccess(
                         normalizedHeroUrl, 'hero_backdrop');
                     return Image(
                       image: imageProvider,
                       fit: BoxFit.cover,
                       filterQuality: FilterQuality.high,
+                      gaplessPlayback: true,
                     );
                   },
                   placeholder: (_, __) => _buildGradientPlaceholder(),
                   errorWidget: (_, url, error) {
+                    ImageFailureCache.recordFailure(url, error);
                     ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
                     logHandshakeIfNeeded(url, error,
                         context: 'LiveTV hero backdrop');
                     return heroFallback;
                   },
                   fadeInDuration: const Duration(milliseconds: 300),
+                  useOldImageOnUrlChange: true,
                 ),
               );
             }
@@ -6072,9 +6184,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   },
                   placeholder: (_, __) => _buildGradientPlaceholder(),
                   errorWidget: (_, url, error) {
+                    ImageFailureCache.recordFailure(url, error);
                     ImageLoadProbe.recordFailure(url, 'hero_poster_bg', error);
                     return _buildGradientPlaceholder();
                   },
+                  useOldImageOnUrlChange: true,
                 ),
                 // Main Image (Contained - shows full content)
                 Center(
@@ -6087,22 +6201,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     memCacheHeight: cacheHeight,
                     imageBuilder: (context, imageProvider) {
                       _markHeroImageCached(normalizedHeroUrl);
+                      ImageFailureCache.recordSuccess(normalizedHeroUrl);
                       ImageLoadProbe.recordSuccess(
                           normalizedHeroUrl, 'hero_poster');
                       return Image(
                         image: imageProvider,
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
                       );
                     },
                     placeholder: (_, __) => const SizedBox.shrink(),
                     errorWidget: (_, url, error) {
+                      ImageFailureCache.recordFailure(url, error);
                       ImageLoadProbe.recordFailure(url, 'hero_poster', error);
                       logHandshakeIfNeeded(url, error,
                           context: 'LiveTV hero main');
                       return heroFallback;
                     },
                     fadeInDuration: const Duration(milliseconds: 300),
+                    useOldImageOnUrlChange: true,
                   ),
                 ),
               ],
@@ -6442,6 +6560,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildAdaptiveImage(BuildContext context, String url,
       BoxFit defaultFit, int? cacheWidth, int? cacheHeight, Widget fallback) {
+    if (ImageFailureCache.shouldSkip(url)) {
+      return fallback;
+    }
+    ImageLoadProbe.recordAttempt(url, 'live_tv_adaptive');
     final isPoster = _isLikelyPosterUrl(url);
 
     if (isPoster) {
@@ -6460,6 +6582,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             memCacheWidth: (cacheWidth ?? 400) ~/ 4,
             memCacheHeight: (cacheHeight ?? 240) ~/ 4,
             imageBuilder: (context, imageProvider) {
+              ImageFailureCache.recordSuccess(url);
               ImageLoadProbe.recordSuccess(url, 'live_tv_poster_bg');
               return ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -6479,6 +6602,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
             placeholder: (context, url) => _buildGradientPlaceholder(),
             errorWidget: (context, url, err) {
+              ImageFailureCache.recordFailure(url, err);
               ImageLoadProbe.recordFailure(url, 'live_tv_poster_bg', err);
               return fallback;
             },
@@ -6494,6 +6618,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             fadeOutDuration: Duration.zero,
             useOldImageOnUrlChange: true,
             imageBuilder: (context, imageProvider) {
+              ImageFailureCache.recordSuccess(url);
               ImageLoadProbe.recordSuccess(url, 'live_tv_poster');
               return Image(
                 image: imageProvider,
@@ -6503,6 +6628,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
             placeholder: (context, url) => fallback,
             errorWidget: (context, url, err) {
+              ImageFailureCache.recordFailure(url, err);
               ImageLoadProbe.recordFailure(url, 'live_tv_poster', err);
               return fallback;
             },
@@ -6521,6 +6647,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       fadeOutDuration: Duration.zero,
       useOldImageOnUrlChange: true,
       imageBuilder: (context, imageProvider) {
+        ImageFailureCache.recordSuccess(url);
         ImageLoadProbe.recordSuccess(url, 'live_tv_card');
         return Image(
           image: imageProvider,
@@ -6530,6 +6657,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       },
       placeholder: (context, url) => fallback,
       errorWidget: (context, url, err) {
+        ImageFailureCache.recordFailure(url, err);
         ImageLoadProbe.recordFailure(url, 'live_tv_card', err);
         logHandshakeIfNeeded(url, err, context: 'LiveTV Adaptive');
         return fallback;

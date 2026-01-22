@@ -1,0 +1,68 @@
+--------- beginning of main
+01-22 08:54:42.155 I/com.risa.app(16732): Late-enabling -Xcheck:jni
+01-22 08:54:42.182 I/com.risa.app(16732): Using CollectorTypeCMC GC.
+01-22 08:54:42.433 I/flutter (16732): [IMPORTANT:flutter/shell/common/shell.cc(527)] [Action Required]: Impeller opt-out deprecated.
+01-22 08:54:42.433 I/flutter (16732):     The application opted out of Impeller by either using the
+01-22 08:54:42.433 I/flutter (16732):     `--no-enable-impeller` flag or the
+01-22 08:54:42.433 I/flutter (16732):     `io.flutter.embedding.android.EnableImpeller` `AndroidManifest.xml` entry.
+01-22 08:54:42.433 I/flutter (16732):     These options are going to go away in an upcoming Flutter release. Remove
+01-22 08:54:42.433 I/flutter (16732):     the explicit opt-out. If you need to opt-out, please report a bug describing
+01-22 08:54:42.433 I/flutter (16732):     the issue.
+01-22 08:54:42.433 I/flutter (16732): 
+01-22 08:54:42.433 I/flutter (16732):     https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+01-22 08:54:42.433 I/flutter (16732): 
+01-22 08:54:42.438 I/flutter (16732): The Dart VM service is listening on http://127.0.0.1:44929/gRBBO31Ons0=/
+01-22 08:54:42.499 I/com.risa.app(16732): hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+01-22 08:54:42.499 I/com.risa.app(16732): hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+01-22 08:54:42.499 I/com.risa.app(16732): hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+01-22 08:54:42.499 I/com.risa.app(16732): hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+01-22 08:54:42.961 E/com.risa.app(16732): Unable to open libpenguin.so: dlopen failed: library "libpenguin.so" not found.
+01-22 08:54:42.966 I/com.risa.app(16732): Compiler allocated 5101KB to compile void android.view.ViewRootImpl.performTraversals()
+01-22 08:54:48.025 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.025 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.025 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-22 08:54:48.037 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.037 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.037 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-22 08:54:48.038 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.038 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.038 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-22 08:54:48.039 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.039 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.039 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-22 08:54:48.040 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.040 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.040 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-22 08:54:48.041 E/FlutterJNI(16732): Failed to decode image
+01-22 08:54:48.041 E/FlutterJNI(16732): android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.-$$Nest$smnCreate(Unknown Source:0)
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:256)
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1858)
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1850)
+01-22 08:54:48.041 E/FlutterJNI(16732): 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)

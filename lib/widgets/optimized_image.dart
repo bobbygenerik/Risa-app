@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// Optimized image widget with progressive loading and memory management
@@ -31,6 +32,23 @@ class OptimizedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ImageFailureCache.shouldSkip(imageUrl)) {
+      return errorWidget ??
+          SizedBox(
+            width: width,
+            height: height,
+            child: ChannelCardFallbackBackground(
+              borderRadius: BorderRadius.circular(4),
+              child: const Center(
+                child: Icon(
+                  Icons.broken_image,
+                  color: Colors.white70,
+                  size: 32,
+                ),
+              ),
+            ),
+          );
+    }
     // Calculate optimal memory cache dimensions
     final screenWidth = MediaQuery.of(context).size.width;
     final optimalWidth = memCacheWidth ??
@@ -44,6 +62,7 @@ class OptimizedImage extends StatelessWidget {
             ? (height! * MediaQuery.of(context).devicePixelRatio).round()
             : null);
 
+    ImageLoadProbe.recordAttempt(imageUrl, 'optimized_image');
     return CachedNetworkImage(
       imageUrl: imageUrl,
       httpHeaders: HttpClientService().imageHeaders,
@@ -53,18 +72,21 @@ class OptimizedImage extends StatelessWidget {
       memCacheWidth: enableMemoryCache ? optimalWidth : null,
       memCacheHeight: enableMemoryCache ? optimalHeight : null,
       imageBuilder: (context, imageProvider) {
+        ImageFailureCache.recordSuccess(imageUrl);
         ImageLoadProbe.recordSuccess(imageUrl, 'optimized_image');
         return Image(
           image: imageProvider,
           width: width,
           height: height,
           fit: fit,
+          gaplessPlayback: true,
         );
       },
       placeholder: placeholder != null
           ? (context, url) => placeholder!
           : (context, url) => _buildShimmerPlaceholder(),
       errorWidget: (context, url, error) {
+        ImageFailureCache.recordFailure(url, error);
         ImageLoadProbe.recordFailure(url, 'optimized_image', error);
         return errorWidget != null
             ? errorWidget!
@@ -72,6 +94,7 @@ class OptimizedImage extends StatelessWidget {
       },
       fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 100),
+      useOldImageOnUrlChange: true,
     );
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
@@ -31,6 +33,10 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ImageFailureCache.shouldSkip(imageUrl)) {
+      return errorWidget ??
+          _buildGradientFallback(width, height, Icons.broken_image);
+    }
     // Conservative default mem cache sizing to avoid large synchronous decodes
     int? finalMemCacheWidth = memCacheWidth;
     int? finalMemCacheHeight = memCacheHeight;
@@ -48,14 +54,17 @@ class CachedImage extends StatelessWidget {
     finalMemCacheHeight ??= screenHeightPx;
 
     // Re-enable image loading with conservative caching and downscaling
+    ImageLoadProbe.recordAttempt(imageUrl, 'cached_image');
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
+      httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
       fit: fit,
       memCacheWidth: finalMemCacheWidth,
       memCacheHeight: finalMemCacheHeight,
       imageBuilder: (context, imageProvider) {
+        ImageFailureCache.recordSuccess(imageUrl);
         ImageLoadProbe.recordSuccess(imageUrl, 'cached_image');
         return Image(
           image: imageProvider,
@@ -63,15 +72,18 @@ class CachedImage extends StatelessWidget {
           height: height,
           fit: fit,
           filterQuality: FilterQuality.low,
+          gaplessPlayback: true,
         );
       },
       placeholder: (context, url) => placeholder ??
           _buildGradientFallback(width, height, Icons.image),
       errorWidget: (context, url, error) {
+        ImageFailureCache.recordFailure(url, error);
         ImageLoadProbe.recordFailure(url, 'cached_image', error);
         return errorWidget ??
             _buildGradientFallback(width, height, Icons.broken_image);
       },
+      useOldImageOnUrlChange: true,
     );
 
     if (borderRadius != null) {
@@ -122,28 +134,37 @@ class CachedChannelLogo extends StatelessWidget {
   if (logoUrl == null || logoUrl!.isEmpty) {
       return _buildLogoPlaceholder(size, fallbackIcon);
     }
-    
+    if (ImageFailureCache.shouldSkip(logoUrl!)) {
+      return _buildLogoPlaceholder(size, fallbackIcon);
+    }
+
+    ImageLoadProbe.recordAttempt(logoUrl!, 'channel_logo');
     return CachedNetworkImage(
       imageUrl: logoUrl!,
+      httpHeaders: HttpClientService().imageHeaders,
       width: size,
       height: size,
       fit: BoxFit.contain,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
       imageBuilder: (context, imageProvider) {
+        ImageFailureCache.recordSuccess(logoUrl!);
         ImageLoadProbe.recordSuccess(logoUrl!, 'channel_logo');
         return Image(
           image: imageProvider,
           width: size,
           height: size,
           fit: BoxFit.contain,
+          gaplessPlayback: true,
         );
       },
       placeholder: (context, url) => _buildLogoPlaceholder(size, fallbackIcon),
       errorWidget: (context, url, error) {
+        ImageFailureCache.recordFailure(url, error);
         ImageLoadProbe.recordFailure(url, 'channel_logo', error);
         return _buildLogoPlaceholder(size, fallbackIcon);
       },
+      useOldImageOnUrlChange: true,
     );
   }
 }

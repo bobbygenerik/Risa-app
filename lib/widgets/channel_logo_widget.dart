@@ -3,6 +3,8 @@ import 'package:iptv_player/services/channel_logo_service.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// A widget that displays a channel logo with fallback support
@@ -98,22 +100,33 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         height: tvHeight,
         color: widget.backgroundColor ?? Colors.transparent,
         child: _effectiveLogoUrl != null && _effectiveLogoUrl!.isNotEmpty
-            ? Image(
-                image: LogoImageCache.providerFor(
-                  _effectiveLogoUrl!,
-                  headers: HttpClientService().imageHeaders,
-                ),
-                fit: widget.fit,
-                filterQuality: FilterQuality.high,
-                frameBuilder: (context, child, frame, wasSync) {
-                  if (wasSync || frame != null) return child;
-                  return widget.placeholder ??
-                      _buildGradientFallback(context, tvWidth, tvHeight);
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    widget.errorWidget ??
-                    _buildGradientFallback(context, tvWidth, tvHeight),
-              )
+            ? (ImageFailureCache.shouldSkip(_effectiveLogoUrl!)
+                ? (widget.placeholder ??
+                    _buildGradientFallback(context, tvWidth, tvHeight))
+                : Image(
+                    image: LogoImageCache.providerFor(
+                      _effectiveLogoUrl!,
+                      headers: HttpClientService().imageHeaders,
+                    ),
+                    fit: widget.fit,
+                    filterQuality: FilterQuality.high,
+                    gaplessPlayback: true,
+                    frameBuilder: (context, child, frame, wasSync) {
+                      ImageLoadProbe.recordAttempt(
+                          _effectiveLogoUrl!, 'channel_logo_widget');
+                      if (wasSync || frame != null) {
+                        ImageFailureCache.recordSuccess(_effectiveLogoUrl!);
+                        return child;
+                      }
+                      return widget.placeholder ??
+                          _buildGradientFallback(context, tvWidth, tvHeight);
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      ImageFailureCache.recordFailure(_effectiveLogoUrl!, error);
+                      return widget.errorWidget ??
+                          _buildGradientFallback(context, tvWidth, tvHeight);
+                    },
+                  ))
             : (widget.placeholder ??
                 _buildGradientFallback(context, tvWidth, tvHeight)),
       ),

@@ -29,6 +29,7 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     return VlcUniversalPlayerController(
       url,
       autoPlay: autoPlay,
+      isLive: isLive,
       hardwareAcceleration: hardwareAcceleration,
     );
   }
@@ -91,12 +92,18 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   VlcUniversalPlayerController(
     String url, {
     bool autoPlay = true,
+    bool isLive = false,
     bool hardwareAcceleration = true,
   }) : _controller = VlcPlayerController.network(
           url,
           autoPlay: autoPlay,
-          hwAcc: hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
+          hwAcc: hardwareAcceleration ? HwAcc.auto : HwAcc.disabled,
           options: VlcPlayerOptions(
+            advanced: VlcAdvancedOptions([
+              VlcAdvancedOptions.networkCaching(isLive ? 1200 : 800),
+              VlcAdvancedOptions.liveCaching(isLive ? 1200 : 800),
+              VlcAdvancedOptions.clockSynchronization(0),
+            ]),
             http: VlcHttpOptions([
               VlcHttpOptions.httpUserAgent(
                 HttpClientService().videoHeaders['User-Agent'] ??

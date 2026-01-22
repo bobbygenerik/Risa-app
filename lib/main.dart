@@ -189,6 +189,10 @@ void main() {
           debugLog('Suppressed image error: ${details.exception}');
           return;
         }
+        final flutterMessage = 'FlutterError: ${details.exception}';
+        logToSystem(flutterMessage, name: 'RisaFlutter');
+        // ignore: avoid_print
+        print(flutterMessage);
         unawaited(CrashLogger.instance.logError(
           details.exception,
           details.stack,
@@ -199,6 +203,19 @@ void main() {
           details.exception,
           details.stack ?? StackTrace.current,
         );
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        final platformMessage = 'PlatformError: $error';
+        logToSystem(platformMessage, name: 'RisaFlutter');
+        // ignore: avoid_print
+        print(platformMessage);
+        unawaited(CrashLogger.instance.logError(
+          error,
+          stack,
+          source: 'platform',
+        ));
+        return true;
       };
 
       PlatformDispatcher.instance.onError = (error, stack) {

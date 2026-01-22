@@ -12,6 +12,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
@@ -209,37 +210,48 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     final cacheHeight = tvHeight == null
         ? null
         : math.min(600, (tvHeight * dpr).round());
+    Widget content;
+    if (_artworkUrl != null &&
+        _artworkUrl!.isNotEmpty &&
+        !ImageFailureCache.shouldSkip(_artworkUrl!)) {
+      ImageLoadProbe.recordAttempt(_artworkUrl!, 'program_artwork');
+      content = CachedNetworkImage(
+        imageUrl: _artworkUrl!,
+        httpHeaders: HttpClientService().imageHeaders,
+        fit: widget.fit,
+        memCacheWidth: cacheWidth,
+        memCacheHeight: cacheHeight,
+        imageBuilder: (context, imageProvider) {
+          ImageFailureCache.recordSuccess(_artworkUrl!);
+          ImageLoadProbe.recordSuccess(_artworkUrl!, 'program_artwork');
+          return Image(
+            image: imageProvider,
+            fit: widget.fit,
+            gaplessPlayback: true,
+          );
+        },
+        placeholder: (context, url) =>
+            widget.placeholder ?? _buildGradientFallback(context, tvWidth, tvHeight),
+        errorWidget: (context, url, error) {
+          ImageFailureCache.recordFailure(url, error);
+          ImageLoadProbe.recordFailure(url, 'program_artwork', error);
+          return widget.errorWidget ??
+              _buildGradientFallback(context, tvWidth, tvHeight);
+        },
+        useOldImageOnUrlChange: true,
+      );
+    } else {
+      content =
+          widget.placeholder ?? _buildGradientFallback(context, tvWidth, tvHeight);
+    }
+
     return ClipRRect(
       borderRadius:
           widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
       child: SizedBox(
         width: tvWidth,
         height: tvHeight,
-        child: _artworkUrl != null && _artworkUrl!.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: _artworkUrl!,
-                httpHeaders: HttpClientService().imageHeaders,
-                fit: widget.fit,
-                memCacheWidth: cacheWidth,
-                memCacheHeight: cacheHeight,
-                imageBuilder: (context, imageProvider) {
-                  ImageLoadProbe.recordSuccess(_artworkUrl!, 'program_artwork');
-                  return Image(
-                    image: imageProvider,
-                    fit: widget.fit,
-                  );
-                },
-                placeholder: (context, url) =>
-                    widget.placeholder ??
-                    _buildGradientFallback(context, tvWidth, tvHeight),
-                errorWidget: (context, url, error) {
-                  ImageLoadProbe.recordFailure(url, 'program_artwork', error);
-                  return widget.errorWidget ??
-                      _buildGradientFallback(context, tvWidth, tvHeight);
-                },
-              )
-            : (widget.placeholder ??
-                _buildGradientFallback(context, tvWidth, tvHeight)),
+        child: content,
       ),
     );
   }
