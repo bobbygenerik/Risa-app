@@ -1,4 +1,4 @@
-# Stream Hub IPTV Player - Progress Update
+# Risa IPTV Player - Progress Update
 
 ## ✅ Completed Features
 

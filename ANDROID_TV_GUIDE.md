@@ -2,7 +2,7 @@
 
 ## Overview
 
-Stream Hub is now fully optimized for Android TV with D-pad navigation, leanback launcher support, and TV-friendly UI.
+Risa IPTV Player is now fully optimized for Android TV with D-pad navigation, leanback launcher support, and TV-friendly UI.
 
 ---
 

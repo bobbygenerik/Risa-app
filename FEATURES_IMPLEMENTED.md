@@ -1,4 +1,4 @@
-# Stream Hub - Advanced Features Implementation
+# Risa IPTV Player - Advanced Features Implementation
 
 ## 🎉 Latest Updates
 
@@ -43,7 +43,7 @@ Located in: **Settings > General > Real-Debrid Integration**
 1. Create free account at real-debrid.com
 2. Go to Account Settings > API Token
 3. Copy your API key
-4. Paste into Stream Hub Settings
+4. Paste into Risa IPTV Player Settings
 
 ---
 

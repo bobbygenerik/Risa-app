@@ -29,7 +29,7 @@ This section is retained for reference. Drive API configuration is not required 
 2. Select "External" user type
 3. Click "Create"
 4. Fill in required fields:
-   - **App name**: Stream Hub
+   - **App name**: Risa IPTV Player
    - **User support email**: your email
    - **Developer contact**: your email
 5. Click "Save and Continue"

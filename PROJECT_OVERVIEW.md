@@ -1,8 +1,8 @@
-# Stream Hub - IPTV Player Implementation Guide
+# Risa IPTV Player - Implementation Guide
 
 ## 🎯 Project Overview
 
-**Stream Hub** is a modern, feature-rich IPTV player built with Flutter/Dart, designed for TV and desktop platforms with a sleek dark theme and intuitive navigation.
+**Risa IPTV Player** is a modern, feature-rich IPTV player built with Flutter/Dart. **Android is the primary platform**, with TV-first design and a sleek dark theme optimized for remote-friendly navigation.
 
 ## ✨ Implemented Features
 

@@ -1,5 +1,5 @@
 name: iptv_player
-description: "A modern IPTV streaming player application built with Flutter - Stream Hub."
+description: "A modern IPTV streaming player application built with Flutter - Risa IPTV Player."
 publish_to: 'none'
 # Version format: MAJOR.MINOR.PATCH+BUILD_NUMBER
 version: 1.9.6+1

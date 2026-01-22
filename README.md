@@ -1,11 +1,11 @@
 # Risa IPTV Player
 
-A comprehensive multi-platform IPTV streaming player built with Flutter and native Android.
+A comprehensive IPTV streaming player built with Flutter and native Android, with Android as the primary platform.
 
 ## Platforms
 
-- **Android TV / Fire TV**: Full-featured 10-foot UI for smart TVs
-- **Mobile / Tablet**: Touch-optimized interface for phones and tablets  
+- **Android TV / Fire TV**: Full-featured 10-foot UI for smart TVs (primary)
+- **Android Mobile / Tablet**: Touch-optimized interface for phones and tablets (primary)
 - **Android Auto**: In-car entertainment with driver-safe interface (coming soon)
 - **Companion App**: Enhanced mobile app for settings and management (coming soon)
 
@@ -172,8 +172,8 @@ Risa-app/
 │   ├── android-auto/         # Native Android Auto app
 │   └── companion-app/        # Flutter companion mobile app
 ├── shared-resources/         # Shared assets and resources
+├── PRD.md                    # Product requirements
 ├── docs/                     # Documentation
-│   ├── PRD.md               # Product requirements
 │   ├── CONTRIBUTING.md      # Contribution guidelines
 │   └── DEVELOPMENT.md       # Development notes
 └── [platform-specific files]
@@ -210,7 +210,7 @@ Contributions are welcome! Please see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.m
 
 ## Documentation
 
-- **[PRD](docs/PRD.md)**: Product Requirements Document
+- **[PRD](PRD.md)**: Product Requirements Document
 - **[Contributing](docs/CONTRIBUTING.md)**: How to contribute
 - **[Development](docs/DEVELOPMENT.md)**: Technical notes
 

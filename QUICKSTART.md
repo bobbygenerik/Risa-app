@@ -1,8 +1,8 @@
-# 🎬 Stream Hub - Quick Start Guide
+# 🎬 Risa IPTV Player - Quick Start Guide
 
 ## ✅ What's Been Implemented
 
-Your Stream Hub IPTV player is now ready with:
+Your Risa IPTV Player app is now ready with:
 
 ### 🎨 Core Features
 - ✅ **Modern Dark UI** - Professional TV interface with blue accents
@@ -325,7 +325,7 @@ flutter run
 
 ## 🎉 You're Ready!
 
-Your Stream Hub IPTV player foundation is complete. You now have:
+Your Risa IPTV Player foundation is complete. You now have:
 
 ✅ Professional UI matching mockups
 ✅ Voice search capability
