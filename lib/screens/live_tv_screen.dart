@@ -1595,8 +1595,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         return buildSkeleton();
                       }
 
-                      // Give EPG more time to load programs - only show error after 30 seconds
-                      if (timeSinceInit.inSeconds < 30) {
+                      // Give EPG a short grace period to load programs if none are present yet
+                      // But if we already have programs (just no matches), fail immediately
+                      final gracefulWait = !epgService.hasLoadedPrograms && timeSinceInit.inSeconds < 5;
+                      
+                      if (gracefulWait) {
                         debugLog(
                             'LiveTV: EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
                         return buildSkeleton();
@@ -1874,8 +1877,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return _buildSkeletonLoaderTracked();
       }
 
-      // Give EPG more time to load - only show error after 30 seconds
-      if (timeSinceInit.inSeconds < 30) {
+      // Give EPG a short grace period
+      final gracefulWait = !epgService.hasLoadedPrograms && timeSinceInit.inSeconds < 5;
+      
+      if (gracefulWait) {
         debugLog(
             'LiveTV: Hero EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
         return _buildSkeletonLoaderTracked();
