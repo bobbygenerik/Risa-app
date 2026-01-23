@@ -59,6 +59,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 const bool _enablePrewarm = false;
@@ -128,9 +129,28 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
+      FlutterError.onError = (details) {
+        final exception = details.exception;
+        final message = exception.toString();
+        if (!_shouldSuppressError(message)) {
+          debugLog('FlutterError: $message');
+          if (details.stack != null) {
+            debugLog(details.stack.toString());
+          }
+        }
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        final message = error.toString();
+        if (!_shouldSuppressError(message)) {
+          debugLog('PlatformError: $message');
+          debugLog(stack.toString());
+        }
+        return true;
+      };
 
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
+      ImageFailureCache.setAggressiveMode(memoryInfo.isLowMemory);
       if (memoryInfo.isLowMemory) {
         // Very conservative cache sizes for Shield/low-memory devices
         PaintingBinding.instance.imageCache.maximumSize = 15; // Reduced from 20

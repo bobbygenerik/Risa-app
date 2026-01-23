@@ -1,0 +1,395 @@
+--------- beginning of main
+01-23 00:30:31.011  3542 17973 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:31.011  3542 17973 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:31.011  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:31.011  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:31.011  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:31.041  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:31.041  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:31.042  3542 17979 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:31.747  3709  3709 D WindowManager: handleComboKeys keyCode: 23, keyAction: 0
+01-23 00:30:31.839 32737 32737 W ThreadPoolForeg: type=1400 audit(0.0:23275): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=21993 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 app=com.google.android.gms
+01-23 00:30:31.957  3709  3709 D WindowManager: handleComboKeys keyCode: 23, keyAction: 1
+01-23 00:30:31.964  3709  3729 D EventSequenceValidator: inc AccIntentStartedEvents to 2
+--------- beginning of system
+01-23 00:30:31.747  3709  3709 I chatty  : uid=1000 system_server expire 2 lines
+01-23 00:30:31.958  3709  3709 I InputManager: Input event injection from pid 3709 uid 1000
+01-23 00:30:31.964  3709  9680 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LEANBACK_LAUNCHER] flg=0x10000000 pkg=com.risa.app cmp=com.risa.app/.MainActivity} from uid 10025
+01-23 00:30:31.974  3413  3413 W powerHAL::common: Power hint:0x8 is not supported in PowerHAL
+01-23 00:30:31.982  3709  3730 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+01-23 00:30:31.982  3709  3840 D ConnectivityService: releasing NetworkRequest [ TRACK_DEFAULT id=502, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ] (release request)
+01-23 00:30:31.983  4822  4822 D FirebaseSessions: App backgrounded on com.spocky.projengmenu
+01-23 00:30:31.984  3709  4574 W ActivityTaskManager: Tried to set launchTime (0) < mLastActivityLaunchTime (283266979)
+01-23 00:30:31.994  3709 17962 W NvAppProfileService: App Profiles: Enabled
+01-23 00:30:31.996  4611  4633 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.power@1.0::IPower/default
+01-23 00:30:32.029  3709 17985 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+01-23 00:30:32.031 17732 17732 I flutter : [IMPORTANT:flutter/shell/common/shell.cc(527)] [Action Required]: Impeller opt-out deprecated.
+01-23 00:30:32.031 17732 17732 I flutter :     The application opted out of Impeller by either using the
+01-23 00:30:32.031 17732 17732 I flutter :     `--no-enable-impeller` flag or the
+01-23 00:30:32.031 17732 17732 I flutter :     `io.flutter.embedding.android.EnableImpeller` `AndroidManifest.xml` entry.
+01-23 00:30:32.031 17732 17732 I flutter :     These options are going to go away in an upcoming Flutter release. Remove
+01-23 00:30:32.031 17732 17732 I flutter :     the explicit opt-out. If you need to opt-out, please report a bug describing
+01-23 00:30:32.031 17732 17732 I flutter :     the issue.
+01-23 00:30:32.031 17732 17732 I flutter : 
+01-23 00:30:32.031 17732 17732 I flutter :     https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+01-23 00:30:32.031 17732 17732 I flutter : 
+01-23 00:30:32.037 17732 17732 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:32.037 17732 17732 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:32.037 17732 17732 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:32.037 17732 17732 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:32.044  3542 17979 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:32.045  3542 17979 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:32.045  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:32.045  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:32.045  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:32.092 32737 17969 D AdvertisingIdClient: AdvertisingIdClient already created.
+01-23 00:30:32.092 32737 17969 D AdvertisingIdClient: AdvertisingIdClient is not bounded. Starting to bind it...
+01-23 00:30:32.098  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:32.098  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:32.100  3542 17986 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:32.113 32737 17969 D AdvertisingIdClient: AdvertisingIdClient is bounded
+01-23 00:30:32.115  4822  4839 I cky.projengmen: Background young concurrent copying GC freed 64500(21MB) AllocSpace objects, 38(2168KB) LOS objects, 48% free, 25MB/48MB, paused 110us total 100.761ms
+01-23 00:30:32.124 32737 17969 I AdvertisingIdClient: shouldSendLog -1
+01-23 00:30:32.124 32737 17969 I AdvertisingIdClient: GetInfoInternal elapse 32ms
+01-23 00:30:32.132 17732 17732 I CrashLogger: Skipping copyLatestCrashToDownloads() and startup marker (writes disabled).
+01-23 00:30:32.143 17732 17732 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+01-23 00:30:32.158 17732 17732 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+01-23 00:30:32.164  3709  9680 I NvUtils : onActivityResumed AM packageName = com.risa.app
+01-23 00:30:32.165  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.165  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.166 14839 17632 I NetworkScheduler: (REDACTED) Error inserting %s
+01-23 00:30:32.167  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.170  3709  9680 I chatty  : uid=1000(system) Binder:3709_1C identical 2 lines
+01-23 00:30:32.170  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.213 17732 17732 D View    : com.nvidia.immediateInput = false
+01-23 00:30:32.213 17732 17732 D View    : com.nvidia.mRawCursorInputRequested = false
+01-23 00:30:32.229 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:32.229 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:32.229 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:32.229 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:32.236 17732 17982 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:32.236 17732 17982 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:32.236 17732 17982 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:32.236 17732 17982 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:32.437  4822  5055 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+01-23 00:30:32.520 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:32.520 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:32.520 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:32.520 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:32.538  3413  3413 W powerHAL::common: Power hint:0x8 is not supported in PowerHAL
+01-23 00:30:32.581  3709  9680 I NvUtils : onActivityStopped AM packageName = com.spocky.projengmenu
+01-23 00:30:32.588  3709  3734 D ArtManagerInternalImpl: /data/misc/iorapd/com.risa.app/20/com.risa.app.MainActivity/compiled_traces/compiled_trace.pb doesn't exist
+01-23 00:30:32.589  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.591  3709  9680 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+01-23 00:30:32.591  3709  3734 I ActivityTaskManager: Displayed com.risa.app/.MainActivity: +578ms
+01-23 00:30:32.591  3709  3734 I ActivityTaskManager: Fully drawn com.risa.app/.MainActivity: +578ms
+01-23 00:30:32.592  3709  9680 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.graphics.display@1.0::INvDisplay/default
+01-23 00:30:32.595  3709  3729 D EventSequenceValidator: dec AccIntentStartedEvents to 1
+01-23 00:30:32.615  4391  4391 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2084 
+01-23 00:30:32.615  4391  4391 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 0, locked = false
+01-23 00:30:32.616  4391  4391 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1345 onStartInput(EditorInfo{EditorInfo{packageName=com.risa.app, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+01-23 00:30:32.616  4391  4391 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 1, locked = false
+01-23 00:30:33.061  3709  4468 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+01-23 00:30:33.101  3542 17986 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:33.101  3542 17986 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:33.101  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:33.101  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:33.101  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:33.145  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:33.145  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:33.145  3542 17999 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:34.101  4822 17961 I FA      : Application backgrounded at: timestamp_millis: 1769146232100
+01-23 00:30:34.146  3542 17999 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:34.146  3542 17999 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:34.147  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:34.147  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:34.147  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:34.201  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:34.201  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:34.201  3542 18002 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:34.480 17732 17732 I flutter : ImageLoadProbe: attempt kind=live_tv_adaptive url=https://image.tmdb.org/t/p/w780/uEoaOfvWibpvjBNxFoj4MxWn0OH.jpg
+01-23 00:30:35.048  3397  3521 V hdcp up : tsec_version: 1
+01-23 00:30:35.049  3397  3521 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+01-23 00:30:35.202  3542 18002 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:35.202  3542 18002 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:35.203  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:35.203  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:35.203  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:35.261  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:35.261  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:35.261  3542 18005 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:36.262  3542 18005 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:36.262  3542 18005 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:36.263  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:36.263  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:36.263  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:36.301  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:36.301  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:36.301  3542 18006 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:36.561  3709  3709 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+01-23 00:30:36.561  3709  3709 I InputManager: Input event injection from pid 3709 uid 1000
+01-23 00:30:36.774  3709  3709 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+01-23 00:30:36.777  3709  3820 D InputDispatcher: Waiting to send key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} because there are unprocessed events that may cause focus to change
+01-23 00:30:36.871 17732 17732 I flutter : ImageLoadProbe: attempt kind=live_tv_adaptive url=https://zap2it.tmsimg.com/assets/p26481131_b_v13_aa.jpg?w=200
+01-23 00:30:37.277  3709  3820 W InputDispatcher: Dispatching key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} even though there are other unprocessed events
+01-23 00:30:37.302  3542 18006 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:37.302  3542 18006 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:37.303  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:37.303  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:37.303  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:37.337  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:37.337  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:37.338  3542 18007 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:38.339  3542 18007 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:38.339  3542 18007 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:38.339  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:38.339  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:38.339  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:38.388  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:38.389  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:38.389  3542 18008 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:39.390  3542 18008 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:39.390  3542 18008 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:39.390  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:39.390  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:39.390  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:39.429  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:39.429  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:39.430  3542 18009 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:39.434  3709  3820 I InputDispatcher: df0d614 com.risa.app/com.risa.app.MainActivity (server) spent 2870ms processing KeyEvent
+01-23 00:30:39.463  3709  3820 I InputDispatcher: df0d614 com.risa.app/com.risa.app.MainActivity (server) spent 2185ms processing KeyEvent
+01-23 00:30:39.757  3709  3709 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+01-23 00:30:39.965  3709  3709 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+01-23 00:30:39.967  3709  3820 D InputDispatcher: Waiting to send key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} because there are unprocessed events that may cause focus to change
+01-23 00:30:40.053  3397  3521 V hdcp up : tsec_version: 1
+01-23 00:30:40.054  3397  3521 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+01-23 00:30:40.431  3542 18009 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:40.431  3542 18009 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:40.431  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:40.431  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:40.431  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:40.461  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:40.461  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:40.462  3542 18012 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:40.467  3709  3820 W InputDispatcher: Dispatching key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} even though there are other unprocessed events
+01-23 00:30:41.463  3542 18012 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:41.463  3542 18012 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:41.463  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:41.463  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:41.463  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:41.505  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:41.505  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:41.505  3542 18013 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:42.506  3542 18013 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:42.506  3542 18013 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:42.506  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:42.506  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:42.506  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:42.537  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:42.537  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:42.537  3542 18016 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:43.538  3542 18016 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:43.538  3542 18016 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:43.538  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:43.539  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:43.539  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:43.589  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:43.589  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:43.589  3542 18017 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:43.671 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:43.671 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:43.671 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:43.678 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:43.678 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:44.132 32737 32737 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+01-23 00:30:44.590  3542 18017 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:44.590  3542 18017 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:44.591  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:44.591  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:44.591  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:44.625  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:44.625  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:44.626  3542 18024 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:45.057  3397  3521 V hdcp up : tsec_version: 1
+01-23 00:30:45.058  3397  3521 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+01-23 00:30:45.063  3709  3709 D WindowManager: handleComboKeys keyCode: 23, keyAction: 0
+01-23 00:30:45.273  3709  3709 D WindowManager: handleComboKeys keyCode: 23, keyAction: 1
+01-23 00:30:45.276  3709  3820 D InputDispatcher: Waiting to send key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} because there are unprocessed events that may cause focus to change
+01-23 00:30:45.627  3542 18024 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:45.627  3542 18024 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:45.627  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:45.627  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:45.627  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:45.677  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:45.677  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:45.681  3542 18025 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:45.776  3709  3820 W InputDispatcher: Dispatching key to Window{df0d614 u0 com.risa.app/com.risa.app.MainActivity} even though there are other unprocessed events
+01-23 00:30:45.959 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:45.959 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:45.959 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:45.972 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:45.972 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:46.682  3542 18025 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:46.682  3542 18025 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:46.682  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:46.682  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:46.682  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:46.737  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:46.737  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:46.738  3542 18026 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:47.739  3542 18026 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:47.739  3542 18026 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:47.739  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:47.739  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:47.739  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:47.777  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:47.777  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:47.777  3542 18027 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:47.938 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:47.938 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:47.938 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:47.945 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:47.945 17732 17732 I chatty  : uid=10271(com.risa.app) identical 1 line
+01-23 00:30:47.945 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:48.275 14839 14839 W ThreadPoolForeg: type=1400 audit(0.0:23276): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=21993 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 app=com.google.android.gms
+01-23 00:30:48.779  3542 18027 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:48.779  3542 18027 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:48.779  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:48.779  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:48.779  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:48.809  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:48.809  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:48.810  3542 18030 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:49.810  3542 18030 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:49.810  3542 18030 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:49.811  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:49.811  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:49.811  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:49.857  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:49.857  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:49.857  3542 18031 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:50.051 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:50.051 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:50.062  3397  3521 V hdcp up : tsec_version: 1
+01-23 00:30:50.063  3397  3521 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+01-23 00:30:50.303 17732 17984 E FlutterJNI: Failed to decode image
+01-23 00:30:50.303 17732 17984 E FlutterJNI: android.graphics.ImageDecoder$DecodeException: Failed to create image decoder with message 'unimplemented'Input contained an error.
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.nCreate(Native Method)
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.access$200(ImageDecoder.java:173)
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder$ByteBufferSource.createImageDecoder(ImageDecoder.java:250)
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmapImpl(ImageDecoder.java:1862)
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at android.graphics.ImageDecoder.decodeBitmap(ImageDecoder.java:1855)
+01-23 00:30:50.303 17732 17984 E FlutterJNI: 	at io.flutter.embedding.engine.FlutterJNI.decodeImage(FlutterJNI.java:557)
+01-23 00:30:50.859  3542 18031 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:50.859  3542 18031 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:50.859  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:50.859  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:50.859  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:50.901  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:50.901  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:50.902  3542 18032 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:51.903  3542 18032 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:51.903  3542 18032 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:51.903  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:51.903  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:51.903  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:51.941  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:51.941  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:51.941  3542 18033 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:52.372 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:52.372 17732 17732 I chatty  : uid=10271(com.risa.app) identical 1 line
+01-23 00:30:52.372 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:52.385 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:52.385 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:52.385 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:52.385 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:52.390 17732 17766 E FrameEvents: updateAcquireFence: Did not find frame.
+01-23 00:30:52.942  3542 18033 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:52.942  3542 18033 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:52.943  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:52.943  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:52.943  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:52.981  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:52.981  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:52.981  3542 18034 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:53.983  3542 18034 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:53.983  3542 18034 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:53.983  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:53.983  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:53.983  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:54.013  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:54.013  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:54.013  3542 18035 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:54.287 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:54.287 17732 17732 I chatty  : uid=10271(com.risa.app) identical 2 lines
+01-23 00:30:54.287 17732 17732 I flutter : Warning database has been locked for 0:00:10.000000. Make sure you always use the transaction object for database operations during a transaction
+01-23 00:30:54.293 17732 17732 I Choreographer: Skipped 113 frames!  The application may be doing too much work on its main thread.
+01-23 00:30:54.308 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+01-23 00:30:54.309 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+01-23 00:30:54.309 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+01-23 00:30:54.309 17732 17766 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+01-23 00:30:54.314 17732 17766 E FrameEvents: updateAcquireFence: Did not find frame.
+01-23 00:30:54.320 17732 17766 I OpenGLRenderer: Davey! duration=1912ms; Flags=1, IntendedVsync=283405469938578, Vsync=283407355155207, OldestInputEvent=9223372036854775807, NewestInputEvent=0, HandleInputStart=283407361048500, AnimationStart=283407361055062, PerformTraversalsStart=283407361062146, DrawStart=283407371636833, SyncQueued=283407381104541, SyncStart=283407386440687, IssueDrawCommandsStart=283407386486573, SwapBuffers=283407386687041, FrameCompleted=283407387355843, DequeueBufferDuration=0, QueueBufferDuration=343490, GpuCompleted=170778463681, 
+01-23 00:30:54.347 17732 17766 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+01-23 00:30:54.348 17732 17766 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+01-23 00:30:55.014  3542 18035 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:55.014  3542 18035 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:55.014  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:55.014  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:55.014  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:55.067  3397  3521 V hdcp up : tsec_version: 1
+01-23 00:30:55.068  3397  3521 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+01-23 00:30:55.068  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:55.069  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:55.069  3542 18040 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:56.071  3542 18040 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:56.071  3542 18040 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:56.071  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:56.071  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:56.071  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:56.109  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:56.109  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:56.109  3542 18041 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:57.110  3542 18041 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:57.110  3542 18041 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:57.110  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:57.111  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:57.111  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:57.145  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:57.145  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:57.145  3542 18042 I adbd    : UsbFfs-monitor thread spawned
+01-23 00:30:58.147  3542 18042 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+01-23 00:30:58.147  3542 18042 I adbd    : UsbFfs: connection terminated: monitor thread finished
+01-23 00:30:58.147  3542  3542 I adbd    : UsbFfs: already offline
+01-23 00:30:58.147  3542  3542 I adbd    : destroying transport UsbFfs
+01-23 00:30:58.147  3542  3542 I adbd    : UsbFfsConnection being destroyed
+01-23 00:30:58.189  3542  3583 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+01-23 00:30:58.189  3542  3583 I adbd    : UsbFfsConnection constructed
+01-23 00:30:58.189  3542 18043 I adbd    : UsbFfs-monitor thread spawned

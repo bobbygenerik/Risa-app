@@ -44,7 +44,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   void didUpdateWidget(VlcPlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.url != oldWidget.url) {
-      _controller?.dispose();
+      _safeDisposeController();
       _initializeController();
     }
   }
@@ -54,14 +54,28 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     _hardwareAccelerationEnabled = settings.hardwareAcceleration;
     _fallbackAttempted = false;
 
-    _controller = UniversalPlayerController.create(
-      url: widget.url,
-      autoPlay: false,
-      isLive: widget.isLive,
-      preferStockOnLive: true,
-      backend: 'VLC',
-      hardwareAcceleration: _hardwareAccelerationEnabled,
-    );
+    final url = widget.url;
+    debugLog('=== VLC WIDGET INIT START ===');
+    debugLog('VLC init: url=$url live=${widget.isLive} hw=$_hardwareAccelerationEnabled');
+    logToSystem('VLC INIT: $url hw=$_hardwareAccelerationEnabled', name: 'RisaVLC');
+    
+    try {
+      _controller = UniversalPlayerController.create(
+        url: url,
+        autoPlay: false,
+        isLive: widget.isLive,
+        preferStockOnLive: true,
+        backend: 'VLC',
+        hardwareAcceleration: _hardwareAccelerationEnabled,
+      );
+      debugLog('VLC controller created successfully');
+    } catch (e, st) {
+      debugLog('=== VLC CONTROLLER CREATE ERROR ===');
+      debugLog('Error: $e');
+      debugLog('Stack: $st');
+      logToSystem('VLC CREATE ERROR: $e', name: 'RisaVLC');
+      return;
+    }
 
     if (widget.controllerNotifier != null) {
       Future.microtask(() {
@@ -72,6 +86,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     _controller?.addListener(_onControllerUpdate);
     _attachVlcInitListener();
     _startInitTimeout();
+    debugLog('=== VLC WIDGET INIT COMPLETE ===');
   }
 
   void _onControllerUpdate() {
@@ -98,7 +113,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     debugLog('Player fallback to software decode: $reason');
     _controller?.removeListener(_onControllerUpdate);
     _detachVlcInitListener();
-    _controller?.dispose();
+    _safeDisposeController();
     _controller = UniversalPlayerController.create(
       url: widget.url,
       autoPlay: false,
@@ -155,12 +170,20 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     _vlcInitListener = null;
   }
 
+  void _safeDisposeController() {
+    final controller = _controller;
+    if (controller == null) return;
+    controller.dispose().catchError((e) {
+      debugLog('VLC dispose error (widget): $e');
+    });
+  }
+
   @override
   void dispose() {
     _initTimeoutTimer?.cancel();
     _controller?.removeListener(_onControllerUpdate);
     _detachVlcInitListener();
-    _controller?.dispose();
+    _safeDisposeController();
     super.dispose();
   }
 

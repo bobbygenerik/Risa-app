@@ -130,8 +130,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         widget.channel?.url ??
         '';
 
+    debugLog('=== VIDEO PLAYER INIT START ===');
     debugLog('Video Player: Initializing with URL: $url');
+    debugLog('isLive: ${widget.isLive}');
+    debugLog('Channel: ${widget.channel?.name ?? "none"}');
+    logToSystem('PLAYER INIT: $url', name: 'RisaPlayer');
+    
     if (url.isEmpty) {
+      debugLog('=== VIDEO PLAYER INIT FAILED: Empty URL ===');
       if (mounted) {
         setState(() => _isLoading = false);
         _showErrorDialog(
@@ -147,8 +153,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    } catch (e) {
+      debugLog('=== VIDEO PLAYER INIT COMPLETE ===');
+    } catch (e, st) {
+      debugLog('=== VIDEO PLAYER INIT ERROR ===');
       debugLog('Video Player: Initialization error: $e');
+      debugLog('Stack: $st');
+      logToSystem('PLAYER INIT ERROR: $e', name: 'RisaPlayer');
       if (mounted) {
         setState(() => _isLoading = false);
         _showErrorDialog('Initialization Error', 'Failed to initialize player: $e');

@@ -40,6 +40,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool _isLoading = false;
   bool _isDownloading = false;
   bool _isParsing = false;
+  bool _externalDbBusy = false;
   String? _error;
   String? _epgUrl;
   bool _hasParsed = false;
@@ -112,7 +113,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
   String? _playlistIdentity;
-  bool get _suspendDbReads => _isParsing || _isDownloading || _isLoading;
+  bool get _suspendDbReads =>
+      _isParsing || _isDownloading || _isLoading || _externalDbBusy;
 
   IncrementalEpgService() {
     WidgetsBinding.instance.addObserver(this);
@@ -243,6 +245,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool get isLoading => _isLoading;
   bool get isDownloading => _isDownloading;
   bool get isParsing => _isParsing;
+  void setExternalDbBusy(bool busy) {
+    if (_externalDbBusy == busy) return;
+    _externalDbBusy = busy;
+    debugLog(
+        'EPG: External DB busy ${busy ? "enabled" : "cleared"} - suspending reads');
+  }
   String? get error => _error;
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _availableChannels.length;
@@ -1950,8 +1958,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                       })
                   .toList();
             }
-            await _db.clearPrograms();
-            await _db.insertAllPrograms(dbPayload);
+            _db.beginBulkWrite();
+            try {
+              await _db.clearPrograms();
+              await _db.insertAllPrograms(dbPayload);
+            } finally {
+              _db.endBulkWrite();
+            }
             debugLog(
                 'EPG: Persisted ${_programsByChannel.length} channels to DB.');
           } catch (e) {

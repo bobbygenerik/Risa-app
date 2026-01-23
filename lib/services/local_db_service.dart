@@ -21,6 +21,7 @@ class LocalDbService {
   Completer<void>? _initCompleter;
   String? _dbPath;
   Future<void> _writeQueue = Future.value();
+  int _bulkWriteDepth = 0;
 
   bool get isReady => _isInit && _db != null;
 
@@ -79,7 +80,7 @@ class LocalDbService {
             // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
             await db.rawQuery('PRAGMA journal_mode=WAL');
             await db.rawQuery('PRAGMA synchronous=NORMAL');
-            await db.rawQuery('PRAGMA busy_timeout=3000');
+            await db.rawQuery('PRAGMA busy_timeout=20000');
           } catch (_) {
             // Best-effort; continue without WAL if platform rejects PRAGMA.
           }
@@ -226,8 +227,30 @@ class LocalDbService {
       await init();
     }
     // With WAL enabled, multiple readers can proceed while a writer is active.
-    // Removed wait for _writeQueue to keep the UI snappy during large EPG/playlist imports.
+    // If a bulk write is running, wait to avoid database lock warnings.
+    if (_bulkWriteDepth > 0) {
+      await _writeQueue;
+    }
     return _withDb(action);
+  }
+
+  Future<T> _withBulkWrite<T>(Future<T> Function() action) async {
+    beginBulkWrite();
+    try {
+      return await action();
+    } finally {
+      endBulkWrite();
+    }
+  }
+
+  void beginBulkWrite() {
+    _bulkWriteDepth++;
+  }
+
+  void endBulkWrite() {
+    if (_bulkWriteDepth > 0) {
+      _bulkWriteDepth--;
+    }
   }
 
   Future<T> _queueWrite<T>(Future<T> Function(Database db) action) {
@@ -498,44 +521,49 @@ class LocalDbService {
 
   Future<void> insertChannels(List<Map<String, dynamic>> channels) async {
     if (channels.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        for (var i = 0; i < channels.length; i++) {
-          final c = channels[i];
-          batch.insert(
-            'channels',
-            {
-              'id': c['id'],
-              'name': c['name'],
-              'url': c['url'],
-              'logoUrl': c['logoUrl'],
-              'groupTitle': c['groupTitle'],
-              'tvgId': c['tvgId'],
-              'channelNumber': c['channelNumber'],
-              'attrs':
-                  c['attributes'] != null ? json.encode(c['attributes']) : null,
-              'isHD': c['isHD'] == true ? 1 : 0,
-              'isFavorite': c['isFavorite'] == true ? 1 : 0,
-              'language': c['language'],
-              'country': c['country'],
-              'isHidden': c['isHidden'] == true ? 1 : 0,
-              'sortOrder': c['sortOrder'],
-              'idx': i,
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        await batch.commit(noResult: true);
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          final batch = txn.batch();
+          for (var i = 0; i < channels.length; i++) {
+            final c = channels[i];
+            batch.insert(
+              'channels',
+              {
+                'id': c['id'],
+                'name': c['name'],
+                'url': c['url'],
+                'logoUrl': c['logoUrl'],
+                'groupTitle': c['groupTitle'],
+                'tvgId': c['tvgId'],
+                'channelNumber': c['channelNumber'],
+                'attrs': c['attributes'] != null
+                    ? json.encode(c['attributes'])
+                    : null,
+                'isHD': c['isHD'] == true ? 1 : 0,
+                'isFavorite': c['isFavorite'] == true ? 1 : 0,
+                'language': c['language'],
+                'country': c['country'],
+                'isHidden': c['isHidden'] == true ? 1 : 0,
+                'sortOrder': c['sortOrder'],
+                'idx': i,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await batch.commit(noResult: true);
+        });
       });
     });
   }
 
   Future<void> clearEpg() async {
-    await _queueWrite((db) async {
-      await db.delete('epg_programs');
-      await db.delete('epg_mapping');
-      await db.delete('epg_channel_hash');
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.delete('epg_programs');
+        await db.delete('epg_mapping');
+        await db.delete('epg_channel_hash');
+      });
     });
   }
 
@@ -547,17 +575,19 @@ class LocalDbService {
 
   Future<void> upsertEpgMapping(Map<String, String> mappings) async {
     if (mappings.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        mappings.forEach((channelId, epgId) {
-          batch.insert(
-            'epg_mapping',
-            {'channelId': channelId, 'epgId': epgId},
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          final batch = txn.batch();
+          mappings.forEach((channelId, epgId) {
+            batch.insert(
+              'epg_mapping',
+              {'channelId': channelId, 'epgId': epgId},
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          });
+          await batch.commit(noResult: true);
         });
-        await batch.commit(noResult: true);
       });
     });
   }
@@ -580,28 +610,30 @@ class LocalDbService {
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        if (clearExisting) {
-          await txn
-              .delete('epg_programs', where: 'epgId = ?', whereArgs: [epgId]);
-        }
-        final batch = txn.batch();
-        for (final p in programs) {
-          batch.insert(
-            'epg_programs',
-            {
-              'epgId': epgId,
-              'startTs': p['startTs'],
-              'endTs': p['endTs'],
-              'title': p['title'],
-              'description': p['description'],
-              'imageUrl': p['imageUrl'],
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        await batch.commit(noResult: true);
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          if (clearExisting) {
+            await txn.delete('epg_programs',
+                where: 'epgId = ?', whereArgs: [epgId]);
+          }
+          final batch = txn.batch();
+          for (final p in programs) {
+            batch.insert(
+              'epg_programs',
+              {
+                'epgId': epgId,
+                'startTs': p['startTs'],
+                'endTs': p['endTs'],
+                'title': p['title'],
+                'description': p['description'],
+                'imageUrl': p['imageUrl'],
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await batch.commit(noResult: true);
+        });
       });
     });
   }
@@ -683,9 +715,11 @@ class LocalDbService {
 
   /// Clear all programs from DB.
   Future<void> clearPrograms() async {
-    await _queueWrite((db) async {
-      await db.delete('epg_programs');
-      await db.delete('epg_channel_hash');
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.delete('epg_programs');
+        await db.delete('epg_channel_hash');
+      });
     });
   }
 
@@ -699,17 +733,19 @@ class LocalDbService {
 
   Future<void> upsertEpgChannelHashes(Map<String, String> hashes) async {
     if (hashes.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        hashes.forEach((epgId, hash) {
-          batch.insert(
-            'epg_channel_hash',
-            {'epgId': epgId, 'hash': hash},
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          final batch = txn.batch();
+          hashes.forEach((epgId, hash) {
+            batch.insert(
+              'epg_channel_hash',
+              {'epgId': epgId, 'hash': hash},
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          });
+          await batch.commit(noResult: true);
         });
-        await batch.commit(noResult: true);
       });
     });
   }
@@ -717,27 +753,29 @@ class LocalDbService {
   /// Bulk insert programs for multiple channels.
   Future<void> insertAllPrograms(Map<String, List<Map<String, dynamic>>> programsByChannel) async {
     if (programsByChannel.isEmpty) return;
-    await _queueWrite((db) async {
-      await db.transaction((txn) async {
-        final batch = txn.batch();
-        for (final entry in programsByChannel.entries) {
-          final epgId = entry.key;
-          for (final p in entry.value) {
-            batch.insert(
-              'epg_programs',
-              {
-                'epgId': epgId,
-                'startTs': p['startTs'],
-                'endTs': p['endTs'],
-                'title': p['title'],
-                'description': p['description'],
-                'imageUrl': p['imageUrl'],
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          final batch = txn.batch();
+          for (final entry in programsByChannel.entries) {
+            final epgId = entry.key;
+            for (final p in entry.value) {
+              batch.insert(
+                'epg_programs',
+                {
+                  'epgId': epgId,
+                  'startTs': p['startTs'],
+                  'endTs': p['endTs'],
+                  'title': p['title'],
+                  'description': p['description'],
+                  'imageUrl': p['imageUrl'],
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
           }
-        }
-        await batch.commit(noResult: true);
+          await batch.commit(noResult: true);
+        });
       });
     });
   }

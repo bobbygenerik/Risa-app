@@ -5913,6 +5913,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _suspendArtworkCaches = true;
     _suspendHeroBackground = true;
 
+    // INSTRUMENTATION: Log channel tap details
+    final channelId = channel.tvgId ?? channel.id;
+    final streamUrl = channel.url;
+    debugLog('=== CHANNEL TAP START ===');
+    debugLog('Channel: ${channel.name} (ID: $channelId)');
+    debugLog('Stream URL: $streamUrl');
+    debugLog('Group: ${channel.groupTitle ?? "none"}');
+    logToSystem('TAP: ${channel.name} -> $streamUrl', name: 'RisaTap');
+
     // Aggressive memory cleanup before player
     _releaseArtworkCachesForPlayback();
     MemoryManager.checkMemoryPressure();
@@ -5924,7 +5933,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     if (!mounted) return;
     try {
+      debugLog('Navigating to player screen...');
       await context.push('/player', extra: channel);
+      debugLog('=== CHANNEL TAP END (returned from player) ===');
+    } catch (e, st) {
+      debugLog('=== CHANNEL TAP ERROR ===');
+      debugLog('Error: $e');
+      debugLog('Stack: $st');
+      logToSystem('TAP ERROR: $e', name: 'RisaTap');
     } finally {
       if (mounted) {
         _isOpeningPlayer = false;

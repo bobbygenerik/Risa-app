@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 /// Abstract interface for a video player controller.
 /// This allows swapping player backends behind a single API.
@@ -114,7 +115,19 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
             ]),
           ),
         ) {
-    _controller.addListener(_onVlcUpdate);
+    debugLog('=== VLC CONTROLLER CONSTRUCTOR ===');
+    debugLog('URL: $url');
+    debugLog('autoPlay: $autoPlay, isLive: $isLive, hwAcc: $hardwareAcceleration');
+    logToSystem('VLC CTOR: $url', name: 'RisaVLC');
+    try {
+      _controller.addListener(_onVlcUpdate);
+      debugLog('VLC listener attached successfully');
+    } catch (e, st) {
+      debugLog('=== VLC LISTENER ATTACH ERROR ===');
+      debugLog('Error: $e');
+      debugLog('Stack: $st');
+      logToSystem('VLC LISTENER ERROR: $e', name: 'RisaVLC');
+    }
   }
 
   VlcPlayerController get vlcController => _controller;
@@ -164,23 +177,28 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
 
   @override
   Future<void> initialize() async {
-    if (_controller.value.isInitialized) {
-      _syncValue(_controller.value);
-      return;
-    }
-    final completer = Completer<void>();
-    void listener() {
+    try {
       if (_controller.value.isInitialized) {
-        _controller.removeListener(listener);
         _syncValue(_controller.value);
-        if (!completer.isCompleted) {
-          completer.complete();
+        return;
+      }
+      final completer = Completer<void>();
+      void listener() {
+        if (_controller.value.isInitialized) {
+          _controller.removeListener(listener);
+          _syncValue(_controller.value);
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
         }
       }
+      _controller.addListener(listener);
+      listener();
+      await completer.future;
+    } catch (e, st) {
+      debugLog('VLC initialize error: $e');
+      debugLog(st.toString());
     }
-    _controller.addListener(listener);
-    listener();
-    await completer.future;
   }
 
   @override
@@ -189,7 +207,10 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       _pendingPlay = true;
       return Future.value();
     }
-    return _controller.play();
+    return _controller.play().catchError((e, st) {
+      debugLog('VLC play error: $e');
+      debugLog(st.toString());
+    });
   }
 
   @override
@@ -198,7 +219,10 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
     if (!_controller.value.isInitialized) {
       return Future.value();
     }
-    return _controller.pause();
+    return _controller.pause().catchError((e, st) {
+      debugLog('VLC pause error: $e');
+      debugLog(st.toString());
+    });
   }
 
   @override
@@ -207,7 +231,10 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       _pendingSeek = position;
       return Future.value();
     }
-    return _controller.seekTo(position);
+    return _controller.seekTo(position).catchError((e, st) {
+      debugLog('VLC seek error: $e');
+      debugLog(st.toString());
+    });
   }
 
   @override
@@ -217,7 +244,10 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       _pendingVolume = scaled;
       return Future.value();
     }
-    return _controller.setVolume(scaled);
+    return _controller.setVolume(scaled).catchError((e, st) {
+      debugLog('VLC volume error: $e');
+      debugLog(st.toString());
+    });
   }
 
   @override
@@ -228,7 +258,12 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   Future<void> dispose() async {
     _isDisposed = true;
     _controller.removeListener(_onVlcUpdate);
-    await _controller.dispose();
+    try {
+      await _controller.dispose();
+    } catch (e, st) {
+      debugLog('VLC dispose error: $e');
+      debugLog(st.toString());
+    }
     super.dispose();
   }
 }
