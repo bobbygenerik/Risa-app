@@ -154,20 +154,26 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
 
   void _onVlcUpdate() {
     _syncValue(_controller.value);
-    if (_controller.value.isInitialized) {
+    if (_controller.value.isInitialized && !_controller.value.hasError) {
       if (_pendingVolume != null) {
         final volume = _pendingVolume!;
         _pendingVolume = null;
-        _controller.setVolume(volume);
+        _controller.setVolume(volume).catchError((e) {
+          debugLog('VLC setVolume error: $e');
+        });
       }
       if (_pendingSeek != null) {
         final position = _pendingSeek!;
         _pendingSeek = null;
-        _controller.seekTo(position);
+        _controller.seekTo(position).catchError((e) {
+           debugLog('VLC seekTo error: $e');
+        });
       }
       if (_pendingPlay) {
         _pendingPlay = false;
-        _controller.play();
+        _controller.play().catchError((e) {
+           debugLog('VLC play error: $e');
+        });
       }
     }
   }
@@ -190,10 +196,17 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
           if (!completer.isCompleted) {
             completer.complete();
           }
+        } else if (_controller.value.hasError) {
+           _controller.removeListener(listener);
+           _syncValue(_controller.value);
+            if (!completer.isCompleted) {
+            // Don't error, just complete so UI can read the error state from value
+            completer.complete();
+          }
         }
       }
       _controller.addListener(listener);
-      listener();
+      listener(); // Check appropriately in case already ready/error
       await completer.future;
     } catch (e, st) {
       if (e.toString().contains('PlatformException')) {
@@ -204,7 +217,6 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
           isPlaying: false,
         );
         notifyListeners();
-        // Don't rethrow, let the UI handle the error state
       } else {
         debugLog('VLC initialize error: $e');
         debugLog(st.toString());

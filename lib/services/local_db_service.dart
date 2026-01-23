@@ -226,11 +226,8 @@ class LocalDbService {
     if (!_isInit) {
       await init();
     }
-    // With WAL enabled, multiple readers can proceed while a writer is active.
-    // If a bulk write is running, wait to avoid database lock warnings.
-    if (_bulkWriteDepth > 0) {
-      await _writeQueue;
-    }
+    // WAL mode allows concurrent readers/writers. 
+    // Removed manual blocking check regarding _bulkWriteDepth to prevent UI freezes.
     return _withDb(action);
   }
 
@@ -782,17 +779,35 @@ class LocalDbService {
   /// Bulk insert programs for multiple channels.
   Future<void> insertAllPrograms(Map<String, List<Map<String, dynamic>>> programsByChannel) async {
     if (programsByChannel.isEmpty) return;
-    await _withBulkWrite(() async {
-      await _queueWrite((db) async {
-        await db.transaction((txn) async {
-          final batch = txn.batch();
-          for (final entry in programsByChannel.entries) {
-            final epgId = entry.key;
-            for (final p in entry.value) {
+
+    // Flatten all programs into a single list for batching
+    final allPrograms = <Map<String, dynamic>>[];
+    for (final entry in programsByChannel.entries) {
+      final epgId = entry.key;
+      for (final p in entry.value) {
+        // Create a copy of the map to inject epgId efficiently
+        final programData = Map<String, dynamic>.from(p);
+        programData['epgId'] = epgId;
+        allPrograms.add(programData);
+      }
+    }
+
+    if (allPrograms.isEmpty) return;
+
+    const int batchSize = 500;
+    for (var i = 0; i < allPrograms.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, allPrograms.length);
+      final chunk = allPrograms.sublist(i, end);
+
+      await _withBulkWrite(() async {
+        await _queueWrite((db) async {
+          await db.transaction((txn) async {
+            final batch = txn.batch();
+            for (final p in chunk) {
               batch.insert(
                 'epg_programs',
                 {
-                  'epgId': epgId,
+                  'epgId': p['epgId'],
                   'startTs': p['startTs'],
                   'endTs': p['endTs'],
                   'title': p['title'],
@@ -802,11 +817,16 @@ class LocalDbService {
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
             }
-          }
-          await batch.commit(noResult: true);
+            await batch.commit(noResult: true);
+          });
         });
       });
-    });
+
+      // Yield to event loop to keep UI responsive
+      if (i + batchSize < allPrograms.length) {
+        await Future.delayed(Duration.zero);
+      }
+    }
   }
 
   Map<String, dynamic> _hydrateAttrs(Map<String, dynamic> row) {

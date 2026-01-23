@@ -4439,12 +4439,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             (processed == 500 || processed % 5000 == 0)) {
           onProgress(processed, totalPrograms);
         }
-        // Optimized throttling: Notify early for initial view, then throttle heavily.
-        // Notify at 500 (initial screen population), then every 10k items or 500ms.
+        // Optimized throttling: Notify early for initial view, then throttle.
+        // Notify at 500, then more frequently to ensure UI stays responsive.
         if (processed == 500 ||
             (processed > 500 &&
-                processed % 10000 == 0 &&
-                yieldClock.elapsedMilliseconds >= 500)) {
+                processed % 1000 == 0 &&
+                yieldClock.elapsedMilliseconds >= 100)) {
           // Brief yield to allow UI frame rendering
           await Future.delayed(const Duration(milliseconds: 0));
           notifyListeners();
