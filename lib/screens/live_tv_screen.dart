@@ -6017,6 +6017,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
     }
 
+    // Force skeleton loader if EPG is doing initial heavy lifting or parsing
+    // This ensures the user sees "Loading..." instead of a partially empty screen.
+    final epgService = context.watch<IncrementalEpgService>();
+    final isInitialLoad = epgService.isLoading || epgService.isParsing;
+    
+    // Check if we have enough content to show a useful screen
+    final channelCount = _categoryChannelCache.values
+        .fold<int>(0, (sum, list) => sum + list.length);
+    final hasContent = channelCount > 10;
+
+    // Show skeleton if we are loading AND don't have enough content yet
+    if (isInitialLoad && !hasContent) {
+      return _buildSkeletonLoaderTracked(
+        showColdStartOverlay: true,
+        titleText: 'Loading TV Guide',
+        statusText: epgService.epgProgressLabel ?? 'Parsing channels...',
+        progress: epgService.epgProgress > 0 ? epgService.epgProgress : null,
+      );
+    }
+
     return SizedBox.expand(
       child: DecoratedBox(
         decoration: heroGradient,

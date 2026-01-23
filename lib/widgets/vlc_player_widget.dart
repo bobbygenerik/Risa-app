@@ -145,6 +145,8 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   void _attachVlcInitListener() {
     final controller = _controller;
     if (controller is! VlcUniversalPlayerController) return;
+    if (controller.vlcController == null) return;
+    
     _detachVlcInitListener();
     final initStart = DateTime.now();
     _vlcInitListener = () {
@@ -153,11 +155,11 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       final initDuration = DateTime.now().difference(initStart);
       debugLog(
           'Player init ready in ${initDuration.inMilliseconds}ms for ${widget.url}');
-      controller.vlcController.play().catchError((e) {
+      controller.vlcController?.play().catchError((e) {
         debugLog('Player play() error: $e');
       });
     };
-    controller.vlcController.addOnInitListener(_vlcInitListener!);
+    controller.vlcController!.addOnInitListener(_vlcInitListener!);
   }
 
   void _detachVlcInitListener() {
@@ -165,7 +167,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     if (controller is! VlcUniversalPlayerController) return;
     final listener = _vlcInitListener;
     if (listener != null) {
-      controller.vlcController.removeOnInitListener(listener);
+      controller.vlcController?.removeOnInitListener(listener);
     }
     _vlcInitListener = null;
   }
@@ -200,8 +202,17 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
                 constraints.maxHeight > 0)
             ? (constraints.maxWidth / constraints.maxHeight)
             : (16 / 9);
+        
+        final vlc = controller.vlcController;
+        // If not initialized yet, show loading
+        if (vlc == null) {
+           return const Center(
+             child: CircularProgressIndicator(color: Colors.white),
+           );
+        }
+            
         return ValueListenableBuilder<VlcPlayerValue>(
-          valueListenable: controller.vlcController,
+          valueListenable: vlc,
           builder: (context, value, _) {
             final aspectRatio = value.isInitialized
                 ? value.aspectRatio
@@ -213,7 +224,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
                 width: constraints.maxWidth,
                 height: constraints.maxWidth / aspectRatio,
                 child: VlcPlayer(
-                  controller: controller.vlcController,
+                  controller: vlc,
                   aspectRatio: aspectRatio,
                   placeholder: const Center(
                     child: CircularProgressIndicator(),

@@ -83,54 +83,33 @@ class UniversalPlayerValue {
 
 /// Implementation wrapping VLC.
 class VlcUniversalPlayerController extends UniversalPlayerController {
-  final VlcPlayerController _controller;
+  VlcPlayerController? _controller;
   UniversalPlayerValue _value = const UniversalPlayerValue();
   bool _isDisposed = false;
   bool _pendingPlay = false;
   Duration? _pendingSeek;
   int? _pendingVolume;
+  
+  // Config parameters stored for lazy init
+  final String _url;
+  final bool _autoPlay;
+  final bool _isLive;
+  final bool _hwAcc;
 
   VlcUniversalPlayerController(
     String url, {
     bool autoPlay = true,
     bool isLive = false,
     bool hardwareAcceleration = true,
-  }) : _controller = VlcPlayerController.network(
-          url,
-          autoPlay: autoPlay,
-          hwAcc: hardwareAcceleration ? HwAcc.auto : HwAcc.disabled,
-          options: VlcPlayerOptions(
-            advanced: VlcAdvancedOptions([
-              VlcAdvancedOptions.networkCaching(isLive ? 1200 : 800),
-              VlcAdvancedOptions.liveCaching(isLive ? 1200 : 800),
-              VlcAdvancedOptions.clockSynchronization(0),
-            ]),
-            http: VlcHttpOptions([
-              VlcHttpOptions.httpUserAgent(
-                HttpClientService().videoHeaders['User-Agent'] ??
-                    'VLC/3.0.0 LibVLC/3.0.0',
-              ),
-              VlcHttpOptions.httpReconnect(true),
-              VlcHttpOptions.httpContinuous(true),
-            ]),
-          ),
-        ) {
-    debugLog('=== VLC CONTROLLER CONSTRUCTOR ===');
-    debugLog('URL: $url');
-    debugLog('autoPlay: $autoPlay, isLive: $isLive, hwAcc: $hardwareAcceleration');
-    logToSystem('VLC CTOR: $url', name: 'RisaVLC');
-    try {
-      _controller.addListener(_onVlcUpdate);
-      debugLog('VLC listener attached successfully');
-    } catch (e, st) {
-      debugLog('=== VLC LISTENER ATTACH ERROR ===');
-      debugLog('Error: $e');
-      debugLog('Stack: $st');
-      logToSystem('VLC LISTENER ERROR: $e', name: 'RisaVLC');
-    }
+  }) : _url = url,
+       _autoPlay = autoPlay,
+       _isLive = isLive,
+       _hwAcc = hardwareAcceleration {
+     // No native init here
+     debugLog('VLC Lazy Controller Created for $_url');
   }
 
-  VlcPlayerController get vlcController => _controller;
+  VlcPlayerController? get vlcController => _controller;
 
   void _syncValue(VlcPlayerValue vlcValue) {
     if (_isDisposed) return;
@@ -153,25 +132,27 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   }
 
   void _onVlcUpdate() {
-    _syncValue(_controller.value);
-    if (_controller.value.isInitialized && !_controller.value.hasError) {
+    if (_controller == null) return;
+    _syncValue(_controller!.value);
+    if (_controller!.value.isInitialized && !_controller!.value.hasError) {
       if (_pendingVolume != null) {
         final volume = _pendingVolume!;
         _pendingVolume = null;
-        _controller.setVolume(volume).catchError((e) {
+        _controller!.setVolume(volume).catchError((e) {
           debugLog('VLC setVolume error: $e');
         });
       }
       if (_pendingSeek != null) {
         final position = _pendingSeek!;
         _pendingSeek = null;
-        _controller.seekTo(position).catchError((e) {
+        _controller!.seekTo(position).catchError((e) {
            debugLog('VLC seekTo error: $e');
         });
       }
-      if (_pendingPlay) {
+      // Only auto-play if explicitly pending OR if autoPlay was requested and we just initialized
+      if (_pendingPlay || (_autoPlay && !_value.isPlaying)) {
         _pendingPlay = false;
-        _controller.play().catchError((e) {
+        _controller!.play().catchError((e) {
            debugLog('VLC play error: $e');
         });
       }
@@ -183,109 +164,120 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
 
   @override
   Future<void> initialize() async {
+    if (_controller != null) return;
+    
     try {
-      if (_controller.value.isInitialized) {
-        _syncValue(_controller.value);
-        return;
-      }
+      debugLog('VLC initializing native controller...');
+      _controller = VlcPlayerController.network(
+        _url,
+        autoPlay: _autoPlay,
+        hwAcc: _hwAcc ? HwAcc.auto : HwAcc.disabled,
+        options: VlcPlayerOptions(
+          advanced: VlcAdvancedOptions([
+            VlcAdvancedOptions.networkCaching(_isLive ? 1200 : 800),
+            VlcAdvancedOptions.liveCaching(_isLive ? 1200 : 800),
+            VlcAdvancedOptions.clockSynchronization(0),
+          ]),
+          http: VlcHttpOptions([
+            VlcHttpOptions.httpUserAgent(
+              HttpClientService().videoHeaders['User-Agent'] ??
+                  'VLC/3.0.0 LibVLC/3.0.0',
+            ),
+            VlcHttpOptions.httpReconnect(true),
+            VlcHttpOptions.httpContinuous(true),
+          ]),
+        ),
+      );
+      
+      _controller!.addListener(_onVlcUpdate);
+      
+      // Wait for initialization signal
       final completer = Completer<void>();
       void listener() {
-        if (_controller.value.isInitialized) {
-          _controller.removeListener(listener);
-          _syncValue(_controller.value);
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        } else if (_controller.value.hasError) {
-           _controller.removeListener(listener);
-           _syncValue(_controller.value);
-            if (!completer.isCompleted) {
-            // Don't error, just complete so UI can read the error state from value
-            completer.complete();
-          }
+        if (_controller == null) return;
+        if (_controller!.value.isInitialized) {
+          _controller!.removeListener(listener);
+          _syncValue(_controller!.value);
+          if (!completer.isCompleted) completer.complete();
+        } else if (_controller!.value.hasError) {
+           _controller!.removeListener(listener);
+           _syncValue(_controller!.value);
+            if (!completer.isCompleted) completer.complete();
         }
       }
-      _controller.addListener(listener);
-      listener(); // Check appropriately in case already ready/error
+      _controller!.addListener(listener);
+      
+      // Safety timeout
+      Future.delayed(const Duration(seconds: 15), () {
+        if (!completer.isCompleted) {
+           debugLog('VLC init timeout');
+           completer.complete();
+        }
+      });
+      
       await completer.future;
     } catch (e, st) {
-      if (e.toString().contains('PlatformException')) {
-        debugLog('VLC initialize caught PlatformException: $e');
-        _value = _value.copyWith(
-          isInitialized: false,
-          errorDescription: 'Failed to initialize player: ${e.toString()}',
-          isPlaying: false,
-        );
-        notifyListeners();
-      } else {
-        debugLog('VLC initialize error: $e');
-        debugLog(st.toString());
-      }
+      debugLog('VLC initialize caught error: $e');
+      _value = _value.copyWith(
+        isInitialized: false,
+        errorDescription: 'Failed to initialize player: ${e.toString()}',
+        isPlaying: false,
+      );
+      notifyListeners();
     }
   }
 
   @override
   Future<void> play() {
-    if (!_controller.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized) {
       _pendingPlay = true;
+      // If we haven't initialized yet, try to do so
+      if (_controller == null) initialize();
       return Future.value();
     }
-    return _controller.play().catchError((e, st) {
-      debugLog('VLC play error: $e');
-      debugLog(st.toString());
-    });
+    return _controller!.play().catchError((e) => debugLog('VLC play error: $e'));
   }
 
   @override
   Future<void> pause() {
     _pendingPlay = false;
-    if (!_controller.value.isInitialized) {
-      return Future.value();
-    }
-    return _controller.pause().catchError((e, st) {
-      debugLog('VLC pause error: $e');
-      debugLog(st.toString());
-    });
+    if (_controller == null || !_controller!.value.isInitialized) return Future.value();
+    return _controller!.pause().catchError((e) => debugLog('VLC pause error: $e'));
   }
 
   @override
   Future<void> seekTo(Duration position) {
-    if (!_controller.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized) {
       _pendingSeek = position;
       return Future.value();
     }
-    return _controller.seekTo(position).catchError((e, st) {
-      debugLog('VLC seek error: $e');
-      debugLog(st.toString());
-    });
+    return _controller!.seekTo(position).catchError((e) => debugLog('VLC seek error: $e'));
   }
 
   @override
   Future<void> setVolume(double volume) {
     final scaled = (volume * 100).round().clamp(0, 100);
-    if (!_controller.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized) {
       _pendingVolume = scaled;
       return Future.value();
     }
-    return _controller.setVolume(scaled).catchError((e, st) {
-      debugLog('VLC volume error: $e');
-      debugLog(st.toString());
-    });
+    return _controller!.setVolume(scaled).catchError((e) => debugLog('VLC volume error: $e'));
   }
 
   @override
-  Future<void> setMuted(bool muted) =>
-      setVolume(muted ? 0.0 : 1.0);
+  Future<void> setMuted(bool muted) => setVolume(muted ? 0.0 : 1.0);
 
   @override
   Future<void> dispose() async {
     _isDisposed = true;
-    _controller.removeListener(_onVlcUpdate);
-    try {
-      await _controller.dispose();
-    } catch (e, st) {
-      debugLog('VLC dispose error: $e');
-      debugLog(st.toString());
+    if (_controller != null) {
+      _controller!.removeListener(_onVlcUpdate);
+      try {
+        await _controller!.dispose();
+      } catch (e) {
+        debugLog('VLC dispose error: $e');
+      }
+      _controller = null;
     }
     super.dispose();
   }
