@@ -2279,12 +2279,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     Future<void> runParseWithDecoder(
-        StreamTransformer<List<int>, String> decoder) async {
+        StreamTransformer<List<int>, String> decoder,
+        {bool useSanitizer = false}) async {
       final sink = tempFile.openWrite();
       final channelIcons = <String, String>{};
-      final charStream =
-          rawStreamProvider().transform(decoder).transform(sanitizeXmlStream());
-      final events = charStream.toXmlEvents().withParentEvents();
+      var charStream = rawStreamProvider().transform(decoder);
+      if (useSanitizer) {
+        charStream = charStream.transform(sanitizeXmlStream());
+      }
+      
+      // OPTIMIZATION: Removed .withParentEvents() as it's expensive and unused
+      final events = charStream.toXmlEvents();
       final elements = events.selectSubtreeEvents((event) =>
           event.name.endsWith('programme') || event.name.endsWith('channel'));
 
@@ -2435,33 +2440,53 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     var usedLenient = false;
     try {
-      // First attempt: UTF-8 but be lenient about malformed sequences
-      await runParseWithDecoder(const Utf8Decoder(allowMalformed: true));
-    } on FormatException catch (e) {
+      // First attempt: UTF-8, NO SANITIZATION (Fastest)
+      // Most files are clean UTF-8, so avoiding regex sanitization saves huge CPU
+      await runParseWithDecoder(const Utf8Decoder(allowMalformed: true),
+          useSanitizer: false);
+    } catch (e) {
+      // Don't log full stack for expected dirty XML errors to reduce noise
+      final msg = e.toString().toLowerCase();
+      final isXmlFormatError = msg.contains('format') || msg.contains('xml');
+      
+      if (isXmlFormatError) {
+        debugLog('EPG: Fast parse failed ($e) - retrying with sanitization...');
+      } else {
+        debugLog('EPG: Fast parse failed: $e');
+      }
+      
       hadXmlErrors = true;
-      debugLog('EPG: UTF-8 parse failed (will retry with Latin1): $e');
       channelIds.clear();
       normalizedChannels.clear();
       programCount = 0;
+      
       try {
-        await runParseWithDecoder(latin1.decoder);
-      } catch (e2, s2) {
-        hadXmlErrors = true;
-        debugLog('EPG: Latin1 retry also failed: $e2');
-        debugLog(s2.toString());
-        debugLog('EPG: Falling back to lenient parser after XML errors.');
+        // Second attempt: UTF-8 WITH SANITIZATION
+        await runParseWithDecoder(const Utf8Decoder(allowMalformed: true),
+            useSanitizer: true);
+      } catch (e2) {
+        debugLog('EPG: Sanitized UTF-8 failed ($e2) - retrying Latin1...');
         channelIds.clear();
         normalizedChannels.clear();
-        channelHashes.clear();
         programCount = 0;
-        tempFile = File(
-            '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
-        usedLenient = true;
-        await runLenientParse();
+        
+        try {
+          // Third attempt: Latin1 WITH SANITIZATION
+          await runParseWithDecoder(latin1.decoder, useSanitizer: true);
+        } catch (e3, s3) {
+          debugLog('EPG: Latin1 retry also failed: $e3');
+          debugLog(s3.toString());
+          debugLog('EPG: Falling back to lenient parser after XML errors.');
+          channelIds.clear();
+          normalizedChannels.clear();
+          channelHashes.clear();
+          programCount = 0;
+          tempFile = File(
+              '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
+          usedLenient = true;
+          await runLenientParse();
+        }
       }
-    } catch (e) {
-      // Pass through any other failures
-      rethrow;
     }
 
     if (!usedLenient && programCount < 1000) {
