@@ -86,7 +86,6 @@ class ImageFailureCache {
   }
 
   static bool _isPermanentError(Object error, String url) {
-    final message = error.toString().toLowerCase();
     if (_isDecoderFailure(error)) {
       return true;
     }

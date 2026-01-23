@@ -196,8 +196,19 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       listener();
       await completer.future;
     } catch (e, st) {
-      debugLog('VLC initialize error: $e');
-      debugLog(st.toString());
+      if (e.toString().contains('PlatformException')) {
+        debugLog('VLC initialize caught PlatformException: $e');
+        _value = _value.copyWith(
+          isInitialized: false,
+          errorDescription: 'Failed to initialize player: ${e.toString()}',
+          isPlaying: false,
+        );
+        notifyListeners();
+        // Don't rethrow, let the UI handle the error state
+      } else {
+        debugLog('VLC initialize error: $e');
+        debugLog(st.toString());
+      }
     }
   }
 

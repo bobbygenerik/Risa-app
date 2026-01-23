@@ -521,40 +521,53 @@ class LocalDbService {
 
   Future<void> insertChannels(List<Map<String, dynamic>> channels) async {
     if (channels.isEmpty) return;
-    await _withBulkWrite(() async {
-      await _queueWrite((db) async {
-        await db.transaction((txn) async {
-          final batch = txn.batch();
-          for (var i = 0; i < channels.length; i++) {
-            final c = channels[i];
-            batch.insert(
-              'channels',
-              {
-                'id': c['id'],
-                'name': c['name'],
-                'url': c['url'],
-                'logoUrl': c['logoUrl'],
-                'groupTitle': c['groupTitle'],
-                'tvgId': c['tvgId'],
-                'channelNumber': c['channelNumber'],
-                'attrs': c['attributes'] != null
-                    ? json.encode(c['attributes'])
-                    : null,
-                'isHD': c['isHD'] == true ? 1 : 0,
-                'isFavorite': c['isFavorite'] == true ? 1 : 0,
-                'language': c['language'],
-                'country': c['country'],
-                'isHidden': c['isHidden'] == true ? 1 : 0,
-                'sortOrder': c['sortOrder'],
-                'idx': i,
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-          }
-          await batch.commit(noResult: true);
+    
+    // Batch inserts to avoid locking DB for too long
+    const int batchSize = 500;
+
+    for (var i = 0; i < channels.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, channels.length);
+      final chunk = channels.sublist(i, end);
+
+      await _withBulkWrite(() async {
+        await _queueWrite((db) async {
+          await db.transaction((txn) async {
+            final batch = txn.batch();
+            for (final c in chunk) {
+              batch.insert(
+                'channels',
+                {
+                  'id': c['id'],
+                  'name': c['name'],
+                  'url': c['url'],
+                  'logoUrl': c['logoUrl'],
+                  'groupTitle': c['groupTitle'],
+                  'tvgId': c['tvgId'],
+                  'channelNumber': c['channelNumber'],
+                  'attrs': c['attributes'] != null
+                      ? json.encode(c['attributes'])
+                      : null,
+                  'isHD': c['isHD'] == true ? 1 : 0,
+                  'isFavorite': c['isFavorite'] == true ? 1 : 0,
+                  'language': c['language'],
+                  'country': c['country'],
+                  'isHidden': c['isHidden'] == true ? 1 : 0,
+                  'sortOrder': c['sortOrder'],
+                  'idx': c['idx'] ?? (i + channels.indexOf(c)), // Ensure idx is preserved or generated
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+            await batch.commit(noResult: true);
+          });
         });
       });
-    });
+
+      // Allow UI interrupts between batches
+      if (i + batchSize < channels.length) {
+        await Future.delayed(Duration.zero);
+      }
+    }
   }
 
   Future<void> clearEpg() async {
@@ -610,32 +623,48 @@ class LocalDbService {
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
-    await _withBulkWrite(() async {
-      await _queueWrite((db) async {
-        await db.transaction((txn) async {
-          if (clearExisting) {
-            await txn.delete('epg_programs',
-                where: 'epgId = ?', whereArgs: [epgId]);
-          }
-          final batch = txn.batch();
-          for (final p in programs) {
-            batch.insert(
-              'epg_programs',
-              {
-                'epgId': epgId,
-                'startTs': p['startTs'],
-                'endTs': p['endTs'],
-                'title': p['title'],
-                'description': p['description'],
-                'imageUrl': p['imageUrl'],
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-          }
-          await batch.commit(noResult: true);
+    
+    // Use smaller chunks to prevent holding the lock for too long
+    const int batchSize = 500;
+    
+    // If clearing, do it in a separate transaction first
+    if (clearExisting) {
+      await _queueWrite((db) => db.delete('epg_programs',
+          where: 'epgId = ?', whereArgs: [epgId]));
+    }
+
+    for (var i = 0; i < programs.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, programs.length);
+      final chunk = programs.sublist(i, end);
+      
+      await _withBulkWrite(() async {
+        await _queueWrite((db) async {
+          await db.transaction((txn) async {
+            final batch = txn.batch();
+            for (final p in chunk) {
+              batch.insert(
+                'epg_programs',
+                {
+                  'epgId': epgId,
+                  'startTs': p['startTs'],
+                  'endTs': p['endTs'],
+                  'title': p['title'],
+                  'description': p['description'],
+                  'imageUrl': p['imageUrl'],
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+            await batch.commit(noResult: true);
+          });
         });
       });
-    });
+      
+      // Small breathe window for UI/readers between batches
+      if (i + batchSize < programs.length) {
+        await Future.delayed(Duration.zero);
+      }
+    }
   }
 
   Future<Map<String, dynamic>?> getCurrentProgram(String epgId) async {

@@ -2976,7 +2976,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         try {
           final decoded = jsonDecode(line);
           if (decoded is Map) {
-            allChannels.add(Map<String, dynamic>.from(decoded as Map));
+            allChannels.add(Map<String, dynamic>.from(decoded));
             parsedCount++;
             if (parsedCount % 500 == 0) {
               final now = DateTime.now();
