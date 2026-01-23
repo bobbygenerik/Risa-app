@@ -59,7 +59,6 @@ class HttpClientService {
         'Connection': 'keep-alive',
         'Accept': '*/*',
         'Cache-Control': 'no-cache',
-        'Range': 'bytes=0-',
       };
 
   Map<String, String> get imageHeaders => {

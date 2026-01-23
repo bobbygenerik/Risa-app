@@ -25,7 +25,7 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     bool isLive = false,
     bool preferStockOnLive = true,
     String? backend,
-    bool hardwareAcceleration = true,
+    bool hardwareAcceleration = false, // Changed default to false for stability
   }) {
     return VlcUniversalPlayerController(
       url,
@@ -100,13 +100,13 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
     String url, {
     bool autoPlay = true,
     bool isLive = false,
-    bool hardwareAcceleration = true,
+    bool hardwareAcceleration = false, // Changed default to false
   }) : _url = url,
        _autoPlay = autoPlay,
        _isLive = isLive,
        _hwAcc = hardwareAcceleration {
      // No native init here
-     debugLog('VLC Lazy Controller Created for $_url');
+     debugLog('VLC Lazy Controller Created for $_url (HW Acc: $_hwAcc)');
   }
 
   VlcPlayerController? get vlcController => _controller;
@@ -216,7 +216,7 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       });
       
       await completer.future;
-    } catch (e, st) {
+    } catch (e) {
       debugLog('VLC initialize caught error: $e');
       _value = _value.copyWith(
         isInitialized: false,
