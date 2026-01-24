@@ -37,7 +37,10 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   @override
   void initState() {
     super.initState();
-    _initializeController();
+    // Create controller in postFrameCallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _initializeController();
+    });
   }
 
   @override
