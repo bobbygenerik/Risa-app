@@ -522,10 +522,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _playerController = controller;
     if (controller == null) return;
     // Start a watchdog to detect if no video frames appear after reasonable time
-    // Use 8 seconds to account for slow connections and buffering
+    // Use 15 seconds to account for slow connections and buffering
     _videoAvailabilityTimer?.cancel();
     _videoUnavailable = false;
-    _videoAvailabilityTimer = Timer(const Duration(seconds: 8), () {
+    _videoAvailabilityTimer = Timer(const Duration(seconds: 15), () {
       if (!mounted) return;
       final value = controller.value;
       // If renderer size is zero after timeout AND not buffering, consider video unavailable

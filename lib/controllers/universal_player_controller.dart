@@ -25,7 +25,7 @@ abstract class UniversalPlayerController extends ChangeNotifier {
     bool isLive = false,
     bool preferStockOnLive = true,
     String? backend,
-    bool hardwareAcceleration = false, // Changed default to false for stability
+    bool hardwareAcceleration = true, // Re-enabled HW acceleration for performance
   }) {
     return VlcUniversalPlayerController(
       url,
@@ -100,7 +100,7 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
     String url, {
     bool autoPlay = true,
     bool isLive = false,
-    bool hardwareAcceleration = false, // Changed default to false
+    bool hardwareAcceleration = true, // Default to true
   }) : _url = url,
        _autoPlay = autoPlay,
        _isLive = isLive,
@@ -174,8 +174,8 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
         hwAcc: _hwAcc ? HwAcc.auto : HwAcc.disabled,
         options: VlcPlayerOptions(
           advanced: VlcAdvancedOptions([
-            VlcAdvancedOptions.networkCaching(_isLive ? 1200 : 800),
-            VlcAdvancedOptions.liveCaching(_isLive ? 1200 : 800),
+            VlcAdvancedOptions.networkCaching(3000),
+            VlcAdvancedOptions.liveCaching(3000),
             VlcAdvancedOptions.clockSynchronization(0),
           ]),
           http: VlcHttpOptions([
