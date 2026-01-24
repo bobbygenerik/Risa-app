@@ -1011,16 +1011,6 @@ final _router = GoRouter(
     GoRoute(
       path: '/multi-view',
       pageBuilder: (context, state) {
-        final data = state.extra;
-        List<Channel>? channels;
-        Channel? initialChannel;
-
-        if (data is List<Channel>) {
-          channels = data;
-        } else if (data is Channel) {
-          initialChannel = data;
-        }
-
         return _fadeSlidePage(
           key: state.pageKey,
           child: const SafePopScope(
