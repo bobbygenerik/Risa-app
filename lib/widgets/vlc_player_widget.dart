@@ -208,6 +208,20 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       return const Center(child: Text('Unsupported player controller'));
     }
 
+    // Trigger initialization on first build if not already done
+    if (controller.vlcController == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && controller.vlcController == null) {
+          controller.initialize().catchError((e) {
+            debugLog('VLC auto-initialize error: $e');
+          });
+        }
+      });
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final fallbackAspect = (constraints.maxWidth > 0 &&
@@ -215,13 +229,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
             ? (constraints.maxWidth / constraints.maxHeight)
             : (16 / 9);
         
-        final vlc = controller.vlcController;
-        // If not initialized yet, show loading
-        if (vlc == null) {
-           return const Center(
-             child: CircularProgressIndicator(color: Colors.white),
-           );
-        }
+        final vlc = controller.vlcController!;
             
         return ValueListenableBuilder<VlcPlayerValue>(
           valueListenable: vlc,
