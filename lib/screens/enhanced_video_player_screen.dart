@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../utils/debug_helper.dart';
@@ -46,15 +45,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isPlaying = false;
   bool _showGuide = false;
   double _progress = 0.0;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
   BoxFit _videoFit = BoxFit.contain;
   Timer? _controlsHideTimer;
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
   bool _playerReady = false;
   bool _playerLoadScheduled = false;
   bool _videoUnavailable = false;
-  Timer? _videoAvailabilityTimer;
 
   @override
   void initState() {

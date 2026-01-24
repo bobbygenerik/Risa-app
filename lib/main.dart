@@ -43,7 +43,7 @@ import 'package:iptv_player/screens/debug_screen.dart';
 import 'package:iptv_player/screens/exit_screen.dart';
 // modern_home_screen is unused in the redesigned UI; import removed to silence lints
 import 'package:iptv_player/screens/live_tv_screen.dart';
-import 'package:iptv_player/screens/multi_view_screen.dart';
+// import 'package:iptv_player/screens/multi_view_screen.dart';
 import 'package:iptv_player/widgets/safe_pop_scope.dart';
 
 import 'package:iptv_player/screens/favorites_screen.dart';
@@ -1023,10 +1023,11 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: SafePopScope(
-            child: MultiViewScreen(
-              channels: channels,
-              initialChannel: initialChannel,
+          child: const SafePopScope(
+            child: Scaffold(
+              body: Center(
+                child: Text('Multi-view temporarily disabled'),
+              ),
             ),
           ),
         );
