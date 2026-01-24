@@ -34,7 +34,7 @@ dependencies:
   go_router: ^17.0.1
   intl: ^0.20.2
   wakelock_plus: ^1.2.8
-  flutter_vlc_player: ^7.4.1
+  better_player: ^0.0.83
 
 
   animations: ^2.0.11

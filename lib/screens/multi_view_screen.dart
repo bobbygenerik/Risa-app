@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
-import '../controllers/universal_player_controller.dart';
 import 'enhanced_video_player_screen.dart';
 
 /// A simple 2x2 multi-view implementation using universal controllers.

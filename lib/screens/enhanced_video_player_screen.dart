@@ -13,8 +13,7 @@ import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../controllers/universal_player_controller.dart';
-import '../widgets/vlc_player_widget.dart';
+import '../widgets/better_player_widget.dart';
 import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
@@ -43,8 +42,6 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
   bool _isLoading = true;
-  final ValueNotifier<UniversalPlayerController?> _playerControllerNotifier =
-      ValueNotifier(null);
   bool _showControls = true;
   bool _isPlaying = false;
   bool _showGuide = false;
@@ -52,8 +49,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   BoxFit _videoFit = BoxFit.contain;
-  UniversalPlayerController? _playerController;
-  VoidCallback? _playerListener;
   Timer? _controlsHideTimer;
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
   bool _playerReady = false;
@@ -64,10 +59,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _playerControllerNotifier.addListener(_handleControllerUpdate);
     _initializePlayer();
     _schedulePlayerWarmup();
-    // Ensure our player focus node is ready and request focus once built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         FocusScope.of(context).requestFocus(_playerFocusNode);
@@ -116,8 +109,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         _transcriptionServiceRef!.removeListener(_transcriptionListener!);
       }
       _controlsHideTimer?.cancel();
-      _playerControllerNotifier.removeListener(_handleControllerUpdate);
-      _detachPlayerController();
     } catch (e) {
       debugLog('Error disposing video player: $e');
     }
@@ -231,17 +222,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            VlcPlayerWidget(
+                            BetterPlayerWidget(
                               url: widget.videoUrl ??
                                   widget.streamUrl ??
                                   widget.channel?.url ??
                                   '',
                               isLive: widget.isLive,
-                              transcriptionService:
-                                  Provider.of<IntegratedTranscriptionService>(context,
-                                      listen: false),
-                              controllerNotifier: _playerControllerNotifier,
-                              fit: _videoFit,
                             ),
                             if (_videoUnavailable)
                               Positioned.fill(
@@ -515,69 +501,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
-  void _handleControllerUpdate() {
-    final controller = _playerControllerNotifier.value;
-    if (controller == _playerController) return;
-    _detachPlayerController();
-    _playerController = controller;
-    if (controller == null) return;
-    // Start a watchdog to detect if no video frames appear after reasonable time
-    // Use 15 seconds to account for slow connections and buffering
-    _videoAvailabilityTimer?.cancel();
-    _videoUnavailable = false;
-    _videoAvailabilityTimer = Timer(const Duration(seconds: 15), () {
-      if (!mounted) return;
-      final value = controller.value;
-      // If renderer size is zero after timeout AND not buffering, consider video unavailable
-      // Also check if the player has any error state
-      if (value.size == Size.zero && !value.isBuffering) {
-        debugLog('Video watchdog: No frames after 15s, size=${value.size}, buffering=${value.isBuffering}, isInitialized=${value.isInitialized}, error=${value.errorDescription}');
-        setState(() => _videoUnavailable = true);
-      }
-      if (value.isInitialized && !value.isPlaying && !value.isBuffering) {
-        debugLog('Video watchdog: Player initialized but not playing, attempting to play...');
-        _playerController?.play().catchError((e) {
-          debugLog('Video watchdog: play() error: $e');
-        });
-      }
-    });
-    _playerListener = () {
-      final value = controller.value;
-      if (!mounted) return;
-      
-      // Clear "no video" overlay as soon as we get valid video frames
-      if (_videoUnavailable && value.size != Size.zero) {
-        debugLog('Video watchdog: Video became available, size=${value.size}');
-        _videoAvailabilityTimer?.cancel();
-        setState(() => _videoUnavailable = false);
-        return; // Skip the rest to avoid redundant setState
-      }
-      
-      setState(() {
-        _isPlaying = value.isPlaying;
-        _position = value.position;
-        _duration = value.duration;
-        if (value.duration.inMilliseconds > 0) {
-          _progress =
-              value.position.inMilliseconds / value.duration.inMilliseconds;
-        } else {
-          _progress = 0.0;
-        }
-      });
-    };
-    controller.addListener(_playerListener!);
-  }
-
-  void _detachPlayerController() {
-    if (_playerController != null && _playerListener != null) {
-      _playerController!.removeListener(_playerListener!);
-    }
-    _playerController = null;
-    _playerListener = null;
-    _videoAvailabilityTimer?.cancel();
-    _videoUnavailable = false;
-  }
-
   void _hideControlsAfterDelay() {
     _controlsHideTimer?.cancel();
     _controlsHideTimer = Timer(const Duration(seconds: 8), () {
@@ -602,33 +525,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    final controller = _playerController;
-    if (controller == null) return;
-    if (controller.value.isPlaying) {
-      controller.pause();
-    } else {
-      controller.play();
-    }
+    // Better player has built-in controls
     _showControlsAndAutoHide();
   }
 
   void _rewind() {
-    final controller = _playerController;
-    if (controller == null) return;
-    final next = _position - const Duration(seconds: 10);
-    controller.seekTo(next.isNegative ? Duration.zero : next);
+    // Better player has built-in controls
     _showControlsAndAutoHide();
   }
 
   void _fastForward() {
-    final controller = _playerController;
-    if (controller == null) return;
-    final next = _position + const Duration(seconds: 10);
-    if (_duration.inMilliseconds > 0 && next > _duration) {
-      controller.seekTo(_duration);
-    } else {
-      controller.seekTo(next);
-    }
+    // Better player has built-in controls
     _showControlsAndAutoHide();
   }
 
@@ -641,7 +548,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _toggleMultiView() {
-    if (mounted) context.push('/multi-view');
+    showAppSnackBar(
+      context,
+      const SnackBar(content: Text('Multi-view temporarily disabled')),
+    );
   }
 
   void _toggleVideoFit() {
