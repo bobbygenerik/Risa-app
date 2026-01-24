@@ -13,7 +13,7 @@ import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../widgets/better_player_widget.dart';
+import '../widgets/chewie_player_widget.dart';
 import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
@@ -222,7 +222,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            BetterPlayerWidget(
+                            ChewiePlayerWidget(
                               url: widget.videoUrl ??
                                   widget.streamUrl ??
                                   widget.channel?.url ??
