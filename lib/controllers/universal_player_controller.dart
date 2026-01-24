@@ -93,7 +93,6 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
   // Config parameters stored for lazy init
   final String _url;
   final bool _autoPlay;
-  final bool _isLive;
   final bool _hwAcc;
 
   VlcUniversalPlayerController(
@@ -103,7 +102,6 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
     bool hardwareAcceleration = true, // Default to true
   }) : _url = url,
        _autoPlay = autoPlay,
-       _isLive = isLive,
        _hwAcc = hardwareAcceleration {
      // No native init here
      debugLog('VLC Lazy Controller Created for $_url (HW Acc: $_hwAcc)');
@@ -216,6 +214,14 @@ class VlcUniversalPlayerController extends UniversalPlayerController {
       });
       
       await completer.future;
+      
+      // Ensure playback starts if autoPlay is enabled
+      if (_autoPlay && _controller != null && _controller!.value.isInitialized && !_controller!.value.isPlaying) {
+        debugLog('VLC auto-play triggered after initialization');
+        await _controller!.play().catchError((e) {
+          debugLog('VLC auto-play error: $e');
+        });
+      }
     } catch (e) {
       debugLog('VLC initialize caught error: $e');
       _value = _value.copyWith(

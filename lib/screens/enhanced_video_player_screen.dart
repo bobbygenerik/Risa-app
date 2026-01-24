@@ -531,8 +531,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       // If renderer size is zero after timeout AND not buffering, consider video unavailable
       // Also check if the player has any error state
       if (value.size == Size.zero && !value.isBuffering) {
-        debugLog('Video watchdog: No frames after 8s, size=${value.size}, buffering=${value.isBuffering}');
+        debugLog('Video watchdog: No frames after 15s, size=${value.size}, buffering=${value.isBuffering}, isInitialized=${value.isInitialized}, error=${value.errorDescription}');
         setState(() => _videoUnavailable = true);
+      }
+      if (value.isInitialized && !value.isPlaying && !value.isBuffering) {
+        debugLog('Video watchdog: Player initialized but not playing, attempting to play...');
+        _playerController?.play().catchError((e) {
+          debugLog('Video watchdog: play() error: $e');
+        });
       }
     });
     _playerListener = () {
