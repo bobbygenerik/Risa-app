@@ -37,7 +37,12 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   @override
   void initState() {
     super.initState();
-    _initializeController();
+    // Delay controller creation to avoid PlatformException
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeController();
+      }
+    });
   }
 
   @override
@@ -59,42 +64,41 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     debugLog('VLC init: url=$url live=${widget.isLive} hw=$_hardwareAccelerationEnabled');
     logToSystem('VLC INIT: $url hw=$_hardwareAccelerationEnabled', name: 'RisaVLC');
     
-    // Delay controller creation until after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    try {
+      _controller = UniversalPlayerController.create(
+        url: url,
+        autoPlay: true,
+        isLive: widget.isLive,
+        preferStockOnLive: true,
+        backend: 'VLC',
+        hardwareAcceleration: _hardwareAccelerationEnabled,
+      );
+      debugLog('VLC controller created successfully');
       
-      try {
-        _controller = UniversalPlayerController.create(
-          url: url,
-          autoPlay: true,
-          isLive: widget.isLive,
-          preferStockOnLive: true,
-          backend: 'VLC',
-          hardwareAcceleration: _hardwareAccelerationEnabled,
-        );
-        debugLog('VLC controller created successfully');
-        
-        if (widget.controllerNotifier != null) {
-          widget.controllerNotifier!.value = _controller;
-        }
-        
-        _controller?.addListener(_onControllerUpdate);
-        _controller?.initialize().then((_) {
-          if (mounted) {
-            _attachVlcInitListener();
-            _startInitTimeout();
-          }
-        }).catchError((e) {
-          debugLog('VLC initialize error: $e');
-          _attemptFallback('init_error:$e');
-        });
-      } catch (e, st) {
-        debugLog('=== VLC CONTROLLER CREATE ERROR ===');
-        debugLog('Error: $e');
-        debugLog('Stack: $st');
-        logToSystem('VLC CREATE ERROR: $e', name: 'RisaVLC');
+      if (widget.controllerNotifier != null) {
+        widget.controllerNotifier!.value = _controller;
       }
-    });
+      
+      _controller?.addListener(_onControllerUpdate);
+      
+      // Trigger setState to rebuild with controller
+      if (mounted) setState(() {});
+      
+      _controller?.initialize().then((_) {
+        if (mounted) {
+          _attachVlcInitListener();
+          _startInitTimeout();
+        }
+      }).catchError((e) {
+        debugLog('VLC initialize error: $e');
+        _attemptFallback('init_error:$e');
+      });
+    } catch (e, st) {
+      debugLog('=== VLC CONTROLLER CREATE ERROR ===');
+      debugLog('Error: $e');
+      debugLog('Stack: $st');
+      logToSystem('VLC CREATE ERROR: $e', name: 'RisaVLC');
+    }
     
     debugLog('=== VLC WIDGET INIT COMPLETE ===');
   }
@@ -142,6 +146,9 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       }
       
       _controller?.addListener(_onControllerUpdate);
+      
+      if (mounted) setState(() {});
+      
       _controller?.initialize().then((_) {
         if (mounted) {
           _attachVlcInitListener();
@@ -210,6 +217,12 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    if (controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+    
     if (controller is! VlcUniversalPlayerController) {
       return const Center(child: Text('Unsupported player controller'));
     }
