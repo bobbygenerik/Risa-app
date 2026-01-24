@@ -21,8 +21,8 @@ class HttpClientService {
 
     // Configure Dio with connection pooling
     _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 20),
-      receiveTimeout: const Duration(minutes: 10),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {
         'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
         'Connection': 'keep-alive',

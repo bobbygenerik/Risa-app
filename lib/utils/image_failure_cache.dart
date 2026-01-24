@@ -1,6 +1,6 @@
 class ImageFailureCache {
-  static const int _recentFailureLimit = 3;
-  static const Duration _cooldown = Duration(minutes: 5);
+  static const int _recentFailureLimit = 5;
+  static const Duration _cooldown = Duration(minutes: 1);
   static bool _aggressiveMode = false;
 
   static final Map<String, int> _failures = {};
@@ -11,9 +11,9 @@ class ImageFailureCache {
   static DateTime? _globalCooldownUntil;
   static DateTime? _globalDisableUntil;
 
-  static const int _globalFailureThreshold = 8;
+  static const int _globalFailureThreshold = 15;
   static const Duration _globalWindow = Duration(seconds: 10);
-  static const Duration _globalCooldown = Duration(seconds: 20);
+  static const Duration _globalCooldown = Duration(seconds: 10);
   static const int _globalFailureThresholdAggressive = 3;
   static const Duration _globalCooldownAggressive = Duration(minutes: 2);
   static const Duration _globalDisableAggressive = Duration(minutes: 10);
@@ -54,6 +54,9 @@ class ImageFailureCache {
 
   static void recordFailure(String url, Object error) {
     if (url.isEmpty) return;
+    // Don't cache network timeouts - retry them
+    if (error.toString().toLowerCase().contains('timeout')) return;
+    
     _lastFailureAt[url] = DateTime.now();
     _failures[url] = (_failures[url] ?? 0) + 1;
     if (_isPermanentError(error, url)) {

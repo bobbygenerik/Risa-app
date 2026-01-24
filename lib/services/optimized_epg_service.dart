@@ -229,20 +229,23 @@ class OptimizedEpgService extends ChangeNotifier {
 
   String? _resolveEpgId(Channel channel) {
     if (channel.tvgId != null && channel.tvgId!.isNotEmpty) {
-      if (_normalizedEpgIds.containsValue(channel.tvgId)) {
-        return channel.tvgId;
-      }
       final normalizedTvg = _normalize(channel.tvgId!);
       if (_normalizedEpgIds.containsKey(normalizedTvg)) {
-        return _normalizedEpgIds[normalizedTvg];
+        final matched = _normalizedEpgIds[normalizedTvg]!;
+        debugLog('EPG Match: ${channel.name} -> $matched (from tvgId=${channel.tvgId})');
+        return matched;
       }
+      debugLog('EPG Miss: ${channel.name} tvgId=${channel.tvgId} normalized=$normalizedTvg not found');
     }
 
     final normalizedName = _normalize(channel.name);
     if (_normalizedEpgIds.containsKey(normalizedName)) {
-      return _normalizedEpgIds[normalizedName];
+      final matched = _normalizedEpgIds[normalizedName]!;
+      debugLog('EPG Match: ${channel.name} -> $matched (by name)');
+      return matched;
     }
 
+    debugLog('EPG Miss: ${channel.name} no match found');
     return null;
   }
 
