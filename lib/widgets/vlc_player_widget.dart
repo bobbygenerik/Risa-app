@@ -213,7 +213,7 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
 
     // Trigger initialization on first build if not already done
     if (controller.vlcController == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted && controller.vlcController == null) {
           controller.initialize().catchError((e) {
             debugLog('VLC auto-initialize error: $e');
