@@ -158,11 +158,6 @@ Future<void> clearPlaylistCache() async {
     await prefs.remove(ChannelProvider._playlistCacheFilePathKey);
   }
   // Remove JSON preview cache
-  final dir = await getApplicationDocumentsDirectory();
-  final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
-  if (await jsonCacheFile.exists()) {
-    await jsonCacheFile.delete();
-  }
   debugLog('ChannelProvider: Playlist cache cleared');
 }
 
@@ -1916,19 +1911,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final storedCounts =
           _loadPlaylistCounts(prefs: prefs, playlistUrl: playlistUrlForCounts);
       int? expectedChannels;
-      if (cacheAge != null && cacheAge < 21600000) {
-        try {
-          final dir = await getApplicationDocumentsDirectory();
-          final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
-          if (await jsonCacheFile.exists()) {
-            final parsed = json.decode(await jsonCacheFile.readAsString())
-                as Map<String, dynamic>;
-            expectedChannels = _asInt(parsed['channelCount']);
-          }
-        } catch (e) {
-          debugLog('ChannelProvider: Failed to read JSON cache metadata: $e');
-        }
-      }
       expectedChannels ??= storedCounts?['channels'];
       final cachedPlaylistUrl = playlistType == 'm3u'
           ? prefs.getString('m3u_url')
@@ -1964,8 +1946,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         }
         if (!skipDbLoad && count > 0) {
           debugLog('ChannelProvider: Found $count channels in DB, loading first chunk...');
-          // Load smaller initial chunk for faster cold start on Shield
-          final initialLimit = 1000; // Reduced from 2000 for Shield performance
+          final initialLimit = 1000;
           final channels = await _db.getChannelsPage(offset: 0, limit: initialLimit);
           
           if (channels.isNotEmpty) {
@@ -1983,13 +1964,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               channelCount: count,
             );
 
-            // CRITICAL: Pre-compute categories immediately so UI can display rows
-            // without waiting for lazy computation. This is the key fix for cold start.
             _invalidateCategoryCaches();
             unawaited(_loadCachedCategoriesFromPrefs());
-            
-            // CRITICAL: Trigger EPG service to load from its DB cache
-            // Without this, hasProgramsForChannel() returns false for all channels
             _updateEpgAllowedChannels();
             _scheduleEpgRefresh(forceRefresh: false);
             
@@ -1998,16 +1974,13 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 .markChannelCacheFresh(channelCount: count));
             StartupProbe.mark('ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
             
-            // Compute categories in background after UI is shown
             unawaited(() async {
               await _computeCategoriesAsync();
               notifyListeners();
             }());
             
-            // Load remaining channels in background
             if (count > initialLimit) {
               unawaited(() async {
-                // Add delay to let UI settle first
                 await Future.delayed(const Duration(milliseconds: 500));
                 final more = await _db.getChannelsPage(
                   offset: initialLimit, 
@@ -2024,60 +1997,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               }());
             }
             return;
-          }
-        }
-      }
-
-      // Fallback: try to load from pre-parsed JSON cache
-      if (cacheAge != null && cacheAge < 21600000) {
-        final dir = await getApplicationDocumentsDirectory();
-        final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
-
-        if (await jsonCacheFile.exists()) {
-          try {
-            _loadingStatus = 'Loading cached playlist metadata...';
-            _loadingProgress = 0.25;
-            notifyListeners();
-            debugLog('ChannelProvider: Loading from pre-parsed JSON cache...');
-            // Optimization: read in chunks or use stream if possible, 
-            // but for now let's at least handle the failure gracefully.
-            final jsonString = await jsonCacheFile.readAsString();
-            final parsed = json.decode(jsonString) as Map<String, dynamic>;
-            final cachedChannels = (parsed['channels'] as List<dynamic>)
-                .map((c) => Map<String, dynamic>.from(c as Map))
-                .toList();
-            
-            if (cachedChannels.isNotEmpty) {
-              _channelMaps = cachedChannels;
-              _channelCountDb = _channelMaps.length;
-              _rebuildChannelCaches();
-              
-              // We've loaded the preview, let's let the UI show SOMETHING
-              _hasLoadedPlaylist = true;
-              _isColdStartLoad = false;
-              notifyListeners();
-              
-              // CRITICAL: Do NOT return early. We want to fall through to load the FULL list
-              // if it exists, or just let the background DB load (started above) finish.
-              // Actually, if we have just 200 from JSON, we should probably try the M3U cache if fresh.
-              debugLog('ChannelProvider: Loaded ${cachedChannels.length} channels from JSON preview, continuing to load full list...');
-            }
-
-            final channelsFile = parsed['channelsFile'] as String?;
-            if (channelsFile != null && channelsFile.isNotEmpty) {
-              final loaded = await _loadChannelsFromJsonlCache(
-                channelsFile: channelsFile,
-                prefs: prefs,
-                playlistUrl: cachedPlaylistUrl,
-                epgUrl: parsed['epgUrl'] as String? ?? cachedEpgUrl,
-                expectedChannelCount: expectedChannels,
-              );
-              if (loaded) {
-                return;
-              }
-            }
-          } catch (e) {
-             debugLog('ChannelProvider: JSON cache failed: $e');
           }
         }
       }
@@ -2163,11 +2082,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 'ChannelProvider: Cache map conversion took ${mapDuration.inMilliseconds}ms');
 
             _invalidateCategoryCaches();
-            // Trigger async category extraction in background (non-blocking)
             unawaited(_computeCategoriesAsync());
-
-            // Save to JSON cache for faster loading next time
-            unawaited(_saveJsonCache(parsed));
 
             _isLoading = false;
             _hasLoadedPlaylist = true;
@@ -2488,7 +2403,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
       }
 
-      unawaited(_saveJsonCache(parsed));
       _loadingProgress = 1.0;
       // _loadingStatus = 'Complete!'; // Removed to prevent lingering text
       _isLoading = false;
@@ -2913,132 +2827,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       _db.endBulkWrite();
       epgService?.setExternalDbBusy(false);
     }
-  }
-
-  /// Save parsed playlist data to JSON cache for fast loading
-  /// Save parsed playlist data to JSON cache for fast loading (chunked to avoid OOM)
-  Future<void> _saveJsonCache(Map<String, dynamic> parsed) async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
-
-      // Store a small preview list for instant UI, plus metadata for full load.
-      final previewLimit = 200;
-      final previewChannels = <Map<String, dynamic>>[];
-      try {
-        final parsedChannels = parsed['channels'] as List<dynamic>?;
-        if (parsedChannels != null && parsedChannels.isNotEmpty) {
-          for (final c in parsedChannels.take(previewLimit)) {
-            previewChannels.add(Map<String, dynamic>.from(c as Map));
-          }
-        } else if (_channelMaps.isNotEmpty) {
-          for (final c in _channelMaps.take(previewLimit)) {
-            previewChannels.add(Map<String, dynamic>.from(c));
-          }
-        }
-      } catch (_) {}
-
-      final cacheData = {
-        'channels': previewChannels,
-        'epgUrl': parsed['epgUrl'],
-        'channelCount': parsed['channelCount'],
-        'channelsFile': parsed['channelsFile'],
-      };
-
-      final jsonData = json.encode(cacheData);
-      await jsonCacheFile.writeAsString(jsonData);
-      debugLog('ChannelProvider: Saved JSON cache metadata only');
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to save JSON cache: $e');
-      // Non-fatal - cache is optional
-    }
-  }
-
-  Future<bool> _loadChannelsFromJsonlCache({
-    required String channelsFile,
-    required SharedPreferences prefs,
-    required String? playlistUrl,
-    required String? epgUrl,
-    int? expectedChannelCount,
-  }) async {
-    final file = File(channelsFile);
-    if (!await file.exists()) return false;
-
-    _loadingStatus = 'Loading cached channels...';
-    _loadingProgress = 0.35;
-    notifyListeners();
-
-    final List<Map<String, dynamic>> allChannels = [];
-    int parsedCount = 0;
-    DateTime lastUiUpdate = DateTime.now();
-
-    try {
-      final stream = file.openRead().transform(utf8.decoder).transform(const LineSplitter());
-      await for (final line in stream) {
-        if (line.trim().isEmpty) continue;
-        try {
-          final decoded = jsonDecode(line);
-          if (decoded is Map) {
-            allChannels.add(Map<String, dynamic>.from(decoded));
-            parsedCount++;
-            if (parsedCount % 500 == 0) {
-              final now = DateTime.now();
-              if (now.difference(lastUiUpdate).inMilliseconds > 500) {
-                lastUiUpdate = now;
-                _loadingStatus = 'Loading cached channels: $parsedCount';
-                if (expectedChannelCount != null && expectedChannelCount > 0) {
-                  _loadingProgress =
-                      0.35 + (parsedCount / expectedChannelCount).clamp(0.0, 0.5);
-                }
-                notifyListeners();
-              }
-            }
-          }
-        } catch (_) {
-          // Skip malformed lines.
-        }
-      }
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to read JSONL cache: $e');
-      return false;
-    }
-
-    if (allChannels.isEmpty) {
-      debugLog('ChannelProvider: JSONL cache empty');
-      return false;
-    }
-
-    _channelMaps = allChannels;
-    _channelCache.clear();
-    _rebuildChannelCaches();
-    _channelCountDb = _channelMaps.length;
-    _updateEpgAllowedChannels();
-
-    await _setCurrentEpgMapSignature(
-      prefs: prefs,
-      playlistUrl: playlistUrl,
-      epgUrl: epgUrl,
-      channelCount: _channelMaps.length,
-      channelsFile: channelsFile,
-    );
-
-    _invalidateCategoryCaches();
-    unawaited(_computeCategoriesAsync());
-
-    _isLoading = false;
-    _hasLoadedPlaylist = true;
-    _isColdStartLoad = false;
-    notifyListeners();
-    _refreshSmartChannelCache();
-    _scheduleEpgRefresh(forceRefresh: false);
-
-    if (_dbReady) {
-      // Defer DB write to avoid blocking UI on slow storage.
-      unawaited(_deferredDbInsert());
-    }
-
-    debugLog('ChannelProvider: Loaded ${_channelMaps.length} channels from JSONL cache');
-    return true;
   }
 
   Future<String?> _stageChannelsJsonl(String source) async {

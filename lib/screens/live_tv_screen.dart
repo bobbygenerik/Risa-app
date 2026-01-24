@@ -1473,7 +1473,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   progress: channelProvider.loadingProgress,
                 );
 
-            // Improved EPG loading detection - only show skeleton if truly loading
+            // Show loading overlay during cold start, skeleton only for warm starts
+            if (channelProvider.isColdStartLoad && overlayBusy) {
+              return buildSkeleton();
+            }
 
             if (!hasChannels &&
                 channelProvider.isLoading &&
@@ -3886,6 +3889,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const timeout = Duration(seconds: 5);
     final channel = _programChannelLookup[program.id];
     final isNews = channel != null && _isNewsProgram(program, channel);
+    
+    // Skip image fetching for news - will show channel logo + "News" text instead
+    if (isNews) {
+      return null;
+    }
+    
     final title = program.title;
     final queryTitles = _buildArtworkQueryTitles(program, channel);
 
@@ -3916,43 +3925,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Fallback to TMDB
     for (final queryTitle in queryTitles) {
       try {
-        if (isNews) {
-          final details = await TMDBService.getBestBackdropDetails(queryTitle)
-              .timeout(timeout);
-          if (!_isBlacklistedNewsArtwork(details, program.title)) {
-            final tmdbImage = (details?['image'] as String?)?.trim();
-            if (_acceptArtworkUrl(
-              tmdbImage,
-              preferLandscape: preferLandscape,
-              programTitle: title,
-              source: 'tmdb_news',
-            ) &&
-                await ImageValidationService.isValid(tmdbImage)) {
-              _logArtworkDecision(
-                'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" url=$tmdbImage',
-              );
-              return tmdbImage;
-            }
-          } else {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tmdb_news program="$title" query="$queryTitle" result=blacklisted',
-            );
-          }
-        } else {
-          final tmdbImage =
-              await TMDBService.getBestBackdrop(queryTitle).timeout(timeout);
-          if (_acceptArtworkUrl(
-            tmdbImage,
-            preferLandscape: preferLandscape,
-            programTitle: title,
-            source: 'tmdb',
-          ) &&
-              await ImageValidationService.isValid(tmdbImage)) {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tmdb program="$title" query="$queryTitle" url=$tmdbImage',
-            );
-            return tmdbImage;
-          }
+        final tmdbImage =
+            await TMDBService.getBestBackdrop(queryTitle).timeout(timeout);
+        if (_acceptArtworkUrl(
+          tmdbImage,
+          preferLandscape: preferLandscape,
+          programTitle: title,
+          source: 'tmdb',
+        ) &&
+            await ImageValidationService.isValid(tmdbImage)) {
+          _logArtworkDecision(
+            'LiveTV artwork: source=tmdb program="$title" query="$queryTitle" url=$tmdbImage',
+          );
+          return tmdbImage;
         }
       } catch (e) {
         debugLog('TMDB failed: $e');
@@ -5866,32 +5851,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final channelInfo = '$channelName $groupTitle';
     return _containsKeywords(info, keywords) ||
         _containsKeywords(channelInfo, keywords);
-  }
-
-  bool _isBlacklistedNewsArtwork(
-    Map<String, dynamic>? details,
-    String programTitle,
-  ) {
-    if (details == null) return true;
-    final image = (details['image'] as String?)?.trim();
-    if (image == null || image.isEmpty) return true;
-    final matchedTitle = (details['title'] as String?)?.toLowerCase() ?? '';
-    final genres = (details['genres'] as List?)
-            ?.map((entry) => entry.toString().toLowerCase())
-            .toList() ??
-        const <String>[];
-    final newsKeywords = ['news', 'newscast', 'headline', 'update', 'bulletin'];
-    final rejectGenres = ['animation', 'anime', 'kids'];
-    final hasNewsKeyword =
-        newsKeywords.any((keyword) => matchedTitle.contains(keyword)) ||
-            genres.any((genre) => genre.contains('news'));
-    if (!hasNewsKeyword) return true;
-    if (rejectGenres.any((keyword) =>
-        matchedTitle.contains(keyword) ||
-        genres.any((genre) => genre.contains(keyword)))) {
-      return true;
-    }
-    return false;
   }
 
   String _formatTime(DateTime dt) {
