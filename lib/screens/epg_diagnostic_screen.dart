@@ -166,6 +166,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     _lastChannelCount = channelCount;
     _lastEpgCount = epgCount;
     
+    // Only refresh stats if enough time has passed to avoid rapid rebuilds
+    final now = DateTime.now();
+    if (_lastRefreshAt != null && now.difference(_lastRefreshAt!).inSeconds < 2) {
+      return;
+    }
+    
     // Defer state update to post-frame to avoid setState during build
     Future.microtask(() {
       if (mounted) _refreshStats();
@@ -388,7 +394,16 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                             final messenger = ScaffoldMessenger.maybeOf(context);
                             try {
                               await _writeDebugMarker('epg_reload_requested');
+                              debugLog('EPG: Force reload initiated from diagnostic screen');
+                              
+                              // Clear all EPG state before reload
+                              await epgService.clearAllData(clearUrls: false, clearSavedPlaylists: false);
+                              debugLog('EPG: Cleared EPG data');
+                              
+                              // Force fresh download and parse
                               await epgService.initialize(forceRefresh: true);
+                              debugLog('EPG: Reload completed');
+                              
                               await _writeDebugMarker('epg_reload_completed');
                               if (!mounted) return;
                               _refreshStats();
@@ -396,7 +411,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                               _deliverSnackBar(
                                 messenger,
                                 const SnackBar(
-                                    content: Text('EPG reload requested')),
+                                    content: Text('EPG reload completed')),
                               );
                             } catch (e) {
                               await _writeDebugMarker('epg_reload_failed');

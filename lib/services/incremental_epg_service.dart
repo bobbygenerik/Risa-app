@@ -1099,6 +1099,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     await _restoreCacheFromBackupIfMissing();
 
+    // CRITICAL: On force refresh, clear cache timestamp to force re-download
+    if (forceRefresh) {
+      debugLog('EPG: Force refresh - clearing cache timestamp');
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_epgCacheTimeKey);
+        await SmartCacheService.instance.clearCache(forceRefresh: true);
+      } catch (e) {
+        debugLog('EPG: Failed to clear cache timestamp: $e');
+      }
+    }
+
     // Skip download if we just downloaded recently (within 30 seconds)
     // This prevents redundant downloads when loading current day then full EPG
     if (!forceRefresh && _lastDownloadTime != null) {
@@ -1610,14 +1622,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             _handleDbError(e);
             // Fall through to XML parsing
           }
-        }
-
-        // Note: We no longer defer when _allowedChannelIdsNormalized is empty.
-        // Instead, we parse all available EPG data (line ~1467 handles this).
-        // This prevents the UI from being stuck when playlist loads after EPG init.
-        if (_allowedChannelIdsNormalized.isEmpty) {
-          debugLog(
-              'EPG: Allowed channels not ready yet - will parse all EPG data and filter later.');
         }
 
         // Legacy optimization for mappings only (fallback)

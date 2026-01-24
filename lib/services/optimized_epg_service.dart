@@ -43,7 +43,7 @@ class OptimizedEpgService extends ChangeNotifier {
   static final RegExp _timeParseRe = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
 
   /// Load EPG data with fast startup optimizations
-  Future<void> loadEpgData(String epgUrl, List<Channel> criticalChannels) async {
+  Future<void> loadEpgData(String epgUrl, List<Channel> criticalChannels, {bool force = false}) async {
     if (_isLoading) return;
     
     _epgUrl = epgUrl;
@@ -60,7 +60,7 @@ class OptimizedEpgService extends ChangeNotifier {
     await _ensureMappingsLoaded();
 
     try {
-      debugLog('OptimizedEpgService: Starting fast EPG load for ${criticalChannels.length} critical channels');
+      debugLog('OptimizedEpgService: Starting EPG load (force=$force) for ${criticalChannels.length} critical channels');
       
       // Initialize DB
       final db = LocalDbService.instance;
@@ -70,7 +70,7 @@ class OptimizedEpgService extends ChangeNotifier {
       
       // 1. Check freshness
       final smartCache = SmartCacheService.instance;
-      bool isFresh = await smartCache.isCacheFresh();
+      bool isFresh = !force && await smartCache.isCacheFresh();
 
       // Also check if DB actually has data
       final programCount = await db.programCount();

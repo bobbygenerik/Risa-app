@@ -48,7 +48,8 @@ class SmartCacheService {
   }
 
   /// Check if EPG data has changed
-  Future<bool> hasEpgChanged(String epgContent) async {
+  Future<bool> hasEpgChanged(String epgContent, {bool forceRefresh = false}) async {
+    if (forceRefresh) return true;
     final prefs = await _requirePrefs();
     final last = prefs.getInt(_epgCacheAtKey);
     if (last == null) return true;
@@ -92,7 +93,8 @@ class SmartCacheService {
   }
   
   /// Load cached EPG data
-  Future<Map<String, List<Program>>?> loadCachedEpgData() async {
+  Future<Map<String, List<Program>>?> loadCachedEpgData({bool forceRefresh = false}) async {
+    if (forceRefresh) return null;
     final prefs = await _requirePrefs();
     final last = prefs.getInt(_epgCacheAtKey);
     if (last == null) return null;
@@ -199,7 +201,8 @@ class SmartCacheService {
   }
   
   /// Check if cache is fresh
-  Future<bool> isCacheFresh() async {
+  Future<bool> isCacheFresh({bool forceRefresh = false}) async {
+    if (forceRefresh) return false;
     final prefs = await _requirePrefs();
     final now = DateTime.now();
     final channelTs = prefs.getInt(_channelsCacheAtKey);
@@ -214,7 +217,7 @@ class SmartCacheService {
   }
   
   /// Clear all cached data
-  Future<void> clearCache() async {
+  Future<void> clearCache({bool forceRefresh = false}) async {
     try {
       await _db.init();
       await _db.clearChannels();
@@ -228,7 +231,7 @@ class SmartCacheService {
     } catch (e) {
       debugLog('SmartCache: Failed to clear cache: $e');
     }
-    debugLog('SmartCache: Cache cleared');
+    debugLog('SmartCache: Cache cleared${forceRefresh ? " (forced)" : ""}');
   }
   
   /// Get cache statistics
