@@ -59,41 +59,41 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     debugLog('VLC init: url=$url live=${widget.isLive} hw=$_hardwareAccelerationEnabled');
     logToSystem('VLC INIT: $url hw=$_hardwareAccelerationEnabled', name: 'RisaVLC');
     
-    try {
-      _controller = UniversalPlayerController.create(
-        url: url,
-        autoPlay: true,
-        isLive: widget.isLive,
-        preferStockOnLive: true,
-        backend: 'VLC',
-        hardwareAcceleration: _hardwareAccelerationEnabled,
-      );
-      debugLog('VLC controller created successfully');
-    } catch (e, st) {
-      debugLog('=== VLC CONTROLLER CREATE ERROR ===');
-      debugLog('Error: $e');
-      debugLog('Stack: $st');
-      logToSystem('VLC CREATE ERROR: $e', name: 'RisaVLC');
-      return;
-    }
-
-    if (widget.controllerNotifier != null) {
-      Future.microtask(() {
-        if (mounted) widget.controllerNotifier!.value = _controller;
-      });
-    }
-
-    _controller?.addListener(_onControllerUpdate);
-    
-    // Delay initialization until after first frame to avoid PlatformException
+    // Delay controller creation until after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _controller == null) return;
-      _controller!.initialize().catchError((e) {
-        debugLog('VLC initialize error: $e');
-        _attemptFallback('init_error:$e');
-      });
-      _attachVlcInitListener();
-      _startInitTimeout();
+      if (!mounted) return;
+      
+      try {
+        _controller = UniversalPlayerController.create(
+          url: url,
+          autoPlay: true,
+          isLive: widget.isLive,
+          preferStockOnLive: true,
+          backend: 'VLC',
+          hardwareAcceleration: _hardwareAccelerationEnabled,
+        );
+        debugLog('VLC controller created successfully');
+        
+        if (widget.controllerNotifier != null) {
+          widget.controllerNotifier!.value = _controller;
+        }
+        
+        _controller?.addListener(_onControllerUpdate);
+        _controller?.initialize().then((_) {
+          if (mounted) {
+            _attachVlcInitListener();
+            _startInitTimeout();
+          }
+        }).catchError((e) {
+          debugLog('VLC initialize error: $e');
+          _attemptFallback('init_error:$e');
+        });
+      } catch (e, st) {
+        debugLog('=== VLC CONTROLLER CREATE ERROR ===');
+        debugLog('Error: $e');
+        debugLog('Stack: $st');
+        logToSystem('VLC CREATE ERROR: $e', name: 'RisaVLC');
+      }
     });
     
     debugLog('=== VLC WIDGET INIT COMPLETE ===');
@@ -124,28 +124,32 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     _controller?.removeListener(_onControllerUpdate);
     _detachVlcInitListener();
     _safeDisposeController();
-    _controller = UniversalPlayerController.create(
-      url: widget.url,
-      autoPlay: true,
-      isLive: widget.isLive,
-      preferStockOnLive: true,
-      backend: 'VLC',
-      hardwareAcceleration: false,
-    );
-    if (widget.controllerNotifier != null) {
-      Future.microtask(() {
-        if (mounted) widget.controllerNotifier!.value = _controller;
-      });
-    }
-    _controller?.addListener(_onControllerUpdate);
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _controller == null) return;
-      _controller!.initialize().catchError((e) {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+      
+      _controller = UniversalPlayerController.create(
+        url: widget.url,
+        autoPlay: true,
+        isLive: widget.isLive,
+        preferStockOnLive: true,
+        backend: 'VLC',
+        hardwareAcceleration: false,
+      );
+      
+      if (widget.controllerNotifier != null) {
+        widget.controllerNotifier!.value = _controller;
+      }
+      
+      _controller?.addListener(_onControllerUpdate);
+      _controller?.initialize().then((_) {
+        if (mounted) {
+          _attachVlcInitListener();
+          _startInitTimeout();
+        }
+      }).catchError((e) {
         debugLog('VLC fallback initialize error: $e');
       });
-      _attachVlcInitListener();
-      _startInitTimeout();
     });
   }
 
