@@ -84,12 +84,18 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
     }
 
     _controller?.addListener(_onControllerUpdate);
-    _controller?.initialize().catchError((e) {
-      debugLog('VLC initialize error: $e');
-      _attemptFallback('init_error:$e');
+    
+    // Delay initialization until after first frame to avoid PlatformException
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _controller == null) return;
+      _controller!.initialize().catchError((e) {
+        debugLog('VLC initialize error: $e');
+        _attemptFallback('init_error:$e');
+      });
+      _attachVlcInitListener();
+      _startInitTimeout();
     });
-    _attachVlcInitListener();
-    _startInitTimeout();
+    
     debugLog('=== VLC WIDGET INIT COMPLETE ===');
   }
 
@@ -132,11 +138,15 @@ class _VlcPlayerWidgetState extends State<VlcPlayerWidget> {
       });
     }
     _controller?.addListener(_onControllerUpdate);
-    _controller?.initialize().catchError((e) {
-      debugLog('VLC fallback initialize error: $e');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _controller == null) return;
+      _controller!.initialize().catchError((e) {
+        debugLog('VLC fallback initialize error: $e');
+      });
+      _attachVlcInitListener();
+      _startInitTimeout();
     });
-    _attachVlcInitListener();
-    _startInitTimeout();
   }
 
   void _startInitTimeout() {
