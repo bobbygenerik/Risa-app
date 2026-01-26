@@ -28,15 +28,34 @@ void _isolateEntry(_IsolateRequest request) async {
     Stream<List<int>> stream;
     
     if (request.url != null) {
-       client = HttpClient();
-       // Auto-decompression
-       client.autoUncompress = true;
-       final req = await client.getUrl(Uri.parse(request.url!));
-       final resp = await req.close();
-       if (resp.statusCode != 200) {
-         throw Exception('HTTP ${resp.statusCode}');
-       }
-       stream = resp;
+      client = HttpClient();
+      // Disable auto-uncompress to handle it manually (sniffing)
+      client.autoUncompress = false;
+      client.badCertificateCallback = (cert, host, port) => true;
+      final req = await client.getUrl(Uri.parse(request.url!));
+      req.headers.add('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      req.headers.add('Accept', '*/*');
+      final resp = await req.close();
+      
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+
+      Stream<List<int>> incoming = resp;
+      
+      // Check headers first
+      final encoding = resp.headers.value('content-encoding')?.toLowerCase() ?? '';
+      bool isGzip = encoding.contains('gzip');
+      
+      // If header says gzip, trust it (mostly). 
+      // But acts of GZIP sniffing are required for "raw" streams that are actual GZIP but lack headers.
+      
+      if (isGzip) {
+        stream = incoming.transform(gzip.decoder);
+      } else {
+        // Sniff first bytes to detect GZIP magic number (1f 8b)
+        stream = _sniffAndDecompress(resp);
+      }
     } else if (request.filePath != null) {
       final file = File(request.filePath!);
       stream = file.openRead();
@@ -51,10 +70,50 @@ void _isolateEntry(_IsolateRequest request) async {
         progressPort: reply);
     reply.send({'type': 'done', 'result': result});
   } catch (e, st) {
-    reply
-        .send({'type': 'error', 'error': e.toString(), 'stack': st.toString()});
+    reply.send({'type': 'error', 'error': e.toString(), 'stack': st.toString()});
   } finally {
     client?.close(force: true);
+  }
+}
+
+// Sniff stream for GZIP magic bytes (0x1f 0x8b) and decompress if found
+Stream<List<int>> _sniffAndDecompress(Stream<List<int>> source) async* {
+  final iterator = StreamIterator(source);
+  
+  List<int>? firstChunk;
+  while (await iterator.moveNext()) {
+    final chunk = iterator.current;
+    if (chunk.isNotEmpty) {
+      firstChunk = chunk;
+      break;
+    }
+  }
+  
+  if (firstChunk == null) return; // Stream empty
+  
+  bool isGzip = false;
+  if (firstChunk.length >= 2) {
+    if (firstChunk[0] == 0x1f && firstChunk[1] == 0x8b) {
+      isGzip = true;
+    }
+  }
+  
+  // Reconstruct the stream
+  // We need to yield firstChunk then the rest of iterator
+  final reconstructed = _rebuildStream(firstChunk, iterator);
+  
+  if (isGzip) {
+    yield* reconstructed.transform(gzip.decoder);
+  } else {
+    yield* reconstructed;
+  }
+}
+
+// Helper to rebuild stream using StreamIterator results
+Stream<List<int>> _rebuildStream(List<int> first, StreamIterator<List<int>> iterator) async* {
+  yield first;
+  while (await iterator.moveNext()) {
+    yield iterator.current;
   }
 }
 

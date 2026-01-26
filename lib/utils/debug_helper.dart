@@ -5,13 +5,12 @@ import 'package:iptv_player/utils/file_logger.dart';
 /// Debug helper that only prints in debug mode
 /// Completely skipped in release/profile mode for performance
 void debugLog(String message) {
-  // Skip entirely in release/profile mode for maximum performance
-  if (kReleaseMode || kProfileMode) return;
+  // Allow logs in Profile mode for debugging persistent issues
+  if (kReleaseMode) return;
   
   FileLogger().log(message);
-  if (kDebugMode) {
-    debugPrint(message);
-  }
+  // Always print to console in Debug and Profile modes
+  debugPrint(message);
 }
 
 void logToSystem(String message, {String name = 'Risa'}) {

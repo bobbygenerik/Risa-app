@@ -714,6 +714,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   String _formatEpgStatus(IncrementalEpgService epgService) {
+    // Use the label directly if available (shows MB for chunked downloads)
+    final label = epgService.epgProgressLabel;
+    if (label != null && label.isNotEmpty) {
+      return label;
+    }
+    // Fallback to percentage for known-length downloads
     final pct = (epgService.epgProgress * 100).round().clamp(0, 100);
     if (epgService.isDownloading) return 'Downloading ($pct%)';
     if (epgService.isParsing) return 'Parsing ($pct%)';

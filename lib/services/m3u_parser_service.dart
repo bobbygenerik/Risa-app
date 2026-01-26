@@ -304,6 +304,7 @@ class M3UParserService {
 
       if (!headerProcessed) {
         headerProcessed = true;
+        debugLog('M3UParser: First logical line: ${line.length > 200 ? '${line.substring(0, 200)}...' : line}');
         _tryCaptureEpgUrl(line);
       }
 
@@ -347,8 +348,17 @@ class M3UParserService {
             channelCount++;
             if (progressPort != null && channelCount % 200 == 0) {
               try {
-                progressPort
-                    .send({'type': 'progress', 'channels': channelCount});
+                // Send progress count
+                progressPort.send({'type': 'progress', 'channels': channelCount});
+                
+                // CRITICAL: Send the actual chunk of data!
+                // We send the last 200 items (or all since last send)
+                // Actually, since we are adding to a main list, we can just slice it?
+                // Or better: maintain a temporary buffer for the current chunk.
+                // But since we already added to 'channelMaps', let's just slice the last 200.
+                final int chunkStart = (channelCount - 200).clamp(0, channelCount);
+                final chunk = channelMaps.sublist(chunkStart, channelCount);
+                progressPort.send({'type': 'channels_chunk', 'channels': chunk});
               } catch (_) {}
             }
             currentInfo = null;
@@ -403,10 +413,39 @@ class M3UParserService {
         if (progressPort != null && channelCount % 200 == 0) {
           try {
             progressPort.send({'type': 'progress', 'channels': channelCount});
+            // CRITICAL: Send chunk
+            final int chunkStart = (channelCount - 200).clamp(0, channelCount);
+            final chunk = channelMaps.sublist(chunkStart, channelCount);
+            progressPort.send({'type': 'channels_chunk', 'channels': chunk});
           } catch (_) {}
         }
-        currentInfo = null;
-        currentAttributes = {};
+      } else if (!line.startsWith('#') && currentInfo == null) {
+        // Handle bare URLs without EXTINF context
+        final urlMatch = _lastUrlMatch(line);
+        if (urlMatch != null) {
+          final channelUrl = urlMatch.group(0) ?? '';
+          if (channelUrl.isNotEmpty && seenUrls.add(channelUrl)) {
+             debugLog('M3UParser: Found bare URL, auto-adding: $channelUrl');
+             // Fallback name from URL
+             String fallbackName = 'Channel ${channelCount + 1}';
+             try {
+               final uri = Uri.parse(channelUrl);
+               fallbackName = uri.pathSegments.last;
+             } catch (_) {}
+             
+             channelMaps.add({
+                'id': stableChannelId(name: fallbackName, url: channelUrl),
+                'name': fallbackName,
+                'url': channelUrl,
+                'groupTitle': 'Uncategorized',
+                'attributes': <String, String>{},
+                'sortOrder': channelCount,
+                'isFavorite': false,
+                'isHidden': false,
+             });
+             channelCount++;
+          }
+        }
       }
     }
 
@@ -442,6 +481,25 @@ class M3UParserService {
 
     if (pendingLine != null) {
       processLogicalLine(pendingLine.trim());
+    }
+
+
+    
+    // Send any remaining channels as a final chunk (if not already sent in batches)
+    // CRITICAL FIX: Always send ALL channels at the end to ensure nothing is lost
+    // This handles playlists with <200 channels or exact multiples of 200
+    if (progressPort != null && channelMaps.isNotEmpty) {
+       try {
+         // Just send everything - the receiver will deduplicate if needed
+         // Or better: only send what hasn't been sent yet
+         final int lastSentIndex = (channelCount ~/ 200) * 200;
+         if (lastSentIndex < channelMaps.length) {
+           final chunk = channelMaps.sublist(lastSentIndex);
+           if (chunk.isNotEmpty) {
+             progressPort.send({'type': 'channels_chunk', 'channels': chunk});
+           }
+         }
+       } catch (_) {}
     }
 
     return {

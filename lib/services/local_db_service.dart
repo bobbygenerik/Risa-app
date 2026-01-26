@@ -531,10 +531,11 @@ class LocalDbService {
           await db.transaction((txn) async {
             final batch = txn.batch();
             for (final c in chunk) {
+              final id = c['id']?.toString() ?? c['url'].hashCode.toString(); // Fallback ID
               batch.insert(
                 'channels',
                 {
-                  'id': c['id'],
+                  'id': id,
                   'name': c['name'],
                   'url': c['url'],
                   'logoUrl': c['logoUrl'],
