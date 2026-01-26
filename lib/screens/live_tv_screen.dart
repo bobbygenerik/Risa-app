@@ -1390,6 +1390,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             final epgService = context.watch<IncrementalEpgService>();
+            final hasDisplayData = hasChannels &&
+                (_categoryNames.isNotEmpty || _categoryChannelCache.isNotEmpty);
+            final epgBusy = epgService.isDownloading ||
+                epgService.isParsing ||
+                epgService.isLoading;
+            final shouldBlockForEpg =
+                hasDisplayData && epgService.hasEpgUrl && !epgService.hasLoadedPrograms;
             // Keep overlay visible until we have actual displayable data
             final categoriesNotReady = channelProvider.isColdStartLoad && 
                 _categoryChannelCache.isEmpty && 
@@ -1403,12 +1410,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final showStartupOverlay =
                 channelProvider.isColdStartLoad &&
                     _startupOverlayActive &&
-                    overlayBusy;
+                    overlayBusy &&
+                    !hasDisplayData;
             if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (!_startupOverlayActive) {
                   setState(() => _startupOverlayActive = true);
+                }
+              });
+            }
+            if (_startupOverlayActive && hasDisplayData) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                if (_startupOverlayActive) {
+                  setState(() => _startupOverlayActive = false);
                 }
               });
             }
@@ -1462,6 +1478,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   secondaryStatusText: epgStatus,
                   progress: channelProvider.loadingProgress,
                 );
+
+            // Block UI until EPG is ready when we have displayable data.
+            if (shouldBlockForEpg || epgBusy) {
+              return buildSkeleton();
+            }
 
             // Show loading overlay during cold start, skeleton only for warm starts
             if (channelProvider.isColdStartLoad && overlayBusy) {
@@ -1741,7 +1762,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         continue;
       }
 
-      final normalizedTitle = normalizeForFilter(currentProgram.title);
+      final displayTitle = _displayProgramTitle(currentProgram, channel);
+      final normalizedTitle = normalizeForFilter(displayTitle);
       if (featuredProgramTitles.contains(normalizedTitle)) {
         debugLog(
             'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
@@ -1793,7 +1815,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         continue;
       }
 
-      final normalizedTitle = normalizeForFilter(currentProgram.title);
+      final displayTitle = _displayProgramTitle(currentProgram, channel);
+      final normalizedTitle = normalizeForFilter(displayTitle);
       if (featuredProgramTitles.contains(normalizedTitle)) {
         debugLog(
             'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
@@ -2369,7 +2392,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildFeaturedInfo(
       BuildContext context, Channel channel, Program? program) {
-    final title = program?.title ?? channel.name;
+    final title = program == null
+        ? channel.name
+        : _displayProgramTitle(program, channel);
     final description = program?.description ?? 'No program data available.';
     final timeRange = program != null
         ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
@@ -3121,10 +3146,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   String _titleCacheKey(Program program, [Channel? channel]) {
-    final base = normalizeForFilter(_canonicalArtworkTitle(program.title));
+    final baseTitle =
+        _stripEpisodeTitleForLookup(program, channel, program.title);
+    final base = normalizeForFilter(_canonicalArtworkTitle(baseTitle));
     final channelForKey = channel ?? _programChannelLookup[program.id];
     if (channelForKey == null) return base;
-    final isNews = EPGMatchingUtils.isLikelyNewsTitle(program.title);
+    final isNews = EPGMatchingUtils.isLikelyNewsTitle(baseTitle);
     if (!_isGenericTitle(base) && !isNews) {
       return base;
     }
@@ -3144,6 +3171,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String _canonicalArtworkTitle(String title) {
     // Use consolidated normalization from EPGMatchingUtils
     return EPGMatchingUtils.normalizeForArtwork(title);
+  }
+
+  String _stripEpisodeTitleForLookup(
+    Program program,
+    Channel? channel,
+    String title,
+  ) {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return title;
+    final isNews = channel != null && _isNewsProgram(program, channel);
+    final isSports = _isSportsProgram(program, channel);
+    final isMovie = channel != null && _isMovieProgram(program, channel);
+    if (isNews || isSports || isMovie) return title;
+    return EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
+  }
+
+  String _displayProgramTitle(Program program, Channel? channel) {
+    final trimmed = program.title.trim();
+    if (trimmed.isEmpty) return program.title;
+    final isNews = channel != null && _isNewsProgram(program, channel);
+    final isSports = _isSportsProgram(program, channel);
+    final isMovie = channel != null && _isMovieProgram(program, channel);
+    return EPGMatchingUtils.normalizeForDisplayTitle(
+      trimmed,
+      stripEpisodeSubtitle: !(isNews || isSports || isMovie),
+    );
   }
 
   String _normalizeArtworkVariant(String title) {
@@ -3168,7 +3221,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   List<String> _buildArtworkQueryTitles(Program program, Channel? channel) {
-    final original = program.title.trim();
+    final rawTitle = program.title.trim();
+    final stripped = _stripEpisodeTitleForLookup(program, channel, rawTitle);
+    final original = stripped.trim().isEmpty ? rawTitle : stripped.trim();
     final canonical = _canonicalArtworkTitle(original).trim();
     final isNews = EPGMatchingUtils.isLikelyNewsTitle(canonical);
     final normalizedLookup = EPGMatchingUtils.normalizeTitleForLookup(
@@ -3226,6 +3281,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       addVariant(normalizedLookup);
     }
     if (canonical != original) addVariant(original);
+    if (original == rawTitle && canonical != rawTitle) {
+      addVariant(rawTitle);
+    }
     if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
       add(channelName);
     }
@@ -4269,7 +4327,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
       if (isFirstRow && program != null) {
         if (program.title.isNotEmpty) {
-          final normalizedTitle = normalizeForFilter(program.title);
+          final displayTitle = _displayProgramTitle(program, channel);
+          final normalizedTitle = normalizeForFilter(displayTitle);
           // More aggressive deduplication: prevent any duplicate program titles
           // regardless of time slot to ensure variety in featured content
           final programTitleKey = normalizedTitle;
@@ -4760,6 +4819,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       double cardHeight,
       bool allowPrefetch,
       {required bool isFirstRow}) {
+    final displayTitle = currentProgram == null
+        ? ''
+        : _displayProgramTitle(currentProgram, channel);
     final progress = currentProgram?.progressPercentage ?? 0.0;
     final imageUrl = _getChannelCardImage(
       currentProgram,
@@ -4921,7 +4983,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           SizedBox(
             width: cardWidth,
             child: Text(
-              currentProgram.title,
+              displayTitle,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 11,

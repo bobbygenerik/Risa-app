@@ -61,6 +61,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   int _epgFutureHours = 8;
   static const int _initialFutureHours = 6;
   static const int _fullFutureHours = 24;
+  static const int _epgPastWindowHours = 24;
+  static const int _epgFutureWindowHours = 24;
   bool _extendedWindowScheduled = false;
   bool _extendingWindow = false;
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
@@ -297,12 +299,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  bool _isDatabaseClosedError(Object error) {
-    final message = error.toString().toLowerCase();
-    return message.contains('database_closed') ||
-        message.contains('database closed');
-  }
-
   Future<void> _restoreDbIfClosed() async {
     if (!_dbClosedDetected) return;
     try {
@@ -471,8 +467,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         await _loadNormalizedMappingFromPrefs();
         await loadMappingsFromDb();
 
-        // Load current day first for fast UI response
-        await _loadCurrentDayPrograms(forceRefresh: forceRefresh);
+        // Skip current-day-only parse; go straight to full-window parsing
+        // to avoid under-matching feeds that are future-dated or shifted.
+        await _loadChannelList(
+          forceRefresh: forceRefresh,
+          allowStaleCache: !forceRefresh,
+          currentDayOnly: false,
+        );
 
         // Load remaining days in background
         unawaited(_loadRemainingDaysInBackground());
@@ -500,113 +501,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _pendingAllowedRefresh = false;
         unawaited(_initializeProgressively(forceRefresh: false));
       }
-    }
-  }
-
-  /// Load current day programs for immediate UI response
-  Future<void> _loadCurrentDayPrograms({bool forceRefresh = false}) async {
-    if (_epgUrl == null || _epgUrl!.isEmpty) return;
-
-    final start = DateTime.now();
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      // Check if we have valid cache for current day
-      if (!forceRefresh && !_dbDisabled && _db.isReady) {
-        try {
-          final dbStart = DateTime.now();
-          final programCount = await _db.programCount();
-          debugLog(
-              'EPG: DB programCount took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
-          if (programCount > 0) {
-            debugLog('EPG: Loading current day from DB cache...');
-            final now = DateTime.now();
-            final startOfDay = DateTime(now.year, now.month, now.day);
-            final endOfDay = startOfDay.add(const Duration(days: 1));
-
-            final dbProgramsStart = DateTime.now();
-            final dbPrograms = await _db.getAllProgramsByChannel(
-              pastHours: 12,
-              futureHours: 24, // Current day + some buffer
-            );
-            debugLog(
-                'EPG: DB getAllProgramsByChannel took ${DateTime.now().difference(dbProgramsStart).inMilliseconds}ms');
-
-            if (dbPrograms.isNotEmpty) {
-              // Filter for current day programs
-              final currentDayPrograms = <String, List<Program>>{};
-              for (final entry in dbPrograms.entries) {
-                final epgId = entry.key;
-                final programs = entry.value
-                    .where((row) {
-                      final startTime = DateTime.fromMillisecondsSinceEpoch(
-                          row['startTs'] as int);
-                      return startTime.isAfter(startOfDay) &&
-                          startTime.isBefore(endOfDay);
-                    })
-                    .map((row) => Program(
-                          id: '${epgId}_${row['startTs']}',
-                          channelId: epgId,
-                          title: row['title'] as String? ?? '',
-                          description: row['description'] as String?,
-                          startTime: DateTime.fromMillisecondsSinceEpoch(
-                              row['startTs'] as int),
-                          endTime: DateTime.fromMillisecondsSinceEpoch(
-                              row['endTs'] as int),
-                          imageUrl: row['imageUrl'] as String?,
-                        ))
-                    .toList();
-
-                if (programs.isNotEmpty) {
-                  currentDayPrograms[epgId] = programs;
-                }
-              }
-
-              if (currentDayPrograms.isNotEmpty) {
-                _programsByChannel.clear();
-                _programsByChannel.addAll(currentDayPrograms);
-                _availableChannels.clear();
-                _availableChannels.addAll(currentDayPrograms.keys);
-                _hasParsed = true;
-                _isLoading = false;
-                _error = null;
-                notifyListeners();
-
-                debugLog(
-                    'EPG: ✓ Current day loaded from DB: ${currentDayPrograms.length} channels');
-                debugLog(
-                    'EPG: Current day total ${DateTime.now().difference(start).inMilliseconds}ms');
-                return;
-              }
-            }
-          }
-        } catch (e) {
-          debugLog('EPG: DB current day load failed, using network: $e');
-          _handleDbError(e);
-        }
-      }
-
-      // Fallback to network loading with current day focus
-      await _loadChannelList(
-        forceRefresh: forceRefresh,
-        allowStaleCache: !forceRefresh,
-        currentDayOnly: true,
-      );
-    } catch (e) {
-      debugLog('EPG: Current day loading error: $e');
-      if (_isDatabaseClosedError(e)) {
-        _handleDbError(e);
-        _error = null;
-      } else {
-        _error = 'Failed to load current day EPG: $e';
-      }
-    } finally {
-      debugLog(
-          'EPG: Current day load finished in ${DateTime.now().difference(start).inMilliseconds}ms');
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
@@ -1591,30 +1485,44 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                       'EPG: Built normalized mapping with ${_normalizedAvailableChannels!.length} entries from ${_programsByChannel.length} channels');
                 }
 
+                final loadedChannels = _programsByChannel.length;
                 debugLog(
-                    'EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
+                    'EPG: Loaded $loadedChannels channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
                 debugLog(
                     'EPG: Load from DB total ${DateTime.now().difference(loadStart).inMilliseconds}ms');
-                _hasParsed = true;
-                _isLoading = false;
-                _isParsing = false;
-                _error = null;
-                notifyListeners();
 
-                unawaited(SmartCacheService.instance.cacheEpgData(
-                  _programsByChannel,
-                  overwriteDb: false,
-                ));
+                final allowedCount = _allowedChannelIdsNormalized.length;
+                final expectedCount =
+                    _allowedChannelCount > 0 ? _allowedChannelCount : 0;
+                final cacheTooSmall =
+                    (allowedCount >= 500 && loadedChannels * 5 < allowedCount) ||
+                    (expectedCount >= 1000 && loadedChannels * 5 < expectedCount) ||
+                    (expectedCount == 0 && loadedChannels < 1000);
+                if (!cacheTooSmall) {
+                  _hasParsed = true;
+                  _isLoading = false;
+                  _isParsing = false;
+                  _error = null;
+                  notifyListeners();
 
-                _scheduleEpgWindowExtension(
-                  fromBackgroundRefresh: fromBackgroundRefresh,
-                );
+                  unawaited(SmartCacheService.instance.cacheEpgData(
+                    _programsByChannel,
+                    overwriteDb: false,
+                  ));
 
-                // Schedule background refresh if cache is stale
-                if (deferRefresh) {
-                  unawaited(_refreshFromNetwork());
+                  _scheduleEpgWindowExtension(
+                    fromBackgroundRefresh: fromBackgroundRefresh,
+                  );
+
+                  // Schedule background refresh if cache is stale
+                  if (deferRefresh) {
+                    unawaited(_refreshFromNetwork());
+                  }
+                  return;
+                } else {
+                  debugLog(
+                      'EPG: DB cache too small ($loadedChannels/$allowedCount); falling through to XML parse.');
                 }
-                return;
               }
             }
           } catch (e) {
@@ -1634,7 +1542,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             final mappingCount = await _db.mappingCount();
             // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
             // _programsByChannel may have keys with empty lists from failed batch loads
-            if (mappingCount > 0 && hasLoadedPrograms) {
+            final allowedCount = _allowedChannelIdsNormalized.length;
+            final loadedChannels = _programsByChannel.length;
+            final expectedCount =
+                _allowedChannelCount > 0 ? _allowedChannelCount : 0;
+            final cacheTooSmall =
+                (allowedCount >= 500 && loadedChannels * 5 < allowedCount) ||
+                (expectedCount >= 1000 && loadedChannels * 5 < expectedCount) ||
+                (expectedCount == 0 && loadedChannels < 1000);
+            if (mappingCount > 0 && hasLoadedPrograms && !cacheTooSmall) {
               debugLog(
                   'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
 
@@ -1679,41 +1595,27 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         notifyListeners();
         _startParseProgressTimer();
 
-        // CRITICAL FIX: If we have cached EPG channel IDs from a previous session,
-        // use those for parsing instead of playlist IDs (which may not match EPG IDs).
-        // The matching between EPG and playlist happens later via _findBestEpgId.
-        Set<String> effectiveAllowedChannels;
-        if (_normalizedAvailableChannels != null &&
-            _normalizedAvailableChannels!.isNotEmpty) {
-          // Use cached EPG channel IDs - these are the actual IDs in the EPG file
-          effectiveAllowedChannels = _normalizedAvailableChannels!.keys.toSet();
-          debugLog(
-              'EPG: Using ${effectiveAllowedChannels.length} cached EPG channel IDs for parsing');
-        } else if (_allowedChannelIdsNormalized.isNotEmpty) {
-          // Fall back to playlist IDs if no cache exists
-          effectiveAllowedChannels = _allowedChannelIdsNormalized;
-          debugLog(
-              'EPG: Using ${effectiveAllowedChannels.length} playlist channel IDs for parsing');
-        } else {
-          // No cache and no playlist - parse all
-          effectiveAllowedChannels = <String>{};
-          debugLog('EPG: No channel filter - parsing all EPG data');
-        }
+        // Parse full EPG (no channel filtering). Matching is handled later.
+        final Set<String> effectiveAllowedChannels = <String>{};
+        debugLog('EPG: Parsing full EPG (no channel filter).');
 
         // Pass file path to isolate instead of content string to save memory
         Future<Map<String, dynamic>> parseEpg(
-            Set<String> allowedChannels) async {
+            Set<String> allowedChannels, {
+            required bool dayOnly,
+            required int futureHours,
+          }) async {
           final now = DateTime.now();
           // Widen time window significantly to catch programs
           // Past: 24 hours back (to catch stale EPG data or timezone issues)
           // Future: configurable hours
-          final windowStart = currentDayOnly
+          final windowStart = dayOnly
               ? DateTime(now.year, now.month, now.day)
-              : now.subtract(const Duration(hours: 24));
-          final windowEnd = currentDayOnly
+              : now.subtract(const Duration(hours: _epgPastWindowHours));
+          final windowEnd = dayOnly
               ? DateTime(now.year, now.month, now.day)
                   .add(const Duration(days: 1))
-              : now.add(Duration(hours: _epgFutureHours + 24));
+              : now.add(Duration(hours: futureHours));
 
           return compute(_parseEpgInIsolate, {
             'filePath': file.path,
@@ -1721,91 +1623,45 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             'nowMs': windowStart.millisecondsSinceEpoch,
             'futureEndMs': windowEnd.millisecondsSinceEpoch,
             'catchupHoursByChannel': _catchupHoursByNormalizedId,
-            'currentDayOnly': currentDayOnly,
+            'currentDayOnly': dayOnly,
           });
         }
 
         final parseStart = DateTime.now();
-        var parseResult = await parseEpg(effectiveAllowedChannels);
+        var effectiveDayOnly = currentDayOnly;
+        var effectiveFutureHours = _epgFutureWindowHours;
+        var parseResult = await parseEpg(
+          effectiveAllowedChannels,
+          dayOnly: effectiveDayOnly,
+          futureHours: effectiveFutureHours,
+        );
         _stopParseProgressTimer();
         _lastParseDurationMs =
             DateTime.now().difference(parseStart).inMilliseconds;
         debugLog(
             'EPG: Parse compute took ${DateTime.now().difference(parseStart).inMilliseconds}ms');
-        final initialProgramCount = parseResult['programCount'] as int? ?? 0;
-        final initialChannelIds =
+        var initialProgramCount = parseResult['programCount'] as int? ?? 0;
+        var initialChannelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
         debugLog(
             'EPG: Initial parse result: $initialProgramCount programs, ${initialChannelIds.length} channels');
 
         final allowedCount = _allowedChannelIdsNormalized.length;
-        final sparseMatch = _allowedChannelIdsNormalized.isNotEmpty &&
-            initialChannelIds.isNotEmpty &&
+        if (effectiveDayOnly &&
+            _allowedChannelIdsNormalized.isNotEmpty &&
             allowedCount >= 500 &&
-            (initialChannelIds.length * 20 < allowedCount);
-        if (sparseMatch) {
+            initialChannelIds.length * 5 < allowedCount) {
           debugLog(
-              'EPG: Filtered parse matched only ${initialChannelIds.length}/$allowedCount channels; parsing full EPG to avoid under-matching.');
-          parseResult = await parseEpg(<String>{});
-        }
-
-        // If we have allowed channels but no results, try fallback strategies
-        if (_allowedChannelIdsNormalized.isNotEmpty &&
-            (initialProgramCount == 0 || initialChannelIds.isEmpty)) {
-          debugLog(
-              'EPG: Filtered parse returned no data; scanning channel IDs for targeted fallback.');
-          final scanStart = DateTime.now();
-          final scanResult = await compute(_scanEpgChannelIdsInIsolate, {
-            'filePath': file.path,
-            'allowedNormalized': _allowedChannelIdsNormalized.toList(),
-          });
-          debugLog(
-              'EPG: Channel ID scan took ${DateTime.now().difference(scanStart).inMilliseconds}ms');
-          final normalizedIds = (scanResult['normalizedIds'] as List<dynamic>)
-              .cast<String>()
-              .toSet();
-          final scannedChannelIds =
-              (scanResult['channelIds'] as List<dynamic>).cast<String>();
-          final matchedChannelIds =
-              (scanResult['matchedChannelIds'] as List<dynamic>).cast<String>();
-          final scannedNormalizedChannels = <String, List<String>>{};
-          for (final id in scannedChannelIds) {
-            final normalized = normalizeForFilter(id);
-            if (normalized.isNotEmpty) {
-              scannedNormalizedChannels
-                  .putIfAbsent(normalized, () => [])
-                  .add(id);
-            }
-          }
-          final targetedAllowed =
-              _allowedChannelIdsNormalized.intersection(normalizedIds);
-          debugLog(
-              'EPG: Scan found ${normalizedIds.length} EPG channels, ${_allowedChannelIdsNormalized.length} playlist channels, ${targetedAllowed.length} intersecting');
-          if (targetedAllowed.isEmpty &&
-              normalizedIds.isNotEmpty &&
-              _allowedChannelIdsNormalized.isNotEmpty) {
-            // Log sample IDs to help debug mismatch
-            final sampleEpg = normalizedIds.take(5).toList();
-            final samplePlaylist =
-                _allowedChannelIdsNormalized.take(5).toList();
-            debugLog('EPG: Sample EPG IDs: $sampleEpg');
-            debugLog('EPG: Sample playlist IDs: $samplePlaylist');
-          }
-          if (targetedAllowed.isNotEmpty) {
-            parseResult = await parseEpg(targetedAllowed);
-          } else if (matchedChannelIds.isNotEmpty) {
-            final matchedAllowed = matchedChannelIds
-                .map((id) => normalizeForFilter(id))
-                .where((id) => id.isNotEmpty)
-                .toSet();
-            parseResult = await parseEpg(matchedAllowed);
-          } else {
-            // Final fallback: parse ALL EPG data without filtering
-            // Matching will happen at query time using _findBestEpgId
-            debugLog(
-                'EPG: No direct ID matches found; parsing all EPG data for runtime matching.');
-            parseResult = await parseEpg(<String>{});
-          }
+              'EPG: Current-day parse matched only ${initialChannelIds.length}/$allowedCount channels; expanding window.');
+          effectiveDayOnly = false;
+          parseResult = await parseEpg(
+            effectiveAllowedChannels,
+            dayOnly: effectiveDayOnly,
+            futureHours: effectiveFutureHours,
+          );
+          initialProgramCount = parseResult['programCount'] as int? ?? 0;
+          initialChannelIds =
+              (parseResult['channelIds'] as List<dynamic>).cast<String>();
         }
 
         final programFilePath = parseResult['programFilePath'] as String?;
@@ -2493,7 +2349,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
-    if (!usedLenient && programCount < 1000) {
+    if (!usedLenient && (programCount == 0 || (hadXmlErrors && programCount < 1000))) {
       debugLog(
           'EPG: Low program count ($programCount). Falling back to lenient parser.');
       channelIds.clear();
@@ -2516,135 +2372,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       'normalizedChannels': normalizedChannels,
       'channelHashes': channelHashStrings,
       'hadXmlErrors': hadXmlErrors,
-    };
-  }
-
-  static Future<Map<String, dynamic>> _scanEpgChannelIdsInIsolate(
-      Map<String, dynamic> args) async {
-    final filePath = args['filePath'] as String? ?? '';
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw Exception('EPG cache file not found in isolate');
-    }
-
-    final normalizedIds = <String>{};
-    final channelIds = <String>{};
-    final matchedChannelIds = <String>{};
-    final allowedNormalized =
-        (args['allowedNormalized'] as List<dynamic>? ?? const [])
-            .map((e) => e.toString())
-            .toSet();
-
-    // Build prefix lookup for fuzzy matching
-    final allowedPrefixes = <String>{};
-    for (final allowed in allowedNormalized) {
-      if (allowed.length >= 4) {
-        allowedPrefixes.add(allowed.substring(0, 4));
-      }
-      if (allowed.length >= 6) {
-        allowedPrefixes.add(allowed.substring(0, 6));
-      }
-    }
-
-    bool fuzzyMatch(String normalized) {
-      // Exact match
-      if (allowedNormalized.contains(normalized)) return true;
-
-      // Check if any allowed ID starts with this normalized ID
-      for (final allowed in allowedNormalized) {
-        if (allowed.startsWith(normalized) && normalized.length >= 4) {
-          return true;
-        }
-        if (normalized.startsWith(allowed) && allowed.length >= 4) return true;
-      }
-
-      // Check prefix match (first 6 chars)
-      if (normalized.length >= 6) {
-        final prefix = normalized.substring(0, 6);
-        if (allowedPrefixes.contains(prefix)) return true;
-      }
-
-      return false;
-    }
-
-    final normalizeCache = <String, String>{};
-    String normalizeCached(String input) {
-      final cached = normalizeCache[input];
-      if (cached != null) return cached;
-      if (normalizeCache.length > 50000) {
-        normalizeCache.clear();
-      }
-      final normalized = normalizeForFilter(input);
-      normalizeCache[input] = normalized;
-      return normalized;
-    }
-
-    try {
-      Stream<List<int>> rawStreamProvider() {
-        final base = file.openRead();
-        if (file.path.toLowerCase().endsWith('.gz')) {
-          return base.transform(gzip.decoder);
-        }
-        return base;
-      }
-      final stream = rawStreamProvider()
-          .transform(const Utf8Decoder(allowMalformed: true));
-      final events = stream.toXmlEvents().withParentEvents();
-      final channelSubtrees =
-          events.selectSubtreeEvents((event) => event.name.endsWith('channel'));
-
-      await for (final subtree in channelSubtrees) {
-        if (subtree.isEmpty) continue;
-        final startEvent = subtree.first;
-        if (startEvent is! XmlStartElementEvent) continue;
-        final id = startEvent.attributes
-            .firstWhere((a) => a.name == 'id',
-                orElse: () =>
-                    XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE))
-            .value;
-        if (id.isEmpty) continue;
-        channelIds.add(id);
-        final normalizedId = normalizeCached(id);
-        if (normalizedId.isNotEmpty) {
-          normalizedIds.add(normalizedId);
-          if (fuzzyMatch(normalizedId)) {
-            matchedChannelIds.add(id);
-          }
-        }
-
-        final displayNames = <String>[];
-        for (var i = 0; i < subtree.length; i++) {
-          final event = subtree[i];
-          if (event is XmlStartElementEvent && event.name == 'display-name') {
-            if (i + 1 < subtree.length) {
-              final next = subtree[i + 1];
-              if (next is XmlTextEvent) {
-                final value = next.value.trim();
-                if (value.isNotEmpty) {
-                  displayNames.add(value);
-                }
-              }
-            }
-          }
-        }
-        for (final displayName in displayNames) {
-          final normalizedDisplay = normalizeForFilter(displayName);
-          if (normalizedDisplay.isNotEmpty) {
-            normalizedIds.add(normalizedDisplay);
-            if (fuzzyMatch(normalizedDisplay)) {
-              matchedChannelIds.add(id);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugLog('EPG: Channel ID scan failed: $e');
-    }
-
-    return {
-      'channelIds': channelIds.toList(),
-      'normalizedIds': normalizedIds.toList(),
-      'matchedChannelIds': matchedChannelIds.toList(),
     };
   }
 
@@ -4498,7 +4225,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final catchupHours = _catchupHoursByNormalizedId[normalized] ?? 0;
       final startMs =
           catchupHours > 0 ? nowMs - (catchupHours * 3600000) : nowMs;
-      final endMs = nowMs + (_epgFutureHours * 3600000);
+      final endMs = nowMs + (_epgFutureWindowHours * 3600000);
       final rows = await _db.getProgramsForEpgId(epgId,
           startMs: startMs, endMs: endMs, limit: 400);
       if (rows.isEmpty) return;
@@ -4553,7 +4280,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      final endMs = nowMs + (_epgFutureHours * 3600000);
+      final endMs = nowMs + (_epgFutureWindowHours * 3600000);
 
       // Calculate start time based on max catchup to be safe, or just nowMs
       // For batch, we'll use a conservative start time

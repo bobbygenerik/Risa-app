@@ -80,6 +80,18 @@ class EPGMatchingUtils {
       RegExp(r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b', caseSensitive: false);
   static final RegExp _artworkNoiseRe =
       RegExp(r'\b(tv|hd|fhd|uhd|4k|channel|network)\b', caseSensitive: false);
+  static final RegExp _subtitleSepRe = RegExp(r'\s*[-–—:|]\s*');
+  static final RegExp _subtitleYearRe = RegExp(r'\b(19|20)\d{2}\b');
+  static final RegExp _subtitleVsRe = RegExp(r'\bvs\.?\b', caseSensitive: false);
+  static final RegExp _subtitleStopwordsRe = RegExp(
+      r'\b(the|a|an|of|and|to|in|on|for|with|from|at|by)\b',
+      caseSensitive: false);
+  static final RegExp _subtitleEpisodeKeywordsRe = RegExp(
+      r'\b(pilot|premiere|finale|reunion|special|episode|part|chapter|season|series|extended|uncut|behind\s+the\s+scenes|bonus)\b',
+      caseSensitive: false);
+  static final RegExp _subtitleKeepRe = RegExp(
+      r'\b(svu|ci|la|ny|uk|us|au|miami|vegas|new\s+orleans|new\s+york|los\s+angeles|most\s+wanted|organized\s+crime|international|special\s+victims\s+unit|criminal\s+intent|crime\s+investigation|cyber)\b',
+      caseSensitive: false);
 
   // Cache for normalized title lookups
   static final Map<String, String> _normalizeTitleCache = {};
@@ -173,10 +185,44 @@ class EPGMatchingUtils {
     return result;
   }
 
+  /// Remove likely episode subtitles from titles like "Show - The Heist".
+  static String stripEpisodeSubtitleLoose(String title) {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return title;
+    final sepMatch = _subtitleSepRe.firstMatch(trimmed);
+    if (sepMatch == null) return title;
+    final parts = trimmed.split(_subtitleSepRe);
+    if (parts.length < 2) return title;
+    final left = parts.first.trim();
+    final right = parts.sublist(1).join(' ').trim();
+    if (left.isEmpty || right.isEmpty) return title;
+    if (right.length > 40) return title;
+    if (_subtitleYearRe.hasMatch(right)) return title;
+    if (_subtitleVsRe.hasMatch(right)) return title;
+    if (_newsAtTimeRe.hasMatch(right) || _timeRe.hasMatch(right)) {
+      return title;
+    }
+    if (_subtitleKeepRe.hasMatch(right)) return title;
+    final rightWords = right.split(RegExp(r'\s+'));
+    if (rightWords.length > 6) return title;
+    final lowerRight = right.toLowerCase();
+    final looksEpisode = _subtitleStopwordsRe.hasMatch(lowerRight) ||
+        _subtitleEpisodeKeywordsRe.hasMatch(lowerRight);
+    if (!looksEpisode) return title;
+    return left;
+  }
+
   /// Normalize a program title for display by removing episode suffixes.
-  static String normalizeForDisplayTitle(String title) {
+  static String normalizeForDisplayTitle(
+    String title, {
+    bool stripEpisodeSubtitle = false,
+  }) {
     var cleaned = title.trim();
     if (cleaned.isEmpty) return title;
+
+    if (stripEpisodeSubtitle) {
+      cleaned = stripEpisodeSubtitleLoose(cleaned);
+    }
 
     final hasEpisodeMarker = _seasonEpisodeRe.hasMatch(cleaned) ||
         _episodePartLabelRe.hasMatch(cleaned) ||

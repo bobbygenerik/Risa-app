@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +45,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   int _artworkDebugTick = 0;
   bool _statsInFlight = false;
   DateTime? _lastRefreshAt;
+  bool _fullScanInFlight = false;
+  int _fullScanMatched = 0;
+  int _fullScanTotal = 0;
+  double _fullScanProgress = 0.0;
+  Duration? _fullScanDuration;
   final List<_MatchEntry> _pageEntries = [];
   int _pageOffset = 0;
   bool _pageLoading = false;
@@ -181,6 +187,69 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   void _requestInitialFocus() {
     if (_reloadFocus.hasFocus) return;
     _reloadFocus.requestFocus();
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  Future<void> _runFullScan() async {
+    if (_fullScanInFlight) return;
+    final epgService = context.read<IncrementalEpgService>();
+    final channelProvider = context.read<ChannelProvider>();
+    final isEpgBusy = epgService.isDownloading ||
+        epgService.isParsing ||
+        epgService.isLoading;
+    if (isEpgBusy || channelProvider.isLoading) return;
+    setState(() {
+      _fullScanInFlight = true;
+      _fullScanMatched = 0;
+      _fullScanTotal = 0;
+      _fullScanProgress = 0.0;
+      _fullScanDuration = null;
+    });
+
+    final startedAt = DateTime.now();
+    final totalChannels = await channelProvider.getChannelCountAsync();
+    const pageSize = 300;
+    int processed = 0;
+    int matched = 0;
+
+    while (processed < totalChannels) {
+      final batch = await channelProvider.getChannelsPage(
+        offset: processed,
+        limit: pageSize,
+      );
+      if (batch.isEmpty) break;
+      for (final channel in batch) {
+        final id = channel.tvgId ?? channel.id;
+        if (epgService.hasEpgMatch(id, channelName: channel.name)) {
+          matched++;
+        }
+      }
+      processed += batch.length;
+      if (!mounted) return;
+      setState(() {
+        _fullScanMatched = matched;
+        _fullScanTotal = totalChannels;
+        _fullScanProgress =
+            totalChannels == 0 ? 0.0 : (processed / totalChannels).clamp(0.0, 1.0);
+      });
+      // Yield to keep UI responsive.
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _fullScanMatched = matched;
+      _fullScanTotal = totalChannels;
+      _fullScanProgress = 1.0;
+      _fullScanInFlight = false;
+      _fullScanDuration = DateTime.now().difference(startedAt);
+    });
   }
 
   Future<Map<String, int>> _computeStats() async {
@@ -362,6 +431,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     final isEpgBusy = epgService.isDownloading ||
         epgService.isParsing ||
         epgService.isLoading;
+    final fullScanPercent = _fullScanTotal == 0
+        ? 0.0
+        : (_fullScanMatched / _fullScanTotal) * 100.0;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: FocusTraversalGroup(
@@ -386,49 +458,71 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(
-                        width: 180,
-                        child: BrandPrimaryButton(
-                          focusNode: _reloadFocus,
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.maybeOf(context);
-                            try {
-                              await _writeDebugMarker('epg_reload_requested');
-                              debugLog('EPG: Force reload initiated from diagnostic screen');
-                              
-                              // Clear all EPG state before reload
-                              await epgService.clearAllData(clearUrls: false, clearSavedPlaylists: false);
-                              debugLog('EPG: Cleared EPG data');
-                              
-                              // Force fresh download and parse
-                              await epgService.initialize(forceRefresh: true);
-                              debugLog('EPG: Reload completed');
-                              
-                              await _writeDebugMarker('epg_reload_completed');
-                              if (!mounted) return;
-                              _refreshStats();
-                              if (!mounted) return;
-                              _deliverSnackBar(
-                                messenger,
-                                const SnackBar(
-                                    content: Text('EPG reload completed')),
-                              );
-                            } catch (e) {
-                              await _writeDebugMarker('epg_reload_failed');
-                              if (!mounted) return;
-                              _deliverSnackBar(
-                                messenger,
-                                SnackBar(
-                                    content: Text(
-                                        'EPG reload failed: ${e.toString()}')),
-                              );
-                            }
-                          },
-                          icon: Icons.refresh,
-                          label: 'Reload EPG',
-                          expand: true,
-                          minHeight: 36,
-                        ),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 160,
+                            child: BrandPrimaryButton(
+                              focusNode: _reloadFocus,
+                              onPressed: () async {
+                                final messenger =
+                                    ScaffoldMessenger.maybeOf(context);
+                                try {
+                                  await _writeDebugMarker('epg_reload_requested');
+                                  debugLog(
+                                      'EPG: Force reload initiated from diagnostic screen');
+
+                                  // Clear all EPG state before reload
+                                  await epgService.clearAllData(
+                                      clearUrls: false,
+                                      clearSavedPlaylists: false);
+                                  debugLog('EPG: Cleared EPG data');
+
+                                  // Force fresh download and parse
+                                  await epgService.initialize(forceRefresh: true);
+                                  debugLog('EPG: Reload completed');
+
+                                  await _writeDebugMarker('epg_reload_completed');
+                                  if (!mounted) return;
+                                  _refreshStats();
+                                  if (!mounted) return;
+                                  _deliverSnackBar(
+                                    messenger,
+                                    const SnackBar(
+                                        content: Text('EPG reload completed')),
+                                  );
+                                } catch (e) {
+                                  await _writeDebugMarker('epg_reload_failed');
+                                  if (!mounted) return;
+                                  _deliverSnackBar(
+                                    messenger,
+                                    SnackBar(
+                                        content: Text(
+                                            'EPG reload failed: ${e.toString()}')),
+                                  );
+                                }
+                              },
+                              icon: Icons.refresh,
+                              label: 'Reload EPG',
+                              expand: true,
+                              minHeight: 36,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 140,
+                            child: BrandPrimaryButton(
+                              onPressed: () {
+                                if (_fullScanInFlight) return;
+                                unawaited(_runFullScan());
+                              },
+                              icon: Icons.find_in_page,
+                              label: _fullScanInFlight ? 'Scanning...' : 'Full Scan',
+                              expand: true,
+                              minHeight: 36,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -502,6 +596,30 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 12),
                           ),
+                          if (_fullScanInFlight) ...[
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: _fullScanProgress,
+                              color: AppTheme.accentGreen,
+                              backgroundColor: Colors.white12,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Full scan: $_fullScanMatched / $_fullScanTotal '
+                              '(${fullScanPercent.toStringAsFixed(1)}%)',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                          ] else if (_fullScanTotal > 0) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Full scan: $_fullScanMatched / $_fullScanTotal '
+                              '(${fullScanPercent.toStringAsFixed(1)}%)'
+                              '${_fullScanDuration == null ? "" : " in ${_formatDuration(_fullScanDuration!)}"}',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
                         ],
                       );
                     },

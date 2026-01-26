@@ -9,6 +9,8 @@ import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
+import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
@@ -62,6 +64,47 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     }
   }
 
+  bool _isMovieProgram(Program? program) {
+    if (program == null) return false;
+    final info = [
+      program.title,
+      program.category ?? '',
+      program.description ?? '',
+      widget.channel.name,
+      widget.channel.groupTitle ?? '',
+    ].join(' ').toLowerCase();
+    return info.contains('movie') ||
+        info.contains('film') ||
+        info.contains('cinema') ||
+        info.contains('feature');
+  }
+
+  bool _isNewsProgram(Program? program) {
+    if (program == null) return false;
+    if (EPGMatchingUtils.isLikelyNewsTitle(program.title)) return true;
+    final info = [
+      program.title,
+      program.category ?? '',
+      program.description ?? '',
+      widget.channel.name,
+      widget.channel.groupTitle ?? '',
+    ].join(' ').toLowerCase();
+    return info.contains('news') || info.contains('newscast');
+  }
+
+  String _stripEpisodeTitleForLookup(String title, Program? program) {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return title;
+    if (program == null) return title;
+    if (SportsClassifier.isSportsProgram(program, widget.channel)) {
+      return title;
+    }
+    if (_isMovieProgram(program) || _isNewsProgram(program)) {
+      return title;
+    }
+    return EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
+  }
+
   Future<void> _fetchArtwork() async {
     if (!mounted) return;
 
@@ -75,9 +118,10 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     );
 
     // Determine the search title
-    final searchTitle = currentProgram?.title.isNotEmpty == true
+    final rawTitle = currentProgram?.title.isNotEmpty == true
         ? currentProgram!.title
         : widget.channel.name;
+    final searchTitle = _stripEpisodeTitleForLookup(rawTitle, currentProgram);
 
     final isSports = SportsClassifier.isSportsProgram(
       currentProgram,
