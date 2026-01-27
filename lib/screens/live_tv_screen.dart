@@ -545,6 +545,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void _tryInitialFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      
+      // FIX: Don't steal focus if the user is already focused on something else (like the Sidebar),
+      // unless this is a fresh cold start of the app.
+      final channelProvider = context.read<ChannelProvider>();
+      final currentFocus = FocusManager.instance.primaryFocus;
+      
+      // If we are NOT in cold start, and something already has valid focus, respect it.
+      if (!channelProvider.isColdStartLoad && 
+          currentFocus != null && 
+          currentFocus.context != null) {
+        // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
+        return;
+      }
+
       // Start with Watch Now button for better UX - user sees hero first
       if (_watchButtonFocus.canRequestFocus) {
         _watchButtonFocus.requestFocus();
