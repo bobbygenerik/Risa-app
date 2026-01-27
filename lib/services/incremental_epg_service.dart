@@ -115,8 +115,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
   String? _playlistIdentity;
-  bool get _suspendDbReads =>
-      _isParsing || _isDownloading || _isLoading || _externalDbBusy;
+  // FIX: Don't suspend DB reads during parsing/loading since we use WAL mode.
+  // Blocking reads causes UI to show no data for ~7s during parse.
+  bool get _suspendDbReads => _dbDisabled;
 
   IncrementalEpgService() {
     WidgetsBinding.instance.addObserver(this);

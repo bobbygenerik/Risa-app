@@ -311,16 +311,21 @@ class _MainShellState extends State<MainShell> {
     // Prevent rapid back button presses
     final now = DateTime.now();
     if (_lastBackPress != null && now.difference(_lastBackPress!).inMilliseconds < 500) {
+      debugLog('Back navigation debounced (location: $location)');
       return;
     }
     _lastBackPress = now;
     
+    debugLog('MainShell back nav: location=$location, last=$lastLocation');
+
     if (location == '/settings' ||
         (lastLocation != null && lastLocation.startsWith('/settings'))) {
+      debugLog('MainShell back nav: handling settings -> home');
       context.go('/home');
       return;
     }
     if (location != '/home') {
+      debugLog('MainShell back nav: handling $location -> home');
       context.go('/home');
       return;
     }
@@ -355,6 +360,7 @@ class _MainShellState extends State<MainShell> {
     }
     
     // Go to exit screen
+    debugLog('MainShell back nav: going to /exit');
     context.go('/exit');
   }
 
