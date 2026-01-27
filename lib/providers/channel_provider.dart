@@ -578,6 +578,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     }
   }
 
+  // Throttle notifyListeners for performance - max once per 100ms
+  DateTime? _lastNotifyTime;
+  bool _notifyPending = false;
+  static const Duration _notifyThrottleInterval = Duration(milliseconds: 100);
+
   @override
   void dispose() {
     _disposed = true;
@@ -587,6 +592,25 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   @override
   void notifyListeners() {
     if (_disposed) return;
+    
+    final now = DateTime.now();
+    if (_lastNotifyTime != null && 
+        now.difference(_lastNotifyTime!) < _notifyThrottleInterval) {
+      // Schedule a delayed notification if not already pending
+      if (!_notifyPending) {
+        _notifyPending = true;
+        Future.delayed(_notifyThrottleInterval, () {
+          _notifyPending = false;
+          if (!_disposed) {
+            _lastNotifyTime = DateTime.now();
+            super.notifyListeners();
+          }
+        });
+      }
+      return;
+    }
+    
+    _lastNotifyTime = now;
     super.notifyListeners();
   }
 
@@ -597,12 +621,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         phase == SchedulerPhase.midFrameMicrotasks) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_disposed) {
-          super.notifyListeners();
+          notifyListeners(); // Use throttled version
         }
       });
       return;
     }
-    super.notifyListeners();
+    notifyListeners(); // Use throttled version
   }
 
   bool _isReadOnlyDbError(Object error) {

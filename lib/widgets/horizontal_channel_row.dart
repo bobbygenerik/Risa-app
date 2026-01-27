@@ -134,24 +134,26 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
     // Ensure visible count covers at least the initial view
     final count = math.min(widget.itemCount, math.max(_visibleCount, 6));
     
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        _handleScrollNotification(notification);
-        return false;
-      },
-      child: ListView.separated(
-        controller: widget.controller,
-        key: ValueKey('row_${widget.sectionKey}'),
-        scrollDirection: Axis.horizontal,
-        physics: const ClampingScrollPhysics(),
-        cacheExtent: widget.cardWidth * 4, // Keep more cards alive to reduce flicker
-        padding: widget.padding,
-        clipBehavior: Clip.none,
-        itemCount: count,
-        // addRepaintBoundaries is true by default, which helps with scroll perf
-        addAutomaticKeepAlives: true, // Keep cards alive to avoid image flicker
-        itemBuilder: widget.itemBuilder,
-        separatorBuilder: (context, index) => SizedBox(width: widget.cardGap),
+    return RepaintBoundary(
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          _handleScrollNotification(notification);
+          return false;
+        },
+        child: ListView.separated(
+          controller: widget.controller,
+          key: ValueKey('row_${widget.sectionKey}'),
+          scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
+          cacheExtent: widget.cardWidth * 4, // Keep more cards alive to reduce flicker
+          padding: widget.padding,
+          clipBehavior: Clip.none,
+          itemCount: count,
+          // addRepaintBoundaries is true by default, which helps with scroll perf
+          addAutomaticKeepAlives: true, // Keep cards alive to avoid image flicker
+          itemBuilder: widget.itemBuilder,
+          separatorBuilder: (context, index) => SizedBox(width: widget.cardGap),
+        ),
       ),
     );
   }

@@ -1407,22 +1407,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
             }
 
-            final epgService = context.watch<IncrementalEpgService>();
+            // Use Selector to only rebuild when loading state changes, not on every EPG update
+            final epgLoadingState = context.select<IncrementalEpgService, ({bool isDownloading, bool isParsing, bool isLoading, bool hasEpgUrl, bool hasLoadedPrograms})>(
+              (epg) => (
+                isDownloading: epg.isDownloading,
+                isParsing: epg.isParsing,
+                isLoading: epg.isLoading,
+                hasEpgUrl: epg.hasEpgUrl,
+                hasLoadedPrograms: epg.hasLoadedPrograms,
+              ),
+            );
             final hasDisplayData = hasChannels &&
                 (_categoryNames.isNotEmpty || _categoryChannelCache.isNotEmpty);
-            final epgBusy = epgService.isDownloading ||
-                epgService.isParsing ||
-                epgService.isLoading;
+            final epgBusy = epgLoadingState.isDownloading ||
+                epgLoadingState.isParsing ||
+                epgLoadingState.isLoading;
             final shouldBlockForEpg =
-                hasDisplayData && epgService.hasEpgUrl && !epgService.hasLoadedPrograms;
+                hasDisplayData && epgLoadingState.hasEpgUrl && !epgLoadingState.hasLoadedPrograms;
             // Keep overlay visible until we have actual displayable data
             final categoriesNotReady = channelProvider.isColdStartLoad && 
                 _categoryChannelCache.isEmpty && 
                 hasChannels;
             final overlayBusy = channelProvider.isLoading ||
-                epgService.isDownloading ||
-                epgService.isParsing ||
-                epgService.isLoading ||
+                epgLoadingState.isDownloading ||
+                epgLoadingState.isParsing ||
+                epgLoadingState.isLoading ||
                 categoriesNotReady;
             // Only show startup overlay on cold starts - warm starts use skeleton loaders
             final showStartupOverlay =
@@ -1454,11 +1463,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 }
               });
             }
-            final epgStatus = epgService.isDownloading
+            final epgStatus = epgLoadingState.isDownloading
                 ? 'Downloading EPG data...'
-                : epgService.isParsing
+                : epgLoadingState.isParsing
                     ? 'Parsing EPG data...'
-                    : epgService.isLoading
+                    : epgLoadingState.isLoading
                         ? 'Loading EPG cache...'
                         : null;
             Widget wrapWithOverlay(Widget child) {
@@ -1736,7 +1745,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final mostWatched = channelProvider.mostWatchedChannels;
 
     // Use stabilized channels if already initialized and fallback haven't changed much
@@ -1921,7 +1930,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
 
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final heroCandidates = _buildHeroCandidates(allChannels, epgService);
     final epgHeroCandidates =
         heroCandidates.where((candidate) => candidate.program != null).toList();
@@ -4321,7 +4330,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
        bool isFirstCategoryRow = false,
        bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
     final seenProgramKeys = <String>{};
     final missingIds = <String>[];
@@ -6264,7 +6273,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Force skeleton loader if EPG is doing initial heavy lifting or parsing
     // This ensures the user sees "Loading..." instead of a partially empty screen.
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final isInitialLoad = epgService.isLoading || epgService.isParsing;
     
     // Check if we have actual PROGRAM data, not just channel definitions.
@@ -6654,7 +6663,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }) {
     _markSkeletonVisibility(true);
     final channelProvider = context.read<ChannelProvider>();
-    final epgService = context.watch<IncrementalEpgService>();
+    final epgService = context.read<IncrementalEpgService>();
     final resolvedOverlay = showColdStartOverlay ?? true;
     var resolvedTitle = titleText;
     String? resolvedStatus = statusText ?? channelProvider.loadingStatus;
