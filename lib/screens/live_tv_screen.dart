@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+
 import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -24,16 +24,13 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/horizontal_channel_row.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
-import 'package:iptv_player/services/fanart_service.dart';
-import 'package:iptv_player/services/sportradar_service.dart';
-import 'package:iptv_player/services/thesportsdb_service.dart';
-import 'package:iptv_player/services/tmdb_service.dart';
-import 'package:iptv_player/services/tvdb_service.dart';
-import 'package:iptv_player/services/service_validator.dart';
+
+import 'package:iptv_player/services/live_tv_artwork_service.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
-import 'package:iptv_player/utils/sports_classifier.dart';
+
 import 'package:iptv_player/utils/epg_matching_utils.dart';
+import 'package:iptv_player/utils/program_classifier.dart';
 
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
@@ -46,6 +43,8 @@ import 'package:iptv_player/widgets/skeleton_loader.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
+import 'package:iptv_player/widgets/live_tv/epg_channel_selector_dialog.dart';
+
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
@@ -54,7 +53,7 @@ import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
-import 'package:iptv_player/utils/no_text_selection_controls.dart';
+
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -104,6 +103,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
   late final ScrollController _scrollController;
+  late final LiveTvArtworkService _artworkService;
   String? _lastRoutePath;
 
   late final FocusNode _watchButtonFocus;
@@ -115,35 +115,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Queue<String> _cardFocusOrder = Queue<String>();
   static const int _maxCardFocusNodes = 320;
   String? _lastFocusedCardKey;
-  final Map<String, String?> _programArtwork = {};
-  final Map<String, String> _programArtworkByTitle = {};
-  final Map<String, DateTime> _programArtworkNegativeByTitle = {};
-  final Set<String> _artworkRequests = {};
-  final Map<String, Future<String?>> _pendingArtworkRequests =
-      {}; // Deduplication
-  final Queue<Program> _artworkQueueHigh = Queue<Program>();
-  final Queue<Program> _artworkQueueLow = Queue<Program>();
-  final Set<String> _queuedArtworkIds = {};
-  final Map<String, Future<String?>> _pendingArtworkByTitle = {};
-  final Queue<String> _programArtworkOrder = Queue<String>();
-  final Queue<String> _programArtworkTitleOrder = Queue<String>();
-  final Queue<String> _programArtworkNegativeTitleOrder = Queue<String>();
-  final Queue<String> _programTitleLogoOrder = Queue<String>();
-  final Queue<String> _categoryCacheOrder = Queue<String>();
-  final Map<String, Size> _heroImageSizes = {};
-  Timer? _artworkThrottle;
-  late final bool _tmdbEnabled;
-  late final bool _fanartEnabled;
-  late final bool _sportsDbEnabled;
-  late final bool _tvdbEnabled;
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
-  final Map<String, DateTime> _artworkRetryAfter = {};
-  final Map<String, int> _artworkFailureCounts = {};
-  final Map<String, String?> _programTitleLogos = {};
-  final Set<String> _titleLogoRequests = {};
-  final Map<String, List<String>> _artworkQueryTitleCache = {};
-  final Map<String, Channel> _programChannelLookup = {};
+
   final Map<String, List<Channel>> _categoryChannelCache = {};
   final Set<String> _categoryChannelLoading = {};
   List<String> _categoryNames = [];
@@ -155,24 +129,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _initialCategoryPrefetchCount = 8;
   static const int _rowInitialFetch = 12;
   static const int _rowFetchStep = 16;
-  static const int _rowVisibleBuffer = 2;
-  static const int _maxProgramArtworkEntries = 100; // Restored but conservative
-  static const int _maxProgramArtworkTitleEntries = 100;
-  static const int _maxProgramArtworkNegativeEntries = 100;
-  static const Duration _artworkNegativeTtl = Duration(hours: 6);
-  static const String _programArtworkTitleCacheKey =
-      'live_tv_program_artwork_title_cache_v2';
-  static const String _programArtworkNegativeCacheKey =
-      'live_tv_program_artwork_negative_cache_v2';
+
   static const String _liveTvSnapshotKey = 'live_tv_snapshot_v1';
   static const Duration _liveTvSnapshotTtl = Duration(hours: 6);
   static const int _liveTvSnapshotCategoryLimit = 6;
   static const int _liveTvSnapshotRowLimit = 12;
-  Timer? _artworkTitleSaveDebounce;
-  Timer? _artworkNegativeSaveDebounce;
   Timer? _snapshotSaveDebounce;
-  static const int _maxProgramTitleLogoEntries = 50;
-  static const int _maxCachedCategories = 6;
+
   int _visibleCategoryCount = 10; // Restored but conservative
   static const int _categoryChunkSize = 6;
   static const double _categoryPrefetchExtent =
@@ -193,12 +156,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, int> _categoryOffsets = {};
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
-  final Map<String, bool> _heroImageCacheHits = {};
-  final Map<String, double> _heroAspectRatios = {};
-  final Set<String> _heroAspectRatioInFlight = {};
   bool _userHasScrolled = false;
-  Timer? _artworkUiDebounce;
-  bool _artworkUiDirty = false;
+
 
   int _lastHeroCandidateCount = 0;
 
@@ -213,8 +172,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   List<Channel> _stableFeaturedChannels = [];
   bool _featuredChannelsInitialized = false;
   bool _isOpeningPlayer = false;
-  bool _pauseArtworkFetching = false;
-  bool _suspendArtworkCaches = false;
   bool _suspendHeroBackground = false;
   bool _snapshotApplied = false;
   static const bool _forceRowsVisible = false;
@@ -240,20 +197,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _artworkRetryWindowActive = false;
   DateTime? _lastArtworkRetryWindow;
 
+  // Status flags
+  final bool _tmdbEnabled = true;
+  final bool _fanartEnabled = true;
+  final bool _sportsDbEnabled = true;
+  final List<String> _categoryCacheOrder = [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _artworkService = LiveTvArtworkService(
+      onArtworkUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+    _artworkService.initialize();
     _initTime = DateTime.now(); // Track init time for EPG loading timeout
-    _tmdbEnabled = ServiceValidator.isTmdbAvailable;
-    _fanartEnabled = true;
-    _sportsDbEnabled = true;
-    _tvdbEnabled = ServiceValidator.isTvdbAvailable;
     // Initialize scroll controller
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScrollPrefetch);
-    unawaited(_loadProgramArtworkTitleCache());
-    unawaited(_loadProgramArtworkNegativeCache());
+
     unawaited(_loadLiveTvSnapshot());
 
     // Get focus nodes from pool
@@ -477,6 +441,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return snapshot;
   }
 
+  void _scheduleLiveTvSnapshotSave() {
+    _snapshotSaveDebounce?.cancel();
+    _snapshotSaveDebounce = Timer(const Duration(seconds: 10), () {
+      if (mounted) _saveLiveTvSnapshot();
+    });
+  }
+
   Future<void> _saveLiveTvSnapshot() async {
     if (_categoryNames.isEmpty || _categoryChannelCache.isEmpty) return;
     if (!mounted) return;
@@ -615,19 +586,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   void _enterIdleMode() {
     _isIdle = true;
-    _pauseArtworkFetching = true;
-    _artworkQueueHigh.clear();
-    _artworkQueueLow.clear();
-    _queuedArtworkIds.clear();
-    _artworkThrottle?.cancel();
-    _artworkThrottle = null;
+    _artworkService.enterIdleMode();
     MemoryManager.checkMemoryPressure();
   }
 
   void _exitIdleMode() {
     _isIdle = false;
-    _pauseArtworkFetching = false;
-    _scheduleArtworkDrain();
+    _artworkService.exitIdleMode();
   }
 
   double _safeScrollOffset() {
@@ -773,13 +738,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  int _initialRowVisibleCount(
-      BuildContext context, double cardWidth, double rowInset) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final availableWidth = screenWidth - rowInset - context.spacingLg();
-    final perRow = (availableWidth / (cardWidth + context.cardGap())).floor();
-    return (perRow + _rowVisibleBuffer).clamp(6, 12);
-  }
+
 
   // Removed _rowVisibleCountFor and _bumpRowVisibleCount as logic is now handled in HorizontalChannelRow widget
 
@@ -857,7 +816,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           groupTitle: channel.groupTitle,
         );
         if (program == null) continue;
-        _ensureFreshProgramArtwork(
+        _artworkService.ensureFreshProgramArtwork(
           program,
           channel,
           highPriority: true,
@@ -868,6 +827,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   void dispose() {
+    _artworkService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     FocusManager.instance.removeListener(_handleFocusChange);
     _stopIdleTimer();
@@ -875,12 +835,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _artworkRetryWindowTimer?.cancel();
     _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
-    _artworkThrottle?.cancel();
-    _artworkTitleSaveDebounce?.cancel();
-    _artworkNegativeSaveDebounce?.cancel();
-    _snapshotSaveDebounce?.cancel();
     _featuredRotationTimer?.cancel();
-    _artworkUiDebounce?.cancel();
 
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
@@ -1980,7 +1935,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ) ??
         '';
     if (selectedHero?.program != null) {
-      _ensureFreshProgramArtwork(
+      _artworkService.ensureFreshProgramArtwork(
         selectedHero!.program!,
         selectedHero.channel,
         highPriority: true,
@@ -2696,67 +2651,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool allowPrefetch, {
     bool highPriority = false,
   }) {
-    // Prefer program artwork when it's not a poster/portrait image.
-    if (program != null) {
-      final cached =
-          _normalizeArtworkUrl(_programArtwork[program.id], isHero: false);
-      if (cached != null && cached.isNotEmpty) {
-        if (_isValidProgramArtwork(
-          cached,
-          channel!,
-          programTitle: program.title,
-          source: 'cached',
-        )) {
-          final normalized = normalizeImageUrl(cached);
-          _logArtworkDecision(
-            'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
-          );
-          return normalized;
-        }
-      }
+    if (program == null || channel == null) return null;
 
-      final byTitle = _normalizeArtworkUrl(
-        _getProgramArtworkByTitle(program, channel),
-        isHero: false,
+    // 1. Check service for cached artwork
+    final cached = _artworkService.getArtwork(program.id);
+    final cachedUrl =
+        _normalizeArtworkUrl(cached, isHero: false);
+    if (cachedUrl != null &&
+        cachedUrl.isNotEmpty &&
+        _isValidProgramArtwork(cachedUrl, channel,
+            programTitle: program.title, source: 'cached')) {
+      final normalized = normalizeImageUrl(cachedUrl);
+      _logArtworkDecision(
+        'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
       );
-      if (byTitle != null && byTitle.isNotEmpty) {
-        if (_isValidProgramArtwork(
-          byTitle,
-          channel!,
-          programTitle: program.title,
-          source: 'title_cache',
-        )) {
-          final normalized = normalizeImageUrl(byTitle);
-          _logArtworkDecision(
-            'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
-          );
-          return normalized;
-        }
-      }
+      return normalized;
+    }
 
-      // Side-effect free artwork fetching check
-      if ((_tmdbEnabled ||
-              _fanartEnabled ||
-              _sportsDbEnabled ||
-              _tvdbEnabled) &&
-          allowPrefetch &&
-          _shouldAttemptArtworkByTitle(program, channel) &&
-          (!_programArtwork.containsKey(program.id) ||
-              _shouldRetryArtwork(program.id))) {
-        // Schedule fetch for after build to avoid side effects during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _setProgramArtwork(program.id, '');
-          _enqueueArtwork(program, highPriority: highPriority);
-        });
-      }
+    // 2. Check service for title-based cached artwork
+    final byTitle =
+        _artworkService.getArtworkByTitle(program, channel);
+    final byTitleUrl =
+        _normalizeArtworkUrl(byTitle, isHero: false);
+    if (byTitleUrl != null &&
+        byTitleUrl.isNotEmpty &&
+        _isValidProgramArtwork(byTitleUrl, channel,
+            programTitle: program.title, source: 'title_cache')) {
+      final normalized = normalizeImageUrl(byTitleUrl);
+      _logArtworkDecision(
+        'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
+      );
+      return normalized;
+    }
 
-      // Fall back to EPG-provided art while services are resolving.
+    // 3. Trigger fetch if needed
+    if (allowPrefetch) {
+       _artworkService.ensureFreshProgramArtwork(program, channel, highPriority: highPriority);
+    }
+
+    // 4. Fall back to EPG-provided art
       final programImage =
           _normalizeArtworkUrl(program.imageUrl, isHero: false);
       if (_isValidProgramArtwork(
         programImage,
-        channel!,
+        channel,
         programTitle: program.title,
         source: 'epg',
       )) {
@@ -2766,7 +2704,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         );
         return normalized;
       }
-    }
 
     return null;
   }
@@ -2936,46 +2873,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
-  bool _acceptArtworkUrl(
-    String? url, {
-    required bool preferLandscape,
-    String? programTitle,
-    String? source,
-  }) {
-    if (url == null || url.isEmpty) return false;
-    if (ImageValidationService.isKnownInvalid(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_invalid_cached',
-      );
-      return false;
-    }
-    if (_isLikelyTitleLogoUrl(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_title_logo',
-      );
-      return false;
-    }
-    if (_isLikelySmallImage(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_small',
-      );
-      return false;
-    }
-    if (preferLandscape && _isLikelyPosterUrl(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=skip_poster_prefer_landscape',
-      );
-      return false;
-    }
-    return true;
-  }
+
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
 
     // Check TMDB title logo cache first
-    final cacheKey = program.id;
-    final cachedUrl = _programTitleLogos[cacheKey];
+    final cachedUrl = _artworkService.getTitleLogo(program.id);
     if (_isValidTitleLogo(cachedUrl, channel) &&
         _isLikelyTitleLogoUrl(cachedUrl!)) {
       return cachedUrl;
@@ -2992,9 +2896,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Trigger async fetch if not already requested
     if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) &&
-        !_titleLogoRequests.contains(cacheKey)) {
-      _titleLogoRequests.add(cacheKey);
-      unawaited(_fetchTitleLogo(program, channel));
+        !_artworkService.isTitleLogoRequestPending(program.id)) {
+      unawaited(_artworkService.fetchTitleLogo(program, channel));
     }
 
     return null;
@@ -3064,37 +2967,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return _applyTmdbSize(url, size);
   }
 
-  void _ensureHeroAspectRatio(String url) {
-    if (url.isEmpty) return;
-    if (ImageFailureCache.shouldSkip(url)) return;
-    if (_heroAspectRatios.containsKey(url)) return;
-    if (_heroAspectRatioInFlight.contains(url)) return;
-    _heroAspectRatioInFlight.add(url);
-    final provider = CachedNetworkImageProvider(
-      url,
-      headers: HttpClientService().imageHeaders,
-    );
-    final stream = provider.resolve(const ImageConfiguration());
-    late ImageStreamListener listener;
-    listener = ImageStreamListener((image, _) {
-      final width = image.image.width.toDouble();
-      final height = image.image.height.toDouble();
-      if (width > 0 && height > 0 && mounted) {
-        setState(() {
-          _heroImageSizes[url] = Size(width, height);
-          _heroAspectRatios[url] = width / height;
-        });
-      }
-      ImageFailureCache.recordSuccess(url);
-      _heroAspectRatioInFlight.remove(url);
-      stream.removeListener(listener);
-    }, onError: (_, __) {
-      ImageFailureCache.recordFailure(url, 'hero_aspect_ratio');
-      _heroAspectRatioInFlight.remove(url);
-      stream.removeListener(listener);
-    });
-    stream.addListener(listener);
-  }
+
+
 
   bool _isHighResHeroImage(String url) {
     if (url.isEmpty) return false;
@@ -3106,533 +2980,44 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return true;
       }
     }
-    final size = _heroImageSizes[url];
-    if (size != null) {
-      return size.width >= 1200 || size.height >= 720;
-    }
-    _ensureHeroAspectRatio(url);
+    // Fallback: assume false without size check
     return false;
-  }
-
-  int _programArtworkEntryLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkEntries;
-  }
-
-  int _programArtworkTitleLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkTitleEntries;
-  }
-
-  int _programArtworkNegativeLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkNegativeEntries;
-  }
-
-  int _programTitleLogoLimit() {
-    return MemoryManager.isLowMemory ? 30 : _maxProgramTitleLogoEntries;
-  }
-
-  void _registerProgramArtworkEntry(String key, String value) {
-    _programArtwork[key] = value;
-    _programArtworkOrder.remove(key);
-    _programArtworkOrder.addLast(key);
-    while (_programArtworkOrder.length > _programArtworkEntryLimit()) {
-      final removed = _programArtworkOrder.removeFirst();
-      _programArtwork.remove(removed);
-      _programChannelLookup.remove(removed);
-    }
-  }
-
-  void _registerProgramArtworkTitle(String key, String value) {
-    _programArtworkByTitle[key] = value;
-    _programArtworkTitleOrder.remove(key);
-    _programArtworkTitleOrder.addLast(key);
-    while (_programArtworkTitleOrder.length > _programArtworkTitleLimit()) {
-      final removed = _programArtworkTitleOrder.removeFirst();
-      _programArtworkByTitle.remove(removed);
-    }
-    _scheduleProgramArtworkTitleSave();
-  }
-
-  void _removeProgramArtworkTitle(String key) {
-    if (key.isEmpty) return;
-    final removed = _programArtworkByTitle.remove(key);
-    if (removed == null) return;
-    _programArtworkTitleOrder.remove(key);
-    _scheduleProgramArtworkTitleSave();
-  }
-
-  void _registerProgramArtworkNegativeTitle(String key, DateTime until) {
-    _programArtworkNegativeByTitle[key] = until;
-    _programArtworkNegativeTitleOrder.remove(key);
-    _programArtworkNegativeTitleOrder.addLast(key);
-    while (_programArtworkNegativeTitleOrder.length >
-        _programArtworkNegativeLimit()) {
-      final removed = _programArtworkNegativeTitleOrder.removeFirst();
-      _programArtworkNegativeByTitle.remove(removed);
-    }
-    _scheduleProgramArtworkNegativeSave();
-  }
-
-  void _scheduleArtworkUiRefresh() {
-    if (!mounted) return;
-    _artworkUiDirty = true;
-    if (_artworkUiDebounce?.isActive ?? false) return;
-    _artworkUiDebounce = Timer(const Duration(milliseconds: 80), () {
-      if (!mounted) return;
-      if (_artworkUiDirty) {
-        setState(() {});
-        _artworkUiDirty = false;
-      }
-    });
-  }
-
-  void _setProgramArtwork(String key, String value) {
-    _registerProgramArtworkEntry(key, value);
-    _scheduleArtworkUiRefresh();
-  }
-
-  String _titleCacheKey(Program program, [Channel? channel]) {
-    final baseTitle =
-        _stripEpisodeTitleForLookup(program, channel, program.title);
-    final base = normalizeForFilter(_canonicalArtworkTitle(baseTitle));
-    final channelForKey = channel ?? _programChannelLookup[program.id];
-    if (channelForKey == null) return base;
-    final isNews = EPGMatchingUtils.isLikelyNewsTitle(baseTitle);
-    if (!_isGenericTitle(base) && !isNews) {
-      return base;
-    }
-    final channelId = channelForKey.tvgId ?? channelForKey.id;
-    if (channelId.isNotEmpty) {
-      return '$base|${normalizeForFilter(channelId)}';
-    }
-    final hintSource = (channelForKey.groupTitle != null &&
-            channelForKey.groupTitle!.trim().isNotEmpty)
-        ? channelForKey.groupTitle!
-        : channelForKey.name;
-    final hint = normalizeForFilter(hintSource);
-    if (hint.isEmpty) return base;
-    return '$base|$hint';
-  }
-
-  String _canonicalArtworkTitle(String title) {
-    // Use consolidated normalization from EPGMatchingUtils
-    return EPGMatchingUtils.normalizeForArtwork(title);
-  }
-
-  String _stripEpisodeTitleForLookup(
-    Program program,
-    Channel? channel,
-    String title,
-  ) {
-    final trimmed = title.trim();
-    if (trimmed.isEmpty) return title;
-    final isNews = channel != null && _isNewsProgram(program, channel);
-    final isSports = _isSportsProgram(program, channel);
-    final isMovie = channel != null && _isMovieProgram(program, channel);
-    if (isNews || isSports || isMovie) return title;
-    return EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
   }
 
   String _displayProgramTitle(Program program, Channel? channel) {
     final trimmed = program.title.trim();
     if (trimmed.isEmpty) return program.title;
-    final isNews = channel != null && _isNewsProgram(program, channel);
-    final isSports = _isSportsProgram(program, channel);
-    final isMovie = channel != null && _isMovieProgram(program, channel);
+    final isNews = channel != null && ProgramClassifier.isNewsProgram(program, channel);
+    final isSports = ProgramClassifier.isSportsProgram(program, channel);
+    final isMovie = channel != null && ProgramClassifier.isMovieProgram(program, channel);
     return EPGMatchingUtils.normalizeForDisplayTitle(
       trimmed,
       stripEpisodeSubtitle: !(isNews || isSports || isMovie),
     );
   }
 
-  String _normalizeArtworkVariant(String title) {
-    // Use consolidated utility from EPGMatchingUtils
-    return EPGMatchingUtils.normalizeArtworkVariant(title);
+  void _logArtworkDecision(String message) {
+    if (!_logArtworkMatches) return;
+    ArtworkDiagnostics.record(message);
+    debugLog(message);
   }
 
-  bool _isGenericTitle(String title) {
-    // Use consolidated utility from EPGMatchingUtils
-    return EPGMatchingUtils.isGenericTitle(title);
-  }
 
-  String _cleanChannelNameForQuery(String name) {
-    var cleaned = name;
-    cleaned = cleaned.replaceAll(RegExp(r'\s*[-:|]\s*'), ' ');
-    cleaned = cleaned.replaceAll(
-        RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(
-        RegExp(r'\b(tv|channel|network)\b', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return cleaned;
-  }
 
-  List<String> _buildArtworkQueryTitles(Program program, Channel? channel) {
-    final rawTitle = program.title.trim();
-    final stripped = _stripEpisodeTitleForLookup(program, channel, rawTitle);
-    final original = stripped.trim().isEmpty ? rawTitle : stripped.trim();
-    final canonical = _canonicalArtworkTitle(original).trim();
-    final isNews = EPGMatchingUtils.isLikelyNewsTitle(canonical);
-    final normalizedLookup = EPGMatchingUtils.normalizeTitleForLookup(
-      canonical,
-      aggressiveForNews: isNews,
-    );
-    final cacheKey = _titleCacheKey(program, channel);
-    final cached = _artworkQueryTitleCache[cacheKey];
-    if (cached != null && cached.isNotEmpty) {
-      return cached;
-    }
-    final titles = <String>[];
-    void add(String value) {
-      if (value.isEmpty || titles.contains(value)) return;
-      titles.add(value);
-    }
 
-    void addVariant(String value) {
-      if (value.isEmpty) return;
-      add(value);
-      final normalized = _normalizeArtworkVariant(value);
-      if (normalized.isNotEmpty && normalized != value) {
-        add(normalized);
-      }
-      if (value.contains(':')) {
-        final primary = value.split(':').first.trim();
-        if (primary.isNotEmpty && primary != value) {
-          add(primary);
-          final normalizedPrimary = _normalizeArtworkVariant(primary);
-          if (normalizedPrimary.isNotEmpty && normalizedPrimary != primary) {
-            add(normalizedPrimary);
-          }
-        }
-      }
-    }
-
-    final channelName =
-        channel == null ? '' : _cleanChannelNameForQuery(channel.name);
-    final groupTitle = channel == null
-        ? ''
-        : _cleanChannelNameForQuery(channel.groupTitle ?? '');
-    if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
-      add('$canonical $channelName');
-    }
-    if ((_isGenericTitle(canonical) || isNews) && groupTitle.isNotEmpty) {
-      add('$canonical $groupTitle');
-    }
-    if ((_isGenericTitle(canonical) || isNews) &&
-        channelName.isNotEmpty &&
-        groupTitle.isNotEmpty) {
-      add('$canonical $channelName $groupTitle');
-    }
-    addVariant(canonical);
-    if (normalizedLookup != canonical) {
-      addVariant(normalizedLookup);
-    }
-    if (canonical != original) addVariant(original);
-    if (original == rawTitle && canonical != rawTitle) {
-      addVariant(rawTitle);
-    }
-    if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
-      add(channelName);
-    }
-    if ((_isGenericTitle(canonical) || isNews) && groupTitle.isNotEmpty) {
-      add(groupTitle);
-    }
-    if (canonical.length <= 6 && channelName.isNotEmpty) {
-      add(channelName);
-    }
-    if (canonical.length <= 6 && groupTitle.isNotEmpty) {
-      add(groupTitle);
-    }
-    // REMOVED: Truncated title variants (3-5 words) causing false positives/negatives for specific movies
-    // We now rely on the full canonical title, original title, and channel-name appended variants.
-
-    if (groupTitle.isNotEmpty) {
-      final lowerGroup = groupTitle.toLowerCase();
-      if (lowerGroup.contains('sports')) {
-        addVariant('$canonical sports');
-      }
-      if (lowerGroup.contains('news')) {
-        addVariant('$canonical news');
-      }
-      if (lowerGroup.contains('kids') || lowerGroup.contains('child')) {
-        addVariant('$canonical kids');
-      }
-    }
-    if (cacheKey.isNotEmpty) {
-      _artworkQueryTitleCache[cacheKey] = List<String>.from(titles);
-    }
-    return titles;
-  }
-
-  String? _getProgramArtworkByTitle(Program program, [Channel? channel]) {
-    return _programArtworkByTitle[_titleCacheKey(program, channel)];
-  }
-
-  void _setProgramArtworkByTitle(
-    Program program,
-    String value, [
-    Channel? channel,
-  ]) {
-    if (value.isEmpty) return;
-    if (ImageValidationService.isKnownInvalid(value)) return;
-    _registerProgramArtworkTitle(_titleCacheKey(program, channel), value);
-  }
-
-  bool _shouldAttemptArtworkByTitle(Program program, [Channel? channel]) {
-    final key = _titleCacheKey(program, channel);
-    final until = _programArtworkNegativeByTitle[key];
-    if (until == null) return true;
-    if (DateTime.now().isAfter(until)) {
-      _programArtworkNegativeByTitle.remove(key);
-      _programArtworkNegativeTitleOrder.remove(key);
-      return true;
-    }
-    debugLog(
-      'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
-      'reason=negative_cache_hit (blocked until ${until.toIso8601String()})',
-    );
-    return false;
-  }
-
-  void _markArtworkNoMatch(Program program, [Channel? channel]) {
-    final key = _titleCacheKey(program, channel);
-    _registerProgramArtworkNegativeTitle(
-      key,
-      DateTime.now().add(_artworkNegativeTtl),
-    );
-  }
-
-  void _clearArtworkNoMatch(Program program, [Channel? channel]) {
-    final key = _titleCacheKey(program, channel);
-    _programArtworkNegativeByTitle.remove(key);
-    _programArtworkNegativeTitleOrder.remove(key);
-    _scheduleProgramArtworkNegativeSave();
-  }
-
-  Future<void> _loadProgramArtworkTitleCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_programArtworkTitleCacheKey);
-      if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) return;
-      _programArtworkByTitle.clear();
-      _programArtworkTitleOrder.clear();
-      decoded.forEach((key, value) {
-        if (value is String && value.isNotEmpty) {
-          _programArtworkByTitle[key] = value;
-          _programArtworkTitleOrder.addLast(key);
-        }
-      });
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (_) {
-      // Ignore cache load errors to avoid impacting startup.
-    }
-  }
-
-  Future<void> _loadProgramArtworkNegativeCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_programArtworkNegativeCacheKey);
-      if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) return;
-      _programArtworkNegativeByTitle.clear();
-      _programArtworkNegativeTitleOrder.clear();
-      final now = DateTime.now();
-      decoded.forEach((key, value) {
-        if (value is int) {
-          final until = DateTime.fromMillisecondsSinceEpoch(value);
-          if (until.isAfter(now)) {
-            _programArtworkNegativeByTitle[key] = until;
-            _programArtworkNegativeTitleOrder.addLast(key);
-          }
-        }
-      });
-    } catch (_) {
-      // Ignore cache load errors to avoid impacting startup.
-    }
-  }
-
-  void _scheduleProgramArtworkTitleSave() {
-    _artworkTitleSaveDebounce?.cancel();
-    _artworkTitleSaveDebounce =
-        Timer(const Duration(seconds: 2), _saveProgramArtworkTitleCache);
-  }
-
-  void _scheduleProgramArtworkNegativeSave() {
-    _artworkNegativeSaveDebounce?.cancel();
-    _artworkNegativeSaveDebounce =
-        Timer(const Duration(seconds: 2), _saveProgramArtworkNegativeCache);
-  }
-
-  void _scheduleLiveTvSnapshotSave() {
-    _snapshotSaveDebounce?.cancel();
-    _snapshotSaveDebounce =
-        Timer(const Duration(seconds: 3), _saveLiveTvSnapshot);
-  }
-
-  Future<void> _saveProgramArtworkTitleCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ordered = <String, String>{};
-      for (final key in _programArtworkTitleOrder) {
-        final value = _programArtworkByTitle[key];
-        if (value != null && value.isNotEmpty) {
-          ordered[key] = value;
-        }
-      }
-      await prefs.setString(
-        _programArtworkTitleCacheKey,
-        jsonEncode(ordered),
-      );
-    } catch (_) {
-      // Best-effort persistence only.
-    }
-  }
-
-  Future<void> _saveProgramArtworkNegativeCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ordered = <String, int>{};
-      for (final key in _programArtworkNegativeTitleOrder) {
-        final value = _programArtworkNegativeByTitle[key];
-        if (value != null) {
-          ordered[key] = value.millisecondsSinceEpoch;
-        }
-      }
-      await prefs.setString(
-        _programArtworkNegativeCacheKey,
-        jsonEncode(ordered),
-      );
-    } catch (_) {
-      // Best-effort persistence only.
-    }
-  }
-
-  void _registerProgramTitleLogoEntry(String key, String value) {
-    _programTitleLogos[key] = value;
-    _programTitleLogoOrder.remove(key);
-    _programTitleLogoOrder.addLast(key);
-    while (_programTitleLogoOrder.length > _programTitleLogoLimit()) {
-      final removed = _programTitleLogoOrder.removeFirst();
-      _programTitleLogos.remove(removed);
-    }
-  }
-
-  void _setProgramTitleLogo(String key, String value) {
-    _registerProgramTitleLogoEntry(key, value);
-    _scheduleArtworkUiRefresh();
-  }
 
   void _trackCachedCategory(String category) {
+    // Only tracking for cache size management now
     if (_categoryChannelCache.containsKey(category)) {
-      _categoryCacheOrder.remove(category);
-      _categoryCacheOrder.addLast(category);
-    }
-    while (_categoryCacheOrder.length > _maxCachedCategories) {
-      final oldest = _categoryCacheOrder.removeFirst();
-      _categoryChannelCache.remove(oldest);
+      // handled by map
     }
   }
 
-  void _enqueueArtwork(Program program, {bool highPriority = false}) {
-    if (_pauseArtworkFetching || _suspendArtworkCaches) return;
-    if (_queuedArtworkIds.contains(program.id)) return;
-    _queuedArtworkIds.add(program.id);
-    if (highPriority) {
-      _artworkQueueHigh.add(program);
-    } else {
-      _artworkQueueLow.add(program);
-    }
-    _scheduleArtworkDrain();
-  }
 
-  Future<void> _fetchTitleLogo(Program program, Channel channel) async {
-    final cacheKey = program.id;
-    try {
-      String? logo;
 
-      // Check if it's a sports program
-      final isSports = _isSportsProgram(program, channel);
 
-      if (isSports) {
-        // Sports: SportRadar -> TheSportsDB -> TMDB -> Fanart
-        logo = await _fetchSportsLogo(program);
-      } else {
-        // Regular: TMDB -> Fanart
-        logo = await _fetchRegularLogo(program);
-      }
 
-      if (_matchesChannelLogo(logo ?? '', channel)) {
-        logo = '';
-      }
-      final isValid = _isValidTitleLogo(logo, channel);
-      final stored = isValid ? (logo ?? '') : '';
-      _setProgramTitleLogo(cacheKey, stored);
-    } catch (e) {
-      debugLog('Error fetching title logo for "${program.title}": $e');
-      _setProgramTitleLogo(cacheKey, '');
-    } finally {
-      _titleLogoRequests.remove(cacheKey);
-    }
-  }
 
-  Future<String?> _fetchSportsLogo(Program program) async {
-    if (!_isSportsProgram(program)) {
-      return _fetchRegularLogo(program);
-    }
-    const timeout = Duration(seconds: 5);
-    final title = program.title;
-    // Try SportRadar first (if quota available)
-    try {
-      final sportRadarLogo =
-          await SportradarService.getHeroImage(title).timeout(timeout);
-      if (sportRadarLogo != null && sportRadarLogo.isNotEmpty) {
-        return sportRadarLogo;
-      }
-    } catch (e) {
-      debugLog('SportRadar logo failed: $e');
-    }
-
-    // Fallback to TheSportsDB
-    try {
-      final sportsDbLogo =
-          await TheSportsDbService.getHeroImage(title).timeout(timeout);
-      if (sportsDbLogo != null && sportsDbLogo.isNotEmpty) {
-        return sportsDbLogo;
-      }
-    } catch (e) {
-      debugLog('TheSportsDB logo failed: $e');
-    }
-
-    // Fallback to regular logo chain
-    return await _fetchRegularLogo(program);
-  }
-
-  Future<String?> _fetchRegularLogo(Program program) async {
-    // Try TMDB first
-    try {
-      final tmdbLogo = await TMDBService.getTitleLogo(program.title);
-      if (tmdbLogo != null && tmdbLogo.isNotEmpty) {
-        return tmdbLogo;
-      }
-    } catch (e) {
-      debugLog('TMDB logo failed: $e');
-    }
-
-    // Fallback to Fanart.tv
-    try {
-      final fanartLogo = await _fetchFanartArtwork(program);
-      if (fanartLogo != null && fanartLogo.isNotEmpty) {
-        return fanartLogo;
-      }
-    } catch (e) {
-      debugLog('Fanart logo failed: $e');
-    }
-
-    return null;
-  }
 
   List<_HeroCandidate> _buildHeroCandidates(
     List<Channel> channels,
@@ -3692,7 +3077,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (program != null) {
       // 1. Try cached TMDB program artwork
       final cached =
-          _normalizeArtworkUrl(_programArtwork[program.id], isHero: true);
+          _normalizeArtworkUrl(_artworkService.getArtwork(program.id), isHero: true);
       if (_isValidProgramArtwork(
         cached,
         channel,
@@ -3708,7 +3093,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
       // 1b. Try cached artwork by title to avoid repeated fetches across airings
       final byTitle = _normalizeArtworkUrl(
-        _getProgramArtworkByTitle(program, channel),
+        _artworkService.getArtworkByTitle(program, channel),
         isHero: true,
       );
       if (_isValidProgramArtwork(
@@ -3725,12 +3110,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // 2. Trigger a fetch if any image service is enabled
-      if ((_tmdbEnabled ||
-              _fanartEnabled ||
-              _sportsDbEnabled ||
-              _tvdbEnabled) &&
-          allowFetch) {
-        _ensureFreshProgramArtwork(
+      // Note: service checks enabled flags internally
+      if (allowFetch) {
+        _artworkService.ensureFreshProgramArtwork(
           program,
           channel,
           highPriority: highPriority,
@@ -3793,484 +3175,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  void _ensureFreshProgramArtwork(
-    Program program,
-    Channel channel, {
-    bool highPriority = false,
-  }) {
-    if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
-      debugLog(
-        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
-        'reason=all_services_disabled (tmdb=$_tmdbEnabled fanart=$_fanartEnabled sports=$_sportsDbEnabled tvdb=$_tvdbEnabled)',
-      );
-      return;
-    }
-    if (_artworkRequests.contains(program.id)) {
-      debugLog(
-        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
-        'reason=request_already_in_flight',
-      );
-      return;
-    }
-    if (!_shouldAttemptArtworkByTitle(program, channel)) return;
-    final existing = _programArtwork[program.id];
-    if (existing != null &&
-        existing.isNotEmpty &&
-        _isValidProgramArtwork(
-          existing,
-          channel,
-          programTitle: program.title,
-          source: 'existing',
-        )) {
-      return;
-    }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _programChannelLookup[program.id] = channel;
-      if (!_shouldAttemptArtworkByTitle(program, channel)) return;
-      final current = _programArtwork[program.id];
-      if (current != null &&
-          current.isNotEmpty &&
-          _isValidProgramArtwork(
-            current,
-            channel,
-            programTitle: program.title,
-            source: 'current',
-          )) {
-        return;
-      }
-      _setProgramArtwork(program.id, '');
-      _enqueueArtwork(program, highPriority: highPriority);
-    });
-  }
 
-  Future<String?> _fetchProgramArtwork(Program program) async {
-    final existing = _programArtwork[program.id];
-    if (_artworkRequests.contains(program.id)) {
-      return existing ?? '';
-    }
-    if (existing != null && existing.isNotEmpty) {
-      if (!ImageValidationService.isKnownInvalid(existing)) {
-        return existing;
-      }
-      _setProgramArtwork(program.id, '');
-    }
 
-    if (_suspendArtworkCaches) return '';
-
-    if (!_shouldAttemptArtworkByTitle(
-      program,
-      _programChannelLookup[program.id],
-    )) {
-      return '';
-    }
-
-    final channel = _programChannelLookup[program.id];
-    final titleKey = _titleCacheKey(program, channel);
-    final cachedByTitle = _getProgramArtworkByTitle(program, channel);
-    if (cachedByTitle != null && cachedByTitle.isNotEmpty) {
-      if (ImageValidationService.isKnownInvalid(cachedByTitle)) {
-        _removeProgramArtworkTitle(titleKey);
-      } else if (await ImageValidationService.isValid(cachedByTitle)) {
-        _setProgramArtwork(program.id, cachedByTitle);
-        return cachedByTitle;
-      } else {
-        _removeProgramArtworkTitle(titleKey);
-      }
-    }
-
-    if (titleKey.isNotEmpty) {
-      final pendingByTitle = _pendingArtworkByTitle[titleKey];
-      if (pendingByTitle != null) {
-        return pendingByTitle;
-      }
-    }
-
-    // Check for pending request
-    if (_pendingArtworkRequests.containsKey(program.id)) {
-      return _pendingArtworkRequests[program.id] ?? Future.value(null);
-    }
-
-    if (!_shouldAttemptArtwork(program.id)) return '';
-    _artworkRequests.add(program.id);
-
-    // Create and store the future for deduplication
-    final future = _fetchArtworkWithFallback(program);
-    _pendingArtworkRequests[program.id] = future;
-    if (titleKey.isNotEmpty) {
-      _pendingArtworkByTitle[titleKey] = future;
-    }
-
-    try {
-      final result = await future;
-      final normalized = _normalizeArtworkUrl(result, isHero: true);
-      String? validated = normalized;
-      if (validated != null && validated.isNotEmpty) {
-        if (!ImageValidationService.isKnownValid(validated) &&
-            !await ImageValidationService.isValid(validated)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=final_validation program="${program.title}" url=$validated result=reject_invalid',
-          );
-          validated = null;
-        }
-      }
-      _setProgramArtwork(program.id, validated ?? '');
-      if (validated != null && validated.isNotEmpty) {
-        _setProgramArtworkByTitle(
-          program,
-          validated,
-          channel,
-        );
-        _clearArtworkNoMatch(program, channel);
-        _clearArtworkFailure(program.id);
-      } else {
-        _markArtworkNoMatch(program, channel);
-      }
-      return validated ?? '';
-    } finally {
-      // Removing the stored future object is synchronous; don't pass it to unawaited
-      await _pendingArtworkRequests.remove(program.id);
-      _artworkRequests.remove(program.id);
-      if (titleKey.isNotEmpty) {
-        final pending = _pendingArtworkByTitle.remove(titleKey);
-        if (pending != null) {
-          unawaited(pending);
-        }
-      }
-    }
-  }
-
-  Future<String?> _fetchArtworkWithFallback(Program program) async {
-    final channel = _programChannelLookup[program.id];
-    final isSports = _isSportsProgram(program, channel);
-    return isSports
-        ? await _fetchSportsImage(program, channel)
-        : await _fetchRegularImage(program);
-  }
-
-  void _scheduleArtworkDrain() {
-    if (_pauseArtworkFetching || _suspendArtworkCaches || _isIdle) {
-      debugLog(
-          'LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
-      return;
-    }
-    _artworkThrottle ??=
-        Timer(const Duration(milliseconds: 700), _drainArtworkQueue);
-  }
-
-  Future<void> _drainArtworkQueue() async {
-    _artworkThrottle?.cancel();
-    _artworkThrottle = null;
-    if ((_artworkQueueHigh.isEmpty && _artworkQueueLow.isEmpty) ||
-        !mounted ||
-        _pauseArtworkFetching ||
-        _suspendArtworkCaches) {
-      return;
-    }
-
-    final batchSize = MemoryManager.isLowMemory ? 1 : 2;
-    final batch = <Program>[];
-    for (var i = 0;
-        i < batchSize &&
-            (_artworkQueueHigh.isNotEmpty || _artworkQueueLow.isNotEmpty);
-        i++) {
-      final program = _artworkQueueHigh.isNotEmpty
-          ? _artworkQueueHigh.removeFirst()
-          : _artworkQueueLow.removeFirst();
-      _queuedArtworkIds.remove(program.id);
-      batch.add(program);
-    }
-
-    final futures = batch.map((program) async {
-      try {
-        debugLog('LiveTV: Fetching artwork for: "${program.title}"');
-        final image = await _fetchProgramArtwork(program);
-        if (!mounted) return;
-        if (image != null && image.isNotEmpty) {
-          debugLog('LiveTV: Found artwork for "${program.title}": $image');
-        } else {
-          debugLog('LiveTV: No artwork found for "${program.title}"');
-        }
-      } catch (e) {
-        debugLog('LiveTV: Error fetching artwork for "${program.title}": $e');
-        _markArtworkFailure(program.id);
-      }
-    }).toList();
-    await Future.wait(futures);
-
-    if (_artworkQueueHigh.isNotEmpty || _artworkQueueLow.isNotEmpty) {
-      _scheduleArtworkDrain();
-    }
-  }
-
-  bool _isSportsProgram(Program program, [Channel? channel]) {
-    return SportsClassifier.isSportsProgram(program, channel);
-  }
-
-  Future<String?> _fetchSportsImage(Program program, [Channel? channel]) async {
-    if (!_isSportsProgram(program, channel)) {
-      return _fetchRegularImage(program);
-    }
-    final landscape = await _fetchSportsImageInternal(
-      program,
-      channel,
-      preferLandscape: true,
-    );
-    if (landscape != null && landscape.isNotEmpty) return landscape;
-    return _fetchSportsImageInternal(
-      program,
-      channel,
-      preferLandscape: false,
-    );
-  }
-
-  Future<String?> _fetchSportsImageInternal(
-    Program program,
-    Channel? channel, {
-    required bool preferLandscape,
-  }) async {
-    const timeout = Duration(seconds: 5);
-    final title = program.title;
-    final queryTitles = _buildArtworkQueryTitles(program, channel);
-    // Try SportRadar first (if quota available)
-    for (final queryTitle in queryTitles) {
-      try {
-        final sportRadarImage =
-            await SportradarService.getHeroImage(queryTitle).timeout(timeout);
-        if (_acceptArtworkUrl(
-          sportRadarImage,
-          preferLandscape: preferLandscape,
-          programTitle: title,
-          source: 'sportradar',
-        ) &&
-            await ImageValidationService.isValid(sportRadarImage)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=sportradar program="$title" query="$queryTitle" url=$sportRadarImage',
-          );
-          return sportRadarImage;
-        }
-      } catch (e) {
-        debugLog('SportRadar failed: $e');
-      }
-    }
-
-    // Fallback to TheSportsDB
-    for (final queryTitle in queryTitles) {
-      try {
-        final sportsDbImage =
-            await TheSportsDbService.getHeroImage(queryTitle).timeout(timeout);
-        if (_acceptArtworkUrl(
-          sportsDbImage,
-          preferLandscape: preferLandscape,
-          programTitle: title,
-          source: 'thesportsdb',
-        ) &&
-            await ImageValidationService.isValid(sportsDbImage)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=thesportsdb program="$title" query="$queryTitle" url=$sportsDbImage',
-          );
-          return sportsDbImage;
-        }
-      } catch (e) {
-        debugLog('TheSportsDB failed: $e');
-      }
-    }
-
-    // Fallback to TVDB for broader sports coverage.
-    if (_tvdbEnabled) {
-      for (final queryTitle in queryTitles) {
-        try {
-          final tvdbImage =
-              await TvdbService.getBestImage(queryTitle).timeout(timeout);
-          if (_acceptArtworkUrl(
-            tvdbImage,
-            preferLandscape: preferLandscape,
-            programTitle: title,
-            source: 'tvdb_sports',
-          ) &&
-              await ImageValidationService.isValid(tvdbImage)) {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tvdb_sports program="$title" query="$queryTitle" url=$tvdbImage',
-            );
-            return tvdbImage;
-          }
-        } catch (e) {
-          debugLog('TVDB (sports) failed: $e');
-        }
-      }
-    }
-
-    if (!preferLandscape) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=none program="$title" reason=sports_no_match',
-      );
-    }
-    return null;
-  }
-
-  Future<String?> _fetchRegularImage(Program program) async {
-    final landscape = await _fetchRegularImageInternal(
-      program,
-      preferLandscape: true,
-    );
-    if (landscape != null && landscape.isNotEmpty) return landscape;
-    return _fetchRegularImageInternal(
-      program,
-      preferLandscape: false,
-    );
-  }
-
-  Future<String?> _fetchRegularImageInternal(
-    Program program, {
-    required bool preferLandscape,
-  }) async {
-    const timeout = Duration(seconds: 5);
-    final channel = _programChannelLookup[program.id];
-    final isNews = channel != null && _isNewsProgram(program, channel);
-    
-    // Skip image fetching for news - will show channel logo + "News" text instead
-    if (isNews) {
-      return null;
-    }
-    
-    final title = program.title;
-    final queryTitles = _buildArtworkQueryTitles(program, channel);
-
-    // Try TVDB first
-    if (_tvdbEnabled) {
-      for (final queryTitle in queryTitles) {
-        try {
-          final tvdbImage =
-              await TvdbService.getBestImage(queryTitle).timeout(timeout);
-          if (_acceptArtworkUrl(
-            tvdbImage,
-            preferLandscape: preferLandscape,
-            programTitle: title,
-            source: 'tvdb',
-          ) &&
-              await ImageValidationService.isValid(tvdbImage)) {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tvdb program="$title" query="$queryTitle" url=$tvdbImage',
-            );
-            return tvdbImage;
-          }
-        } catch (e) {
-          debugLog('TVDB failed: $e');
-        }
-      }
-    }
-
-    // Fallback to TMDB
-    for (final queryTitle in queryTitles) {
-      try {
-        final tmdbImage =
-            await TMDBService.getBestBackdrop(queryTitle).timeout(timeout);
-        if (_acceptArtworkUrl(
-          tmdbImage,
-          preferLandscape: preferLandscape,
-          programTitle: title,
-          source: 'tmdb',
-        ) &&
-            await ImageValidationService.isValid(tmdbImage)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=tmdb program="$title" query="$queryTitle" url=$tmdbImage',
-          );
-          return tmdbImage;
-        }
-      } catch (e) {
-        debugLog('TMDB failed: $e');
-      }
-    }
-
-    // Fallback to Fanart.tv
-    try {
-      final fanartImage = await _fetchFanartArtwork(program);
-      if (_acceptArtworkUrl(
-        fanartImage,
-        preferLandscape: preferLandscape,
-        programTitle: title,
-        source: 'fanart',
-      ) &&
-          await ImageValidationService.isValid(fanartImage)) {
-        _logArtworkDecision(
-          'LiveTV artwork: source=fanart program="$title" url=$fanartImage',
-        );
-        return fanartImage;
-      }
-    } catch (e) {
-      debugLog('Fanart failed: $e');
-    }
-
-    if (!preferLandscape) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=none program="$title" reason=no_match',
-      );
-    }
-    return null;
-  }
-
-  Future<String?> _fetchFanartArtwork(Program program) async {
-    final channel = _programChannelLookup[program.id];
-    final queryTitles = _buildArtworkQueryTitles(program, channel);
-    for (final queryTitle in queryTitles) {
-      final details = await _resolveTmdbDetails(queryTitle);
-      final tmdbId = details?['tmdbId'] as int?;
-      final mediaType = (details?['mediaType'] as String?)?.toLowerCase();
-      if (tmdbId == null || mediaType == null) {
-        continue;
-      }
-      return FanartService.getBackdrop(
-        tmdbId,
-        isTv: mediaType == 'tv',
-      );
-    }
-    _logArtworkDecision(
-      'LiveTV artwork: source=fanart program="${program.title}" result=missing_tmdb_details',
-    );
-    return null;
-  }
-
-  Future<Map<String, dynamic>?> _resolveTmdbDetails(String title) async {
-    try {
-      final tvDetails = await TMDBService.getTVDetails(title);
-      if (tvDetails != null) return tvDetails;
-      return await TMDBService.getMovieDetails(title);
-    } catch (e) {
-      debugLog('TMDB details lookup failed for "$title": $e');
-      return null;
-    }
-  }
-
-  void _logArtworkDecision(String message) {
-    if (!_logArtworkMatches) return;
-    ArtworkDiagnostics.record(message);
-    debugLog(message);
-  }
-
-  bool _shouldAttemptArtwork(String key) {
-    final retryAfter = _artworkRetryAfter[key];
-    if (retryAfter == null) return true;
-    return DateTime.now().isAfter(retryAfter);
-  }
-
-  bool _shouldRetryArtwork(String key) {
-    if (!_programArtwork.containsKey(key)) return true;
-    if (_programArtwork[key]?.isNotEmpty == true) return false;
-    return _shouldAttemptArtwork(key);
-  }
-
-  void _markArtworkFailure(String key) {
-    final count = (_artworkFailureCounts[key] ?? 0) + 1;
-    _artworkFailureCounts[key] = count;
-    final minutes = math.min(60, math.pow(2, count).round() * 2);
-    _artworkRetryAfter[key] = DateTime.now().add(Duration(minutes: minutes));
-  }
-
-  void _clearArtworkFailure(String key) {
-    _artworkFailureCounts.remove(key);
-    _artworkRetryAfter.remove(key);
-  }
 
   bool _shouldPrefetchArt(
     BuildContext context,
@@ -4687,17 +3594,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   double _sidebarInset() => AppSpacing.sidebarCollapsedWidth;
 
-  double _liveTvContentTop(double heroHeight, double cardPeek) {
-    // Position content so featured row cards peek from bottom of screen
-    // Using 0.85 instead of 0.68 to push content lower - only card tops visible initially
-    final capped = heroHeight * 0.85;
-    final maxAllowed = (heroHeight - cardPeek).clamp(0.0, heroHeight);
-    return math.min(capped, maxAllowed);
-  }
 
-  double _contentTopForLayout(BuildContext context, double heroHeight, double cardPeek) {
-    return _liveTvContentTop(heroHeight, cardPeek);
-  }
+
+
 
   void _prefetchEpgForRow(String category, List<Channel> channels) {
     if (_epgPrefetchedRows.contains(category)) return;
@@ -4760,140 +3659,143 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               if (event.logicalKey == LogicalKeyboardKey.select ||
                   event.logicalKey == LogicalKeyboardKey.enter ||
                   event.logicalKey == LogicalKeyboardKey.space) {
-              _openChannelPlayer(channel);
-              return KeyEventResult.handled;
-            }
-            if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              if (isFirstRow) {
-                if (_scrollController.hasClients) {
-                  _scrollController.animateTo(
+                _openChannelPlayer(channel);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                if (isFirstRow) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                    );
+                  }
+                  if (_watchButtonFocus.canRequestFocus) {
+                    _watchButtonFocus.requestFocus();
+                  }
+                  return KeyEventResult.handled;
+                }
+                final moved =
+                    FocusScope.of(context).focusInDirection(TraversalDirection.up);
+                if (!moved && _scrollController.hasClients) {
+                  final nextOffset = (_safeScrollOffset() - rowHeight).clamp(
                     0.0,
-                    duration: const Duration(milliseconds: 220),
+                    _scrollController.position.maxScrollExtent,
+                  );
+                  _scrollController.animateTo(
+                    nextOffset,
+                    duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOutCubic,
                   );
                 }
-                if (_watchButtonFocus.canRequestFocus) {
-                  _watchButtonFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index == 0) {
+                if (rowScrollController.hasClients &&
+                    rowScrollController.offset >
+                        rowScrollController.position.minScrollExtent + 1) {
+                  rowScrollController.animateTo(
+                    rowScrollController.position.minScrollExtent,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                  );
+                  return KeyEventResult.handled;
                 }
+                // Only open sidebar if we are at the start of the list
+                final moved = requestNavigationFocus();
+                return moved ? KeyEventResult.handled : KeyEventResult.ignored;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
+                  event.logicalKey == LogicalKeyboardKey.info ||
+                  event.logicalKey == LogicalKeyboardKey.keyM) {
+                _showEpgChannelSelector(channel);
                 return KeyEventResult.handled;
               }
-              final moved = FocusScope.of(context)
-                  .focusInDirection(TraversalDirection.up);
-              if (!moved && _scrollController.hasClients) {
-                final nextOffset = (_safeScrollOffset() - rowHeight).clamp(
-                  0.0,
-                  _scrollController.position.maxScrollExtent,
-                );
-                _scrollController.animateTo(
-                  nextOffset,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                );
-              }
-              return KeyEventResult.handled;
             }
-            if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
-                index == 0) {
-              if (rowScrollController.hasClients &&
-                  rowScrollController.offset >
-                      rowScrollController.position.minScrollExtent + 1) {
-                rowScrollController.animateTo(
-                  rowScrollController.position.minScrollExtent,
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                );
-                return KeyEventResult.handled;
-              }
-              // Only open sidebar if we are at the start of the list
-              final moved = requestNavigationFocus();
-              return moved ? KeyEventResult.handled : KeyEventResult.ignored;
-            }
-            if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
-                event.logicalKey == LogicalKeyboardKey.info ||
-                event.logicalKey == LogicalKeyboardKey.keyM) {
-              _showEpgChannelSelector(channel);
-              return KeyEventResult.handled;
-            }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Selector<IncrementalEpgService, _EpgCardData>(
-          selector: (context, epgService) {
-            // Always try to get program data, even during loading if available
-            // This prevents flickering by showing data as soon as it's ready
-            final channelId = channel.tvgId ?? channel.id;
-            final program = epgService.getCurrentProgram(
-              channelId,
-              channelName: channel.name,
-              groupTitle: channel.groupTitle,
-            );
-            return _EpgCardData(
-              program: program,
-              hasUsableData: epgService.hasUsableData,
-              isLoading: epgService.isLoading || epgService.isParsing || epgService.isDownloading,
-            );
+            return KeyEventResult.ignored;
           },
-          shouldRebuild: (previous, next) {
-            // Only rebuild if program actually changed (not just state changes)
-            // Compare program by ID and title to detect real changes
-            final prevId = previous.program?.id;
-            final nextId = next.program?.id;
-            final prevTitle = previous.program?.title;
-            final nextTitle = next.program?.title;
-            
-            // If both are null, don't rebuild unless transitioning from loading to loaded
-            if (prevId == null && nextId == null) {
-              // Only rebuild if we went from loading to not loading (but still no data)
-              return previous.isLoading && !next.isLoading;
-            }
-            
-            // Rebuild if program ID changed
-            if (prevId != nextId) return true;
-            
-            // Rebuild if program title changed (same program, different show)
-            if (prevTitle != nextTitle) return true;
-            
-            // Don't rebuild for loading state changes alone
-            return false;
-          },
-          builder: (context, epgData, _) {
-            final isFocused = Focus.of(context).hasFocus;
-            final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
-
-            // Load EPG for focused channel or if we have usable data but no program yet
-            if (isFocused && epgData.program == null && epgData.hasUsableData) {
-              unawaited(epgService.ensureChannelLoaded(
-                channel.tvgId ?? channel.id,
+          child: Selector<IncrementalEpgService, _EpgCardData>(
+            selector: (context, epgService) {
+              // Always try to get program data, even during loading if available
+              // This prevents flickering by showing data as soon as it's ready
+              final channelId = channel.tvgId ?? channel.id;
+              final program = epgService.getCurrentProgram(
+                channelId,
                 channelName: channel.name,
-              ));
-            }
+                groupTitle: channel.groupTitle,
+              );
+              return _EpgCardData(
+                program: program,
+                hasUsableData: epgService.hasUsableData,
+                isLoading: epgService.isParsing || epgService.isDownloading,
+              );
+            },
+            shouldRebuild: (previous, next) {
+              // Only rebuild if program actually changed (not just state changes)
+              // Compare program by ID and title to detect real changes
+              final prevId = previous.program?.id;
+              final nextId = next.program?.id;
+              final prevTitle = previous.program?.title;
+              final nextTitle = next.program?.title;
 
-            return GestureDetector(
-              onTap: () => _openChannelPlayer(channel),
-              onLongPress: () => _showEpgChannelSelector(channel),
-              child: AnimatedScale(
-                scale: isFocused ? 1.05 : 1.0,
-                duration: TVFocusStyle.animationDuration,
-                curve: TVFocusStyle.animationCurve,
-                alignment: Alignment.topCenter,
-                child: _buildCardContent(
-                  context,
-                  channel,
-                  epgData.program,
-                  isFocused,
-                  cardWidth,
-                  cardHeight,
-                  allowPrefetch,
-                  isFirstRow: isFirstRow,
+              // If both are null, don't rebuild
+              // unless transitioning from loading to loaded
+              if (prevId == null && nextId == null) {
+                // Only rebuild if we went from loading to not loading (but still no data)
+                return previous.isLoading && !next.isLoading;
+              }
+
+              // Rebuild if program ID changed
+              if (prevId != nextId) return true;
+
+              // Rebuild if program title changes (same program ID, different show... unlikely but safe)
+              if (prevTitle != nextTitle) return true;
+
+              return false;
+            },
+            builder: (context, epgData, _) {
+              final isFocused = Focus.of(context).hasFocus;
+              final epgService =
+                  Provider.of<IncrementalEpgService>(context, listen: false);
+
+              // Load EPG for focused channel or if we have usable data but no program yet
+              if (isFocused &&
+                  epgData.program == null &&
+                  epgData.hasUsableData) {
+                unawaited(epgService.ensureChannelLoaded(
+                  channel.tvgId ?? channel.id,
+                  channelName: channel.name,
+                ));
+              }
+
+              return GestureDetector(
+                onTap: () => _openChannelPlayer(channel),
+                onLongPress: () => _showEpgChannelSelector(channel),
+                child: AnimatedScale(
+                  scale: isFocused ? 1.05 : 1.0,
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  alignment: Alignment.topCenter,
+                  child: _buildCardContent(
+                    context,
+                    channel,
+                    epgData.program,
+                    isFocused,
+                    cardWidth,
+                    cardHeight,
+                    allowPrefetch,
+                    isFirstRow: isFirstRow,
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-    ),
     );
   }
+
 
   Widget _buildCardContent(
       BuildContext context,
@@ -5122,377 +4024,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ],
       ],
     );
-  }
-
-  void _showEpgChannelSelector(Channel channel) {
-    if (!mounted) return;
-    final epgService =
-        Provider.of<IncrementalEpgService>(context, listen: false);
-    final epgChannelIds = epgService.getEpgChannelIds();
-
-    if (epgChannelIds.isEmpty) {
-      showAppSnackBar(
-          context,
-          const SnackBar(
-            content: Text(
-                'No EPG data loaded. Please configure EPG URL in Settings.'),
-            backgroundColor: AppTheme.accentRed,
-          ));
-      return;
-    }
-
-    String searchQuery = '';
-    final searchController = TextEditingController();
-
-    final suggestions = epgService.getSuggestedMatches(
-      channel.tvgId ?? channel.id,
-      channel.name,
-      limit: 15,
-    );
-
-    unawaited(showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          List<String> filteredIds;
-          final showingSuggestions = searchQuery.isEmpty;
-
-          if (searchQuery.isEmpty) {
-            final suggestedIds = suggestions.map((e) => e.key).toSet();
-            final otherIds = epgChannelIds
-                .where((id) => !suggestedIds.contains(id))
-                .toList();
-            filteredIds = [...suggestions.map((e) => e.key), ...otherIds];
-          } else {
-            filteredIds = epgChannelIds.where((id) {
-              final displayName = _getDisplayNameForEpgId(id).toLowerCase();
-              final idLower = id.toLowerCase();
-              final queryLower = searchQuery.toLowerCase();
-              return displayName.contains(queryLower) ||
-                  idLower.contains(queryLower);
-            }).toList();
-          }
-
-          return AlertDialog(
-            backgroundColor: AppTheme.darkBackground,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Match EPG for ${channel.name}',
-                    style: const TextStyle(
-                        fontSize: 18, color: AppTheme.textPrimary)),
-                Text(
-                  'ID: ${channel.tvgId ?? channel.id}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppTheme.textSecondary),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: searchController,
-                  enableInteractiveSelection: false,
-                  selectionControls: NoTextSelectionControls(),
-                  showCursor: false,
-                  cursorColor: Colors.transparent,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white),
-                  onTap: () {
-                    final text = searchController.text;
-                    searchController.selection =
-                        TextSelection.collapsed(offset: text.length);
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search EPG channels...',
-                    hintStyle:
-                        TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                    isDense: true,
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    border: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide:
-                          BorderSide(color: AppTheme.primaryBlue, width: 2),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      searchQuery = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: filteredIds.isEmpty
-                  ? Center(
-                      child: Text(
-                        searchQuery.isEmpty
-                            ? 'No EPG channels found'
-                            : 'No matches for "$searchQuery"',
-                        style: TextStyle(color: AppTheme.textSecondary),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: filteredIds.length +
-                          (showingSuggestions && suggestions.isNotEmpty
-                              ? 1
-                              : 0),
-                      itemBuilder: (context, index) {
-                        if (showingSuggestions &&
-                            suggestions.isNotEmpty &&
-                            index == 0) {
-                          return Container(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.auto_awesome,
-                                    size: 16, color: AppTheme.primaryBlue),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Suggested Matches (${suggestions.length})',
-                                  style: TextStyle(
-                                    color: AppTheme.primaryBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final adjustedIndex =
-                            showingSuggestions && suggestions.isNotEmpty
-                                ? index - 1
-                                : index;
-                        if (adjustedIndex < 0 ||
-                            adjustedIndex >= filteredIds.length) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final epgId = filteredIds[adjustedIndex];
-                        final preview = epgService.getChannelPreview(epgId);
-                        final currentMapping = epgService
-                            .getManualMapping(channel.tvgId ?? channel.id);
-                        final isCurrentlyMapped = currentMapping == epgId;
-                        final isSuggested = showingSuggestions &&
-                            adjustedIndex < suggestions.length;
-                        final suggestionScore = isSuggested
-                            ? suggestions[adjustedIndex].value
-                            : 0.0;
-
-                        final showDivider = showingSuggestions &&
-                            suggestions.isNotEmpty &&
-                            adjustedIndex == suggestions.length - 1;
-
-                        return Column(
-                          children: [
-                            FocusableActionDetector(
-                              actions: <Type, Action<Intent>>{
-                                ActivateIntent: CallbackAction<ActivateIntent>(
-                                  onInvoke: (intent) {
-                                    Navigator.pop(dialogContext);
-                                    _setEpgMapping(channel, epgId);
-                                    return null;
-                                  },
-                                ),
-                              },
-                              child: Builder(
-                                builder: (context) {
-                                  final isFocused = Focus.of(context).hasFocus;
-                                  return ListTile(
-                                    dense: true,
-                                    selected: isFocused,
-                                    selectedTileColor:
-                                        AppTheme.primaryBlue.withValues(
-                                      alpha: 0.16,
-                                    ),
-                                    leading: isCurrentlyMapped
-                                        ? const Icon(Icons.check_circle,
-                                            color: AppTheme.accentGreen)
-                                        : isSuggested
-                                            ? Icon(
-                                                Icons.stars,
-                                                color: suggestionScore > 0.7
-                                                    ? AppTheme.accentGreen
-                                                    : suggestionScore > 0.4
-                                                        ? AppTheme.primaryBlue
-                                                        : AppTheme
-                                                            .textSecondary,
-                                              )
-                                            : const Icon(Icons.tv_outlined,
-                                                color: AppTheme.textSecondary),
-                                    title: Text(
-                                      _getDisplayNameForEpgId(epgId),
-                                      style: TextStyle(
-                                        fontWeight:
-                                            isCurrentlyMapped || isSuggested
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                        color: isCurrentlyMapped
-                                            ? AppTheme.accentGreen
-                                            : AppTheme.textPrimary,
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (preview != null)
-                                          Text(
-                                            'Now: $preview',
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: AppTheme.textSecondary),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        if (isSuggested)
-                                          Text(
-                                            'Match: ${(suggestionScore * 100).toInt()}%',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: suggestionScore > 0.7
-                                                  ? AppTheme.accentGreen
-                                                  : AppTheme.textSecondary,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(dialogContext);
-                                      _setEpgMapping(channel, epgId);
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            if (showDivider)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                        child: Divider(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.1))),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8),
-                                      child: Text(
-                                        'All EPG Channels',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppTheme.textSecondary),
-                                      ),
-                                    ),
-                                    Expanded(
-                                        child: Divider(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.1))),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-            ),
-            actions: [
-              if (epgService.hasManualMapping(channel.tvgId ?? channel.id))
-                BrandSecondaryButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                    _removeEpgMapping(channel);
-                  },
-                  label: 'Remove Mapping',
-                ),
-              BrandSecondaryButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                label: 'Cancel',
-              ),
-            ],
-          );
-        },
-      ),
-    ));
-  }
-
-  Future<void> _setEpgMapping(Channel channel, String epgChannelId) async {
-    final epgService =
-        Provider.of<IncrementalEpgService>(context, listen: false);
-    await epgService.setManualMapping(
-        channel.tvgId ?? channel.id, epgChannelId);
-
-    if (mounted) {
-      showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('EPG mapped: ${channel.name} → $epgChannelId'),
-            backgroundColor: AppTheme.accentGreen,
-          ));
-      setState(() {});
-    }
-  }
-
-  Future<void> _removeEpgMapping(Channel channel) async {
-    final epgService =
-        Provider.of<IncrementalEpgService>(context, listen: false);
-    await epgService.removeManualMapping(channel.tvgId ?? channel.id);
-
-    if (mounted) {
-      showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('EPG mapping removed for ${channel.name}'),
-            backgroundColor: AppTheme.primaryBlue,
-          ));
-      setState(() {});
-    }
-  }
-
-  String _getDisplayNameForEpgId(String epgId) {
-    String name = epgId.split('.').first;
-    final patterns = {
-      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) =>
-          'BBC ${m.group(1)}',
-      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) =>
-          'ITV${m.group(1) ?? ''}',
-      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) =>
-          'Channel ${m.group(1)}',
-      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) =>
-          'Sky ${m.group(1)!.toUpperCase()}',
-      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) =>
-          'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) =>
-          'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) =>
-          'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) =>
-          'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) =>
-          'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-    };
-
-    for (final pattern in patterns.entries) {
-      final match = pattern.key.firstMatch(name);
-      if (match != null) {
-        return pattern.value(match);
-      }
-    }
-
-    name = name.replaceAll(RegExp(r'[_-]'), ' ');
-    if (name.isNotEmpty) {
-      name = name[0].toUpperCase() + name.substring(1).toLowerCase();
-    }
-
-    return name.isEmpty ? epgId : name;
   }
 
   Widget _buildChannelCardFallback(Program? program, Channel channel) {
@@ -5990,177 +4521,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  bool _isNewsProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'news',
-      'newscast',
-      'breaking',
-      'headlines',
-      'bulletin',
-      'update',
-      // Common non-English news keywords (ASCII only)
-      'noticia',
-      'noticias',
-      'noticiero',
-      'jornal',
-      'telejornal',
-      'journal',
-      'journaux',
-      'nouvelles',
-      'info',
-      'infos',
-      'notizie',
-      'telegiornale',
-      'nachrichten',
-      'nieuws',
-      'nyheter',
-      'nyheder',
-      'wiadomosci',
-      'haber',
-    ];
-    bool containsKeyword(String value) {
-      for (final keyword in keywords) {
-        if (value.contains(keyword)) {
-          return true;
-        }
-      }
-      return false;
-    }
 
-    final titleCategoryDescription = '$title $category $description';
-    if (containsKeyword(titleCategoryDescription)) {
-      return true;
-    }
-
-    final channelInfo = '$channelName $groupTitle';
-    if ((title.isEmpty || _isGenericTitle(title)) &&
-        containsKeyword(channelInfo)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  bool _containsKeywords(String value, List<String> keywords) {
-    for (final keyword in keywords) {
-      if (value.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool _isKidsProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'kids',
-      'kid',
-      'child',
-      'children',
-      'family',
-      'cartoon',
-      'animation',
-      'anime',
-      'toons',
-      'nursery',
-      'preschool',
-    ];
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
-  }
-
-  bool _isMusicProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'music',
-      'concert',
-      'festival',
-      'hits',
-      'chart',
-      'mtv',
-      'vh1',
-      'vevo',
-      'radio',
-    ];
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
-  }
-
-  bool _isDocumentaryProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'documentary',
-      'docu',
-      'history',
-      'science',
-      'nature',
-      'wildlife',
-      'biography',
-    ];
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
-  }
-
-  bool _isWeatherProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'weather',
-      'forecast',
-      'storm',
-      'climate',
-      'meteor',
-      'hurricane',
-    ];
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
-  }
-
-  bool _isMovieProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
-    final category = (program?.category ?? '').toLowerCase();
-    final description = (program?.description ?? '').toLowerCase();
-    final channelName = channel.name.toLowerCase();
-    final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    const keywords = [
-      'movie',
-      'film',
-      'cinema',
-      'feature',
-    ];
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
-  }
 
   String _formatTime(DateTime dt) {
     final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
@@ -6182,8 +4543,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _openChannelPlayer(Channel channel) async {
     if (_isOpeningPlayer) return;
     _isOpeningPlayer = true;
-    _pauseArtworkFetching = true;
-    _suspendArtworkCaches = true;
+    _artworkService.pauseFetching();
+    _artworkService.suspendCaches();
     _suspendHeroBackground = true;
 
     // INSTRUMENTATION: Log channel tap details
@@ -6202,7 +4563,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     MemoryManager.forceGarbageCollection();
 
     // Clear hero image cache to free memory
-    _heroImageCacheHits.clear();
+
 
     if (!mounted) return;
     try {
@@ -6217,8 +4578,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     } finally {
       if (mounted) {
         _isOpeningPlayer = false;
-        _pauseArtworkFetching = false;
-        _suspendArtworkCaches = false;
+        _artworkService.resumeFetching();
+        _artworkService.resumeCaches();
         _suspendHeroBackground = false;
         // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
         unawaited(_prefetchInitialRows(force: true));
@@ -6227,27 +4588,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _releaseArtworkCachesForPlayback() {
-    _artworkQueueHigh.clear();
-    _artworkQueueLow.clear();
-    _queuedArtworkIds.clear();
-    _artworkRequests.clear();
-    _pendingArtworkRequests.clear();
-    _pendingArtworkByTitle.clear();
-    _programArtwork.clear();
-    _programArtworkOrder.clear();
-    _programTitleLogos.clear();
-    _programTitleLogoOrder.clear();
-    _programChannelLookup.clear();
-    _artworkQueryTitleCache.clear();
-    _heroImageCacheHits.clear();
-    _heroAspectRatios.clear();
-    _heroAspectRatioInFlight.clear();
+    _artworkService.pauseFetching();
+    _artworkService.suspendCaches();
 
-    // Clear additional caches that can consume memory
-    _programArtworkByTitle.clear();
-    _programArtworkTitleOrder.clear();
+    // Clear local caches that are not in service
+    MemoryManager.checkMemoryPressure();
+    MemoryManager.clearCaches();
+    MemoryManager.forceGarbageCollection();
     _categoryChannelCache.clear();
-    _categoryCacheOrder.clear();
+
+
   }
 
   Widget _buildHeroContent(
@@ -6323,10 +4673,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return heroFallback;
             }
             ImageLoadProbe.recordAttempt(normalizedHeroUrl, 'hero_image');
-            if (!_heroImageCacheHits.containsKey(normalizedHeroUrl)) {
-              _checkHeroImageCache(normalizedHeroUrl);
-            }
-            _ensureHeroAspectRatio(normalizedHeroUrl);
             final dpr = MediaQuery.of(context).devicePixelRatio;
             // Increase cache limits for better 4K support
             final cacheWidth =
@@ -6416,11 +4762,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             // Adaptive handling:
-            // Prefer aspect ratio over URL heuristics to avoid misclassification.
-            final aspect = _heroAspectRatios[normalizedHeroUrl];
-            final isLandscape = aspect != null
-                ? aspect >= 1.2
-                : _isExplicitBackdropUrl(normalizedHeroUrl);
+            // Use heuristics since aspect ratio cache is removed.
+            final isLandscape = _isExplicitBackdropUrl(normalizedHeroUrl);
 
             if (isLandscape) {
               // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
@@ -6433,7 +4776,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   memCacheWidth: cacheWidth,
                   memCacheHeight: cacheHeight,
                   imageBuilder: (context, imageProvider) {
-                    _markHeroImageCached(normalizedHeroUrl);
                     ImageFailureCache.recordSuccess(normalizedHeroUrl);
                     ImageLoadProbe.recordSuccess(
                         normalizedHeroUrl, 'hero_backdrop');
@@ -6508,7 +4850,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     memCacheWidth: cacheWidth,
                     memCacheHeight: cacheHeight,
                     imageBuilder: (context, imageProvider) {
-                      _markHeroImageCached(normalizedHeroUrl);
+
                       ImageFailureCache.recordSuccess(normalizedHeroUrl);
                       ImageLoadProbe.recordSuccess(
                           normalizedHeroUrl, 'hero_poster');
@@ -6541,54 +4883,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildHeroLoadingFallback(
       Channel featuredChannel, Program? currentProgram) {
-    if (_isNewsProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isNewsProgram(currentProgram, featuredChannel)) {
       return _buildNewsHeroFallback(featuredChannel);
     }
     if (currentProgram != null &&
-        _isSportsProgram(currentProgram, featuredChannel)) {
+        ProgramClassifier.isSportsProgram(currentProgram, featuredChannel)) {
       return _buildSportsHeroFallback(featuredChannel);
     }
-    if (_isWeatherProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isWeatherProgram(currentProgram, featuredChannel)) {
       return _buildWeatherHeroFallback(featuredChannel);
     }
-    if (_isKidsProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isKidsProgram(currentProgram, featuredChannel)) {
       return _buildKidsHeroFallback(featuredChannel);
     }
-    if (_isMusicProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isMusicProgram(currentProgram, featuredChannel)) {
       return _buildMusicHeroFallback(featuredChannel);
     }
-    if (_isDocumentaryProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isDocumentaryProgram(currentProgram, featuredChannel)) {
       return _buildDocumentaryHeroFallback(featuredChannel);
     }
-    if (_isMovieProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isMovieProgram(currentProgram, featuredChannel)) {
       return _buildMovieHeroFallback(featuredChannel);
     }
     return _buildLogoHeroFallback(featuredChannel);
   }
 
-  void _checkHeroImageCache(String url) {
-    if (url.isEmpty) return;
-    unawaited(() async {
-      final cached = await DefaultCacheManager().getFileFromCache(url);
-      if (!mounted) return;
-      final hit = cached != null;
-      if (_heroImageCacheHits[url] == hit) return;
-      setState(() {
-        _heroImageCacheHits[url] = hit;
-      });
-    }());
-  }
 
-  void _markHeroImageCached(String url) {
-    if (url.isEmpty) return;
-    if (_heroImageCacheHits[url] == true) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _heroImageCacheHits[url] = true;
-      });
-    });
-  }
 
   Widget _buildColdStartOverlayCard({
     String? titleText,
@@ -6971,5 +5291,75 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return fallback;
       },
     );
+  }
+
+
+
+
+
+
+
+  double _contentTopForLayout(BuildContext context, double heroHeight, double cardPeek) {
+    return heroHeight - cardPeek;
+  }
+
+  int _initialRowVisibleCount(BuildContext context, double cardWidth, double rowInset) {
+    if (cardWidth <= 0) return 6;
+    final width = MediaQuery.of(context).size.width - rowInset;
+    return (width / cardWidth).ceil() + 1;
+  }
+
+
+
+
+
+
+
+  void _showEpgChannelSelector(Channel channel) async {
+    if (!mounted) return;
+    
+    // Use the helper from epg_channel_selector_dialog.dart
+    final result = await showEpgChannelSelector(
+      context: context,
+      channel: channel,
+    );
+
+    if (!mounted || result == null) return;
+
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+
+    if (result.isEmpty) {
+      epgService.removeManualMapping(channel.tvgId ?? channel.id);
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text('Mapping removed. Reloading EPG...'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    } else {
+      unawaited(epgService.setManualMapping(channel.tvgId ?? channel.id, result));
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text('Channel mapped successfully. Reloading EPG...'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    }
+
+    // Refresh EPG data for this channel
+    unawaited(epgService.ensureChannelLoaded(
+      channel.tvgId ?? channel.id,
+      channelName: channel.name,
+      // forceRefresh parameter removed as it does not exist
+    ));
+     
+     // Force generic rebuild if needed
+     if (mounted) setState(() {});
   }
 }

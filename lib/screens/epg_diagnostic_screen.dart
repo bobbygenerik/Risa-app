@@ -364,6 +364,16 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         appBar: AppBar(
           title: const Text('EPG Diagnostic'),
           backgroundColor: AppTheme.darkBackground,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'EPG'),

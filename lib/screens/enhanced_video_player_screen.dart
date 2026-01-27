@@ -12,6 +12,7 @@ import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/chewie_player_widget.dart';
 import '../utils/memory_manager.dart';
 
@@ -318,7 +319,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   children: [
                     _buildControlButton(
                       icon: Icons.arrow_back,
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          // Fallback to home if no history
+                          GoRouter.of(context).go('/home');
+                        }
+                      },
                       size: 28,
                     ),
                     const Spacer(),
