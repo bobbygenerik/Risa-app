@@ -2394,10 +2394,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     if (id.isNotEmpty) {
       final normalizedId = normalize(id);
-      if (allowedNormalized.isNotEmpty &&
-          !allowedNormalized.contains(normalizedId)) {
-        return;
-      }
+      // ALWAYS add channel IDs from <channel> tags to build complete EPG index.
+      // Do not filter here - filtering is applied to programmes (by time window).
+      // This ensures all channels in the EPG are available for matching even if
+      // they have no programs in the current time window.
       channelIds.add(id);
       if (normalizedId.isNotEmpty) {
         normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
@@ -2480,14 +2480,22 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final start = _staticParseTime(startStr).millisecondsSinceEpoch;
     final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
     final normalizedChannelId = normalize(channelId);
+
+    // CRITICAL: Always register channel ID for matching BEFORE time filtering.
+    // This ensures all channels in the EPG are available for M3U matching,
+    // even if no programs are in the current time window.
+    channelIds.add(channelId);
+    if (normalizedChannelId.isNotEmpty) {
+      normalizedChannels
+          .putIfAbsent(normalizedChannelId, () => [])
+          .add(channelId);
+    }
+
+    // Time filter for programs - only store programs in current window
     if (!_shouldIncludeProgramme(channelId, start, end, allowedNormalized,
         catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId)) {
       return;
     }
-
-    // Ensure we track this channel ID even if No <channel> tag exists for it in the XMLTV
-    // This allows the UI to still match programs to the M3U channels.
-    channelIds.add(channelId);
 
     String title = 'Unknown';
     String? description;
@@ -2536,17 +2544,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         channelIcons != null &&
         channelIcons.containsKey(channelId)) {
       icon = channelIcons[channelId];
-    }
-
-    // Ensure we track this channel ID even if no <channel> tag exists for it in the XMLTV
-    // This allows the UI to still match programs to the M3U channels.
-    channelIds.add(channelId);
-
-    // Also track in normalized map for loose matching
-    if (normalizedChannelId.isNotEmpty) {
-      normalizedChannels
-          .putIfAbsent(normalizedChannelId, () => [])
-          .add(channelId);
     }
 
     final payload = {
@@ -3394,7 +3391,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
           for (final entry in _normalizedAvailableChannels!.entries) {
             final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
-            if (score >= 0.75) {
+            // Lower threshold to 0.65 to catch more matches
+            if (score >= 0.65) {
               if (score > highestTrigram) highestTrigram = score;
               allCandidates.addAll(entry.value);
             }
@@ -3404,11 +3402,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             final best = _selectBestFromCandidates(
                 allCandidates, countryCode, normalizedName);
             if (best != null) {
-              // For fuzzy, be even stricter about country disagreement
+              // For fuzzy, be more lenient - only reject if strong country disagreement
               if (countryCode != null &&
                   _epgIdDisagreesWithCountry(best, countryCode)) {
-                // Reject
-              } else if (highestTrigram >= 0.85) {
+                // Still allow if score is very high (>= 0.9)
+                if (highestTrigram >= 0.9) {
+                  return _cacheResolvedMapping(channelId, best);
+                }
+              } else if (highestTrigram >= 0.75) {
+                // Lower threshold from 0.85 to 0.75 for better matching
                 return _cacheResolvedMapping(channelId, best);
               }
             }
@@ -3553,14 +3555,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   bool hasProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
-    // First try strict matching for fast exact lookups
-    var epgId = _internalToEpgIdMapping[channelId] ??
-        _findBestEpgId(channelId, channelName,
-            countryHint: groupTitle, allowLoose: false);
-    // If strict matching fails but we have a channel name, try loose matching
+    // Try matching with loose matching enabled by default for better coverage
+    var epgId = _internalToEpgIdMapping[channelId];
     if (epgId == null && channelName != null && channelName.trim().isNotEmpty) {
+      // Use loose matching first for better coverage
       epgId = _findBestEpgId(channelId, channelName,
           countryHint: groupTitle, allowLoose: true);
+    }
+    // Fallback to strict if loose didn't work and we have an ID
+    if (epgId == null && channelId.isNotEmpty) {
+      epgId = _findBestEpgId(channelId, channelName,
+          countryHint: groupTitle, allowLoose: false);
     }
     if (epgId != null) {
       final programs = _programsByChannel[epgId];

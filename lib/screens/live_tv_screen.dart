@@ -73,6 +73,21 @@ class _HeroCandidate {
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
+/// Helper class to hold EPG data for channel cards to prevent unnecessary rebuilds
+class _EpgCardData {
+  final Program? program;
+  final bool hasUsableData;
+  final bool isLoading;
+
+  _EpgCardData({
+    required this.program,
+    required this.hasUsableData,
+    required this.isLoading,
+  });
+}
+
+/// A focused Live TV screen. Shows a hero for the currently airing program
+/// on a featured channel, plus channel rows below.
 class LiveTVScreen extends StatefulWidget {
   const LiveTVScreen({super.key});
 
@@ -212,6 +227,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   DateTime? _lastRecoveryAttempt;
   bool _isSkeletonVisible = false;
   bool _recoveryInFlight = false;
+  bool _hasShownContent = false; // Prevents skeleton from reappearing after content displayed
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
   bool _startupOverlayActive = false;
@@ -628,6 +644,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _startSkeletonWatchdog();
       return;
     }
+    // Successfully showing content - remember this to prevent skeleton flicker
+    _hasShownContent = true;
     _skeletonShownAt = null;
     _recoveryInFlight = false;
     _stopSkeletonWatchdog();
@@ -1480,7 +1498,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 );
 
             // Block UI until EPG is ready when we have displayable data.
-            if (shouldBlockForEpg || epgBusy) {
+            // But only block on initial load - don't re-display skeleton after content shown
+            if ((shouldBlockForEpg || epgBusy) && !_hasShownContent) {
               return buildSkeleton();
             }
 
@@ -1621,7 +1640,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       // Also check if batch loading is in progress
                       final isBatchLoading = epgService.isBatchLoading;
 
-                      if (isEpgLoading || isBatchLoading) {
+                      // Only show skeleton if we haven't shown content yet
+                      // This prevents flickering when EPG background refreshes occur
+                      if ((isEpgLoading || isBatchLoading) && !_hasShownContent) {
                         debugLog(
                             'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
                         return buildSkeleton();
@@ -1629,7 +1650,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
                       // Give EPG a short grace period to load programs if none are present yet
                       // But if we already have programs (just no matches), fail immediately
-                      final gracefulWait = !epgService.hasLoadedPrograms && timeSinceInit.inSeconds < 5;
+                      // Skip this if we've already shown content once
+                      final gracefulWait = !epgService.hasLoadedPrograms && timeSinceInit.inSeconds < 5 && !_hasShownContent;
                       
                       if (gracefulWait) {
                         debugLog(
@@ -4315,9 +4337,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (program == null) {
         missingIds.add(channelId);
         missingNames.add(channel.name);
-        // Only skip channels without program data in the featured row (Hero section)
-        // For regular rows, show the channel card with "No Information" instead of hiding it
-        if (isFirstRow) {
+        // Don't skip channels in featured row - show them even without EPG
+        // This allows users to see channels while EPG is still loading
+        // Only skip if we have many channels with EPG and this one doesn't match
+        final hasManyWithEpg = filteredChannels.length > 10;
+        if (isFirstRow && hasManyWithEpg) {
+          // Skip only if we already have enough channels with EPG
           continue;
         }
       }
@@ -4393,7 +4418,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         if (rowController.hasClients) {
-          rowController.jumpTo(0);
+          // For featured row, start slightly scrolled to show card peeking effect
+          if (isFirstRow && filteredChannels.length > 1) {
+            // Scroll to show partial peek of next card (about 20% of card width)
+            final peekOffset = cardWidth * 0.2;
+            rowController.jumpTo(peekOffset);
+          } else {
+            rowController.jumpTo(0);
+          }
         }
       });
     }
@@ -4633,7 +4665,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   double _sidebarInset() => AppSpacing.sidebarCollapsedWidth;
 
   double _liveTvContentTop(double heroHeight, double cardPeek) {
-    final capped = heroHeight * 0.68;
+    // Position content so featured row cards peek from bottom of screen
+    // Using 0.85 instead of 0.68 to push content lower - only card tops visible initially
+    final capped = heroHeight * 0.85;
     final maxAllowed = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     return math.min(capped, maxAllowed);
   }
@@ -4760,23 +4794,51 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           return KeyEventResult.ignored;
         },
-        child: Consumer<IncrementalEpgService>(
-          builder: (context, epgService, _) {
+        child: Selector<IncrementalEpgService, _EpgCardData>(
+          selector: (context, epgService) {
+            // Always try to get program data, even during loading if available
+            // This prevents flickering by showing data as soon as it's ready
+            final channelId = channel.tvgId ?? channel.id;
+            final program = epgService.getCurrentProgram(
+              channelId,
+              channelName: channel.name,
+              groupTitle: channel.groupTitle,
+            );
+            return _EpgCardData(
+              program: program,
+              hasUsableData: epgService.hasUsableData,
+              isLoading: epgService.isLoading || epgService.isParsing || epgService.isDownloading,
+            );
+          },
+          shouldRebuild: (previous, next) {
+            // Only rebuild if program actually changed (not just state changes)
+            // Compare program by ID and title to detect real changes
+            final prevId = previous.program?.id;
+            final nextId = next.program?.id;
+            final prevTitle = previous.program?.title;
+            final nextTitle = next.program?.title;
+            
+            // If both are null, don't rebuild unless transitioning from loading to loaded
+            if (prevId == null && nextId == null) {
+              // Only rebuild if we went from loading to not loading (but still no data)
+              return previous.isLoading && !next.isLoading;
+            }
+            
+            // Rebuild if program ID changed
+            if (prevId != nextId) return true;
+            
+            // Rebuild if program title changed (same program, different show)
+            if (prevTitle != nextTitle) return true;
+            
+            // Don't rebuild for loading state changes alone
+            return false;
+          },
+          builder: (context, epgData, _) {
             final isFocused = Focus.of(context).hasFocus;
+            final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
 
-            // Optimization: Get current program only when needed
-            // Prevents freeze: Skip expensive lookups if EPG is actively loading/parsing
-            final allowEpgLookup = !epgService.isLoading &&
-                (!epgService.isParsing || epgService.hasUsableData);
-            final program = allowEpgLookup
-                ? epgService.getCurrentProgram(
-                    channel.tvgId ?? channel.id,
-                    channelName: channel.name,
-                    groupTitle: channel.groupTitle,
-                  )
-                : null;
-
-            if (isFocused) {
+            // Load EPG for focused channel or if we have usable data but no program yet
+            if (isFocused && epgData.program == null && epgData.hasUsableData) {
               unawaited(epgService.ensureChannelLoaded(
                 channel.tvgId ?? channel.id,
                 channelName: channel.name,
@@ -4794,7 +4856,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: _buildCardContent(
                   context,
                   channel,
-                  program,
+                  epgData.program,
                   isFocused,
                   cardWidth,
                   cardHeight,

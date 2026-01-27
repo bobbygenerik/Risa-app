@@ -39,13 +39,11 @@ void main() {
       });
 
       expect(parsed, isA<Map<String, dynamic>>());
-      final channelsFile = parsed['channelsFile'] as String?;
+      final channels = parsed['channels'] as List<dynamic>?;
       final channelCount = parsed['channelCount'] as int?;
-      expect(channelsFile, isNotNull);
+      expect(channels, isNotNull);
+      expect(channels?.length, equals(300));
       expect(channelCount, equals(300));
-      if (channelsFile != null) {
-        expect(File(channelsFile).existsSync(), isTrue);
-      }
       expect(progresses.isNotEmpty, isTrue);
 
       await server.close(force: true);

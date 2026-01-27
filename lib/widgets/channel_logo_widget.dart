@@ -56,14 +56,19 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   @override
   void didUpdateWidget(ChannelLogoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.channelName != oldWidget.channelName ||
-        widget.logoUrl != oldWidget.logoUrl) {
-      _effectiveLogoUrl = widget.logoUrl;
-      _triedEnrichment = false;
-      if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
-        _enrichLogo();
+    // Only update if logo URL actually changed (not just widget rebuild)
+    if (widget.logoUrl != oldWidget.logoUrl) {
+      final newLogoUrl = widget.logoUrl;
+      // Only update state if logo URL actually changed
+      if (_effectiveLogoUrl != newLogoUrl) {
+        _effectiveLogoUrl = newLogoUrl;
+        _triedEnrichment = false;
+        if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
+          _enrichLogo();
+        }
       }
     }
+    // Don't reset enrichment on channel name changes - logo URL is what matters
   }
 
   Future<void> _enrichLogo() async {

@@ -8,13 +8,15 @@ class EPGMatchingUtils {
   static final RegExp _digitsRe = RegExp(r'\d+');
   static final RegExp _qualitySufRe =
       RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false);
+  // Regional suffixes: Only strip when clearly separated by word boundary patterns
+  // Using common patterns like numeric prefix or repeated letters to detect boundaries
+  // This prevents 'amcwest' from becoming 'amc' while still handling 'bbc1scotland'
   static final RegExp _regionSufRe = RegExp(
-      r'(london|scotland|wales|ireland|ni|channelislands|manchester|birmingham|leeds|yorkshire|north|south|east|west|northeast|northwest|southeast|southwest|midlands)$',
+      r'(?<=[0-9])(london|scotland|wales|ireland|ni|channelislands|manchester|birmingham|leeds|yorkshire|north|south|east|west|northeast|northwest|southeast|southwest|midlands)$',
       caseSensitive: false);
-  static final RegExp _countryCodeSufRe =
-      RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$', caseSensitive: false);
+  // Quality suffixes only - don't strip regional identifiers like east/west here
   static final RegExp _suffixSufRe = RegExp(
-      r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$',
+      r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$',
       caseSensitive: false);
   static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
   static final RegExp _timeRe =
@@ -333,28 +335,6 @@ class EPGMatchingUtils {
         genericTitles.contains(normalized);
   }
 
-  static String _stripCountryRegion(String text) {
-    return text.replaceAll(_countryCodeSufRe, '').replaceAll(_regionSufRe, '');
-  }
-
-  static Map<String, List<String>> _buildStrippedLookup(
-    Set<String> allEpgKeys,
-  ) {
-    final strippedLookup = <String, List<String>>{};
-    for (final key in allEpgKeys) {
-      final normalized = key.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-      final stripped = _stripCountryRegion(normalized);
-      if (stripped.length >= 3) {
-        strippedLookup.putIfAbsent(stripped, () => []).add(key);
-      }
-      final strippedWithNumbers = convertNumberWords(stripped);
-      if (strippedWithNumbers != stripped && strippedWithNumbers.length >= 3) {
-        strippedLookup.putIfAbsent(strippedWithNumbers, () => []).add(key);
-      }
-    }
-    return strippedLookup;
-  }
-
   /// Convert number words to digits for better matching
   static String convertNumberWords(String text) {
     final conversions = {
@@ -480,6 +460,16 @@ class EPGMatchingUtils {
   }
 
   /// Find the best matching EPG key for a channel
+  /// 
+  /// Uses conservative matching to avoid incorrect matches:
+  /// 1. Manual mappings (explicit user overrides)
+  /// 2. Cache lookup  
+  /// 3. Case-insensitive exact match
+  /// 4. Normalized match (remove non-alphanumeric characters only)
+  /// 5. Number word conversion (e.g., "bbcone" → "bbc1")
+  /// 
+  /// Does NOT use aggressive stripping (digits, regional suffixes, country codes)
+  /// to prevent incorrect matches like "AMC West" → "AMC" or "ESPN2" → "ESPN"
   static String? findEpgKey(
     String channelId,
     String? channelName,
@@ -488,7 +478,7 @@ class EPGMatchingUtils {
   ) {
     final cacheKey = '$channelId|${channelName ?? ''}';
 
-    // Check manual mapping first (highest priority)
+    // 1. Check manual mapping first (highest priority)
     if (manualMappings.containsKey(channelId)) {
       final manualKey = manualMappings[channelId]!;
       if (allEpgKeys.contains(manualKey)) {
@@ -496,14 +486,14 @@ class EPGMatchingUtils {
       }
     }
 
-    // Check cache
+    // 2. Check cache
     if (_channelIdCache.containsKey(cacheKey)) {
       return _channelIdCache[cacheKey];
     }
 
     final normalizedKeys = getNormalizedEpgKeys(allEpgKeys);
 
-    // Try lowercase match
+    // 3. Try case-insensitive exact match
     final lowerChannelId = channelId.toLowerCase();
     for (final key in allEpgKeys) {
       if (key.toLowerCase() == lowerChannelId) {
@@ -512,24 +502,14 @@ class EPGMatchingUtils {
       }
     }
 
-    // Try matching without domain suffix
-    final withoutDomain = channelId.split('.').first;
-    for (final key in allEpgKeys) {
-      final keyWithoutDomain = key.split('.').first;
-      if (keyWithoutDomain.toLowerCase() == withoutDomain.toLowerCase()) {
-        _channelIdCache[cacheKey] = key;
-        return key;
-      }
-    }
-
-    // Try normalized matching
+    // 4. Try normalized matching (remove non-alphanumeric only, preserve digits)
     final normalizedId = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
       return normalizedKeys[normalizedId];
     }
 
-    // Try with number word conversion
+    // 5. Try with number word conversion (e.g., "bbcone" → "bbc1")
     final normalizedWithNumbers = convertNumberWords(normalizedId);
     if (normalizedWithNumbers != normalizedId &&
         normalizedKeys.containsKey(normalizedWithNumbers)) {
@@ -537,173 +517,34 @@ class EPGMatchingUtils {
       return normalizedKeys[normalizedWithNumbers];
     }
 
-    // Try prefix/contains matching with normalized ID
-    final List<MapEntry<String, String>> prefixMatches = [];
+    // 6. Try reverse number word conversion on EPG keys
     for (final entry in normalizedKeys.entries) {
-      final epgNormalized = entry.key;
-      final epgWithNumbers = convertNumberWords(epgNormalized);
-      final epgStripped = stripSuffixes(epgWithNumbers);
-      if (epgNormalized.startsWith(normalizedId) && normalizedId.length >= 4) {
-        prefixMatches.add(entry);
-        continue;
-      }
-      if (epgWithNumbers.startsWith(normalizedWithNumbers) &&
-          normalizedWithNumbers.length >= 4) {
-        prefixMatches.add(entry);
-        continue;
-      }
-      final channelStripped = stripSuffixes(normalizedWithNumbers);
-      if (epgStripped == channelStripped && channelStripped.length >= 4) {
-        prefixMatches.add(entry);
-        continue;
-      }
-    }
-    if (prefixMatches.isNotEmpty) {
-      prefixMatches.sort((a, b) {
-        final aHasLondon = a.value.toLowerCase().contains('london');
-        final bHasLondon = b.value.toLowerCase().contains('london');
-        if (aHasLondon && !bHasLondon) return -1;
-        if (!aHasLondon && bHasLondon) return 1;
-        return a.key.length.compareTo(b.key.length);
-      });
-      final bestMatch = prefixMatches.first;
-      _channelIdCache[cacheKey] = bestMatch.value;
-      return bestMatch.value;
-    }
-
-    // Try number-stripped matching
-    final channelStrippedNumbers = stripNumbers(normalizedId);
-    if (channelStrippedNumbers.length >= 3) {
-      for (final entry in normalizedKeys.entries) {
-        final epgNormalized = entry.key;
-        final epgStrippedNumbers = stripNumbers(epgNormalized);
-        if (epgStrippedNumbers == channelStrippedNumbers) {
-          _channelIdCache[cacheKey] = entry.value;
-          return entry.value;
-        }
-        if (epgStrippedNumbers.startsWith(channelStrippedNumbers) &&
-            channelStrippedNumbers.length >= 3) {
-          prefixMatches.add(entry);
-        }
-      }
-      if (prefixMatches.isNotEmpty) {
-        prefixMatches.sort((a, b) {
-          final aHasLondon = a.value.toLowerCase().contains('london');
-          final bHasLondon = b.value.toLowerCase().contains('london');
-          if (aHasLondon && !bHasLondon) return -1;
-          if (!aHasLondon && bHasLondon) return 1;
-          return a.key.length.compareTo(b.key.length);
-        });
-        final bestMatch = prefixMatches.first;
-        _channelIdCache[cacheKey] = bestMatch.value;
-        return bestMatch.value;
-      }
-    }
-
-    // Try contains matching
-    for (final entry in normalizedKeys.entries) {
-      final epgNormalized = entry.key;
-      if (normalizedId.contains(epgNormalized) && epgNormalized.length >= 4) {
+      final epgWithNumberWords = convertNumberWords(entry.key);
+      if (epgWithNumberWords == normalizedId) {
         _channelIdCache[cacheKey] = entry.value;
         return entry.value;
       }
     }
 
-    // Try matching by channel NAME if provided
+    // 7. Try matching by channel NAME if provided (exact normalized match only)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName =
           channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-      final cleanedLookupName =
-          normalizeTitleForLookup(channelName, aggressiveForNews: false)
-              .toLowerCase()
-              .replaceAll(_nonAlphaNumRe, '');
       if (normalizedKeys.containsKey(normalizedName)) {
         _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
         return normalizedKeys[normalizedName];
       }
-      if (cleanedLookupName.isNotEmpty &&
-          normalizedKeys.containsKey(cleanedLookupName)) {
-        _channelIdCache[cacheKey] = normalizedKeys[cleanedLookupName];
-        return normalizedKeys[cleanedLookupName];
-      }
-      final cleanedName = normalizedName.replaceAll(_qualitySufRe, '');
-      for (final entry in normalizedKeys.entries) {
-        final epgNormalized = entry.key;
-        if (cleanedName.contains(epgNormalized) && epgNormalized.length >= 3) {
-          _channelIdCache[cacheKey] = entry.value;
-          return entry.value;
-        }
-        if (epgNormalized.contains(cleanedName) && cleanedName.length >= 3) {
-          _channelIdCache[cacheKey] = entry.value;
-          return entry.value;
-        }
-        if (cleanedLookupName.isNotEmpty &&
-            cleanedLookupName.contains(epgNormalized) &&
-            epgNormalized.length >= 3) {
-          _channelIdCache[cacheKey] = entry.value;
-          return entry.value;
-        }
-        if (cleanedLookupName.isNotEmpty &&
-            epgNormalized.contains(cleanedLookupName) &&
-            cleanedLookupName.length >= 3) {
-          _channelIdCache[cacheKey] = entry.value;
-          return entry.value;
-        }
+      
+      // Try number word conversion on channel name
+      final nameWithNumbers = convertNumberWords(normalizedName);
+      if (nameWithNumbers != normalizedName &&
+          normalizedKeys.containsKey(nameWithNumbers)) {
+        _channelIdCache[cacheKey] = normalizedKeys[nameWithNumbers];
+        return normalizedKeys[nameWithNumbers];
       }
     }
 
-    // Try unique stripped match (country/region) as a fallback.
-    final strippedLookup = _buildStrippedLookup(allEpgKeys);
-    final strippedId = _stripCountryRegion(normalizedId);
-    if (strippedId.length >= 3) {
-      final candidates = strippedLookup[strippedId];
-      if (candidates != null && candidates.length == 1) {
-        _channelIdCache[cacheKey] = candidates.first;
-        return candidates.first;
-      }
-    }
-    if (channelName != null && channelName.isNotEmpty) {
-      final normalizedName =
-          channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-      final strippedName = _stripCountryRegion(normalizedName);
-      if (strippedName.length >= 3) {
-        final candidates = strippedLookup[strippedName];
-        if (candidates != null && candidates.length == 1) {
-          _channelIdCache[cacheKey] = candidates.first;
-          return candidates.first;
-        }
-      }
-    }
-
-    // Try smarter partial match
-    // We want to avoid "TNT" matching "TNT Sports" if "TNT" exists elsewhere or if it's too different.
-    // Score candidates based on length difference and word boundary presence.
-    String? bestPartialMatch;
-    int minLengthDiff = 999;
-
-    for (final key in allEpgKeys) {
-      final lowerKey = key.toLowerCase();
-      // Check if one contains the other
-      if (lowerKey.contains(lowerChannelId)) {
-        // Calculate "junk" remaining
-        final diff = lowerKey.length - lowerChannelId.length;
-
-        // Strict check: if the difference is too big, it's likely a different channel
-        // e.g. "TNT" (3) vs "TNT Sports 4K" (13) -> diff 10. Too big.
-        // e.g. "BBC One" (7) vs "BBC One HD" (10) -> diff 3. Acceptable.
-        if (diff < minLengthDiff && diff < 8) {
-          minLengthDiff = diff;
-          bestPartialMatch = key;
-        }
-      }
-    }
-
-    if (bestPartialMatch != null) {
-      _channelIdCache[cacheKey] = bestPartialMatch;
-      return bestPartialMatch;
-    }
-
-    // No match found - cache the miss
+    // No match found - cache null result to avoid repeated lookups
     _channelIdCache[cacheKey] = null;
     return null;
   }
