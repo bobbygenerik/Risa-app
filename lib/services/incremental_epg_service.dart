@@ -34,6 +34,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]
+  final Set<String> _epgIdsRaw = {};
+  final Map<String, String> _epgIdsLowerToRaw = {};
+  final Set<String> _diagnosticMatchedChannels = {};
+  int _diagnosticIdMatches = 0;
+  int _diagnosticNameMatches = 0;
+  final bool _enableMatchingDiagnostics = kDebugMode;
   final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
   bool _isDownloading = false;
@@ -602,6 +608,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _extendingWindow = false;
     _lastDownloadTime = null; // Reset download timestamp to allow fresh download
     _availableChannels.clear();
+    _resetEpgIdIndex();
     _internalToEpgIdMapping.clear();
     _normalizedAvailableChannels = null;
     
@@ -613,6 +620,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _loggedMissingEpgIds.clear();
     _loggedMissingProgramChannels.clear();
     _invalidateProgramIndexCache();
+    _resetMatchDiagnostics();
     notifyListeners();
 
     try {
@@ -709,6 +717,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _normalizedAvailableChannels = null;
       
       _availableChannels.clear();
+      _resetEpgIdIndex();
       _internalToEpgIdMapping.clear();
       _programsByChannel.clear();
       _invalidateProgramIndexCache();
@@ -759,7 +768,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _manualMappings.forEach((channelId, epgId) {
       if (channelId.isEmpty || epgId.isEmpty) return;
       _internalToEpgIdMapping[channelId] = epgId;
-      _availableChannels.add(epgId);
+      _registerAvailableChannel(epgId);
     });
   }
 
@@ -837,6 +846,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       
       _availableChannels
           .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
+      _rebuildEpgIdIndexFromIds(_availableChannels);
       debugLog(
           'EPG: Loaded normalized mapping from file (${_normalizedAvailableChannels!.length} entries)');
       if (sourceFile.path != file.path) {
@@ -1344,6 +1354,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _isLoading = true;
     _error = null;
     notifyListeners();
+    _resetMatchDiagnostics();
 
     int retryCount = 0;
     var forceRefreshAfterParseFailure = false;
@@ -1420,6 +1431,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                   _availableChannels.addAll(_normalizedAvailableChannels!.values
                       .expand((list) => list));
                 }
+                _rebuildEpgIdIndexFromIds(_availableChannels);
                 _internalToEpgIdMapping.clear();
 
                 // CRITICAL: Rebuild normalized mapping from DB keys if missing
@@ -1444,6 +1456,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                 final loadedChannels = _programsByChannel.length;
                 debugLog(
                     'EPG: Loaded $loadedChannels channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
+                if (_enableMatchingDiagnostics) {
+                  debugLog(
+                      'EPG: Diagnostics - dbChannels=$loadedChannels rawIds=${_epgIdsRaw.length}');
+                }
                 debugLog(
                     'EPG: Load from DB total ${DateTime.now().difference(loadStart).inMilliseconds}ms');
 
@@ -1512,6 +1528,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
               _availableChannels.addAll(
                   _normalizedAvailableChannels!.values.expand((list) => list));
+              _rebuildEpgIdIndexFromIds(_availableChannels);
 
               _hasParsed = true;
               _isLoading = false;
@@ -1692,8 +1709,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           ..clear()
           ..addAll(channelIds);
         _normalizedAvailableChannels = normalizedChannels;
+        _rebuildEpgIdIndexFromIds(channelIds);
         debugLog(
             'EPG: Total EPG channel IDs collected: ${_availableChannels.length}');
+        if (_enableMatchingDiagnostics) {
+          debugLog(
+              'EPG: Diagnostics - parsedChannels=${_availableChannels.length} rawIds=${_epgIdsRaw.length}');
+        }
         
 
         // Stream programs from the temp file into memory (capped) and DB in batches
@@ -1815,6 +1837,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               _normalizedAvailableChannels!.isNotEmpty) {
             _availableChannels.addAll(
                 _normalizedAvailableChannels!.values.expand((list) => list));
+            _rebuildEpgIdIndexFromIds(_availableChannels);
           }
           break;
         }
@@ -2339,12 +2362,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     // Basic parsing of channel tag to get ID and display-name
     // <channel id="BBC1"> <display-name>BBC One</display-name> </channel>
     final startEvent = events.first as XmlStartElementEvent;
-    final id = startEvent.attributes
+    final rawId = startEvent.attributes
         .firstWhere((a) => a.name == 'id',
             orElse: () =>
                 XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE))
         .value;
-
+    final id = rawId.trim();
     if (id.isNotEmpty) {
       final normalizedId = normalize(id);
       // ALWAYS add channel IDs from <channel> tags to build complete EPG index.
@@ -2412,11 +2435,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     // <programme start="..." stop="..." channel="..."> ... </programme>
     final startEvent = events.first as XmlStartElementEvent;
 
-    final channelId = startEvent.attributes
+    final rawChannelId = startEvent.attributes
         .firstWhere((a) => a.name == 'channel',
             orElse: () =>
                 XmlEventAttribute('channel', '', XmlAttributeType.DOUBLE_QUOTE))
         .value;
+    final channelId = rawChannelId.trim();
     final startStr = startEvent.attributes
         .firstWhere((a) => a.name == 'start',
             orElse: () =>
@@ -2669,6 +2693,67 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  void _resetEpgIdIndex() {
+    _epgIdsRaw.clear();
+    _epgIdsLowerToRaw.clear();
+  }
+
+  void _indexEpgIdRaw(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return;
+    _epgIdsRaw.add(trimmed);
+    _epgIdsLowerToRaw.putIfAbsent(trimmed.toLowerCase(), () => trimmed);
+  }
+
+  void _rebuildEpgIdIndexFromIds(Iterable<String> ids) {
+    _resetEpgIdIndex();
+    for (final id in ids) {
+      _indexEpgIdRaw(id);
+    }
+  }
+
+  void _registerAvailableChannel(String epgId) {
+    if (epgId.isEmpty) return;
+    _availableChannels.add(epgId);
+    _indexEpgIdRaw(epgId);
+  }
+
+  void _registerAvailableChannels(Iterable<String> ids) {
+    for (final id in ids) {
+      _registerAvailableChannel(id);
+    }
+  }
+
+  String? _matchRawEpgId(String channelId) {
+    final trimmed = channelId.trim();
+    if (trimmed.isEmpty || _epgIdsRaw.isEmpty) return null;
+    if (_epgIdsRaw.contains(trimmed)) return trimmed;
+    return _epgIdsLowerToRaw[trimmed.toLowerCase()];
+  }
+
+  void _resetMatchDiagnostics() {
+    _diagnosticMatchedChannels.clear();
+    _diagnosticIdMatches = 0;
+    _diagnosticNameMatches = 0;
+  }
+
+  void _recordMatchDiagnostic(String channelId, {required bool idMatch}) {
+    if (!_enableMatchingDiagnostics) return;
+    if (!_diagnosticMatchedChannels.add(channelId)) return;
+    if (idMatch) {
+      _diagnosticIdMatches++;
+    } else {
+      _diagnosticNameMatches++;
+    }
+  }
+
+  void _logMatchDiagnostics({String context = 'EPG'}) {
+    if (!_enableMatchingDiagnostics) return;
+    final total = _diagnosticIdMatches + _diagnosticNameMatches;
+    debugLog(
+        '$context: Matching diagnostics - total=$total idMatches=$_diagnosticIdMatches nameMatches=$_diagnosticNameMatches');
+  }
+
   static String _removeDiacritics(String input) {
     const Map<String, String> map = {
       'á': 'a',
@@ -2845,55 +2930,22 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       if (cached == null) {
         return null;
       }
-      if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
+      if (_epgIdsRaw.isEmpty || _epgIdsRaw.contains(cached)) {
         return cached;
       }
       _internalToEpgIdMapping.remove(channelId);
     }
 
+    // 3. Exact ID match (raw, authoritative)
+    final rawMatch = _matchRawEpgId(channelId);
+    if (rawMatch != null) {
+      _recordMatchDiagnostic(channelId, idMatch: true);
+      return _cacheResolvedMapping(channelId, rawMatch);
+    }
+
     _ensureNormalizedMap();
 
-    // 3. Case-insensitive exact match
-    final lowerChannelId = channelId.toLowerCase();
-    for (final key in _availableChannels) {
-      if (key.toLowerCase() == lowerChannelId) {
-        return _cacheResolvedMapping(channelId, key);
-      }
-    }
-
-    // 4. Normalized match (remove non-alphanumeric only, preserve digits)
-    final normalizedId = _normalize(channelId);
-    if (normalizedId.isNotEmpty &&
-        _normalizedAvailableChannels != null &&
-        _normalizedAvailableChannels!.containsKey(normalizedId)) {
-      final candidates = _normalizedAvailableChannels![normalizedId];
-      if (candidates != null && candidates.isNotEmpty) {
-        return _cacheResolvedMapping(channelId, candidates.first);
-      }
-    }
-
-    // 5. Number word conversion (e.g., "bbcone" → "bbc1")
-    final normalizedWithNumbers = _convertNumberWords(normalizedId);
-    if (normalizedWithNumbers != normalizedId &&
-        _normalizedAvailableChannels != null &&
-        _normalizedAvailableChannels!.containsKey(normalizedWithNumbers)) {
-      final candidates = _normalizedAvailableChannels![normalizedWithNumbers];
-      if (candidates != null && candidates.isNotEmpty) {
-        return _cacheResolvedMapping(channelId, candidates.first);
-      }
-    }
-
-    // 6. Reverse number word conversion on EPG keys
-    if (_normalizedAvailableChannels != null) {
-      for (final entry in _normalizedAvailableChannels!.entries) {
-        final epgWithNumberWords = _convertNumberWords(entry.key);
-        if (epgWithNumberWords == normalizedId) {
-          return _cacheResolvedMapping(channelId, entry.value.first);
-        }
-      }
-    }
-
-    // 7. Try matching by channel NAME if provided (exact normalized match only)
+    // 4. Try matching by channel NAME if provided (normalized match)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName = _normalize(channelName);
       if (normalizedName.isNotEmpty &&
@@ -2901,6 +2953,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final candidates = _normalizedAvailableChannels![normalizedName];
         if (candidates != null && candidates.isNotEmpty) {
+          _recordMatchDiagnostic(channelId, idMatch: false);
           return _cacheResolvedMapping(channelId, candidates.first);
         }
       }
@@ -2912,6 +2965,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           _normalizedAvailableChannels!.containsKey(nameWithNumbers)) {
         final candidates = _normalizedAvailableChannels![nameWithNumbers];
         if (candidates != null && candidates.isNotEmpty) {
+          _recordMatchDiagnostic(channelId, idMatch: false);
           return _cacheResolvedMapping(channelId, candidates.first);
         }
       }
@@ -2945,16 +2999,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       return _programsByChannel[channelId] ?? [];
     }
 
-    // Try with normalized channel ID
-    final normalizedId = _normalize(channelId);
-    for (final key in _programsByChannel.keys) {
-      final normalizedKey = _normalize(key);
-      if (normalizedKey == normalizedId) {
-        _cacheResolvedMapping(channelId, key);
-        return _programsByChannel[key] ?? [];
-      }
-    }
-
     if (!_isParsing && !_isLoading && _allowedChannelIdsNormalized.isNotEmpty) {
       _maybeLogMissingPrograms(channelId, channelName: channelName);
     }
@@ -2976,7 +3020,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         continue;
       }
       _programsByChannel[epgId] = programs;
-      _availableChannels.add(epgId);
+      _registerAvailableChannel(epgId);
       final normalized = _normalize(epgId);
       if (normalized.isNotEmpty) {
         _normalizedAvailableChannels ??= {};
@@ -3021,18 +3065,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _cacheResolvedMapping(channelId, channelId);
       _clearChannelFailures(channelId);
       return true;
-    }
-
-    final normalizedId = _normalize(channelId);
-    for (final key in _programsByChannel.keys) {
-      if (_normalize(key) == normalizedId) {
-        final programs = _programsByChannel[key];
-        if (programs != null && programs.isNotEmpty) {
-          _cacheResolvedMapping(channelId, key);
-          _clearChannelFailures(channelId);
-          return true;
-        }
-      }
     }
 
     // Don't record failure here; data might just be loading
@@ -3082,7 +3114,19 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool hasEpgData(String channelId) {
-    return _availableChannels.contains(channelId);
+    return _epgIdsRaw.contains(channelId.trim());
+  }
+
+  /// Debug helper: logs match counts (guarded by debug flag).
+  void logMatchDiagnostics() {
+    _logMatchDiagnostics(context: 'EPG');
+  }
+
+  /// Debug helper: resets match counters (guarded by debug flag).
+  void resetMatchDiagnostics() {
+    if (_enableMatchingDiagnostics) {
+      _resetMatchDiagnostics();
+    }
   }
 
   /// Resolve and optionally cache the EPG id for a playlist channel
@@ -3094,7 +3138,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }) {
     final cached = _internalToEpgIdMapping[channelId];
     if (cached != null) {
-      if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
+      if (_epgIdsRaw.isEmpty || _epgIdsRaw.contains(cached)) {
         return cached;
       }
       _internalToEpgIdMapping.remove(channelId);
@@ -3123,8 +3167,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   /// Fast match estimator for diagnostics (no fuzzy matching).
   int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
     _ensureNormalizedMap();
-    if (_normalizedAvailableChannels == null ||
-        _normalizedAvailableChannels!.isEmpty) {
+    if ((_normalizedAvailableChannels == null ||
+            _normalizedAvailableChannels!.isEmpty) &&
+        _epgIdsRaw.isEmpty) {
       return _internalToEpgIdMapping.length;
     }
     int matched = 0;
@@ -3134,9 +3179,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final name = (map['name'] as String?) ?? '';
       final primary = tvgId.trim().isNotEmpty ? tvgId : id;
       if (primary.trim().isNotEmpty) {
-        final normalized = _normalize(primary);
-        if (normalized.isNotEmpty &&
-            _normalizedAvailableChannels!.containsKey(normalized)) {
+        if (_matchRawEpgId(primary) != null) {
           matched++;
           continue;
         }
@@ -3169,21 +3212,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _cacheResolvedMapping(channelId, channelId);
       }
     }
-    
-    // Fallback 2: Try normalized key search through program keys
-    if (epgId == null) {
-      final normalizedId = _normalize(channelId);
-      for (final key in _programsByChannel.keys) {
-        if (_normalize(key) == normalizedId) {
-          final programs = _programsByChannel[key];
-          if (programs != null && programs.isNotEmpty) {
-            epgId = key;
-            _cacheResolvedMapping(channelId, key);
-            break;
-          }
-        }
-      }
-    }
+    // Intentionally skip normalized ID matching for tvg-id paths.
     
     if (epgId == null) {
       _maybeLogMissingEpgId(channelId, channelName);
@@ -3316,7 +3345,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
-    _availableChannels.add(epgId);
+    _registerAvailableChannel(epgId);
 
     // Cache the mapping
     _cacheResolvedMapping(channelId, epgId);
@@ -3377,7 +3406,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         continue;
       }
       if (!seen.add(epgId)) continue;
-      _availableChannels.add(epgId);
+      _registerAvailableChannel(epgId);
       epgIdsToLoad.add(epgId);
     }
 
@@ -3494,7 +3523,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
       final mappings = await _db.getAllMappings();
       _internalToEpgIdMapping.addAll(mappings);
-      _availableChannels.addAll(mappings.values);
+      _registerAvailableChannels(mappings.values);
       _applyManualMappings();
       _lastMappingsLoad = now;
       debugLog('EPG: Loaded ${mappings.length} mappings from DB');
@@ -3685,7 +3714,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _programsByChannel[epgId] = programs;
       debugLog('EPG: Loaded ${programs.length} programs for $epgId from DB');
       if (programs.isNotEmpty) {
-        _availableChannels.add(epgId);
+        _registerAvailableChannel(epgId);
         notifyListeners();
       }
     } catch (e) {
@@ -3777,7 +3806,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       var added = false;
       for (final entry in byId.entries) {
         _programsByChannel[entry.key] = entry.value;
-        _availableChannels.add(entry.key);
+        _registerAvailableChannel(entry.key);
         added = true;
       }
 

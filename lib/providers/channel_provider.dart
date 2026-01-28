@@ -1317,6 +1317,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     int totalChannels = 0;
     int channelsWithTvgId = 0;
     int idBasedMatches = 0;
+    _epgService?.resetMatchDiagnostics();
 
     for (int i = 0; i < _channelMaps.length; i++) {
       final map = _channelMaps[i];
@@ -1376,6 +1377,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     debugLog('ChannelProvider: Completed EPG mapping build');
     debugLog(
         'ChannelProvider: EPG mapping stats - total=$totalChannels tvgId=$channelsWithTvgId idMatches=$idBasedMatches');
+    _epgService?.logMatchDiagnostics();
     if (_dbReady) {
       try {
         await _epgService?.loadMappingsFromDb();
