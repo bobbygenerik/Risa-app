@@ -110,3 +110,24 @@ class Channel {
     return 'Channel(id: $id, name: $name, url: $url, groupTitle: $groupTitle)';
   }
 }
+
+extension ChannelEpgLookup on Channel {
+  /// Prefer tvg-id for EPG lookup; fall back to channel id when missing/empty.
+  String get epgLookupId {
+    final tvg = tvgId?.trim();
+    if (tvg != null && tvg.isNotEmpty) {
+      return tvg;
+    }
+    return id.trim();
+  }
+
+  /// Only use name-based matching when tvg-id is missing/empty.
+  String? get epgLookupName {
+    final tvg = tvgId?.trim();
+    if (tvg != null && tvg.isNotEmpty) {
+      return null;
+    }
+    final trimmed = name.trim();
+    return trimmed.isNotEmpty ? trimmed : null;
+  }
+}

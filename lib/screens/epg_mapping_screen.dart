@@ -60,12 +60,12 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     _mappingEntries.clear();
 
     for (final channel in widget.channels) {
-      final tvgId = channel.tvgId ?? channel.id;
+      final tvgId = channel.epgLookupId;
       final existingMapping = _epgService.getManualMapping(tvgId);
       final hasEpgData =
-          _epgService.hasEpgMatch(tvgId, channelName: channel.name);
+          _epgService.hasEpgMatch(tvgId, channelName: channel.epgLookupName);
       final suggestedMatches =
-          _epgService.getSuggestedMatches(tvgId, channel.name, limit: 5);
+          _epgService.getSuggestedMatches(tvgId, channel.epgLookupName, limit: 5);
 
       final confidence =
           _calculateChannelMatchConfidence(channel, suggestedMatches);
@@ -88,9 +88,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       Channel channel, List<MapEntry<String, double>> suggestions) {
     if (suggestions.isEmpty) return 0.0;
 
-    final tvgId = channel.tvgId ?? channel.id;
+    final tvgId = channel.epgLookupId;
     final hasExactMatch =
-        _epgService.hasEpgMatch(tvgId, channelName: channel.name);
+        _epgService.hasEpgMatch(tvgId, channelName: channel.epgLookupName);
     if (hasExactMatch) return 1.0;
 
     return suggestions.first.value;
@@ -99,11 +99,11 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   void _calculateMatchConfidence() {
     for (final entry in _mappingEntries) {
       final suggestions = _epgService.getSuggestedMatches(
-        entry.channel.tvgId ?? entry.channel.id,
-        entry.channel.name,
+        entry.channel.epgLookupId,
+        entry.channel.epgLookupName,
         limit: 5,
       );
-      _matchConfidence[entry.channel.tvgId ?? entry.channel.id] =
+      _matchConfidence[entry.channel.epgLookupId] =
           suggestions.isEmpty ? 0.0 : suggestions.first.value;
     }
   }
@@ -114,7 +114,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
         if (!entry.channel.name.toLowerCase().contains(query) &&
-            !(entry.channel.tvgId ?? '').toLowerCase().contains(query)) {
+            !entry.channel.epgLookupId.toLowerCase().contains(query)) {
           return false;
         }
       }
@@ -301,7 +301,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
   Widget _buildChannelMappingCard(ChannelMappingEntry entry) {
     final isSelected = _selectedChannelIds.contains(
-      entry.channel.tvgId ?? entry.channel.id,
+      entry.channel.epgLookupId,
     );
 
     return Card(
@@ -519,7 +519,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _toggleChannelSelection(ChannelMappingEntry entry) {
-    final channelId = entry.channel.tvgId ?? entry.channel.id;
+    final channelId = entry.channel.epgLookupId;
     setState(() {
       if (_selectedChannelIds.contains(channelId)) {
         _selectedChannelIds.remove(channelId);
@@ -532,7 +532,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   void _bulkAutoMap() async {
     final entries = _mappingEntries
         .where((e) =>
-            _selectedChannelIds.contains(e.channel.tvgId ?? e.channel.id))
+            _selectedChannelIds.contains(e.channel.epgLookupId))
         .where((e) => e.confidence > 0.7)
         .toList();
 
@@ -548,14 +548,14 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
     for (final entry in entries) {
       final suggestions = _epgService.getSuggestedMatches(
-        entry.channel.tvgId ?? entry.channel.id,
-        entry.channel.name,
+        entry.channel.epgLookupId,
+        entry.channel.epgLookupName,
         limit: 1,
       );
 
       if (suggestions.isNotEmpty) {
         await _epgService.setManualMapping(
-          entry.channel.tvgId ?? entry.channel.id,
+          entry.channel.epgLookupId,
           suggestions.first.key,
         );
       }

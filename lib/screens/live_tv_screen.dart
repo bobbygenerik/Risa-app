@@ -188,6 +188,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
   bool _startupOverlayActive = false;
+  DateTime? _overlayShownAt;
   Timer? _idleTimer;
   DateTime _lastInteractionAt = DateTime.now();
   bool _isIdle = false;
@@ -324,7 +325,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             channels.add(channel);
             final programsRaw = c['programs'];
             if (programsRaw is List) {
-              final epgId = channel.tvgId ?? channel.id;
+              final epgId = channel.epgLookupId;
               final programs = <Program>[];
               for (final p in programsRaw) {
                 if (p is! Map<String, dynamic>) continue;
@@ -410,10 +411,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     Channel channel,
     IncrementalEpgService epgService,
   ) {
-    final channelId = channel.tvgId ?? channel.id;
+    final channelId = channel.epgLookupId;
     final programs = epgService.getProgramsForChannel(
       channelId,
-      channelName: channel.name,
+      channelName: channel.epgLookupName,
       groupTitle: channel.groupTitle,
     );
     if (programs.isEmpty) return const [];
@@ -718,15 +719,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final missingIds = <String>[];
     final missingNames = <String?>[];
     for (final channel in channels) {
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
       final hasPrograms = epgService.hasProgramsForChannel(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
       if (!hasPrograms) {
         missingIds.add(channelId);
-        missingNames.add(channel.name);
+        missingNames.add(channel.epgLookupName);
       }
     }
 
@@ -809,10 +810,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final limit = math.min(channels.length, 10);
       for (var j = 0; j < limit; j++) {
         final channel = channels[j];
-        final channelId = channel.tvgId ?? channel.id;
+        final channelId = channel.epgLookupId;
         final program = epgService.getCurrentProgram(
           channelId,
-          channelName: channel.name,
+          channelName: channel.epgLookupName,
           groupTitle: channel.groupTitle,
         );
         if (program == null) continue;
@@ -877,7 +878,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (isFirstRow && index == 0) {
       return allowCategoryPaging ? _firstChannelFocus : _firstFeaturedFocus;
     }
-    final channelId = channel.tvgId ?? channel.id;
+    final channelId = channel.epgLookupId;
     final key = '$sectionKey|$channelId|$index';
     final existing = _cardFocusNodes[key];
     if (existing != null) return existing;
@@ -1376,6 +1377,48 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
             }
 
+            Widget buildNoPlaylistState(String? errorMessage) {
+              _markSkeletonVisibility(false);
+              return Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      context.iconXxl(
+                        AppIcons.liveTV,
+                        color:
+                            AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                      ),
+                      SizedBox(height: context.tvSpacing(24)),
+                      Text(
+                        AppLocalizations.of(context)!.noLiveTvAvailable,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      SizedBox(height: context.tvSpacing(8)),
+                      Text(
+                        errorMessage != null && errorMessage.isNotEmpty
+                            ? errorMessage
+                            : AppLocalizations.of(context)!.loadPlaylistMessage,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: context.tvSpacing(32)),
+                      GoToSettingsButton(
+                        onPressed: _goToSettings,
+                        focusNode: _settingsButtonFocus,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (!hasChannels && channelProvider.noPlaylistConfigured) {
+              return buildNoPlaylistState(channelProvider.errorMessage);
+            }
+
             // Use Selector to only rebuild when loading state changes, not on every EPG update
             final epgLoadingState = context.select<IncrementalEpgService, ({bool isDownloading, bool isParsing, bool isLoading, bool hasEpgUrl, bool hasLoadedPrograms})>(
               (epg) => (
@@ -1402,33 +1445,52 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 epgLoadingState.isParsing ||
                 epgLoadingState.isLoading ||
                 categoriesNotReady;
-            // Only show startup overlay on cold starts - warm starts use skeleton loaders
+            // Show overlay during cold start or when EPG is actively parsing
+            // Keep overlay visible for minimum 500ms to prevent flicker
+            final now = DateTime.now();
+            final minDisplayTime = _overlayShownAt != null &&
+                now.difference(_overlayShownAt!) < const Duration(milliseconds: 500);
             final showStartupOverlay =
-                channelProvider.isColdStartLoad &&
+                (channelProvider.isColdStartLoad &&
                     _startupOverlayActive &&
                     overlayBusy &&
-                    !hasDisplayData;
+                    !hasDisplayData) ||
+                (epgLoadingState.isParsing || epgLoadingState.isDownloading) ||
+                minDisplayTime;
             if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (!_startupOverlayActive) {
-                  setState(() => _startupOverlayActive = true);
+                  setState(() {
+                    _startupOverlayActive = true;
+                    _overlayShownAt = DateTime.now();
+                  });
                 }
               });
+            }
+            // Track when overlay is shown for EPG parsing
+            if (showStartupOverlay && _overlayShownAt == null) {
+              _overlayShownAt = DateTime.now();
             }
             if (_startupOverlayActive && hasDisplayData) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (_startupOverlayActive) {
-                  setState(() => _startupOverlayActive = false);
+                  setState(() {
+                    _startupOverlayActive = false;
+                    _overlayShownAt = null;
+                  });
                 }
               });
             }
-            if (_startupOverlayActive && !overlayBusy) {
+            if (_startupOverlayActive && !overlayBusy && !minDisplayTime) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (_startupOverlayActive) {
-                  setState(() => _startupOverlayActive = false);
+                  setState(() {
+                    _startupOverlayActive = false;
+                    _overlayShownAt = null;
+                  });
                 }
               });
             }
@@ -1528,41 +1590,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       channelProvider.isLoading)) {
                 return buildSkeleton();
               }
-              _markSkeletonVisibility(false);
-              return wrapWithOverlay(Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      context.iconXxl(
-                        AppIcons.liveTV,
-                        color:
-                            AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                      ),
-                      SizedBox(height: context.tvSpacing(24)),
-                      Text(
-                        AppLocalizations.of(context)!.noLiveTvAvailable,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      SizedBox(height: context.tvSpacing(8)),
-                      Text(
-                        errorMessage != null && errorMessage.isNotEmpty
-                            ? errorMessage
-                            : AppLocalizations.of(context)!.loadPlaylistMessage,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: context.tvSpacing(32)),
-                      GoToSettingsButton(
-                        onPressed: _goToSettings,
-                        focusNode: _settingsButtonFocus,
-                      ),
-                    ],
-                  ),
-                ),
-              ));
+              return buildNoPlaylistState(errorMessage);
             }
 
             _requestCategoryPrefetch();
@@ -1666,7 +1694,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     // Handle Stable ID vs Index
                     if (_featuredChannelId != null) {
                       final idx = displayChannels.indexWhere(
-                          (c) => (c.tvgId ?? c.id) == _featuredChannelId);
+                          (c) => (c.epgLookupId) == _featuredChannelId);
                       if (idx != -1) {
                         _featuredIndex = idx;
                       }
@@ -1678,14 +1706,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
 
                     _featuredChannelId =
-                        featuredChannel.tvgId ?? featuredChannel.id;
+                        featuredChannel.epgLookupId;
 
                     // Ensure EPG is triggered for the selected hero
                     if (_featuredChannelId != null &&
                         _featuredChannelId!.isNotEmpty) {
                       unawaited(epgService.ensureChannelLoaded(
                           _featuredChannelId!,
-                          channelName: featuredChannel.name));
+                          channelName: featuredChannel.epgLookupName));
                     }
 
                     return Stack(
@@ -1733,31 +1761,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final Set<String> addedChannelIds = {};
     final Set<String> featuredProgramTitles = {};
     final Set<String> missingChannelIds = {};
-    final List<String> missingChannelNames = [];
+    final List<String?> missingChannelNames = [];
 
     // Add most-watched channels first (up to 60% of featured slots)
     final maxMostWatched = math.min(mostWatched.length, 6);
     for (int i = 0; i < maxMostWatched; i++) {
       final channel = mostWatched[i];
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
 
       // Check if this channel's current program is already featured
       final currentProgram = epgService.getCurrentProgram(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
 
       if (currentProgram == null) {
         if (missingChannelIds.add(channelId)) {
-          missingChannelNames.add(channel.name);
+          missingChannelNames.add(channel.epgLookupName);
         }
         continue;
       }
 
       if (epgService.shouldHideChannel(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
       )) {
         continue;
       }
@@ -1780,7 +1808,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Fill remaining slots with random channels for variety
     final availableChannels = fallbackChannels
         .where(
-            (channel) => !addedChannelIds.contains(channel.tvgId ?? channel.id))
+            (channel) => !addedChannelIds.contains(channel.epgLookupId))
         .toList();
 
     // Shuffle for randomness
@@ -1792,25 +1820,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     for (int i = 0; i < randomCount; i++) {
       final channel = availableChannels[i];
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
 
       // Check if this channel's current program is already featured
       final currentProgram = epgService.getCurrentProgram(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
 
       if (currentProgram == null) {
         if (missingChannelIds.add(channelId)) {
-          missingChannelNames.add(channel.name);
+          missingChannelNames.add(channel.epgLookupName);
         }
         continue;
       }
 
       if (epgService.shouldHideChannel(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
       )) {
         continue;
       }
@@ -1834,11 +1862,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (featuredChannels.length < targetFeaturedCount) {
       for (final channel in availableChannels) {
         if (featuredChannels.length >= targetFeaturedCount) break;
-        final channelId = channel.tvgId ?? channel.id;
+        final channelId = channel.epgLookupId;
         if (addedChannelIds.contains(channelId)) continue;
         if (epgService.shouldHideChannel(
           channelId,
-          channelName: channel.name,
+          channelName: channel.epgLookupName,
         )) {
           continue;
         }
@@ -3028,16 +3056,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final candidates = <_HeroCandidate>[];
     // Scan all channels in the preview list (usually 60) to find the best heroes
     for (final channel in channels) {
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
       final program = epgService.getCurrentProgram(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
 
       if (epgService.shouldHideChannel(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
       )) {
         continue;
       }
@@ -3156,10 +3184,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // Log more details about why no program was found
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
       final hasPrograms = epgService.hasProgramsForChannel(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
       debugLog(
@@ -3258,15 +3286,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final missingNames = <String?>[];
     for (var i = 0; i < channels.length; i++) {
       final channel = channels[i];
-      final channelId = channel.tvgId ?? channel.id;
+      final channelId = channel.epgLookupId;
       final program = epgService.getCurrentProgram(
         channelId,
-        channelName: channel.name,
+        channelName: channel.epgLookupName,
         groupTitle: channel.groupTitle,
       );
       if (program == null) {
         missingIds.add(channelId);
-        missingNames.add(channel.name);
+        missingNames.add(channel.epgLookupName);
         // Don't skip channels in featured row - show them even without EPG
         // This allows users to see channels while EPG is still loading
         // Only skip if we have many channels with EPG and this one doesn't match
@@ -3606,10 +3634,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
       final channelIds = channels
-          .map((c) => c.tvgId ?? c.id)
+          .map((c) => c.epgLookupId)
           .where((id) => id.isNotEmpty)
           .toList();
-      final channelNames = channels.map((c) => c.name).toList();
+      final channelNames = channels.map((c) => c.epgLookupName).toList();
       if (channelIds.isEmpty) return;
       unawaited(epgService.ensureChannelsLoadedBatch(
         channelIds,
@@ -3645,7 +3673,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               // Update focused index without triggering full screen rebuild if possible
               _focusedIndexBySection[sectionKey] = index;
               _lastFocusedCardKey =
-                  '$sectionKey|${channel.tvgId ?? channel.id}|$index';
+                  '$sectionKey|${channel.epgLookupId}|$index';
               _scrollToHeroPeekOnFocus();
               onItemFocus?.call();
             } else if (_focusedIndexBySection[sectionKey] == index) {
@@ -3719,10 +3747,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             selector: (context, epgService) {
               // Always try to get program data, even during loading if available
               // This prevents flickering by showing data as soon as it's ready
-              final channelId = channel.tvgId ?? channel.id;
+              final channelId = channel.epgLookupId;
               final program = epgService.getCurrentProgram(
                 channelId,
-                channelName: channel.name,
+                channelName: channel.epgLookupName,
                 groupTitle: channel.groupTitle,
               );
               return _EpgCardData(
@@ -3764,8 +3792,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   epgData.program == null &&
                   epgData.hasUsableData) {
                 unawaited(epgService.ensureChannelLoaded(
-                  channel.tvgId ?? channel.id,
-                  channelName: channel.name,
+                  channel.epgLookupId,
+                  channelName: channel.epgLookupName,
                 ));
               }
 
@@ -4548,7 +4576,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _suspendHeroBackground = true;
 
     // INSTRUMENTATION: Log channel tap details
-    final channelId = channel.tvgId ?? channel.id;
+    final channelId = channel.epgLookupId;
     final streamUrl = channel.url;
     debugLog('=== CHANNEL TAP START ===');
     debugLog('Channel: ${channel.name} (ID: $channelId)');
@@ -5329,7 +5357,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
 
     if (result.isEmpty) {
-      epgService.removeManualMapping(channel.tvgId ?? channel.id);
+      unawaited(epgService.removeManualMapping(channel.epgLookupId));
       if (mounted) {
         showAppSnackBar(
           context,
@@ -5340,7 +5368,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         );
       }
     } else {
-      unawaited(epgService.setManualMapping(channel.tvgId ?? channel.id, result));
+      unawaited(epgService.setManualMapping(channel.epgLookupId, result));
       if (mounted) {
         showAppSnackBar(
           context,
@@ -5354,8 +5382,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Refresh EPG data for this channel
     unawaited(epgService.ensureChannelLoaded(
-      channel.tvgId ?? channel.id,
-      channelName: channel.name,
+      channel.epgLookupId,
+      channelName: channel.epgLookupName,
       // forceRefresh parameter removed as it does not exist
     ));
      

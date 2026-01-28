@@ -232,7 +232,7 @@ class _EPGScreenState extends State<EPGScreen>
         channels.add(channel);
         final programsRaw = c['programs'];
         if (programsRaw is List) {
-          final epgId = channel.tvgId ?? channel.id;
+          final epgId = channel.epgLookupId;
           final programs = <Program>[];
           for (final p in programsRaw) {
             if (p is! Map<String, dynamic>) continue;
@@ -291,10 +291,10 @@ class _EPGScreenState extends State<EPGScreen>
     Channel channel,
     IncrementalEpgService epgService,
   ) {
-    final channelId = channel.tvgId ?? channel.id;
+    final channelId = channel.epgLookupId;
     final programs = epgService.getProgramsForChannel(
       channelId,
-      channelName: channel.name,
+      channelName: channel.epgLookupName,
       groupTitle: channel.groupTitle,
     );
     if (programs.isEmpty) return const [];
@@ -404,7 +404,7 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   FocusNode _programFocusNodeForChannel(Channel channel) {
-    final key = channel.tvgId ?? channel.id;
+    final key = channel.epgLookupId;
     final existing = _programFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGProgram:$key');
@@ -422,7 +422,7 @@ class _EPGScreenState extends State<EPGScreen>
     if (index == 0) {
       return _firstChannelFocus;
     }
-    final key = channel.tvgId ?? channel.id;
+    final key = channel.epgLookupId;
     final existing = _channelFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGChannel:$key');
@@ -1164,8 +1164,8 @@ class _EPGScreenState extends State<EPGScreen>
       final channelNames = <String?>[];
       for (var i = 0; i < preloadCount; i++) {
         final channel = channels[i];
-        channelIds.add(channel.tvgId ?? channel.id);
-        channelNames.add(channel.name);
+        channelIds.add(channel.epgLookupId);
+        channelNames.add(channel.epgLookupName);
       }
       unawaited(epgService.ensureChannelsLoadedBatch(
         channelIds,
@@ -1560,7 +1560,7 @@ class _EPGScreenState extends State<EPGScreen>
     if (!mounted) return;
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
-    final hasMapping = epgService.hasManualMapping(channel.tvgId ?? channel.id);
+    final hasMapping = epgService.hasManualMapping(channel.epgLookupId);
 
     unawaited(showModalBottomSheet(
       context: context,
@@ -1593,7 +1593,7 @@ class _EPGScreenState extends State<EPGScreen>
                               fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         Text(
-                          'ID: ${channel.tvgId ?? channel.id}',
+                          'ID: ${channel.epgLookupId}',
                           style: const TextStyle(
                               color: AppTheme.textSecondary, fontSize: 12),
                         ),
@@ -1625,7 +1625,7 @@ class _EPGScreenState extends State<EPGScreen>
               title: const Text('Match EPG Channel'),
               subtitle: hasMapping
                   ? Text(
-                      'Currently: ${epgService.getManualMapping(channel.tvgId ?? channel.id)}',
+                      'Currently: ${epgService.getManualMapping(channel.epgLookupId)}',
                       style: const TextStyle(fontSize: 12))
                   : null,
               onTap: () {
@@ -1672,7 +1672,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Get suggested matches for this channel
     final suggestions = epgService.getSuggestedMatches(
-      channel.tvgId ?? channel.id,
+      channel.epgLookupId,
       channel.name,
       limit: 15,
     );
@@ -1710,7 +1710,7 @@ class _EPGScreenState extends State<EPGScreen>
                     style: const TextStyle(
                         fontSize: 18, color: AppTheme.textPrimary)),
                 Text(
-                  'ID: ${channel.tvgId ?? channel.id}',
+                  'ID: ${channel.epgLookupId}',
                   style: const TextStyle(
                       fontSize: 12, color: AppTheme.textSecondary),
                 ),
@@ -1807,7 +1807,7 @@ class _EPGScreenState extends State<EPGScreen>
                         final epgId = filteredIds[adjustedIndex];
                         final preview = epgService.getChannelPreview(epgId);
                         final currentMapping = epgService
-                            .getManualMapping(channel.tvgId ?? channel.id);
+                            .getManualMapping(channel.epgLookupId);
                         final isCurrentlyMapped = currentMapping == epgId;
                         final isSuggested = showingSuggestions &&
                             adjustedIndex < suggestions.length;
@@ -1951,7 +1951,7 @@ class _EPGScreenState extends State<EPGScreen>
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
     await epgService.setManualMapping(
-        channel.tvgId ?? channel.id, epgChannelId);
+        channel.epgLookupId, epgChannelId);
 
     if (mounted) {
       showAppSnackBar(
@@ -1968,7 +1968,7 @@ class _EPGScreenState extends State<EPGScreen>
   Future<void> _removeEpgMapping(Channel channel) async {
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
-    await epgService.removeManualMapping(channel.tvgId ?? channel.id);
+    await epgService.removeManualMapping(channel.epgLookupId);
 
     if (mounted) {
       showAppSnackBar(

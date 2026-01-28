@@ -404,8 +404,8 @@ class EPGHero extends StatelessWidget {
       builder: (context, epgService, child) {
         // Get current program from EPG service (resolver-aware)
         final currentProgram = epgService.getProgramForChannel(
-          channel.tvgId ?? channel.id,
-          channelName: channel.name,
+          channel.epgLookupId,
+          channelName: channel.epgLookupName,
         );
 
         final title = currentProgram?.title ?? channel.name;

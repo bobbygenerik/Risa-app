@@ -1314,23 +1314,37 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     const int batchSize = 500;
     const int yieldEvery = 50; // Increased frequency to prevent UI jank
     final Map<String, String> batch = {};
+    int totalChannels = 0;
+    int channelsWithTvgId = 0;
+    int idBasedMatches = 0;
 
     for (int i = 0; i < _channelMaps.length; i++) {
       final map = _channelMaps[i];
-      final channelId = (map['tvgId'] as String?) ??
-          (map['id'] as String?) ??
-          (map['url'] as String? ?? '');
+      totalChannels++;
+      final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
+      final id = (map['id'] as String?)?.trim() ?? '';
+      final url = (map['url'] as String?)?.trim() ?? '';
+      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
       final name = (map['name'] as String?) ?? '';
       if (channelId.isEmpty) continue;
 
+      final channelNameForLookup =
+          tvgId.isNotEmpty ? null : name.trim();
+      if (tvgId.isNotEmpty) {
+        channelsWithTvgId++;
+      }
+
       final epgId = _epgService!.resolveEpgId(
         channelId,
-        channelName: name,
+        channelName: channelNameForLookup,
         cache: true,
         allowLoose: false,
       );
       if (epgId != null) {
         batch[channelId] = epgId;
+        if (tvgId.isNotEmpty) {
+          idBasedMatches++;
+        }
       }
 
       if (_dbReady && batch.length >= batchSize) {
@@ -1360,6 +1374,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     }
 
     debugLog('ChannelProvider: Completed EPG mapping build');
+    debugLog(
+        'ChannelProvider: EPG mapping stats - total=$totalChannels tvgId=$channelsWithTvgId idMatches=$idBasedMatches');
     if (_dbReady) {
       try {
         await _epgService?.loadMappingsFromDb();
@@ -3555,13 +3571,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     int matched = 0;
     for (int i = 0; i < cappedTotal; i++) {
       final map = _channelMaps[i];
-      final channelId = (map['tvgId'] as String?) ??
-          (map['id'] as String?) ??
-          (map['url'] as String? ?? '');
+      final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
+      final id = (map['id'] as String?)?.trim() ?? '';
+      final url = (map['url'] as String?)?.trim() ?? '';
+      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
       final name = (map['name'] as String?) ?? '';
+      final channelNameForLookup =
+          tvgId.isNotEmpty ? null : name.trim();
 
       if (channelId.isNotEmpty &&
-          epgService.hasEpgMatch(channelId, channelName: name)) {
+          epgService.hasEpgMatch(channelId, channelName: channelNameForLookup)) {
         matched++;
       }
 

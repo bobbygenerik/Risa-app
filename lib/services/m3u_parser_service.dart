@@ -110,6 +110,7 @@ class M3UParserService {
     String? currentInfo;
     Map<String, String> currentAttributes = {};
     int channelCount = 0;
+    int tvgIdCount = 0;
 
     void processExtinfSegment(String segment) {
       final urlMatch = _lastUrlMatch(segment);
@@ -149,6 +150,9 @@ class M3UParserService {
           );
           channels.add(channel);
           channelCount++;
+          if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
+            tvgIdCount++;
+          }
           currentInfo = null;
           currentAttributes = {};
         }
@@ -205,6 +209,9 @@ class M3UParserService {
 
           channels.add(channel);
           channelCount++;
+          if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
+            tvgIdCount++;
+          }
           if (channelCount <= 5) {
             debugLog('M3UParser: Added channel #$channelCount: $channelName');
             debugLog('M3UParser: Channel URL: $line');
@@ -231,6 +238,7 @@ class M3UParserService {
     }
 
     debugLog('M3UParser: Total channels parsed: ${channels.length}');
+    debugLog('M3UParser: Channels with tvg-id: $tvgIdCount');
     return channels;
   }
 
@@ -294,6 +302,7 @@ class M3UParserService {
     String? currentInfo;
     Map<String, String> currentAttributes = {};
     int channelCount = 0;
+    int tvgIdCount = 0;
     bool headerProcessed = false;
     final seenUrls = <String>{};
     int epgLinesChecked = 0;
@@ -329,23 +338,26 @@ class M3UParserService {
             final groupTitle = currentAttributes['group-title'] ?? '';
 
             // FAST PATH: Skip all VOD detection - treat everything as live channel
+            final tvgId = currentAttributes['tvg-id'];
             channelMaps.add({
-              'id': currentAttributes['tvg-id'] ??
-                  stableChannelId(
-                      tvgId: currentAttributes['tvg-id'],
-                      name: channelName,
-                      url: inlineUrl),
+              'id': (tvgId != null && tvgId.trim().isNotEmpty)
+                  ? tvgId
+                  : stableChannelId(
+                      tvgId: tvgId, name: channelName, url: inlineUrl),
               'name': channelName,
               'url': inlineUrl,
               'logoUrl': currentAttributes['tvg-logo'],
               'groupTitle': groupTitle,
-              'tvgId': currentAttributes['tvg-id'],
+              'tvgId': tvgId,
               'attributes': currentAttributes,
               'sortOrder': channelCount,
               'isFavorite': false,
               'isHidden': false,
             });
             channelCount++;
+            if ((tvgId?.trim().isNotEmpty ?? false)) {
+              tvgIdCount++;
+            }
             if (progressPort != null && channelCount % 200 == 0) {
               try {
                 // Send progress count
@@ -393,23 +405,26 @@ class M3UParserService {
         final groupTitle = currentAttributes['group-title'] ?? '';
 
         // FAST PATH: Skip all VOD detection - treat everything as live channel
+        final tvgId = currentAttributes['tvg-id'];
         channelMaps.add({
-          'id': currentAttributes['tvg-id'] ??
-              stableChannelId(
-                  tvgId: currentAttributes['tvg-id'],
-                  name: channelName,
-                  url: channelUrl),
+          'id': (tvgId != null && tvgId.trim().isNotEmpty)
+              ? tvgId
+              : stableChannelId(
+                  tvgId: tvgId, name: channelName, url: channelUrl),
           'name': channelName,
           'url': channelUrl,
           'logoUrl': currentAttributes['tvg-logo'],
           'groupTitle': groupTitle,
-          'tvgId': currentAttributes['tvg-id'],
+          'tvgId': tvgId,
           'attributes': currentAttributes,
           'sortOrder': channelCount,
           'isFavorite': false,
           'isHidden': false,
         });
         channelCount++;
+        if ((tvgId?.trim().isNotEmpty ?? false)) {
+          tvgIdCount++;
+        }
         if (progressPort != null && channelCount % 200 == 0) {
           try {
             progressPort.send({'type': 'progress', 'channels': channelCount});
@@ -502,6 +517,8 @@ class M3UParserService {
        } catch (_) {}
     }
 
+    debugLog('M3UParser: (maps) Total channels parsed: $channelCount');
+    debugLog('M3UParser: (maps) Channels with tvg-id: $tvgIdCount');
     return {
       'channels': channelMaps,
       'movies': const <Map<String, dynamic>>[],  // VOD detection skipped
@@ -540,8 +557,8 @@ class M3UParserService {
       final keyStart = i;
       while (i < len) {
         final c = info.codeUnitAt(i);
-        if (_isLetter(c) || c == 45) {
-          // letter or hyphen
+        if (_isLetter(c) || _isDigit(c) || c == 45 || c == 95) {
+          // letter, digit, hyphen, or underscore
           i++;
         } else {
           break;
@@ -588,6 +605,10 @@ class M3UParserService {
 
   bool _isLetter(int c) {
     return (c >= 65 && c <= 90) || (c >= 97 && c <= 122); // A-Z or a-z
+  }
+
+  bool _isDigit(int c) {
+    return (c >= 48 && c <= 57); // 0-9
   }
 
   /// Parses attributes from EXTINF line

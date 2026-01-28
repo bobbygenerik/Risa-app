@@ -34,8 +34,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]
-  Map<String, List<String>>?
-      _normalizedAvailableChannelsStripped; // strippedId -> [originalId1, originalId2]
   final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
   bool _isDownloading = false;
@@ -124,45 +122,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // Provider-style alias map (normalized) to bridge common naming drift
-  static const Map<String, List<String>> _aliasMap = {
-    'bbcone': ['bbc1', 'bbcone', 'bbc1hd', 'bbconehd'],
-    'bbctwo': ['bbc2', 'bbctwo', 'bbc2hd', 'bbctwohd'],
-    'itv1': ['itv', 'itvhd', 'itv1hd'],
-    'skysportsmainevent': [
-      'skysportmainevent',
-      'ssmainevent',
-      'mainevent',
-      'skysportsmaineventhd'
-    ],
-    'skysportsnews': ['ssnews', 'skysportnews', 'skysportsnewshd'],
-    'foxsports1': ['fs1', 'foxsport1', 'foxsportsone'],
-    'foxsports2': ['fs2', 'foxsport2', 'foxsportstwo'],
-    'espn': ['espnusa', 'espn us', 'espnhd'],
-    'tsn1': ['tsn 1', 'tsn one'],
-    'tsn2': ['tsn 2', 'tsn two'],
-    'canalplus': ['canal+', 'canal plus', 'canal plus hd'],
-    // A&E and common ampersand channels
-    'ae': ['aetv', 'aande', 'aandenetwork', 'aehd', 'aetvhd', 'aandehd'],
-    'aetv': ['ae', 'aande', 'aandenetwork', 'aehd', 'aetvhd'],
-    // Other common ampersand-containing channels  
-    'hgtv': ['hgtvhd', 'hgtvus', 'homeandgarden'],
-    'tlc': ['tlchd', 'tlcus', 'thelearningchannel'],
-    'tnt': ['tnthd', 'tntus', 'turnernetworktelevision'],
-    'tbs': ['tbshd', 'tbsus', 'turnerbsystem'],
-    'usanetwork': ['usa', 'usahd', 'usanetworkhd'],
-    'syfy': ['syfyhd', 'syfyus', 'scifi', 'scifichannel'],
-    'bravo': ['bravohd', 'bravous', 'bravotv'],
-    'oxygen': ['oxygenhd', 'oxygenus', 'oxygentv'],
-    'history': ['historyhd', 'historyus', 'historychannel', 'histchannel'],
-    'discovery': ['discoveryhd', 'discoveryus', 'discoverychannel', 'disc'],
-    'nationalgeographic': ['natgeo', 'natgeohd', 'natgeowild', 'ngc'],
-    'foodnetwork': ['food', 'foodhd', 'foodus', 'foodtv'],
-    'hbo': ['hbohd', 'hbous', 'homeboxoffice'],
-    'showtime': ['showtimehd', 'sho', 'shohd'],
-    'starz': ['starzhd', 'starzus'],
-    'cinemax': ['cinemaxhd', 'max', 'maxhd'],
-  };
-
   static final RegExp _httpSchemeRe =
       RegExp(r'https?://', caseSensitive: false);
   static final RegExp _schemeValidRe = RegExp(r'^[A-Za-z]');
@@ -196,10 +155,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
   static final RegExp _techChPrefixRe =
       RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
-  static final RegExp _countryCodeSufRe = RegExp(
-      r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es|in|se|ru|mx|br|nl|no|dk|fi|pl|cz|sk|ro|bg|gr|tr|il|sa|ae|eg|za|nz|cn|jp|kr|tw|vn|th|id|my|sg|ph|pk|bd|ar|cl|co|pe|ve|ch|be|at)$');
-  static final RegExp _regionSufRe = RegExp(
-      r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$');
   static final RegExp _plusOneSufRe = RegExp(r'(plus1|plusone|\+1|\+2)$');
   static final RegExp _programmeStartRe =
       RegExp(r'<(?:\w+:)?programme\b', caseSensitive: false);
@@ -649,7 +604,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _availableChannels.clear();
     _internalToEpgIdMapping.clear();
     _normalizedAvailableChannels = null;
-    _normalizedAvailableChannelsStripped = null;
+    
     _normalizeCache.clear();
     _manualMappings.clear();
     _programsByChannel.clear();
@@ -752,7 +707,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
       await _saveNormalizedMappingToPrefs(null);
       _normalizedAvailableChannels = null;
-      _normalizedAvailableChannelsStripped = null;
+      
       _availableChannels.clear();
       _internalToEpgIdMapping.clear();
       _programsByChannel.clear();
@@ -879,7 +834,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final data = await compute(json.decode, jsonStr) as Map<String, dynamic>;
       _normalizedAvailableChannels = data.map((k, v) =>
           MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()));
-      _normalizedAvailableChannelsStripped = null;
+      
       _availableChannels
           .addAll(_normalizedAvailableChannels!.values.expand((list) => list));
       debugLog(
@@ -1473,7 +1428,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                   debugLog(
                       'EPG: Rebuilding normalized mapping from DB keys...');
                   _normalizedAvailableChannels = {};
-                  _normalizedAvailableChannelsStripped = null;
+                  
                   for (final epgId in _programsByChannel.keys) {
                     final normalized = _normalize(epgId);
                     if (normalized.isNotEmpty) {
@@ -1737,7 +1692,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           ..clear()
           ..addAll(channelIds);
         _normalizedAvailableChannels = normalizedChannels;
-        _normalizedAvailableChannelsStripped = null;
+        debugLog(
+            'EPG: Total EPG channel IDs collected: ${_availableChannels.length}');
+        
 
         // Stream programs from the temp file into memory (capped) and DB in batches
         // For background refresh, use double-buffering (stagedPrograms) to avoid UI flicker.
@@ -1924,13 +1881,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     Map<String, int>? rejectStats,
   }) {
     final normalized = normalizedChannelId ?? normalizeForFilter(channelId);
-    if (allowedNormalized.isNotEmpty &&
-        (normalized.isEmpty || !allowedNormalized.contains(normalized))) {
-      if (rejectStats != null) {
-        rejectStats['channelFiltered'] = (rejectStats['channelFiltered'] ?? 0) + 1;
-      }
-      return false;
-    }
+    // REMOVED: Don't filter by allowed channels - parse all EPG channels
+    // This allows matching by name when tvg-id is missing
 
     // Reject programs that start after our future window
     if (startMs > futureEndMs) {
@@ -2707,10 +2659,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     return normalized;
   }
 
-  static String _stripCountryRegion(String text) {
-    return text.replaceAll(_countryCodeSufRe, '').replaceAll(_regionSufRe, '');
-  }
-
   void _ensureNormalizedMap() {
     if (_availableChannels.isEmpty) return;
     _normalizedAvailableChannels ??= {};
@@ -2719,49 +2667,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       if (normalized.isEmpty) continue;
       _normalizedAvailableChannels!.putIfAbsent(normalized, () => []).add(id);
     }
-  }
-
-  void _ensureStrippedNormalizedMap() {
-    if (_availableChannels.isEmpty) return;
-    _normalizedAvailableChannelsStripped ??= {};
-    for (final id in _availableChannels) {
-      final normalized = _normalize(id);
-      if (normalized.isEmpty) continue;
-      final stripped = _stripCountryRegion(normalized);
-      if (stripped.isEmpty || stripped == normalized) continue;
-      _normalizedAvailableChannelsStripped!
-          .putIfAbsent(stripped, () => [])
-          .add(id);
-    }
-  }
-
-  String? _findUniqueStrippedFallback(
-    String normalizedId,
-    String? channelName,
-  ) {
-    _ensureStrippedNormalizedMap();
-    final strippedMap = _normalizedAvailableChannelsStripped;
-    if (strippedMap == null || strippedMap.isEmpty) return null;
-
-    final strippedId = _stripCountryRegion(normalizedId);
-    if (strippedId.isNotEmpty && strippedId != normalizedId) {
-      final candidates = strippedMap[strippedId];
-      if (candidates != null && candidates.length == 1) {
-        return candidates.first;
-      }
-    }
-
-    if (channelName != null && channelName.isNotEmpty) {
-      final normalizedName = _normalize(channelName);
-      final strippedName = _stripCountryRegion(normalizedName);
-      if (strippedName.isNotEmpty && strippedName != normalizedName) {
-        final candidates = strippedMap[strippedName];
-        if (candidates != null && candidates.length == 1) {
-          return candidates.first;
-        }
-      }
-    }
-    return null;
   }
 
   static String _removeDiacritics(String input) {
@@ -2823,174 +2728,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         (match) => _commonWordReplacements[match.group(0)!] ?? match.group(0)!);
   }
 
-  /// Resolve normalized aliases to a canonical normalized key (if present).
-  String? _resolveAliasNormalized(String normalized) {
-    if (normalized.isEmpty) return null;
-    if (_aliasMap.containsKey(normalized)) return normalized;
-    for (final entry in _aliasMap.entries) {
-      if (entry.value.contains(normalized)) {
-        return entry.key;
-      }
-    }
-    return null;
-  }
-
-  String? _matchAliasToAvailable(String normalized, {String? countryCode}) {
-    final alias = _resolveAliasNormalized(normalized);
-    if (alias != null &&
-        _normalizedAvailableChannels != null &&
-        _normalizedAvailableChannels!.containsKey(alias)) {
-      final candidates = _normalizedAvailableChannels![alias];
-      if (candidates != null) {
-        return _selectBestFromCandidates(candidates, countryCode, alias);
-      }
-    }
-    return null;
-  }
-
-  String? _matchStrippedToAvailable(String normalized, {String? countryCode}) {
-    if (normalized.isEmpty) return null;
-    _ensureStrippedNormalizedMap();
-    final strippedMap = _normalizedAvailableChannelsStripped;
-    if (strippedMap == null || strippedMap.isEmpty) return null;
-    final candidates = strippedMap[normalized];
-    if (candidates == null || candidates.isEmpty) return null;
-    final best = _selectBestFromCandidates(candidates, countryCode, normalized);
-    if (best == null) return null;
-    if (countryCode != null && _epgIdDisagreesWithCountry(best, countryCode)) {
-      return null;
-    }
-    return best;
-  }
-
-  /// Select the best EPG ID from a list of candidates based on country and similarity.
-  String? _selectBestFromCandidates(
-      List<String> candidates, String? countryCode, String normalizedTarget) {
-    if (candidates.isEmpty) return null;
-    if (candidates.length == 1 && countryCode == null) return candidates.first;
-
-    String? bestId;
-    double bestScore = -1000.0;
-    double secondBest = -1000.0;
-
-    for (final id in candidates) {
-      double score = 0.0;
-      final normalizedId = _normalize(id);
-
-      // 1. Exact normalized match is strong
-      if (normalizedId == normalizedTarget) {
-        score += 50.0;
-      }
-
-      // 2. Country match is strongest
-      if (countryCode != null) {
-        if (_epgIdMatchesCountry(id, countryCode)) {
-          score += 100.0;
-        } else if (_epgIdDisagreesWithCountry(id, countryCode)) {
-          // HEAVY penalty if it explicitly matches a DIFFERENT country
-          score -= 80.0;
-        }
-      }
-
-      // 3. Length difference penalty (prefer closer names)
-      final diff = (normalizedId.length - normalizedTarget.length).abs();
-      score -= diff * 2.0;
-
-      // 4. Prefer IDs that don't look like tech strings (uuid-like)
-      if (id.length > 20 && RegExp(r'[0-9a-f-]{8,}').hasMatch(id)) {
-        score -= 10.0;
-      }
-
-      if (score > bestScore) {
-        secondBest = bestScore;
-        bestScore = score;
-        bestId = id;
-      } else if (score > secondBest) {
-        secondBest = score;
-      }
-    }
-
-    if (bestId != null && candidates.length > 1 && countryCode == null) {
-      final normalizedBest = _normalize(bestId);
-      final exactMatch = normalizedBest == normalizedTarget;
-      if (!exactMatch && bestScore < 40.0) {
-        return null;
-      }
-      if (secondBest > -999.0 && (bestScore - secondBest) < 5.0) {
-        return null;
-      }
-    }
-
-    return bestId;
-  }
-
-  /// Check if an EPG ID explicitly belongs to a different country than the one requested.
-  bool _epgIdDisagreesWithCountry(String epgId, String countryCode) {
-    // Only check common IPTV country suffixes
-    final suffixes = [
-      'uk',
-      'us',
-      'ca',
-      'au',
-      'ie',
-      'pt',
-      'hk',
-      'fr',
-      'de',
-      'es',
-      'it',
-      'in',
-      'se',
-      'ru',
-      'mx',
-      'br',
-      'nl',
-      'no',
-      'dk',
-      'fi',
-      'pl',
-      'cz',
-      'sk',
-      'ro',
-      'bg',
-      'gr',
-      'tr',
-      'il',
-      'sa',
-      'ae',
-      'eg',
-      'za',
-      'nz',
-      'cn',
-      'jp',
-      'kr',
-      'tw',
-      'vn',
-      'th',
-      'id',
-      'my',
-      'sg',
-      'ph',
-      'pk',
-      'bd',
-      'ar',
-      'cl',
-      'co',
-      'pe',
-      've',
-      'ch',
-      'be',
-      'at',
-    ];
-    final normalizedId = epgId.toLowerCase();
-
-    for (final code in suffixes) {
-      if (code == countryCode) continue;
-      if (_epgIdMatchesCountry(normalizedId, code)) return true;
-    }
-    return false;
-  }
-
   static String _convertNumberWords(String text) {
     const conversions = {
       'zero': '0',
@@ -3028,132 +2765,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
     });
     return result;
-  }
-
-  static String _stripSuffixes(String text) {
-    return text
-        .replaceAll(_qualitySufRe, '')
-        .replaceAll(_regionSufRe, '')
-        .trim();
-  }
-
-  /// Map of country/region names to ISO 2-letter codes for EPG matching
-  static const Map<String, String> _countryNameToCode = {
-    // Full country names
-    'australia': 'au', 'australian': 'au',
-    'united states': 'us', 'usa': 'us', 'american': 'us', 'america': 'us',
-    'united kingdom': 'uk', 'uk': 'uk', 'british': 'uk', 'britain': 'uk',
-    'england': 'uk',
-    'canada': 'ca', 'canadian': 'ca',
-    'germany': 'de', 'german': 'de', 'deutschland': 'de',
-    'france': 'fr', 'french': 'fr',
-    'spain': 'es', 'spanish': 'es', 'espana': 'es',
-    'italy': 'it', 'italian': 'it', 'italia': 'it',
-    'portugal': 'pt', 'portuguese': 'pt',
-    'brazil': 'br', 'brazilian': 'br', 'brasil': 'br',
-    'mexico': 'mx', 'mexican': 'mx',
-    'netherlands': 'nl', 'dutch': 'nl', 'holland': 'nl',
-    'belgium': 'be', 'belgian': 'be',
-    'ireland': 'ie', 'irish': 'ie',
-    'new zealand': 'nz', 'kiwi': 'nz',
-    'india': 'in', 'indian': 'in',
-    'pakistan': 'pk', 'pakistani': 'pk',
-    'turkey': 'tr', 'turkish': 'tr',
-    'russia': 'ru', 'russian': 'ru',
-    'poland': 'pl', 'polish': 'pl',
-    'sweden': 'se', 'swedish': 'se',
-    'switzerland': 'ch', 'swiss': 'ch',
-    'austria': 'at', 'austrian': 'at',
-    'norway': 'no', 'norwegian': 'no',
-    'denmark': 'dk', 'danish': 'dk',
-    'finland': 'fi', 'finnish': 'fi',
-    'greece': 'gr', 'greek': 'gr',
-    'japan': 'jp', 'japanese': 'jp',
-    'korea': 'kr', 'korean': 'kr', 'south korea': 'kr',
-    'china': 'cn', 'chinese': 'cn',
-    'hong kong': 'hk',
-    'taiwan': 'tw', 'taiwanese': 'tw',
-    'philippines': 'ph', 'filipino': 'ph',
-    'indonesia': 'id', 'indonesian': 'id',
-    'malaysia': 'my', 'malaysian': 'my',
-    'singapore': 'sg', 'singaporean': 'sg',
-    'thailand': 'th', 'thai': 'th',
-    'vietnam': 'vn', 'vietnamese': 'vn',
-    'arab': 'ar', 'arabic': 'ar', 'middle east': 'ar',
-    'israel': 'il', 'israeli': 'il', 'hebrew': 'il',
-    'south africa': 'za', 'african': 'za',
-    'latin': 'latam', 'latino': 'latam', 'latin america': 'latam',
-  };
-
-  /// Extract country code from a group/category name
-  static String? _extractCountryCode(String? groupName) {
-    if (groupName == null || groupName.isEmpty) return null;
-    final normalized = groupName.toLowerCase().trim();
-
-    // Direct lookup
-    if (_countryNameToCode.containsKey(normalized)) {
-      return _countryNameToCode[normalized];
-    }
-
-    // Check if group contains a country name
-    for (final entry in _countryNameToCode.entries) {
-      if (normalized.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-
-    // Check for 2-letter codes at end (e.g., "Sports AU", "News UK")
-    final parts = normalized.split(RegExp(r'[\s|_-]+'));
-    if (parts.isNotEmpty) {
-      final lastPart = parts.last;
-      if (lastPart.length == 2 &&
-          _countryNameToCode.values.contains(lastPart)) {
-        return lastPart;
-      }
-    }
-
-    return null;
-  }
-
-  /// Check if an EPG ID contains a country code hint
-  static bool _epgIdMatchesCountry(String epgId, String countryCode) {
-    final normalizedId = epgId.toLowerCase();
-    // Check for .au, _au, -au, or just ending with au
-    return normalizedId.contains('.$countryCode') ||
-        normalizedId.contains('_$countryCode') ||
-        normalizedId.contains('-$countryCode') ||
-        normalizedId.endsWith(countryCode);
-  }
-
-  // Conservative trigram-based similarity to use as a last-resort fallback.
-  // OPTIMIZED: Uses integer packing for trigrams instead of String substrings to avoid allocation.
-  // Assumes inputs are already normalized (which is true for _findBestEpgId usage).
-  static Set<int> _generateTrigramSet(String s) {
-    final set = <int>{};
-    final len = s.length;
-    if (len < 3) return set;
-
-    final units = s.codeUnits;
-    for (var i = 0; i < len - 2; i++) {
-      // Pack 3 16-bit code units into a 64-bit int (Dart int is 64-bit on VM)
-      // This avoids creating String objects for every trigram.
-      final t = (units[i] << 32) | (units[i + 1] << 16) | units[i + 2];
-      set.add(t);
-    }
-    return set;
-  }
-
-  static double _calculateTrigramSetSimilarity(Set<int> aSet, String b) {
-    // Generate b's trigrams on the fly (still fast as it avoids String alloc)
-    // Note: We assume b is already normalized here.
-    final bSet = _generateTrigramSet(b);
-
-    if (aSet.isEmpty || bSet.isEmpty) return 0.0;
-
-    final inter = aSet.intersection(bSet).length;
-    final union = aSet.length + bSet.length - inter;
-    if (union == 0) return 0.0;
-    return inter / union;
   }
 
   static String _normalizeForMatch(String text) {
@@ -3221,270 +2832,96 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     bool allowLoose = true,
     String? countryHint,
   }) {
+    // 1. Manual mappings (highest priority)
     final manual = _manualMappings[channelId];
     if (manual != null && manual.isNotEmpty) {
       _internalToEpgIdMapping[channelId] = manual;
       return manual;
     }
 
+    // 2. Check cache
     if (_internalToEpgIdMapping.containsKey(channelId)) {
       final cached = _internalToEpgIdMapping[channelId];
       if (cached == null) {
         return null;
       }
       if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
-        if (allowLoose ||
-            _isStrictMatch(channelId, channelName, cached,
-                countryHint: countryHint)) {
-          return cached;
-        }
+        return cached;
       }
       _internalToEpgIdMapping.remove(channelId);
     }
 
     _ensureNormalizedMap();
 
-    // Extract country code from hint (e.g., "Australia" -> "au")
-    final countryCode = _extractCountryCode(countryHint);
-
-    // 1. Exact match
-    if (_availableChannels.contains(channelId)) {
-      return _cacheResolvedMapping(channelId, channelId);
+    // 3. Case-insensitive exact match
+    final lowerChannelId = channelId.toLowerCase();
+    for (final key in _availableChannels) {
+      if (key.toLowerCase() == lowerChannelId) {
+        return _cacheResolvedMapping(channelId, key);
+      }
     }
 
-    // 2. Normalized ID match (with country prioritization)
+    // 4. Normalized match (remove non-alphanumeric only, preserve digits)
     final normalizedId = _normalize(channelId);
     if (normalizedId.isNotEmpty &&
         _normalizedAvailableChannels != null &&
         _normalizedAvailableChannels!.containsKey(normalizedId)) {
       final candidates = _normalizedAvailableChannels![normalizedId];
-      final best = candidates != null
-          ? _selectBestFromCandidates(candidates, countryCode, normalizedId)
-          : null;
-      if (best != null) return _cacheResolvedMapping(channelId, best);
-    }
-
-    final aliasId =
-        _matchAliasToAvailable(normalizedId, countryCode: countryCode);
-    if (aliasId != null) {
-      return _cacheResolvedMapping(channelId, aliasId);
-    }
-    final strippedId = _stripCountryRegion(normalizedId);
-    final strippedFromId =
-        _matchStrippedToAvailable(strippedId, countryCode: countryCode);
-    if (strippedFromId != null) {
-      return _cacheResolvedMapping(channelId, strippedFromId);
-    }
-
-    // Match without domain suffix (e.g., "BBC1.uk" -> "BBC1")
-    if (channelId.contains('.')) {
-      final withoutDomain = _normalize(channelId.split('.').first);
-      if (withoutDomain.isNotEmpty &&
-          _normalizedAvailableChannels != null &&
-          _normalizedAvailableChannels!.containsKey(withoutDomain)) {
-        final candidates = _normalizedAvailableChannels![withoutDomain];
-        final best = candidates != null
-            ? _selectBestFromCandidates(candidates, countryCode, withoutDomain)
-            : null;
-        if (best != null) return _cacheResolvedMapping(channelId, best);
-      }
-
-      final aliasWithoutDomain =
-          _matchAliasToAvailable(withoutDomain, countryCode: countryCode);
-      if (aliasWithoutDomain != null) {
-        return _cacheResolvedMapping(channelId, aliasWithoutDomain);
-      }
-      final strippedFromDomain =
-          _matchStrippedToAvailable(withoutDomain, countryCode: countryCode);
-      if (strippedFromDomain != null) {
-        return _cacheResolvedMapping(channelId, strippedFromDomain);
+      if (candidates != null && candidates.isNotEmpty) {
+        return _cacheResolvedMapping(channelId, candidates.first);
       }
     }
 
-    // 3. Name match (if provided)
+    // 5. Number word conversion (e.g., "bbcone" → "bbc1")
+    final normalizedWithNumbers = _convertNumberWords(normalizedId);
+    if (normalizedWithNumbers != normalizedId &&
+        _normalizedAvailableChannels != null &&
+        _normalizedAvailableChannels!.containsKey(normalizedWithNumbers)) {
+      final candidates = _normalizedAvailableChannels![normalizedWithNumbers];
+      if (candidates != null && candidates.isNotEmpty) {
+        return _cacheResolvedMapping(channelId, candidates.first);
+      }
+    }
+
+    // 6. Reverse number word conversion on EPG keys
+    if (_normalizedAvailableChannels != null) {
+      for (final entry in _normalizedAvailableChannels!.entries) {
+        final epgWithNumberWords = _convertNumberWords(entry.key);
+        if (epgWithNumberWords == normalizedId) {
+          return _cacheResolvedMapping(channelId, entry.value.first);
+        }
+      }
+    }
+
+    // 7. Try matching by channel NAME if provided (exact normalized match only)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName = _normalize(channelName);
       if (normalizedName.isNotEmpty &&
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final candidates = _normalizedAvailableChannels![normalizedName];
-        final best = candidates != null
-            ? _selectBestFromCandidates(candidates, countryCode, normalizedName)
-            : null;
-        if (best != null) return _cacheResolvedMapping(channelId, best);
+        if (candidates != null && candidates.isNotEmpty) {
+          return _cacheResolvedMapping(channelId, candidates.first);
+        }
       }
 
-      final aliasFromName =
-          _matchAliasToAvailable(normalizedName, countryCode: countryCode);
-      if (aliasFromName != null) {
-        return _cacheResolvedMapping(channelId, aliasFromName);
-      }
-      final strippedFromName =
-          _matchStrippedToAvailable(normalizedName, countryCode: countryCode);
-      if (strippedFromName != null) {
-        return _cacheResolvedMapping(channelId, strippedFromName);
-      }
-
-      final strippedName = _normalize(_stripSuffixes(channelName));
-      if (strippedName.isNotEmpty &&
-          strippedName != normalizedName &&
+      // Try number word conversion on channel name
+      final nameWithNumbers = _convertNumberWords(normalizedName);
+      if (nameWithNumbers != normalizedName &&
           _normalizedAvailableChannels != null &&
-          _normalizedAvailableChannels!.containsKey(strippedName)) {
-        final candidates = _normalizedAvailableChannels![strippedName];
-        final best = candidates != null
-            ? _selectBestFromCandidates(candidates, countryCode, strippedName)
-            : null;
-        if (best != null) return _cacheResolvedMapping(channelId, best);
-      }
-
-      final aliasFromStripped =
-          _matchAliasToAvailable(strippedName, countryCode: countryCode);
-      if (aliasFromStripped != null) {
-        return _cacheResolvedMapping(channelId, aliasFromStripped);
-      }
-      if (strippedName != normalizedName) {
-        final strippedFromStripped =
-            _matchStrippedToAvailable(strippedName, countryCode: countryCode);
-        if (strippedFromStripped != null) {
-          return _cacheResolvedMapping(channelId, strippedFromStripped);
-        }
-      }
-
-      if (allowLoose) {
-        // Try matching the name against exact EPG IDs if they look like names
-        // Prioritize matches that contain our country code
-        String? bestMatch;
-        double bestScore = -1000.0;
-
-        for (final epgId in _availableChannels) {
-          final normalizedEpg = _normalize(epgId);
-          if (normalizedEpg == normalizedName ||
-              normalizedEpg == strippedName) {
-            double score = 0.0;
-            if (countryCode != null) {
-              if (_epgIdMatchesCountry(epgId, countryCode)) {
-                score += 100.0;
-              } else if (_epgIdDisagreesWithCountry(epgId, countryCode)) {
-                score -= 80.0;
-              }
-            }
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatch = epgId;
-            }
-          }
-        }
-        if (bestMatch != null && (countryCode == null || bestScore > 0)) {
-          return _cacheResolvedMapping(channelId, bestMatch);
-        }
-
-        // If we found a match but it had a bad score, don't return it but don't stop searching
-
-        // 4. Loose matching (starts with / contains)
-        // Collect all potential matches first
-        if (normalizedName.length >= 4 &&
-            _normalizedAvailableChannels != null) {
-          final List<String> allCandidates = [];
-          double highestTrigram = 0.0;
-
-          // Optimization: Pre-calculate trigrams for the target name once
-          final targetTrigrams = _generateTrigramSet(normalizedName);
-
-          for (final entry in _normalizedAvailableChannels!.entries) {
-            final score = _calculateTrigramSetSimilarity(targetTrigrams, entry.key);
-            // Lower threshold to 0.65 to catch more matches
-            if (score >= 0.65) {
-              if (score > highestTrigram) highestTrigram = score;
-              allCandidates.addAll(entry.value);
-            }
-          }
-
-          if (allCandidates.isNotEmpty) {
-            final best = _selectBestFromCandidates(
-                allCandidates, countryCode, normalizedName);
-            if (best != null) {
-              // For fuzzy, be more lenient - only reject if strong country disagreement
-              if (countryCode != null &&
-                  _epgIdDisagreesWithCountry(best, countryCode)) {
-                // Still allow if score is very high (>= 0.9)
-                if (highestTrigram >= 0.9) {
-                  return _cacheResolvedMapping(channelId, best);
-                }
-              } else if (highestTrigram >= 0.75) {
-                // Lower threshold from 0.85 to 0.75 for better matching
-                return _cacheResolvedMapping(channelId, best);
-              }
-            }
-          }
+          _normalizedAvailableChannels!.containsKey(nameWithNumbers)) {
+        final candidates = _normalizedAvailableChannels![nameWithNumbers];
+        if (candidates != null && candidates.isNotEmpty) {
+          return _cacheResolvedMapping(channelId, candidates.first);
         }
       }
     }
 
-    final strippedFallback =
-        _findUniqueStrippedFallback(normalizedId, channelName);
-    if (strippedFallback != null) {
-      return _cacheResolvedMapping(channelId, strippedFallback);
-    }
-
-    // If country hint was too restrictive, retry once without it.
-    if (countryCode != null) {
-      return _findBestEpgId(
-        channelId,
-        channelName,
-        logIfMissing: logIfMissing,
-        allowLoose: allowLoose,
-        countryHint: null,
-      );
-    }
-
-    // No match found - only cache the negative result if we are confident data is complete
+    // No match found - cache null result to avoid repeated lookups
     if (_hasParsed && !_isLoading && !_isParsing) {
       return _cacheResolvedMapping(channelId, null);
     }
     return null;
-  }
-
-  bool _isStrictMatch(
-    String channelId,
-    String? channelName,
-    String epgId, {
-    String? countryHint,
-  }) {
-    if (channelId.isEmpty) return false;
-    if (channelId == epgId) return true;
-
-    _ensureNormalizedMap();
-    final countryCode = _extractCountryCode(countryHint);
-    final normalizedEpg = _normalize(epgId);
-    if (normalizedEpg.isEmpty) return false;
-
-    bool matchesNormalized(String normalized) {
-      if (normalized.isEmpty) return false;
-      if (normalized == normalizedEpg) return true;
-      final alias = _resolveAliasNormalized(normalized);
-      if (alias != null &&
-          _normalizedAvailableChannels != null &&
-          _normalizedAvailableChannels!.containsKey(alias) &&
-          _normalizedAvailableChannels![alias]!.contains(epgId)) {
-        return countryCode == null ||
-            !_epgIdDisagreesWithCountry(epgId, countryCode);
-      }
-      return false;
-    }
-
-    if (matchesNormalized(_normalize(channelId))) return true;
-    if (channelId.contains('.') &&
-        matchesNormalized(_normalize(channelId.split('.').first))) {
-      return true;
-    }
-
-    if (channelName != null && channelName.trim().isNotEmpty) {
-      if (matchesNormalized(_normalize(channelName))) return true;
-      final stripped = _normalize(_stripSuffixes(channelName));
-      if (stripped.isNotEmpty && matchesNormalized(stripped)) return true;
-    }
-
-    return false;
   }
 
   List<Program> getProgramsForChannel(String channelId,
@@ -3683,12 +3120,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         null;
   }
 
-  /// Fast match estimator for diagnostics (no fuzzy or trigram matching).
+  /// Fast match estimator for diagnostics (no fuzzy matching).
   int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
     _ensureNormalizedMap();
     if (_normalizedAvailableChannels == null ||
         _normalizedAvailableChannels!.isEmpty) {
-      // Return established mapping count as fallback
       return _internalToEpgIdMapping.length;
     }
     int matched = 0;
@@ -3704,19 +3140,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           matched++;
           continue;
         }
-        if (_matchAliasToAvailable(normalized) != null) {
-          matched++;
-          continue;
-        }
       }
       if (name.trim().isNotEmpty) {
         final normalizedName = _normalize(name);
         if (normalizedName.isNotEmpty &&
             _normalizedAvailableChannels!.containsKey(normalizedName)) {
-          matched++;
-          continue;
-        }
-        if (_matchAliasToAvailable(normalizedName) != null) {
           matched++;
           continue;
         }

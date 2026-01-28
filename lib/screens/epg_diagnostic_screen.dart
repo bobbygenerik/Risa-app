@@ -137,8 +137,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         if (batch.isEmpty) break;
         offset += batch.length;
         for (final channel in batch) {
-          final id = channel.tvgId ?? channel.id;
-          final matched = epgService.hasEpgMatch(id, channelName: channel.name);
+          final id = channel.epgLookupId;
+          final matched =
+              epgService.hasEpgMatch(id, channelName: channel.epgLookupName);
           final passes = _matchFilter == _MatchFilter.all ||
               (_matchFilter == _MatchFilter.matched && matched) ||
               (_matchFilter == _MatchFilter.unmatched && !matched);
@@ -225,8 +226,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       );
       if (batch.isEmpty) break;
       for (final channel in batch) {
-        final id = channel.tvgId ?? channel.id;
-        if (epgService.hasEpgMatch(id, channelName: channel.name)) {
+        final id = channel.epgLookupId;
+        if (epgService.hasEpgMatch(id, channelName: channel.epgLookupName)) {
           matched++;
         }
       }

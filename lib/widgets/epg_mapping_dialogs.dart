@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/channel.dart';
 import '../services/incremental_epg_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_theme.dart';
@@ -36,9 +37,10 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
 
     try {
       final entry = widget.entry;
+      final channel = entry.channel as Channel;
       final suggestions = widget.epgService.getSuggestedMatches(
-        entry.channel.tvgId ?? entry.channel.id,
-        entry.channel.name,
+        channel.epgLookupId,
+        channel.epgLookupName,
         limit: 10,
       );
 
@@ -306,8 +308,9 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
 
     try {
       final entry = widget.entry;
+      final channel = entry.channel as Channel;
       await widget.epgService.setManualMapping(
-        entry.channel.tvgId ?? entry.channel.id,
+        channel.epgLookupId,
         _selectedEpgId!,
       );
 
@@ -324,8 +327,9 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
   void _clearMapping() async {
     try {
       final entry = widget.entry;
+      final channel = entry.channel as Channel;
       await widget.epgService.removeManualMapping(
-        entry.channel.tvgId ?? entry.channel.id,
+        channel.epgLookupId,
       );
 
       if (!mounted) return;
