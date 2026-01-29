@@ -2107,43 +2107,77 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         charStream = charStream.transform(sanitizeXmlStream());
       }
       
-      // OPTIMIZATION: Removed .withParentEvents() as it's expensive and unused
-      final events = charStream.toXmlEvents();
-      final elements = events.selectSubtreeEvents((event) =>
-          event.name.endsWith('programme') || event.name.endsWith('channel'));
+      final eventStream = charStream.toXmlEvents();
+      
+      List<XmlEvent>? currentEvents;
+      bool inChannel = false;
+      bool inProgramme = false;
+      int depth = 0;
 
-      await for (final subtreeEvents in elements) {
-        if (subtreeEvents.isEmpty) continue;
-        final startEvent = subtreeEvents.first;
-        if (startEvent is! XmlStartElementEvent) continue;
-
-        if (startEvent.name.endsWith('programme')) {
-          _processProgramme(
-            subtreeEvents,
-            channelIds,
-            normalizedChannels,
-            sink,
-            () {
-              programCount++;
-            },
-            allowedList,
-            catchupHoursByChannel,
-            nowMs,
-            futureEndMs,
-            normalizeCached,
-            channelIcons: channelIcons,
-            channelHashes: channelHashes,
-          );
-        } else if (startEvent.name.endsWith('channel')) {
-          _processChannel(
-            subtreeEvents,
-            channelIds,
-            normalizedChannels,
-            allowedNormalized: allowedList,
-            normalize: normalizeCached,
-            channelIcons: channelIcons,
-            displayNamesById: displayNamesById,
-          );
+      await for (final chunk in eventStream) {
+        for (final event in chunk) {
+          if (event is XmlStartElementEvent) {
+             if (!inChannel && !inProgramme) {
+                if (event.localName == 'channel') {
+                  inChannel = true;
+                  currentEvents = [event];
+                  depth = 1;
+                } else if (event.localName == 'programme') {
+                  inProgramme = true;
+                  currentEvents = [event];
+                  depth = 1;
+                }
+             } else {
+                // Inside a block, just accumulate
+                if (!event.isSelfClosing) {
+                   depth++;
+                }
+                currentEvents?.add(event);
+             }
+          } else if (event is XmlEndElementEvent) {
+             if (inChannel || inProgramme) {
+                currentEvents?.add(event);
+                depth--;
+                
+                if (depth <= 0) {
+                   // Block finished
+                   if (inChannel) {
+                      _processChannel(
+                        currentEvents!,
+                        channelIds,
+                        normalizedChannels,
+                        allowedNormalized: allowedList,
+                        normalize: normalizeCached,
+                        channelIcons: channelIcons,
+                        displayNamesById: displayNamesById,
+                      );
+                      inChannel = false;
+                   } else if (inProgramme) {
+                      _processProgramme(
+                        currentEvents!,
+                        channelIds,
+                        normalizedChannels,
+                        sink,
+                        () {
+                          programCount++;
+                        },
+                        allowedList,
+                        catchupHoursByChannel,
+                        nowMs,
+                        futureEndMs,
+                        normalizeCached,
+                        channelIcons: channelIcons,
+                        channelHashes: channelHashes,
+                      );
+                      inProgramme = false;
+                   }
+                   currentEvents = null;
+                }
+             }
+          } else if (inChannel || inProgramme) {
+             // Text, CDATA, etc.
+             currentEvents?.add(event);
+          }
         }
       }
 
@@ -2399,19 +2433,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         if (event is XmlStartElementEvent) {
           if (event.localName == 'display-name') {
             final val = _extractTagContent(events, i);
-            
-            // VERBOSE LOGGING: Sample first 10 display names to confirm parsing works
-            if (channelIds.length <= 10) {
-              debugLog('EPG_DEBUG: Id=$id, RawDisplayNameTag=${event.toString()}, ExtractedVal="$val"');
-            }
-            
             if (val != null && val.isNotEmpty) {
               displayNames.add(val);
             } else {
-               // Log failures only if we have few changes
-               if (channelIds.length <= 20) {
-                 debugLog('EPG_DEBUG: Failed to extract display-name content for ID=$id (val was empty/null)');
-               }
+              debugLog('EPG: Failed to extract display-name content for ID=$id');
             }
           } else if (event.localName == 'icon') {
             channelIcon = event.attributes
@@ -2818,9 +2843,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     double bestScore = 0.0;
     EpgMatchCandidate? bestCandidate;
-    
-    // VERBOSE LOGGING: Track top candidates for the first few failed matches
-    final List<Map<String, dynamic>> debugTopCandidates = [];
 
     for (final candidate in _matchCandidates) {
       final score = EPGMatchingUtils.calculateMatchScore(
@@ -2829,23 +2851,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         playlistTokens: searchTokens,
       );
 
-      // Collect debug info for first 5 channels if score is decent but not winning
-      if (channelId.hashCode % 100 < 5 && score > 40.0 && score < 100.0) {
-         if (debugTopCandidates.length < 3) {
-            debugTopCandidates.add({'name': candidate.displayName, 'score': score});
-         }
-      }
-
       if (score > bestScore) {
         bestScore = score;
         bestCandidate = candidate;
         // Optimization: Early exit on perfect match
         if (bestScore >= 99.0) break;
       }
-    }
-    
-    if (channelId.hashCode % 100 < 5 && (bestCandidate == null || bestScore < 65.0)) {
-       debugLog('EPG_DEBUG: Low match for "$searchName" (ID: $channelId). Tokens: $searchTokens. Top candidates: $debugTopCandidates');
     }
 
 
