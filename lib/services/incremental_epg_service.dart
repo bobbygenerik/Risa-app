@@ -2114,69 +2114,80 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       bool inProgramme = false;
       int depth = 0;
 
+      void triggerProcess() {
+        if (currentEvents == null || currentEvents!.isEmpty) return;
+        if (inChannel) {
+          _processChannel(
+            currentEvents!,
+            channelIds,
+            normalizedChannels,
+            allowedNormalized: allowedList,
+            normalize: normalizeCached,
+            channelIcons: channelIcons,
+            displayNamesById: displayNamesById,
+          );
+          inChannel = false;
+        } else if (inProgramme) {
+          _processProgramme(
+            currentEvents!,
+            channelIds,
+            normalizedChannels,
+            sink,
+            () {
+              programCount++;
+            },
+            allowedList,
+            catchupHoursByChannel,
+            nowMs,
+            futureEndMs,
+            normalizeCached,
+            channelIcons: channelIcons,
+            channelHashes: channelHashes,
+          );
+          inProgramme = false;
+        }
+        currentEvents = null;
+        depth = 0;
+      }
+
       await for (final chunk in eventStream) {
         for (final event in chunk) {
           if (event is XmlStartElementEvent) {
-             if (!inChannel && !inProgramme) {
-                if (event.localName == 'channel') {
-                  inChannel = true;
-                  currentEvents = [event];
-                  depth = 1;
-                } else if (event.localName == 'programme') {
-                  inProgramme = true;
-                  currentEvents = [event];
-                  depth = 1;
-                }
-             } else {
-                // Inside a block, just accumulate
-                if (!event.isSelfClosing) {
-                   depth++;
-                }
-                currentEvents?.add(event);
-             }
+            final isTopLevel =
+                event.localName == 'channel' || event.localName == 'programme';
+
+            // Defensive auto-close if we hit a new top-level tag while inside one at depth 1
+            if (isTopLevel && (inChannel || inProgramme) && depth == 1) {
+              triggerProcess();
+            }
+
+            if (!inChannel && !inProgramme) {
+              if (event.localName == 'channel') {
+                inChannel = true;
+                currentEvents = [event];
+                depth = 1;
+              } else if (event.localName == 'programme') {
+                inProgramme = true;
+                currentEvents = [event];
+                depth = 1;
+              }
+            } else {
+              if (!event.isSelfClosing) {
+                depth++;
+              }
+              currentEvents?.add(event);
+            }
           } else if (event is XmlEndElementEvent) {
-             if (inChannel || inProgramme) {
-                currentEvents?.add(event);
-                depth--;
-                
-                if (depth <= 0) {
-                   // Block finished
-                   if (inChannel) {
-                      _processChannel(
-                        currentEvents!,
-                        channelIds,
-                        normalizedChannels,
-                        allowedNormalized: allowedList,
-                        normalize: normalizeCached,
-                        channelIcons: channelIcons,
-                        displayNamesById: displayNamesById,
-                      );
-                      inChannel = false;
-                   } else if (inProgramme) {
-                      _processProgramme(
-                        currentEvents!,
-                        channelIds,
-                        normalizedChannels,
-                        sink,
-                        () {
-                          programCount++;
-                        },
-                        allowedList,
-                        catchupHoursByChannel,
-                        nowMs,
-                        futureEndMs,
-                        normalizeCached,
-                        channelIcons: channelIcons,
-                        channelHashes: channelHashes,
-                      );
-                      inProgramme = false;
-                   }
-                   currentEvents = null;
-                }
-             }
+            if (inChannel || inProgramme) {
+              currentEvents?.add(event);
+              depth--;
+
+              if (depth <= 0) {
+                triggerProcess();
+              }
+            }
           } else if (inChannel || inProgramme) {
-             // Text, CDATA, etc.
-             currentEvents?.add(event);
+            currentEvents?.add(event);
           }
         }
       }
@@ -2373,31 +2384,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     };
   }
 
-  static String? _extractTagContent(List<XmlEvent> events, int startIndex) {
-    if (startIndex >= events.length) return null;
-    final startNode = events[startIndex];
-    if (startNode is! XmlStartElementEvent) return null;
-    if (startNode.isSelfClosing) return '';
+  // Removed _extractTagContent for O(N) performance in processors. Tag extraction
+  // is now handled inline within _processChannel and _processProgramme in a single pass.
 
-    final sb = StringBuffer();
-    var depth = 1;
-    for (var i = startIndex + 1; i < events.length; i++) {
-      final node = events[i];
-      if (node is XmlStartElementEvent) {
-        if (!node.isSelfClosing) {
-          depth++;
-        }
-      } else if (node is XmlEndElementEvent) {
-        depth--;
-        if (depth == 0) break;
-      } else if (node is XmlTextEvent) {
-        sb.write(node.value);
-      } else if (node is XmlCDATAEvent) {
-        sb.write(node.value);
-      }
-    }
-    return sb.toString().trim();
-  }
 
   static void _processChannel(
     List<XmlEvent> events,
@@ -2408,52 +2397,69 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     Map<String, String>? channelIcons,
     Map<String, List<String>>? displayNamesById,
   }) {
-    // Basic parsing of channel tag to get ID and display-name
-    // <channel id="BBC1"> <display-name>BBC One</display-name> </channel>
+    if (events.isEmpty || events.first is! XmlStartElementEvent) return;
     final startEvent = events.first as XmlStartElementEvent;
-    final rawId = startEvent.attributes
-        .firstWhere((a) => a.name == 'id',
+
+    final id = startEvent.attributes
+        .firstWhere((a) => a.localName == 'id',
             orElse: () =>
                 XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE))
-        .value;
-    final id = rawId.trim();
-    if (id.isNotEmpty) {
-      final normalizedId = normalize(id);
-      channelIds.add(id);
-      if (normalizedId.isNotEmpty) {
-        normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
-      }
+        .value
+        .trim();
 
-      // Parse <icon> and <display-name> elements
-      final displayNames = <String>[];
-      String? channelIcon;
-      // Index-based iteration to pass to extractTagContent
-      for (var i = 0; i < events.length; i++) {
-        final event = events[i];
-        if (event is XmlStartElementEvent) {
-          if (event.localName == 'display-name') {
-            final val = _extractTagContent(events, i);
-            if (val != null && val.isNotEmpty) {
-              displayNames.add(val);
-            } else {
-              debugLog('EPG: Failed to extract display-name content for ID=$id');
-            }
-          } else if (event.localName == 'icon') {
-            channelIcon = event.attributes
-                .firstWhere((a) => a.localName == 'src',
-                    orElse: () => XmlEventAttribute(
-                        'src', '', XmlAttributeType.DOUBLE_QUOTE))
-                .value;
-            if (channelIcon.isNotEmpty) {
-              channelIcons?[id] = channelIcon;
-            }
+    if (id.isEmpty) return;
+
+    channelIds.add(id);
+    final normalizedId = normalize(id);
+    if (normalizedId.isNotEmpty) {
+      normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
+    }
+
+    final displayNames = <String>[];
+    String? currentTag;
+    StringBuffer? currentSb;
+
+    // Single pass for O(N) performance
+    for (var i = 1; i < events.length; i++) {
+      final event = events[i];
+      if (event is XmlStartElementEvent) {
+        final name = event.localName;
+        if (name == 'display-name') {
+          currentTag = 'display-name';
+          currentSb = StringBuffer();
+        } else if (name == 'icon') {
+          final src = event.attributes
+              .firstWhere((a) => a.localName == 'src',
+                  orElse: () => XmlEventAttribute(
+                      'src', '', XmlAttributeType.DOUBLE_QUOTE))
+              .value;
+          if (src.isNotEmpty) {
+            channelIcons?[id] = src;
           }
+        }
+      } else if (event is XmlEndElementEvent) {
+        if (event.localName == 'display-name' && currentTag == 'display-name') {
+          if (currentSb != null) {
+            final val = currentSb.toString().trim();
+            if (val.isNotEmpty) displayNames.add(val);
+          }
+          currentTag = null;
+          currentSb = null;
+        }
+      } else if (event is XmlTextEvent) {
+        if (currentTag == 'display-name') {
+          currentSb?.write(event.value);
+        }
+      } else if (event is XmlCDATAEvent) {
+        if (currentTag == 'display-name') {
+          currentSb?.write(event.value);
         }
       }
 
-      if (displayNames.isNotEmpty) {
-        displayNamesById?[id] = List<String>.from(displayNames);
-      }
+    }
+
+    if (displayNames.isNotEmpty) {
+      displayNamesById?[id] = List<String>.from(displayNames);
       for (final displayName in displayNames) {
         final normalizedDisplay = normalize(displayName);
         if (normalizedDisplay.isNotEmpty) {
@@ -2520,25 +2526,53 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     String? category;
     String? icon;
 
-    // Index-based iteration
-    for (var i = 0; i < events.length; i++) {
+    String? currentTag;
+    StringBuffer? currentSb;
+
+    // Single pass for O(N) performance
+    for (var i = 1; i < events.length; i++) {
       final event = events[i];
       if (event is XmlStartElementEvent) {
-        if (event.localName == 'title') {
-          title = _extractTagContent(events, i) ?? 'Unknown';
-        } else if (event.localName == 'desc') {
-          description = _extractTagContent(events, i);
-        } else if (event.localName == 'category') {
-          category = _extractTagContent(events, i);
-        } else if (event.localName == 'icon') {
-          // Icon is an empty tag usually, check attributes
-          icon = event.attributes
+        final name = event.localName;
+        if (name == 'title' || name == 'desc' || name == 'category') {
+          currentTag = name;
+          currentSb = StringBuffer();
+        } else if (name == 'icon') {
+          final src = event.attributes
               .firstWhere((a) => a.localName == 'src',
-                  orElse: () =>
-                      XmlEventAttribute('src', '', XmlAttributeType.DOUBLE_QUOTE))
+                  orElse: () => XmlEventAttribute(
+                      'src', '', XmlAttributeType.DOUBLE_QUOTE))
               .value;
+          if (src.isNotEmpty) icon = src;
+        }
+      } else if (event is XmlEndElementEvent) {
+        final name = event.localName;
+        if (name == currentTag) {
+          if (currentSb != null) {
+            final val = currentSb.toString().trim();
+            if (val.isNotEmpty) {
+              if (name == 'title' && title == 'Unknown') {
+                title = val;
+              } else if (name == 'desc' && description == null) {
+                description = val;
+              } else if (name == 'category' && category == null) {
+                category = val;
+              }
+            }
+          }
+          currentTag = null;
+          currentSb = null;
+        }
+      } else if (event is XmlTextEvent) {
+        if (currentTag != null) {
+          currentSb?.write(event.value);
+        }
+      } else if (event is XmlCDATAEvent) {
+        if (currentTag != null) {
+          currentSb?.write(event.value);
         }
       }
+
     }
     
     // Fallback icon from channel if missing
