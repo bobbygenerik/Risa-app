@@ -2399,10 +2399,19 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         if (event is XmlStartElementEvent) {
           if (event.localName == 'display-name') {
             final val = _extractTagContent(events, i);
+            
+            // VERBOSE LOGGING: Sample first 10 display names to confirm parsing works
+            if (channelIds.length <= 10) {
+              debugLog('EPG_DEBUG: Id=$id, RawDisplayNameTag=${event.toString()}, ExtractedVal="$val"');
+            }
+            
             if (val != null && val.isNotEmpty) {
               displayNames.add(val);
             } else {
-              debugLog('EPG: Failed to extract display-name content for ID=$id');
+               // Log failures only if we have few changes
+               if (channelIds.length <= 20) {
+                 debugLog('EPG_DEBUG: Failed to extract display-name content for ID=$id (val was empty/null)');
+               }
             }
           } else if (event.localName == 'icon') {
             channelIcon = event.attributes
@@ -2809,6 +2818,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     double bestScore = 0.0;
     EpgMatchCandidate? bestCandidate;
+    
+    // VERBOSE LOGGING: Track top candidates for the first few failed matches
+    final List<Map<String, dynamic>> debugTopCandidates = [];
 
     for (final candidate in _matchCandidates) {
       final score = EPGMatchingUtils.calculateMatchScore(
@@ -2817,6 +2829,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         playlistTokens: searchTokens,
       );
 
+      // Collect debug info for first 5 channels if score is decent but not winning
+      if (channelId.hashCode % 100 < 5 && score > 40.0 && score < 100.0) {
+         if (debugTopCandidates.length < 3) {
+            debugTopCandidates.add({'name': candidate.displayName, 'score': score});
+         }
+      }
+
       if (score > bestScore) {
         bestScore = score;
         bestCandidate = candidate;
@@ -2824,6 +2843,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         if (bestScore >= 99.0) break;
       }
     }
+    
+    if (channelId.hashCode % 100 < 5 && (bestCandidate == null || bestScore < 65.0)) {
+       debugLog('EPG_DEBUG: Low match for "$searchName" (ID: $channelId). Tokens: $searchTokens. Top candidates: $debugTopCandidates');
+    }
+
 
     // Thresholds
     // 90+: Excellent match
