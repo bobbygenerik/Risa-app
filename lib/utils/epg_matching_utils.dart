@@ -107,7 +107,6 @@ class EPGMatchingUtils {
   static final RegExp _suffixSufRe = RegExp(
       r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$',
       caseSensitive: false);
-  static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
   static final RegExp _timeRe =
       RegExp(r'\b\d{1,2}(:\d{2})?\s?(am|pm)\b', caseSensitive: false);
   static final RegExp _shortTimeRe =
@@ -367,21 +366,6 @@ class EPGMatchingUtils {
     return normalized;
   }
 
-  /// Calculate similarity score with length-aware thresholds.
-  /// For short titles (<=4 chars), requires higher similarity.
-  static double calculateSimilarityWithThreshold(
-    String a,
-    String b, {
-    double defaultThreshold = 0.55,
-    double shortTitleThreshold = 0.80,
-  }) {
-    final score = calculateSimilarity(a, b);
-    final minLength =
-        a.length < b.length ? a.length : b.length;
-    final threshold = minLength <= 4 ? shortTitleThreshold : defaultThreshold;
-    return score >= threshold ? score : 0.0;
-  }
-
   /// Set of generic program titles that need disambiguation.
   static const Set<String> genericTitles = {
     'news',
@@ -461,34 +445,6 @@ class EPGMatchingUtils {
     return text.replaceAll(_qualitySufRe, '').replaceAll(_regionSufRe, '');
   }
 
-  /// Calculate similarity score between two strings (0.0 to 1.0)
-  static double calculateSimilarity(String a, String b) {
-    if (a.isEmpty || b.isEmpty) return 0.0;
-    if (a == b) return 1.0;
-
-    final aNorm = a.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-    final bNorm = b.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-
-    if (aNorm == bNorm) return 0.95;
-    if (aNorm.contains(bNorm) || bNorm.contains(aNorm)) {
-      return 0.8 *
-          (aNorm.length < bNorm.length
-              ? aNorm.length / bNorm.length
-              : bNorm.length / aNorm.length);
-    }
-
-    // Calculate Levenshtein-like similarity
-    int matches = 0;
-    final shorter = aNorm.length < bNorm.length ? aNorm : bNorm;
-    final longer = aNorm.length >= bNorm.length ? aNorm : bNorm;
-
-    for (int i = 0; i < shorter.length; i++) {
-      if (longer.contains(shorter[i])) matches++;
-    }
-
-    return matches / longer.length * 0.6;
-  }
-
   /// Extract meaningful name parts from an EPG key for matching
   static List<String> extractNameParts(String epgKey) {
     final parts = <String>[];
@@ -548,17 +504,9 @@ class EPGMatchingUtils {
     return normalizedEpgKeys;
   }
 
-  /// Find the best matching EPG key for a channel
-  /// 
-  /// Uses conservative matching to avoid incorrect matches:
-  /// 1. Manual mappings (explicit user overrides)
-  /// 2. Cache lookup  
-  /// 3. Case-insensitive exact match
-  /// 4. Normalized match (remove non-alphanumeric characters only)
-  /// 5. Number word conversion (e.g., "bbcone" → "bbc1")
-  /// 
-  /// Does NOT use aggressive stripping (digits, regional suffixes, country codes)
-  /// to prevent incorrect matches like "AMC West" → "AMC" or "ESPN2" → "ESPN"
+  /// Find the best matching EPG key for a channel.
+  ///
+  /// Deprecated: prefer using the tiered fuzzy matcher directly.
   static String? findEpgKey(
     String channelId,
     String? channelName,
@@ -567,7 +515,7 @@ class EPGMatchingUtils {
   ) {
     final cacheKey = '$channelId|${channelName ?? ''}';
 
-    // 1. Check manual mapping first (highest priority)
+    // Manual mapping still takes priority.
     if (manualMappings.containsKey(channelId)) {
       final manualKey = manualMappings[channelId]!;
       if (allEpgKeys.contains(manualKey)) {
@@ -575,65 +523,26 @@ class EPGMatchingUtils {
       }
     }
 
-    // 2. Check cache
     if (_channelIdCache.containsKey(cacheKey)) {
       return _channelIdCache[cacheKey];
     }
 
-    final normalizedKeys = getNormalizedEpgKeys(allEpgKeys);
-
-    // 3. Try case-insensitive exact match
-    final lowerChannelId = channelId.toLowerCase();
-    for (final key in allEpgKeys) {
-      if (key.toLowerCase() == lowerChannelId) {
-        _channelIdCache[cacheKey] = key;
-        return key;
-      }
+    final searchName = (channelName != null && channelName.trim().isNotEmpty)
+        ? channelName
+        : channelId;
+    if (searchName.trim().isEmpty || allEpgKeys.isEmpty) {
+      _channelIdCache[cacheKey] = null;
+      return null;
     }
 
-    // 4. Try normalized matching (remove non-alphanumeric only, preserve digits)
-    final normalizedId = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-    if (normalizedKeys.containsKey(normalizedId)) {
-      _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
-      return normalizedKeys[normalizedId];
+    final candidates =
+        allEpgKeys.map((id) => MapEntry(id, id)).toList();
+    final best = findBestFuzzyMatch(searchName, candidates);
+    if (best != null) {
+      _channelIdCache[cacheKey] = best.key;
+      return best.key;
     }
 
-    // 5. Try with number word conversion (e.g., "bbcone" → "bbc1")
-    final normalizedWithNumbers = convertNumberWords(normalizedId);
-    if (normalizedWithNumbers != normalizedId &&
-        normalizedKeys.containsKey(normalizedWithNumbers)) {
-      _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
-      return normalizedKeys[normalizedWithNumbers];
-    }
-
-    // 6. Try reverse number word conversion on EPG keys
-    for (final entry in normalizedKeys.entries) {
-      final epgWithNumberWords = convertNumberWords(entry.key);
-      if (epgWithNumberWords == normalizedId) {
-        _channelIdCache[cacheKey] = entry.value;
-        return entry.value;
-      }
-    }
-
-    // 7. Try matching by channel NAME if provided (exact normalized match only)
-    if (channelName != null && channelName.isNotEmpty) {
-      final normalizedName =
-          channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-      if (normalizedKeys.containsKey(normalizedName)) {
-        _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
-        return normalizedKeys[normalizedName];
-      }
-      
-      // Try number word conversion on channel name
-      final nameWithNumbers = convertNumberWords(normalizedName);
-      if (nameWithNumbers != normalizedName &&
-          normalizedKeys.containsKey(nameWithNumbers)) {
-        _channelIdCache[cacheKey] = normalizedKeys[nameWithNumbers];
-        return normalizedKeys[nameWithNumbers];
-      }
-    }
-
-    // No match found - cache null result to avoid repeated lookups
     _channelIdCache[cacheKey] = null;
     return null;
   }
@@ -645,44 +554,40 @@ class EPGMatchingUtils {
     Set<String> allEpgKeys, {
     int limit = 10,
   }) {
-    final scores = <String, double>{};
-    final searchTerms = <String>[];
+    if (allEpgKeys.isEmpty) return const [];
 
-    // Add channel ID variations
-    final idNorm = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-    searchTerms.add(idNorm);
-    searchTerms.add(idNorm.replaceAll(_suffixSufRe, ''));
+    final terms = <String>[];
+    if (channelName != null && channelName.trim().isNotEmpty) {
+      terms.add(channelName);
+    }
+    if (channelId.trim().isNotEmpty) {
+      terms.add(channelId);
+    }
+    if (terms.isEmpty) return const [];
 
-    // Add channel name variations
-    if (channelName != null && channelName.isNotEmpty) {
-      final nameNorm = channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-      searchTerms.add(nameNorm);
-      searchTerms.add(nameNorm.replaceAll(_suffixSufRe, ''));
-
-      // Also add individual words from the name
-      final words = channelName.toLowerCase().split(_wordSepRe);
-      for (final word in words) {
-        if (word.length >= 3) {
-          searchTerms.add(word.replaceAll(_nonAlphaNumRe, ''));
-        }
-      }
+    final termTokens = <String, List<String>>{};
+    for (final term in terms) {
+      termTokens[term] = tokenizeForFuzzyMatch(term);
     }
 
-    // Score each EPG channel
+    final scores = <String, double>{};
     for (final epgKey in allEpgKeys) {
+      final epgTokens = tokenizeForFuzzyMatch(epgKey);
       double maxScore = 0.0;
-
-      for (final term in searchTerms) {
-        final score = calculateSimilarity(term, epgKey);
+      for (final term in terms) {
+        final score = scoreFuzzyMatch(
+          term,
+          epgKey,
+          termTokens[term] ?? const [],
+          epgTokens,
+        );
         if (score > maxScore) maxScore = score;
       }
-
-      if (maxScore > 0.2) {
+      if (maxScore > 30.0) {
         scores[epgKey] = maxScore;
       }
     }
 
-    // Sort by score descending
     final sorted = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 

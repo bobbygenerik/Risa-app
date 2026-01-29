@@ -1338,8 +1338,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final name = (map['name'] as String?) ?? '';
       if (channelId.isEmpty) continue;
 
-      final channelNameForLookup =
-          tvgId.isNotEmpty ? null : name.trim();
+      // Always provide the name as a fallback for fuzzy logic
+      final channelNameForLookup = name.trim();
       if (tvgId.isNotEmpty) {
         channelsWithTvgId++;
       }
@@ -3587,8 +3587,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final url = (map['url'] as String?)?.trim() ?? '';
       final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
       final name = (map['name'] as String?) ?? '';
-      final channelNameForLookup =
-          tvgId.isNotEmpty ? null : name.trim();
+      // Always provide the name as a fallback for fuzzy logic
+      final channelNameForLookup = name.trim();
 
       if (channelId.isNotEmpty &&
           epgService.hasEpgMatch(channelId, channelName: channelNameForLookup)) {

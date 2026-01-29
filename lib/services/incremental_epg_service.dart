@@ -1698,9 +1698,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             .map((k, v) => MapEntry(k.toString(),
                 (v as List<dynamic>).map((e) => e.toString()).toList()));
         final displayNamesById = (parseResult['displayNamesById'] as Map?)
-                ?.map((k, v) => MapEntry(
-                    k.toString(),
-                    (v as List<dynamic>).map((e) => e.toString()).toList())) ??
+                ?.map((k, v) =>
+                    MapEntry(k.toString(), (v as List).cast<String>())) ??
             <String, List<String>>{};
         final stagedPrograms = <String, List<Program>>{};
         final skipChannels = <String>{};
@@ -2713,7 +2712,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     if (_normalizeCache.length > 50000) {
       _normalizeCache.clear();
     }
-    final normalized = _normalizeForMatch(text);
+    final normalized = EPGMatchingUtils.normalizeForFuzzyMatch(text);
     _normalizeCache[text] = normalized;
     return normalized;
   }
@@ -2729,22 +2728,30 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _rebuildFuzzyCandidates() {
-    if (_epgDisplayNamesById.isEmpty) {
-      _epgNameCandidates = const [];
-      return;
-    }
-    final candidates = <MapEntry<String, String>>[];
-    for (final entry in _epgDisplayNamesById.entries) {
-      final epgId = entry.key;
-      final names = entry.value;
-      // Always include the EPG id as a fallback candidate name.
-      candidates.add(MapEntry(epgId, epgId));
-      for (final name in names) {
-        if (name.trim().isEmpty) continue;
-        candidates.add(MapEntry(epgId, name));
+    final List<MapEntry<String, String>> newList = [];
+
+    if (_epgDisplayNamesById.isNotEmpty) {
+      for (final entry in _epgDisplayNamesById.entries) {
+        final epgId = entry.key;
+        // Add the ID itself as a candidate name
+        newList.add(MapEntry(epgId, epgId));
+        // Add all Display Names from XML
+        for (final name in entry.value) {
+          if (name.trim().isNotEmpty) {
+            newList.add(MapEntry(epgId, name));
+          }
+        }
+      }
+    } else if (_availableChannels.isNotEmpty) {
+      // Total fallback: use available channel IDs as their own names
+      for (final id in _availableChannels) {
+        newList.add(MapEntry(id, id));
       }
     }
-    _epgNameCandidates = candidates;
+
+    _epgNameCandidates = newList;
+    debugLog(
+        'EPG: Rebuilt fuzzy search pool with ${_epgNameCandidates.length} entries.');
   }
 
   void _resetEpgIdIndex() {
@@ -2954,48 +2961,37 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     bool allowLoose = true,
     String? countryHint,
   }) {
-    // 1. Manual mappings (Highest Priority)
+    // Tier 1: Manual mappings (User overrides)
     final manual = _manualMappings[channelId];
     if (manual != null && manual.isNotEmpty) {
-      _internalToEpgIdMapping[channelId] = manual;
       return manual;
     }
 
-    // 2. Memory Cache Check
-    if (_internalToEpgIdMapping.containsKey(channelId)) {
-      final cached = _internalToEpgIdMapping[channelId];
-      if (cached != null) return cached;
-    }
-
-    // 3. Exact ID match (Authoritative)
+    // Tier 2: Exact ID match (Authoritative)
     final rawMatch = _matchRawEpgId(channelId);
     if (rawMatch != null) {
       return _cacheResolvedMapping(channelId, rawMatch);
     }
 
-    // 4. Normalized ID/Name Match (Non-aggressive)
+    // Tier 3: Normalized ID Match
     _ensureNormalizedMap();
-    if (channelName != null && channelName.isNotEmpty) {
-      // Note: We use the Utility normalization here for consistency
-      final normalizedName =
-          EPGMatchingUtils.normalizeForFuzzyMatch(channelName);
-      if (normalizedName.isNotEmpty &&
-          _normalizedAvailableChannels != null &&
-          _normalizedAvailableChannels!.containsKey(normalizedName)) {
-        final candidates = _normalizedAvailableChannels![normalizedName];
-        if (candidates != null && candidates.isNotEmpty) {
-          return _cacheResolvedMapping(channelId, candidates.first);
-        }
+    final normalizedId = EPGMatchingUtils.normalizeForFuzzyMatch(channelId);
+    if (normalizedId.isNotEmpty &&
+        _normalizedAvailableChannels != null &&
+        _normalizedAvailableChannels!.containsKey(normalizedId)) {
+      final candidates = _normalizedAvailableChannels![normalizedId];
+      if (candidates != null && candidates.isNotEmpty) {
+        return _cacheResolvedMapping(channelId, candidates.first);
       }
     }
 
-    // 5. THE CRITICAL FIX: Fuzzy name match (raw name only)
+    // Tier 4: Fuzzy Logic Match (Raw Name)
     if (allowLoose &&
         channelName != null &&
         channelName.trim().isNotEmpty &&
         _epgNameCandidates.isNotEmpty) {
       final best = EPGMatchingUtils.findBestFuzzyMatch(
-        channelName, // Raw name
+        channelName,
         _epgNameCandidates,
       );
       if (best != null) {
@@ -3003,10 +2999,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
-    // Cache null to prevent repeated expensive fuzzy searches
-    if (_hasParsed && !_isLoading && !_isParsing) {
-      return _cacheResolvedMapping(channelId, null);
-    }
     return null;
   }
 

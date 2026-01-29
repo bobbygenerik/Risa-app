@@ -114,16 +114,22 @@ class TvdbService {
       final normalizedTitle = _normalizeTitle(title);
       final isNews = EPGMatchingUtils.isLikelyNewsTitle(normalizedTitle);
       // Use length-aware thresholds: stricter for short titles to avoid false positives
-      final baseThreshold = isNews ? 0.7 : 0.55;
-      final shortTitleThreshold = isNews ? 0.85 : 0.80;
+      final baseThreshold = isNews ? 70.0 : 55.0;
+      final shortTitleThreshold = isNews ? 85.0 : 80.0;
+      final titleTokens =
+          EPGMatchingUtils.tokenizeForFuzzyMatch(normalizedTitle);
       for (final entry in results) {
         if (entry is! Map<String, dynamic>) continue;
         final candidateTitle = _extractTitle(entry);
         if (candidateTitle.isEmpty) continue;
         final normalizedCandidate = _normalizeTitle(candidateTitle);
-        final score = EPGMatchingUtils.calculateSimilarity(
+        final candidateTokens =
+            EPGMatchingUtils.tokenizeForFuzzyMatch(normalizedCandidate);
+        final score = EPGMatchingUtils.scoreFuzzyMatch(
           normalizedTitle,
           normalizedCandidate,
+          titleTokens,
+          candidateTokens,
         );
         // Require higher score for short titles (<=4 chars) to prevent false matches
         final minLength = normalizedTitle.length < normalizedCandidate.length
