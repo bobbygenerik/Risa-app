@@ -711,6 +711,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     // Offload heavy string normalization to isolate
     try {
       final allowed = await compute(_buildAllowedSet, mapsSubset);
+      debugLog('ChannelProvider: Allowed set size=${allowed.length}');
       service.setAllowedChannelIds(allowed, triggerRefresh: true);
     } catch (e) {
       debugLog('ChannelProvider: compute(_buildAllowedSet) failed: $e');
@@ -720,17 +721,23 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   static Set<String> _buildAllowedSet(List<Map<String, dynamic>> maps) {
     final allowed = <String>{};
     for (final map in maps) {
-      final tvgId = (map['tvgId'] as String?) ?? '';
-      final id = (map['id'] as String?) ?? '';
-      final name = (map['name'] as String?) ?? '';
+      final attrs = map['attributes'];
+      final tvgIdRaw = (map['tvgId'] as String?) ??
+          (attrs is Map ? (attrs['tvg-id'] as String?) : null) ??
+          (map['tvg-id'] as String?) ??
+          '';
+      final tvgId = tvgIdRaw.trim();
+      final id = (map['id'] as String?)?.trim() ?? '';
+      final name = (map['name'] as String?)?.trim() ?? '';
       if (tvgId.isNotEmpty) {
-        allowed.add(IncrementalEpgService.normalizeForFilter(tvgId));
-      }
-      if (id.isNotEmpty) {
-        allowed.add(IncrementalEpgService.normalizeForFilter(id));
-      }
-      if (name.isNotEmpty) {
-        allowed.add(IncrementalEpgService.normalizeForFilter(name));
+        allowed.add(IncrementalEpgService.normalizeForAllowedId(tvgId));
+      } else {
+        if (id.isNotEmpty) {
+          allowed.add(IncrementalEpgService.normalizeForAllowedId(id));
+        }
+        if (name.isNotEmpty) {
+          allowed.add(IncrementalEpgService.normalizeForAllowedId(name));
+        }
       }
     }
     return allowed;
@@ -752,23 +759,25 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         );
         if (rows.isEmpty) break;
         for (final row in rows) {
-          final tvgId = (row['tvgId'] as String?) ?? '';
-          final id = (row['id'] as String?) ?? '';
-          final name = (row['name'] as String?) ?? '';
+          final tvgId = (row['tvgId'] as String?)?.trim() ?? '';
+          final id = (row['id'] as String?)?.trim() ?? '';
+          final name = (row['name'] as String?)?.trim() ?? '';
           if (tvgId.isNotEmpty) {
-            allowed.add(IncrementalEpgService.normalizeForFilter(tvgId));
-          }
-          if (id.isNotEmpty) {
-            allowed.add(IncrementalEpgService.normalizeForFilter(id));
-          }
-          if (name.isNotEmpty) {
-            allowed.add(IncrementalEpgService.normalizeForFilter(name));
+            allowed.add(IncrementalEpgService.normalizeForAllowedId(tvgId));
+          } else {
+            if (id.isNotEmpty) {
+              allowed.add(IncrementalEpgService.normalizeForAllowedId(id));
+            }
+            if (name.isNotEmpty) {
+              allowed.add(IncrementalEpgService.normalizeForAllowedId(name));
+            }
           }
         }
         if (rows.length < pageSize) break;
         offset += pageSize;
       }
       if (allowed.isNotEmpty) {
+        debugLog('ChannelProvider: Allowed set (DB) size=${allowed.length}');
         service.setAllowedChannelIds(allowed, triggerRefresh: true);
       }
     } catch (e) {

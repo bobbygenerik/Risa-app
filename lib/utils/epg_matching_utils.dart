@@ -1,6 +1,95 @@
 /// Utility class for EPG channel matching algorithms
 /// Extracted from EPGService to improve maintainability and testability
 class EPGMatchingUtils {
+  /// Candidate used for fuzzy channel matching.
+  static const int _minTokenLength = 3;
+
+  static final RegExp _fuzzyTokenSplitRe = RegExp(r'[^a-z0-9]+');
+  static final RegExp _fuzzyNormalizeRe = RegExp(r'[^a-z0-9]');
+
+  /// Normalize per fuzzy matching spec: lowercase + strip non-alphanumeric.
+  static String normalizeForFuzzyMatch(String text) {
+    if (text.isEmpty) return '';
+    return text.toLowerCase().replaceAll(_fuzzyNormalizeRe, '');
+  }
+
+  /// Tokenize per fuzzy matching spec: split into words, drop <=2 chars.
+  static List<String> tokenizeForFuzzyMatch(String text) {
+    if (text.isEmpty) return const [];
+    final tokens = text
+        .toLowerCase()
+        .split(_fuzzyTokenSplitRe)
+        .where((t) => t.length >= _minTokenLength)
+        .toList();
+    return tokens;
+  }
+
+  /// Compute token intersection score as defined in the spec.
+  static double tokenIntersectionScore(
+    List<String> tokens1,
+    List<String> tokens2,
+  ) {
+    if (tokens1.isEmpty || tokens2.isEmpty) return 0.0;
+    int matches = 0;
+    for (final t1 in tokens1) {
+      for (final t2 in tokens2) {
+        if (t2.contains(t1)) {
+          matches++;
+          break;
+        }
+      }
+    }
+    final denom = tokens1.length > tokens2.length ? tokens1.length : tokens2.length;
+    if (denom == 0) return 0.0;
+    return (matches / denom) * 80.0;
+  }
+
+  /// Score a single candidate per multi-tier spec.
+  static double scoreFuzzyMatch(
+    String m3uName,
+    String epgName,
+    List<String> m3uTokens,
+    List<String> epgTokens,
+  ) {
+    final m3uNorm = normalizeForFuzzyMatch(m3uName);
+    final epgNorm = normalizeForFuzzyMatch(epgName);
+    if (m3uNorm.isNotEmpty && epgNorm.isNotEmpty && m3uNorm == epgNorm) {
+      return 100.0;
+    }
+    if (m3uNorm.isNotEmpty &&
+        epgNorm.isNotEmpty &&
+        (m3uNorm.contains(epgNorm) || epgNorm.contains(m3uNorm))) {
+      return 85.0;
+    }
+    return tokenIntersectionScore(m3uTokens, epgTokens);
+  }
+
+  /// Find the best fuzzy match among candidates.
+  static MapEntry<String, double>? findBestFuzzyMatch(
+    String m3uName,
+    List<MapEntry<String, String>> epgNameCandidates,
+  ) {
+    if (m3uName.trim().isEmpty || epgNameCandidates.isEmpty) {
+      return null;
+    }
+    final m3uTokens = tokenizeForFuzzyMatch(m3uName);
+    var bestScore = 0.0;
+    String? bestId;
+    for (final entry in epgNameCandidates) {
+      final epgId = entry.key;
+      final epgName = entry.value;
+      final epgTokens = tokenizeForFuzzyMatch(epgName);
+      final score = scoreFuzzyMatch(m3uName, epgName, m3uTokens, epgTokens);
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = epgId;
+      }
+    }
+    if (bestId != null && bestScore > 30.0) {
+      return MapEntry(bestId, bestScore);
+    }
+    return null;
+  }
   /// Cache for channel ID mapping (tvgId -> epgKey)
   static final Map<String, String?> _channelIdCache = {};
 

@@ -1450,13 +1450,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final now = DateTime.now();
             final minDisplayTime = _overlayShownAt != null &&
                 now.difference(_overlayShownAt!) < const Duration(milliseconds: 500);
-            final showStartupOverlay =
-                (channelProvider.isColdStartLoad &&
-                    _startupOverlayActive &&
-                    overlayBusy &&
-                    !hasDisplayData) ||
-                (epgLoadingState.isParsing || epgLoadingState.isDownloading) ||
-                minDisplayTime;
+            final allowBlockingUi = !_hasShownContent;
+            final showStartupOverlay = allowBlockingUi &&
+                ((channelProvider.isColdStartLoad &&
+                        _startupOverlayActive &&
+                        overlayBusy &&
+                        !hasDisplayData) ||
+                    (epgLoadingState.isParsing ||
+                        epgLoadingState.isDownloading) ||
+                    minDisplayTime);
             if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
@@ -1544,7 +1546,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             // Show loading overlay during cold start, skeleton only for warm starts
-            if (channelProvider.isColdStartLoad && overlayBusy) {
+            if (channelProvider.isColdStartLoad &&
+                overlayBusy &&
+                !_hasShownContent) {
               return buildSkeleton();
             }
 
