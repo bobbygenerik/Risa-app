@@ -2397,16 +2397,16 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       for (var i = 0; i < events.length; i++) {
         final event = events[i];
         if (event is XmlStartElementEvent) {
-          if (event.name == 'display-name') {
+          if (event.localName == 'display-name') {
             final val = _extractTagContent(events, i);
             if (val != null && val.isNotEmpty) {
               displayNames.add(val);
             } else {
               debugLog('EPG: Failed to extract display-name content for ID=$id');
             }
-          } else if (event.name == 'icon') {
+          } else if (event.localName == 'icon') {
             channelIcon = event.attributes
-                .firstWhere((a) => a.name == 'src',
+                .firstWhere((a) => a.localName == 'src',
                     orElse: () => XmlEventAttribute(
                         'src', '', XmlAttributeType.DOUBLE_QUOTE))
                 .value;
@@ -2447,18 +2447,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final startEvent = events.first as XmlStartElementEvent;
 
     final rawChannelId = startEvent.attributes
-        .firstWhere((a) => a.name == 'channel',
+        .firstWhere((a) => a.localName == 'channel',
             orElse: () =>
                 XmlEventAttribute('channel', '', XmlAttributeType.DOUBLE_QUOTE))
         .value;
     final channelId = rawChannelId.trim();
     final startStr = startEvent.attributes
-        .firstWhere((a) => a.name == 'start',
+        .firstWhere((a) => a.localName == 'start',
             orElse: () =>
                 XmlEventAttribute('start', '', XmlAttributeType.DOUBLE_QUOTE))
         .value;
     final stopStr = startEvent.attributes
-        .firstWhere((a) => a.name == 'stop',
+        .firstWhere((a) => a.localName == 'stop',
             orElse: () =>
                 XmlEventAttribute('stop', '', XmlAttributeType.DOUBLE_QUOTE))
         .value;
@@ -2490,18 +2490,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     for (var i = 0; i < events.length; i++) {
       final event = events[i];
       if (event is XmlStartElementEvent) {
-        if (event.name == 'title') {
+        if (event.localName == 'title') {
           title = _extractTagContent(events, i) ?? 'Unknown';
-        } else if (event.name == 'desc') {
+        } else if (event.localName == 'desc') {
           description = _extractTagContent(events, i);
-        } else if (event.name == 'category') {
+        } else if (event.localName == 'category') {
           category = _extractTagContent(events, i);
-        } else if (event.name == 'icon') {
+        } else if (event.localName == 'icon') {
           // Icon is an empty tag usually, check attributes
           icon = event.attributes
-              .firstWhere((a) => a.name == 'src',
-                  orElse: () => XmlEventAttribute(
-                      'src', '', XmlAttributeType.DOUBLE_QUOTE))
+              .firstWhere((a) => a.localName == 'src',
+                  orElse: () =>
+                      XmlEventAttribute('src', '', XmlAttributeType.DOUBLE_QUOTE))
               .value;
         }
       }
