@@ -5,12 +5,177 @@ class EPGMatchingUtils {
   static const int _minTokenLength = 3;
 
   static final RegExp _fuzzyTokenSplitRe = RegExp(r'[^a-z0-9]+');
-  static final RegExp _fuzzyNormalizeRe = RegExp(r'[^a-z0-9]');
+  
+  // --- New Robust Normalization Regexes ---
+  static final RegExp httpSchemeRe = RegExp(r'https?://', caseSensitive: false);
+  static final RegExp schemeValidRe = RegExp(r'^[A-Za-z]');
+  static final RegExp invalidXmlCharRe = RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
+  static final RegExp unbrokenEntityRe = RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
+  static final RegExp timeParseRe = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp trailingSlashRe = RegExp(r'/+$');
+  static final RegExp bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
+  static final RegExp commonPrefixRe = RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false);
+  static final RegExp leadingNumberRe = RegExp(r'^([0-9]+)[\s\-_.]+(.*)$');
+  static final RegExp noiseTokensRe = RegExp(
+      r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b|\bpaid\s+programming\b|\bhome\s+shopping\b|\bhomeshopping\b|\binfomercial\b|\bsponsored\b|\bpromotion\b|\bcommercial\b|\badvertisement\b)',
+      caseSensitive: false);
+  static final RegExp _techLabelsRe = RegExp(
+      r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\bhb\b|\blb\b)',
+      caseSensitive: false);
+  static final RegExp _langSufRe = RegExp(
+      r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
+      caseSensitive: false);
+  static final RegExp _catchupMarkersRe = RegExp(
+      r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
+      caseSensitive: false);
+  static final RegExp _sepRe = RegExp(r'[|._]+');
+  static final RegExp _multiSpaceRe = RegExp(r'\s+');
+  static final RegExp _qualitySufRe = RegExp(
+      r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)|(uhd|fhd|hd|sd|4k|1080p|720p)$', 
+      caseSensitive: false);
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _techChPrefixRe = RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
+  static final RegExp _plusOneSufRe = RegExp(r'(plus1|plusone|\+1|\+2)$');
+
+  static const Map<String, String> _commonWordReplacements = {
+    'noticias': 'news',
+    'newses': 'news',
+    'cine': 'movies',
+    'peliculas': 'movies',
+    'filmes': 'movies',
+    'canal': 'channel',
+    'canale': 'channel',
+    'sport': 'sports',
+    'deportes': 'sports',
+    'futbol': 'football',
+    'fútbol': 'football',
+    'musica': 'music',
+    'musik': 'music',
+    'kids': 'kids',
+    'ninos': 'kids',
+    'infantil': 'kids',
+  };
+
+  static final RegExp _commonWordReplacementsRe =
+      RegExp(r'\b(' + _commonWordReplacements.keys.join('|') + r')\b');
 
   /// Normalize per fuzzy matching spec: lowercase + strip non-alphanumeric.
   static String normalizeForFuzzyMatch(String text) {
     if (text.isEmpty) return '';
-    return text.toLowerCase().replaceAll(_fuzzyNormalizeRe, '');
+
+    // Remove diacritics (España -> espana) and bracketed clutter tags.
+    var clean = _removeDiacritics(text);
+    clean = clean.replaceAll(bracketsRe, ' ');
+
+    // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
+    clean = clean.replaceAll(commonPrefixRe, '');
+    // Strip leading channel numbers "001-", but only if not purely numeric.
+    final numMatch = leadingNumberRe.firstMatch(clean);
+    if (numMatch != null) {
+      final remainder = numMatch.group(2) ?? '';
+      if (remainder.trim().isNotEmpty) {
+        clean = remainder;
+      }
+    }
+
+    // Strip promo/noise tokens and tech labels.
+    clean = clean.replaceAll(noiseTokensRe, ' ');
+    clean = clean.replaceAll(_techLabelsRe, ' ');
+
+    // Drop language/region suffix tokens (but keep the base).
+    clean = clean.replaceAll(_langSufRe, '');
+
+    // Remove common catchup/time-shift markers.
+    clean = clean.replaceAll(_catchupMarkersRe, '');
+
+    // Translate common non-English labels to English keywords.
+    clean = _translateCommonWords(clean);
+
+    // Normalize separators and trim.
+    clean = clean.replaceAll(_sepRe, ' ');
+    clean = clean.replaceAll(_multiSpaceRe, ' ').trim();
+
+    // Strip quality suffixes after normalization.
+    clean = clean.replaceAll(_qualitySufRe, '');
+
+    // Convert ampersand and plus before stripping non-alphanumeric.
+    // This allows "A&E" to match "AandE" and "AMC+" to match "AMC Plus".
+    clean = clean.replaceAll('&', 'and');
+    clean = clean.replaceAll('+', ' plus ');
+
+    String normalized = clean.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+
+    // Strip technical channel prefixes like "ch_" or "channel" when followed
+    // by a long numeric/hex identifier (common in XMLTV ids).
+    final match = _techChPrefixRe.firstMatch(normalized);
+    if (match != null) {
+      normalized = match.group(2) ?? normalized;
+    }
+
+    // Collapse "plus1"/"plusone" and "+1/+2" variants.
+    normalized = normalized.replaceAll(_plusOneSufRe, '');
+
+    return convertNumberWords(normalized);
+  }
+
+  static String _removeDiacritics(String input) {
+    const Map<String, String> map = {
+      'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
+      'č': 'c', 'ç': 'c',
+      'ď': 'd',
+      'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e', 'ě': 'e',
+      'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
+      'ľ': 'l', 'ĺ': 'l',
+      'ń': 'n', 'ň': 'n', 'ñ': 'n',
+      'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o',
+      'ř': 'r', 'ŕ': 'r',
+      'š': 's', 'ś': 's',
+      'ť': 't',
+      'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
+      'ý': 'y',
+      'ž': 'z', 'ź': 'z',
+    };
+    final buffer = StringBuffer();
+    for (final rune in input.runes) {
+      final ch = String.fromCharCode(rune);
+      final lower = ch.toLowerCase();
+      buffer.write(map[lower] ?? ch);
+    }
+    return buffer.toString();
+  }
+
+  static String _translateCommonWords(String input) {
+    if (input.isEmpty) return input;
+    return input.toLowerCase().replaceAllMapped(_commonWordReplacementsRe,
+        (match) => _commonWordReplacements[match.group(0)!] ?? match.group(0)!);
+  }
+
+  // Placeholder removed.
+
+  /// Compute Levenshtein edit distance between two strings
+  static int levenshteinDistance(String s, String t) {
+    if (s == t) return 0;
+    if (s.isEmpty) return t.length;
+    if (t.isEmpty) return s.length;
+
+    List<int> v0 = List<int>.generate(t.length + 1, (i) => i);
+    List<int> v1 = List<int>.filled(t.length + 1, 0);
+
+    for (int i = 0; i < s.length; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < t.length; j++) {
+        int cost = (s.codeUnitAt(i) == t.codeUnitAt(j)) ? 0 : 1;
+        v1[j + 1] = [
+          v1[j] + 1,
+          v0[j + 1] + 1,
+          v0[j] + cost
+        ].reduce((min, e) => e < min ? e : min);
+      }
+      for (int j = 0; j <= t.length; j++) {
+        v0[j] = v1[j];
+      }
+    }
+    return v1[t.length];
   }
 
   /// Tokenize per fuzzy matching spec: split into words, drop <=2 chars.
@@ -53,14 +218,32 @@ class EPGMatchingUtils {
   ) {
     final m3uNorm = normalizeForFuzzyMatch(m3uName);
     final epgNorm = normalizeForFuzzyMatch(epgName);
-    if (m3uNorm.isNotEmpty && epgNorm.isNotEmpty && m3uNorm == epgNorm) {
+    
+    if (m3uNorm.isEmpty || epgNorm.isEmpty) return 0.0;
+
+    // 1. Exact match (strongest)
+    if (m3uNorm == epgNorm) {
       return 100.0;
     }
-    if (m3uNorm.isNotEmpty &&
-        epgNorm.isNotEmpty &&
-        (m3uNorm.contains(epgNorm) || epgNorm.contains(m3uNorm))) {
+
+    // 2. Contains match (strong)
+    if (m3uNorm.contains(epgNorm) || epgNorm.contains(m3uNorm)) {
+      // Penalty for length difference to avoid over-matching "NBC" to "CNBC"
+      final lenDiff = (m3uNorm.length - epgNorm.length).abs();
+      if (lenDiff < 3) return 95.0;
       return 85.0;
     }
+    
+    // 3. Levenshtein Distance (for typos/minor differences)
+    // Only verify if strings are somewhat similar in length
+    final lenDiff = (m3uNorm.length - epgNorm.length).abs();
+    if (lenDiff <= 3) {
+      final dist = levenshteinDistance(m3uNorm, epgNorm);
+      if (dist <= 1) return 95.0; // Very close
+      if (dist <= 2 && m3uNorm.length > 4) return 80.0; // Close enough for longer words
+    }
+
+    // 4. Token Intersection (fallback)
     return tokenIntersectionScore(m3uTokens, epgTokens);
   }
 
@@ -72,19 +255,31 @@ class EPGMatchingUtils {
     if (m3uName.trim().isEmpty || epgNameCandidates.isEmpty) {
       return null;
     }
+    
+    // Pre-calculate M3U tokens once
     final m3uTokens = tokenizeForFuzzyMatch(m3uName);
+    
     var bestScore = 0.0;
     String? bestId;
+    
     for (final entry in epgNameCandidates) {
-      final epgId = entry.key;
       final epgName = entry.value;
+      
+      // Compute score
+      // Note: We compute epgTokens inside scoreFuzzyMatch loop or pass them.
+      // Optimizing: tokenize internally or expect caller to pass?
+      // For now, keep it simple as originally designed: re-tokenize or just pass empty if unused by strict match
+      
       final epgTokens = tokenizeForFuzzyMatch(epgName);
       final score = scoreFuzzyMatch(m3uName, epgName, m3uTokens, epgTokens);
+
       if (score > bestScore) {
         bestScore = score;
-        bestId = epgId;
+        bestId = entry.key;
+        if (bestScore >= 100.0) break; // Optimization: early exit on perfect match
       }
     }
+    
     if (bestId != null && bestScore > 30.0) {
       return MapEntry(bestId, bestScore);
     }
@@ -93,10 +288,9 @@ class EPGMatchingUtils {
   /// Cache for channel ID mapping (tvgId -> epgKey)
   static final Map<String, String?> _channelIdCache = {};
 
-  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
   static final RegExp _digitsRe = RegExp(r'\d+');
-  static final RegExp _qualitySufRe =
-      RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false);
+  // _qualitySufRe is duplicate (see top of file)
+  
   // Regional suffixes: Only strip when clearly separated by word boundary patterns
   // Using common patterns like numeric prefix or repeated letters to detect boundaries
   // This prevents 'amcwest' from becoming 'amc' while still handling 'bbc1scotland'
@@ -112,9 +306,7 @@ class EPGMatchingUtils {
   static final RegExp _shortTimeRe =
       RegExp(r'\b\d{1,2}\s*[ap]\b', caseSensitive: false);
   static final RegExp _callSignRe = RegExp(r'^\s*[A-Z]{3,4}\b');
-  static final RegExp _noiseTokensRe = RegExp(
-      r'\b(paid\s+programming|home\s+shopping|homeshopping|infomercial|sponsored|promotion|promo|commercial|advertisement)\b',
-      caseSensitive: false);
+  // _noiseTokensRe is duplicate (see top of file)
 
   static String normalizeForFilter(String text) {
     var s = text.toLowerCase();
@@ -163,7 +355,7 @@ class EPGMatchingUtils {
       r'\b(at|@)\s+\d{1,2}(:\d{2})?\s?(am|pm)?\b',
       caseSensitive: false);
   static final RegExp _callSignLeadingRe = RegExp(r'^\s*[A-Z]{3,4}\b\s+');
-  static final RegExp _multiSpaceRe = RegExp(r'\s+');
+  // _multiSpaceRe is duplicate
   static final RegExp _yearParensExactRe = RegExp(r'\s*\(\d{4}\)');
   static final RegExp _yearSufExactRe = RegExp(r'\s+(19|20)\d{2}$');
   static final RegExp _episodePartLabelRe =
@@ -211,7 +403,7 @@ class EPGMatchingUtils {
     normalized = normalized.replaceAll(_hourRe, '');
     normalized = normalized.replaceAll(_yearSuffixRe, '');
     normalized = normalized.replaceAll(_yearParenRe, '');
-    normalized = normalized.replaceAll(_noiseTokensRe, '');
+    normalized = normalized.replaceAll(noiseTokensRe, '');
 
     if (aggressiveForNews || isLikelyNewsTitle(title)) {
       normalized = normalized.replaceAll(_newsAtTimeRe, 'news');
@@ -410,7 +602,8 @@ class EPGMatchingUtils {
 
   /// Convert number words to digits for better matching
   static String convertNumberWords(String text) {
-    final conversions = {
+    const conversions = {
+      'zero': '0',
       'one': '1',
       'two': '2',
       'three': '3',
@@ -421,6 +614,16 @@ class EPGMatchingUtils {
       'eight': '8',
       'nine': '9',
       'ten': '10',
+      'eleven': '11',
+      'twelve': '12',
+      'thirteen': '13',
+      'fourteen': '14',
+      'fifteen': '15',
+      'sixteen': '16',
+      'seventeen': '17',
+      'eighteen': '18',
+      'nineteen': '19',
+      'twenty': '20',
       '1st': '1',
       '2nd': '2',
       '3rd': '3',
@@ -429,9 +632,11 @@ class EPGMatchingUtils {
     };
 
     String result = text.toLowerCase();
-    for (final entry in conversions.entries) {
-      result = result.replaceAll(entry.key, entry.value);
-    }
+    conversions.forEach((key, value) {
+      if (result.contains(key)) {
+        result = result.replaceAll(key, value);
+      }
+    });
     return result;
   }
 

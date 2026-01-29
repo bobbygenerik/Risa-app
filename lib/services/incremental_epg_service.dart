@@ -127,40 +127,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // Provider-style alias map (normalized) to bridge common naming drift
-  static final RegExp _httpSchemeRe =
-      RegExp(r'https?://', caseSensitive: false);
+  // Regexes moved to EPGMatchingUtils
+  static final RegExp _httpSchemeRe = RegExp(r'https?://', caseSensitive: false);
   static final RegExp _schemeValidRe = RegExp(r'^[A-Za-z]');
-  static final RegExp _invalidXmlCharRe =
-      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
-  static final RegExp _unbrokenEntityRe =
-      RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
-  static final RegExp _timeParseRe =
-      RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
-  static final RegExp _trailingSlashRe = RegExp(r'/+$');
-  static final RegExp _bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
-  static final RegExp _commonPrefixRe =
-      RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false);
-  static final RegExp _leadingNumberRe = RegExp(r'^([0-9]+)[\s\-_.]+(.*)$');
-  static final RegExp _noiseTokensRe = RegExp(
-      r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
-      caseSensitive: false);
-  static final RegExp _techLabelsRe = RegExp(
-      r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\bhb\b|\blb\b)',
-      caseSensitive: false);
-  static final RegExp _langSufRe = RegExp(
-      r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
-      caseSensitive: false);
-  static final RegExp _catchupMarkersRe = RegExp(
-      r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
-      caseSensitive: false);
-  static final RegExp _sepRe = RegExp(r'[|._]+');
-  static final RegExp _multiSpaceRe = RegExp(r'\s+');
-  static final RegExp _qualitySufRe =
-      RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false);
-  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
-  static final RegExp _techChPrefixRe =
-      RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
-  static final RegExp _plusOneSufRe = RegExp(r'(plus1|plusone|\+1|\+2)$');
   static final RegExp _programmeStartRe =
       RegExp(r'<(?:\w+:)?programme\b', caseSensitive: false);
   static final RegExp _programmeEndRe =
@@ -170,27 +139,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   static final RegExp _channelEndRe =
       RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
 
-  static const Map<String, String> _commonWordReplacements = {
-    'noticias': 'news',
-    'newses': 'news',
-    'cine': 'movies',
-    'peliculas': 'movies',
-    'filmes': 'movies',
-    'canal': 'channel',
-    'canale': 'channel',
-    'sport': 'sports',
-    'deportes': 'sports',
-    'futbol': 'football',
-    'fútbol': 'football',
-    'musica': 'music',
-    'musik': 'music',
-    'kids': 'kids',
-    'ninos': 'kids',
-    'infantil': 'kids',
-  };
-
-  static final RegExp _commonWordReplacementsRe =
-      RegExp(r'\b(' + _commonWordReplacements.keys.join('|') + r')\b');
+  // Word replacements moved to EPGMatchingUtils
 
   static const int _fnvOffsetBasis = 0xcbf29ce484222325;
   static const int _fnvPrime = 0x100000001b3;
@@ -243,7 +192,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _epgProgressLabel.isNotEmpty ? _epgProgressLabel : null;
 
   static String normalizeForFilter(String input) {
-    return _normalizeForMatch(input);
+    return EPGMatchingUtils.normalizeForFuzzyMatch(input);
   }
 
   /// Allowed-set normalization: trim + lowercase only.
@@ -2022,8 +1971,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     String sanitizeXmlChunk(String input) {
       // Remove invalid control characters and escape broken entities.
-      var out = input.replaceAll(_invalidXmlCharRe, '');
-      out = out.replaceAll(_unbrokenEntityRe, '&amp;');
+      var out = input.replaceAll(EPGMatchingUtils.invalidXmlCharRe, '');
+      out = out.replaceAll(EPGMatchingUtils.unbrokenEntityRe, '&amp;');
       return out;
     }
 
@@ -2607,7 +2556,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final trimmed = timeStr.trim();
       // Match base datetime and optional offset like +0100 or -0500
-      final m = _timeParseRe.firstMatch(trimmed);
+      final m = EPGMatchingUtils.timeParseRe.firstMatch(trimmed);
       if (m == null) return DateTime.now();
 
       final g1 = m.group(1);
@@ -2679,7 +2628,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final startUtc =
         DateTime.fromMillisecondsSinceEpoch(startTs, isUtc: false).toUtc();
     final startStr = _formatCatchupTime(startUtc);
-    final base = server.replaceAll(_trailingSlashRe, '');
+    final base = server.replaceAll(EPGMatchingUtils.trailingSlashRe, '');
     return '$base/timeshift.php?username=$username&password=$password&stream=${info.streamId}&start=$startStr&duration=$durationMinutes';
   }
 
@@ -2798,161 +2747,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   void _logMatchDiagnostics({String context = 'EPG'}) {}
 
-  static String _removeDiacritics(String input) {
-    const Map<String, String> map = {
-      'á': 'a',
-      'à': 'a',
-      'ä': 'a',
-      'â': 'a',
-      'ã': 'a',
-      'å': 'a',
-      'č': 'c',
-      'ç': 'c',
-      'ď': 'd',
-      'é': 'e',
-      'è': 'e',
-      'ë': 'e',
-      'ê': 'e',
-      'ě': 'e',
-      'í': 'i',
-      'ì': 'i',
-      'ï': 'i',
-      'î': 'i',
-      'ľ': 'l',
-      'ĺ': 'l',
-      'ń': 'n',
-      'ň': 'n',
-      'ñ': 'n',
-      'ó': 'o',
-      'ò': 'o',
-      'ö': 'o',
-      'ô': 'o',
-      'õ': 'o',
-      'ř': 'r',
-      'ŕ': 'r',
-      'š': 's',
-      'ś': 's',
-      'ť': 't',
-      'ú': 'u',
-      'ù': 'u',
-      'ü': 'u',
-      'û': 'u',
-      'ý': 'y',
-      'ž': 'z',
-      'ź': 'z',
-    };
-    final buffer = StringBuffer();
-    for (final rune in input.runes) {
-      final ch = String.fromCharCode(rune);
-      final lower = ch.toLowerCase();
-      buffer.write(map[lower] ?? ch);
-    }
-    return buffer.toString();
-  }
+  // _removeDiacritics moved to EPGMatchingUtils
 
-  static String _translateCommonWords(String input) {
-    if (input.isEmpty) return input;
-
-    return input.toLowerCase().replaceAllMapped(_commonWordReplacementsRe,
-        (match) => _commonWordReplacements[match.group(0)!] ?? match.group(0)!);
-  }
-
-  static String _convertNumberWords(String text) {
-    const conversions = {
-      'zero': '0',
-      'one': '1',
-      'two': '2',
-      'three': '3',
-      'four': '4',
-      'five': '5',
-      'six': '6',
-      'seven': '7',
-      'eight': '8',
-      'nine': '9',
-      'ten': '10',
-      'eleven': '11',
-      'twelve': '12',
-      'thirteen': '13',
-      'fourteen': '14',
-      'fifteen': '15',
-      'sixteen': '16',
-      'seventeen': '17',
-      'eighteen': '18',
-      'nineteen': '19',
-      'twenty': '20',
-      '1st': '1',
-      '2nd': '2',
-      '3rd': '3',
-      '4th': '4',
-      '5th': '5',
-    };
-
-    String result = text.toLowerCase();
-    conversions.forEach((key, value) {
-      if (result.contains(key)) {
-        result = result.replaceAll(key, value);
-      }
-    });
-    return result;
-  }
-
-  static String _normalizeForMatch(String text) {
-    if (text.isEmpty) return '';
-
-    // Remove diacritics (España -> espana) and bracketed clutter tags.
-    var clean = _removeDiacritics(text);
-    clean = clean.replaceAll(_bracketsRe, ' ');
-
-    // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
-    clean = clean.replaceAll(_commonPrefixRe, '');
-    // Strip leading channel numbers "001-", but only if not purely numeric.
-    final numMatch = _leadingNumberRe.firstMatch(clean);
-    if (numMatch != null) {
-      final remainder = numMatch.group(2) ?? '';
-      if (remainder.trim().isNotEmpty) {
-        clean = remainder;
-      }
-    }
-
-    // Strip promo/noise tokens and tech labels.
-    clean = clean.replaceAll(_noiseTokensRe, ' ');
-    clean = clean.replaceAll(_techLabelsRe, ' ');
-
-    // Drop language/region suffix tokens (but keep the base).
-    clean = clean.replaceAll(_langSufRe, '');
-
-    // Remove common catchup/time-shift markers.
-    clean = clean.replaceAll(_catchupMarkersRe, '');
-
-    // Translate common non-English labels to English keywords.
-    clean = _translateCommonWords(clean);
-
-    // Normalize separators and trim.
-    clean = clean.replaceAll(_sepRe, ' ');
-    clean = clean.replaceAll(_multiSpaceRe, ' ').trim();
-
-    // Strip quality suffixes after normalization.
-    clean = clean.replaceAll(_qualitySufRe, '');
-
-    // Convert ampersand and plus before stripping non-alphanumeric.
-    // This allows "A&E" to match "AandE" and "AMC+" to match "AMC Plus".
-    clean = clean.replaceAll('&', 'and');
-    clean = clean.replaceAll('+', ' plus ');
-
-    String normalized = clean.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-
-    // Strip technical channel prefixes like "ch_" or "channel" when followed
-    // by a long numeric/hex identifier (common in XMLTV ids).
-    final match = _techChPrefixRe.firstMatch(normalized);
-    if (match != null) {
-      normalized = match.group(2) ?? normalized;
-    }
-
-    // Collapse "plus1"/"plusone" and "+1/+2" variants.
-    normalized = normalized.replaceAll(_plusOneSufRe, '');
-
-    return _convertNumberWords(normalized);
-  }
 
   String? _findBestEpgId(
     String channelId,
@@ -3209,11 +3005,21 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
       if (name.trim().isNotEmpty) {
-        final normalizedName = _normalize(name);
-        if (normalizedName.isNotEmpty &&
-            _normalizedAvailableChannels!.containsKey(normalizedName)) {
-          matched++;
-          continue;
+        final normalizedName = EPGMatchingUtils.normalizeForFuzzyMatch(name);
+        if (normalizedName.isNotEmpty) {
+          // Tier 1: Exact normalized match
+          if (_normalizedAvailableChannels!.containsKey(normalizedName)) {
+            matched++;
+            continue;
+          }
+          // Tier 2: Fuzzy match (simulated)
+          if (_epgNameCandidates.isNotEmpty) {
+             final best = EPGMatchingUtils.findBestFuzzyMatch(name, _epgNameCandidates);
+             if (best != null) {
+               matched++;
+               continue;
+             }
+          }
         }
       }
     }
