@@ -152,12 +152,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   int _lastPreviewChannelCount = -1;
   final Map<String, ScrollController> _rowScrollControllers = {};
   final Set<String> _rowScrollInitialized = {};
+  final Set<String> _prefetchedTitleLogoKeys = {};
+  final Queue<String> _prefetchedTitleLogoOrder = Queue<String>();
+  final Set<String> _prefetchedArtworkKeys = {};
+  final Queue<String> _prefetchedArtworkOrder = Queue<String>();
   // _rowVisibleCountBySection removed
   final Map<String, int> _categoryOffsets = {};
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
   bool _userHasScrolled = false;
-
 
   int _lastHeroCandidateCount = 0;
 
@@ -184,7 +187,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   DateTime? _lastRecoveryAttempt;
   bool _isSkeletonVisible = false;
   bool _recoveryInFlight = false;
-  bool _hasShownContent = false; // Prevents skeleton from reappearing after content displayed
+  bool _hasShownContent =
+      false; // Prevents skeleton from reappearing after content displayed
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
   bool _startupOverlayActive = false;
@@ -257,7 +261,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Helper: replace the word 'EPG' with 'data' in the status (second) line.
   String? _replaceEpgWithData(String? s) {
     if (s == null) return null;
-    return s.replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data').trim();
+    return s
+        .replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data')
+        .trim();
   }
 
   Future<String?> _readPlaylistIdentity() async {
@@ -464,6 +470,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           in _categoryNames.take(_liveTvSnapshotCategoryLimit)) {
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) continue;
+        _prefetchRowArtworkForChannels(
+          channels.take(_liveTvSnapshotRowLimit).toList(),
+          limit: 6,
+        );
         final payload = <Map<String, dynamic>>[];
         for (final channel in channels.take(_liveTvSnapshotRowLimit)) {
           final programs = _snapshotProgramsForChannel(channel, epgService);
@@ -513,19 +523,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _initialFocusRequested = true;
     _tryInitialFocus();
   }
-  
+
   void _tryInitialFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       // FIX: Don't steal focus if the user is already focused on something else (like the Sidebar),
       // unless this is a fresh cold start of the app.
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
-      
+
       // If we are NOT in cold start, and something already has valid focus, respect it.
-      if (!channelProvider.isColdStartLoad && 
-          currentFocus != null && 
+      if (!channelProvider.isColdStartLoad &&
+          currentFocus != null &&
           currentFocus.context != null) {
         // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
         return;
@@ -712,8 +722,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _requestCategoryPrefetch();
   }
 
-
-
   void _ensureEpgForChannels(
       List<Channel> channels, IncrementalEpgService epgService) {
     final missingIds = <String>[];
@@ -738,8 +746,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ));
     }
   }
-
-
 
   // Removed _rowVisibleCountFor and _bumpRowVisibleCount as logic is now handled in HorizontalChannelRow widget
 
@@ -1009,6 +1015,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _categoryHasMore[category] = channels.length >= _rowInitialFetch;
         _trackCachedCategory(category);
         _prefetchEpgForRow(category, channels);
+        _prefetchRowArtworkForChannels(channels, limit: 6);
         _notifyCategoryRow(category);
       }
       _scheduleLiveTvSnapshotSave();
@@ -1082,7 +1089,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (append && _categoryChannelCache.containsKey(category)) {
           _categoryChannelCache[category] = [
             ..._categoryChannelCache[category] ?? [],
-            ...channels
+            ...channels,
           ];
         } else {
           _categoryChannelCache[category] = channels;
@@ -1094,6 +1101,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             _prefetchEpgForRow(category, channels);
           }
         }
+        _prefetchRowArtworkForChannels(channels, limit: 6);
         _categoryOffsets[category] = offset + channels.length;
         _trackCachedCategory(category);
       } else if (!append) {
@@ -1124,8 +1132,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (removeCategory) {
           _removeCategoryRow(category);
         } else {
-          if (retryLoad &&
-              _categoryChannelCache[category]?.isEmpty == true) {
+          if (retryLoad && _categoryChannelCache[category]?.isEmpty == true) {
             _categoryChannelCache.remove(category);
           }
           _notifyCategoryRow(category);
@@ -1420,7 +1427,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             // Use Selector to only rebuild when loading state changes, not on every EPG update
-            final epgLoadingState = context.select<IncrementalEpgService, ({bool isDownloading, bool isParsing, bool isLoading, bool hasEpgUrl, bool hasLoadedPrograms})>(
+            final epgLoadingState = context.select<
+                IncrementalEpgService,
+                ({
+                  bool isDownloading,
+                  bool isParsing,
+                  bool isLoading,
+                  bool hasEpgUrl,
+                  bool hasLoadedPrograms
+                })>(
               (epg) => (
                 isDownloading: epg.isDownloading,
                 isParsing: epg.isParsing,
@@ -1434,11 +1449,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final epgBusy = epgLoadingState.isDownloading ||
                 epgLoadingState.isParsing ||
                 epgLoadingState.isLoading;
-            final shouldBlockForEpg =
-                hasDisplayData && epgLoadingState.hasEpgUrl && !epgLoadingState.hasLoadedPrograms;
+            final shouldBlockForEpg = hasDisplayData &&
+                epgLoadingState.hasEpgUrl &&
+                !epgLoadingState.hasLoadedPrograms;
             // Keep overlay visible until we have actual displayable data
-            final categoriesNotReady = channelProvider.isColdStartLoad && 
-                _categoryChannelCache.isEmpty && 
+            final categoriesNotReady = channelProvider.isColdStartLoad &&
+                _categoryChannelCache.isEmpty &&
                 hasChannels;
             final overlayBusy = channelProvider.isLoading ||
                 epgLoadingState.isDownloading ||
@@ -1449,7 +1465,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             // Keep overlay visible for minimum 500ms to prevent flicker
             final now = DateTime.now();
             final minDisplayTime = _overlayShownAt != null &&
-                now.difference(_overlayShownAt!) < const Duration(milliseconds: 500);
+                now.difference(_overlayShownAt!) <
+                    const Duration(milliseconds: 500);
             final allowBlockingUi = !_hasShownContent;
             final showStartupOverlay = allowBlockingUi &&
                 ((channelProvider.isColdStartLoad &&
@@ -1519,7 +1536,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           alignment: Alignment.center,
                           child: _buildColdStartOverlayCard(
                             titleText: epgStatus != null ? 'Loading EPG' : null,
-                            statusText: _replaceEpgWithData(channelProvider.loadingStatus),
+                            statusText: _replaceEpgWithData(
+                                channelProvider.loadingStatus),
                             secondaryStatusText: epgStatus,
                             progress: channelProvider.loadingProgress,
                           ),
@@ -1534,7 +1552,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             Widget buildSkeleton() => _buildSkeletonLoaderTracked(
                   showColdStartOverlay: showStartupOverlay,
                   titleText: epgStatus != null ? 'Loading EPG' : null,
-                  statusText: _replaceEpgWithData(channelProvider.loadingStatus),
+                  statusText:
+                      _replaceEpgWithData(channelProvider.loadingStatus),
                   secondaryStatusText: epgStatus,
                   progress: channelProvider.loadingProgress,
                 );
@@ -1562,12 +1581,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             // FIX: If we have channels but no categories yet, extract them synchronously
             // from the in-memory channel list to avoid showing skeleton forever.
             var hasCategories = _categoryNames.isNotEmpty;
-            
+
             if (!hasCategories && hasChannels && !_loadingCategories) {
               // Synchronously build categories from channels to unblock UI
               final syncCategories = _buildFallbackCategories(channelProvider);
               if (syncCategories.isNotEmpty) {
-                debugLog('LiveTV: Sync-built ${syncCategories.length} categories from channels');
+                debugLog(
+                    'LiveTV: Sync-built ${syncCategories.length} categories from channels');
                 _categoryNames = syncCategories;
                 _categoryNameSet.clear();
                 _categoryNameSet.addAll(_categoryNames);
@@ -1577,7 +1597,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 unawaited(_prefetchInitialCategoryRows());
               }
             }
-
 
             if (!hasCategories &&
                 channelProvider.isLoading &&
@@ -1628,7 +1647,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     // FIX: Don't filter out channels just because EPG is missing!
                     // We want to show the channels ASAP.
                     // final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
-                    
+
                     // Trigger EPG load for visible channels but don't hide them
                     _ensureEpgForChannels(previewList, epgService);
 
@@ -1652,7 +1671,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
                       // Only show skeleton if we haven't shown content yet
                       // This prevents flickering when EPG background refreshes occur
-                      if ((isEpgLoading || isBatchLoading) && !_hasShownContent) {
+                      if ((isEpgLoading || isBatchLoading) &&
+                          !_hasShownContent) {
                         debugLog(
                             'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
                         return buildSkeleton();
@@ -1661,8 +1681,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       // Give EPG a short grace period to load programs if none are present yet
                       // But if we already have programs (just no matches), fail immediately
                       // Skip this if we've already shown content once
-                      final gracefulWait = !epgService.hasLoadedPrograms && timeSinceInit.inSeconds < 5 && !_hasShownContent;
-                      
+                      final gracefulWait = !epgService.hasLoadedPrograms &&
+                          timeSinceInit.inSeconds < 5 &&
+                          !_hasShownContent;
+
                       if (gracefulWait) {
                         debugLog(
                             'LiveTV: EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
@@ -1708,9 +1730,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         _featuredIndex % displayChannels.length;
                     final featuredChannel = displayChannels[safeFeaturedIndex];
 
-
-                    _featuredChannelId =
-                        featuredChannel.epgLookupId;
+                    _featuredChannelId = featuredChannel.epgLookupId;
 
                     // Ensure EPG is triggered for the selected hero
                     if (_featuredChannelId != null &&
@@ -1811,8 +1831,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Fill remaining slots with random channels for variety
     final availableChannels = fallbackChannels
-        .where(
-            (channel) => !addedChannelIds.contains(channel.epgLookupId))
+        .where((channel) => !addedChannelIds.contains(channel.epgLookupId))
         .toList();
 
     // Shuffle for randomness
@@ -1888,7 +1907,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Only stabilize featured list when EPG is ready and we have enough channels
     // This prevents locking in a sparse list before EPG finishes loading
-    final epgReady = !epgService.isLoading && !epgService.isParsing && !epgService.isDownloading;
+    final epgReady = !epgService.isLoading &&
+        !epgService.isParsing &&
+        !epgService.isDownloading;
     final hasEnoughChannels = featuredChannels.length >= 5;
     if (featuredChannels.isNotEmpty && epgReady && hasEnoughChannels) {
       _stableFeaturedChannels = List.from(featuredChannels);
@@ -1942,10 +1963,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // Only block if we have ZERO channels at all.
       return _buildSkeletonLoaderTracked();
     }
-    
 
     final selectionPool = epgHeroCandidates;
     _lastHeroCandidateCount = selectionPool.length;
+    _prefetchTitleLogosForCandidates(selectionPool);
+    _prefetchRowArtworkForChannels(
+      selectionPool.map((candidate) => candidate.channel).toList(),
+      limit: 6,
+    );
     // Removed state mutation of _featuredIndex from build method to avoid infinite loops
     // Safe indexing is handled below with modulo operator
     final selectedHero = _lastHeroCandidateCount == 0
@@ -2034,173 +2059,163 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       );
     }
-                    return SizedBox.expand(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-        // Hero Background & Gradient
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: AnimatedBuilder(
-            animation: _scrollController,
-            child: Builder(builder: (context) {
-              final scrollPos = _safeScrollOffset();
-              final fadeProgress =
-                  (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+    return SizedBox.expand(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Hero Background & Gradient
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroHeight,
+            child: AnimatedBuilder(
+              animation: _scrollController,
+              child: Builder(builder: (context) {
+                final scrollPos = _safeScrollOffset();
+                final fadeProgress =
+                    (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
 
-              return Opacity(
-                opacity: 1.0 - fadeProgress,
-                child: Stack(
-                  children: [
-                    _buildHeroContent(
-                      activeChannel,
-                      currentProgram,
-                      heroImage,
-                      0.0,
-                    ),
-                    // Full-height left scrim to avoid blocky panel edges.
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: const Alignment(-1.0, -0.2),
-                              end: const Alignment(0.6, 0.4),
-                              colors: [
-                                AppTheme.darkBackground.withValues(alpha: 0.88),
-                                AppTheme.darkBackground.withValues(alpha: 0.52),
-                                Colors.transparent,
-                              ],
-                              stops: const [0.0, 0.35, 0.7],
+                return Opacity(
+                  opacity: 1.0 - fadeProgress,
+                  child: Stack(
+                    children: [
+                      _buildHeroContent(
+                        activeChannel,
+                        currentProgram,
+                        heroImage,
+                        0.0,
+                      ),
+                      // Full-height left scrim to avoid blocky panel edges.
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: const Alignment(-1.0, -0.2),
+                                end: const Alignment(0.6, 0.4),
+                                colors: [
+                                  AppTheme.darkBackground
+                                      .withValues(alpha: 0.88),
+                                  AppTheme.darkBackground
+                                      .withValues(alpha: 0.52),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.35, 0.7],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Gradient fade at bottom
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: cardPeek + 24,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              AppTheme.darkBackground
-                                  .withAlpha((0.8 * 255).round()),
-                              AppTheme.darkBackground,
-                            ],
+                      // Gradient fade at bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: cardPeek + 24,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppTheme.darkBackground
+                                    .withAlpha((0.8 * 255).round()),
+                                AppTheme.darkBackground,
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            builder: (context, child) {
-              final scrollPos = _safeScrollOffset();
-              return Transform.translate(
-                offset: Offset(0, -scrollPos),
-                child: child,
-              );
-            },
+                    ],
+                  ),
+                );
+              }),
+              builder: (context, child) {
+                final scrollPos = _safeScrollOffset();
+                return Transform.translate(
+                  offset: Offset(0, -scrollPos),
+                  child: child,
+                );
+              },
+            ),
           ),
-        ),
-        // Content Background Gradient (behind channel rows)
-        // Start gradient halfway down the first card row for better visual blend
-        Positioned(
-          top: contentTop + (_estimateRowHeight(context) * 0.5),
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  AppTheme.darkBackground,
-                  AppTheme.darkBackground,
-                ],
-                stops: [0.0, 0.3, 1.0], // Faster fade since starting lower
+          // Content Background Gradient (behind channel rows)
+          // Start gradient halfway down the first card row for better visual blend
+          Positioned(
+            top: contentTop + (_estimateRowHeight(context) * 0.5),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppTheme.darkBackground,
+                    AppTheme.darkBackground,
+                  ],
+                  stops: [0.0, 0.3, 1.0], // Faster fade since starting lower
+                ),
               ),
             ),
           ),
-        ),
-        // Scrollable content
-        Positioned.fill(
-          child: CustomScrollView(
-            key: const PageStorageKey<String>('live_tv_scroll'),
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: GestureDetector(
-                  onTap: () {
-                    // Tap on hero area to scroll back to top
-                    _scrollController.animateTo(
-                      0.0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                    );
-                  },
-                  child: SizedBox(height: contentTop),
-                ),
-              ),
-              if (_debugRowProbe)
+          // Scrollable content
+          Positioned.fill(
+            child: CustomScrollView(
+              key: const PageStorageKey<String>('live_tv_scroll'),
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: EdgeInsets.only(
-                      left: _sidebarInset() + context.spacingSm(),
-                      right: rightInset,
-                      bottom: context.spacingSm(),
-                    ),
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E7F3B).withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
+                  child: GestureDetector(
+                    onTap: () {
+                      // Tap on hero area to scroll back to top
+                      _scrollController.animateTo(
+                        0.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                      );
+                    },
+                    child: SizedBox(height: contentTop),
+                  ),
+                ),
+                if (_debugRowProbe)
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: EdgeInsets.only(
+                        left: _sidebarInset() + context.spacingSm(),
+                        right: rightInset,
+                        bottom: context.spacingSm(),
+                      ),
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E7F3B).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'DEBUG: SCROLL CONTENT VISIBLE',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ) ??
+                                const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
                       ),
                     ),
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'DEBUG: SCROLL CONTENT VISIBLE',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ) ??
-                          const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
                   ),
-                ),
-              SliverPadding(
-                padding: EdgeInsets.only(
-                  left: 0,
-                  right: rightInset,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: KeyedSubtree(
-                    key: const ValueKey<String>('live_tv_featured_row'),
-                    child: _buildFeaturedRow(context, allChannels),
-                  ),
-                ),
-              ),
-              if (showFailsafeRow)
                 SliverPadding(
                   padding: EdgeInsets.only(
                     left: 0,
@@ -2208,185 +2223,200 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   ),
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
-                      key: const ValueKey<String>('live_tv_failsafe_row'),
-                      child: _buildChannelSection(
-                        context,
-                        'All Channels',
-                        allChannels,
-                        allowCategoryPaging: false,
-                      ),
+                      key: const ValueKey<String>('live_tv_featured_row'),
+                      child: _buildFeaturedRow(context, allChannels),
                     ),
                   ),
                 ),
-              SliverPadding(
-                padding: EdgeInsets.only(
-                  left: 0,
-                  right: rightInset,
-                  bottom: context.spacingXl(),
-                ),
-                sliver: SliverFixedExtentList(
-                  itemExtent: _estimateRowHeight(context),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index < 0 || index >= _categoryNames.length) {
-                        return const SizedBox.shrink();
-                      }
-                      final categoryName = _categoryNames[index];
-                      return KeyedSubtree(
-                        key: ValueKey<String>('live_tv_row_$categoryName'),
-                        child: _buildCategoryRowWidget(
+                if (showFailsafeRow)
+                  SliverPadding(
+                    padding: EdgeInsets.only(
+                      left: 0,
+                      right: rightInset,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: KeyedSubtree(
+                        key: const ValueKey<String>('live_tv_failsafe_row'),
+                        child: _buildChannelSection(
                           context,
-                          categoryName,
-                          index,
-                          // Category rows don't filter by EPG, but first one gets special focus
-                          isFirstRow: false,
-                          isFirstCategoryRow: index == 0,
+                          'All Channels',
+                          allChannels,
+                          allowCategoryPaging: false,
                         ),
-                      );
-                    },
-                    childCount:
-                        math.min(_visibleCategoryCount, _categoryNames.length),
+                      ),
+                    ),
+                  ),
+                SliverPadding(
+                  padding: EdgeInsets.only(
+                    left: 0,
+                    right: rightInset,
+                    bottom: context.spacingXl(),
+                  ),
+                  sliver: SliverFixedExtentList(
+                    itemExtent: _estimateRowHeight(context),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index < 0 || index >= _categoryNames.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final categoryName = _categoryNames[index];
+                        return KeyedSubtree(
+                          key: ValueKey<String>('live_tv_row_$categoryName'),
+                          child: _buildCategoryRowWidget(
+                            context,
+                            categoryName,
+                            index,
+                            // Category rows don't filter by EPG, but first one gets special focus
+                            isFirstRow: false,
+                            isFirstCategoryRow: index == 0,
+                          ),
+                        );
+                      },
+                      childCount: math.min(
+                          _visibleCategoryCount, _categoryNames.length),
+                    ),
                   ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(height: context.spacing(12)),
-              ),
-            ],
+                SliverToBoxAdapter(
+                  child: SizedBox(height: context.spacing(12)),
+                ),
+              ],
+            ),
           ),
-        ),
-        // Hero info overlay
-        Positioned(
-          top: 0,
-          left: 0,
-          right: rightInset,
-          height: contentTop, // Limit height to visible area above channels
-          child: AnimatedBuilder(
-            animation: _scrollController,
-            builder: (context, _) {
-              final scrollPos = _safeScrollOffset();
-              final fadeProgress =
-                  (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
-              final opacity = 1.0 - fadeProgress;
+          // Hero info overlay
+          Positioned(
+            top: 0,
+            left: 0,
+            right: rightInset,
+            height: contentTop, // Limit height to visible area above channels
+            child: AnimatedBuilder(
+              animation: _scrollController,
+              builder: (context, _) {
+                final scrollPos = _safeScrollOffset();
+                final fadeProgress =
+                    (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                final opacity = 1.0 - fadeProgress;
 
-              Widget content;
-              if (opacity <= 0.01) {
-                // Always show focusable tap area when fully faded
-                content = Focus(
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent) {
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter ||
-                          event.logicalKey == LogicalKeyboardKey.space) {
+                Widget content;
+                if (opacity <= 0.01) {
+                  // Always show focusable tap area when fully faded
+                  content = Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent) {
+                        if (event.logicalKey == LogicalKeyboardKey.select ||
+                            event.logicalKey == LogicalKeyboardKey.enter ||
+                            event.logicalKey == LogicalKeyboardKey.space) {
+                          _scrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                          );
+                          return KeyEventResult.handled;
+                        }
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: GestureDetector(
+                      onTap: () {
                         _scrollController.animateTo(
                           0.0,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeOutCubic,
                         );
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: GestureDetector(
-                    onTap: () {
-                      _scrollController.animateTo(
-                        0.0,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutCubic,
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: contentTop,
-                      color: Colors.transparent,
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: contentTop,
+                        color: Colors.transparent,
+                      ),
                     ),
-                  ),
-                );
-              } else {
-                content = Opacity(
-                  opacity: opacity,
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Stack(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(left: contentInset),
-                            child: _buildHeroInfoPanel(
-                              context,
-                              heroInfoWidth,
-                              _buildFeaturedInfoWithFocus(
-                                  context, activeChannel, currentProgram),
+                  );
+                } else {
+                  content = Opacity(
+                    opacity: opacity,
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Stack(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(left: contentInset),
+                              child: _buildHeroInfoPanel(
+                                context,
+                                heroInfoWidth,
+                                _buildFeaturedInfoWithFocus(
+                                    context, activeChannel, currentProgram),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  );
+                }
+
+                return Transform.translate(
+                  offset: Offset(0, -scrollPos),
+                  child: content,
                 );
-              }
-
-              return Transform.translate(
-                offset: Offset(0, -scrollPos),
-                child: content,
-              );
-            },
+              },
+            ),
           ),
-        ),
-        // Channel logo
-        Positioned(
-          top: AppSizes.lg,
-          right: AppSizes.lg,
-          child: Builder(builder: (context) {
-            final scrollPos = _safeScrollOffset();
-            final fadeProgress =
-                (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-            return Opacity(
-              opacity: 1.0 - fadeProgress,
-              child: _buildChannelLogo(context, activeChannel),
-            );
-          }),
-        ),
+          // Channel logo
+          Positioned(
+            top: AppSizes.lg,
+            right: AppSizes.lg,
+            child: Builder(builder: (context) {
+              final scrollPos = _safeScrollOffset();
+              final fadeProgress =
+                  (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+              return Opacity(
+                opacity: 1.0 - fadeProgress,
+                child: _buildChannelLogo(context, activeChannel),
+              );
+            }),
+          ),
 
-        // Small non-intrusive updating indicator for background sync
-        _buildBackgroundUpdateIndicator(context),
-                        ],
-                      ),
-                    );
+          // Small non-intrusive updating indicator for background sync
+          _buildBackgroundUpdateIndicator(context),
+        ],
+      ),
+    );
   }
 
   Widget _buildBackgroundUpdateIndicator(BuildContext context) {
-      final channelProvider = Provider.of<ChannelProvider>(context);
-      if (!channelProvider.isBackgroundSyncing) return const SizedBox.shrink();
+    final channelProvider = Provider.of<ChannelProvider>(context);
+    if (!channelProvider.isBackgroundSyncing) return const SizedBox.shrink();
 
-      return Positioned(
-        top: AppSizes.lg + 60, 
-        right: AppSizes.lg, 
-        child: Container(
-           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-           decoration: BoxDecoration(
-             color: Colors.black.withValues(alpha: 0.6),
-             borderRadius: BorderRadius.circular(16),
-             border: Border.all(color: Colors.white24, width: 1),
-           ),
-           child: Row(
-             mainAxisSize: MainAxisSize.min,
-             children: [
-               const SizedBox(
-                 width: 12, height: 12,
-                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-               ),
-               const SizedBox(width: 8),
-               Text('Updating...', style: AppTypography.smallText(context).copyWith(color: Colors.white)),
-             ],
-           ),
+    return Positioned(
+      top: AppSizes.lg + 60,
+      right: AppSizes.lg,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white24, width: 1),
         ),
-      );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            Text('Updating...',
+                style: AppTypography.smallText(context)
+                    .copyWith(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
   }
-
-
 
   Widget _buildEpgError(String message) {
     return Center(
@@ -2424,9 +2454,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildFeaturedInfo(
       BuildContext context, Channel channel, Program? program) {
-    final title = program == null
-        ? channel.name
-        : _displayProgramTitle(program, channel);
+    final title =
+        program == null ? channel.name : _displayProgramTitle(program, channel);
     final description = program?.description ?? 'No program data available.';
     final timeRange = program != null
         ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
@@ -2687,8 +2716,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // 1. Check service for cached artwork
     final cached = _artworkService.getArtwork(program.id);
-    final cachedUrl =
-        _normalizeArtworkUrl(cached, isHero: false);
+    final cachedUrl = _normalizeArtworkUrl(cached, isHero: false);
     if (cachedUrl != null &&
         cachedUrl.isNotEmpty &&
         _isValidProgramArtwork(cachedUrl, channel,
@@ -2701,10 +2729,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // 2. Check service for title-based cached artwork
-    final byTitle =
-        _artworkService.getArtworkByTitle(program, channel);
-    final byTitleUrl =
-        _normalizeArtworkUrl(byTitle, isHero: false);
+    final byTitle = _artworkService.getArtworkByTitle(program, channel);
+    final byTitleUrl = _normalizeArtworkUrl(byTitle, isHero: false);
     if (byTitleUrl != null &&
         byTitleUrl.isNotEmpty &&
         _isValidProgramArtwork(byTitleUrl, channel,
@@ -2718,24 +2744,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // 3. Trigger fetch if needed
     if (allowPrefetch) {
-       _artworkService.ensureFreshProgramArtwork(program, channel, highPriority: highPriority);
+      _artworkService.ensureFreshProgramArtwork(program, channel,
+          highPriority: highPriority);
     }
 
     // 4. Fall back to EPG-provided art
-      final programImage =
-          _normalizeArtworkUrl(program.imageUrl, isHero: false);
-      if (_isValidProgramArtwork(
-        programImage,
-        channel,
-        programTitle: program.title,
-        source: 'epg',
-      )) {
-        final normalized = normalizeImageUrl(programImage!);
-        _logArtworkDecision(
-          'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
-        );
-        return normalized;
-      }
+    final programImage = _normalizeArtworkUrl(program.imageUrl, isHero: false);
+    if (_isValidProgramArtwork(
+      programImage,
+      channel,
+      programTitle: program.title,
+      source: 'epg',
+    )) {
+      final normalized = normalizeImageUrl(programImage!);
+      _logArtworkDecision(
+        'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
+      );
+      return normalized;
+    }
 
     return null;
   }
@@ -2816,11 +2842,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    // Allow poster/portrait artwork; UI will render it with adaptive layouts.
+    // Reject poster/portrait artwork to keep hero/cards landscape only.
     if (_isLikelyPosterUrl(url)) {
       _logArtworkDecision(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=allow_poster',
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_poster',
       );
+      return false;
     }
     // Avoid title logos (clearart) for backgrounds.
     if (_isLikelyTitleLogoUrl(url)) {
@@ -2905,15 +2932,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
-
-
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
 
     // Check TMDB title logo cache first
-    final cachedUrl = _artworkService.getTitleLogo(program.id);
-    if (_isValidTitleLogo(cachedUrl, channel) &&
-        _isLikelyTitleLogoUrl(cachedUrl!)) {
+    final cachedUrl = _artworkService.getTitleLogoForProgram(program, channel);
+    if (_isValidTitleLogo(cachedUrl, channel)) {
       return cachedUrl;
     }
 
@@ -2928,7 +2952,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Trigger async fetch if not already requested
     if ((_tmdbEnabled || _fanartEnabled || _sportsDbEnabled) &&
-        !_artworkService.isTitleLogoRequestPending(program.id)) {
+        !_artworkService.isTitleLogoRequestPendingForProgram(
+            program, channel)) {
       unawaited(_artworkService.fetchTitleLogo(program, channel));
     }
 
@@ -2999,9 +3024,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return _applyTmdbSize(url, size);
   }
 
-
-
-
   bool _isHighResHeroImage(String url) {
     if (url.isEmpty) return false;
     final lower = url.toLowerCase();
@@ -3019,9 +3041,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String _displayProgramTitle(Program program, Channel? channel) {
     final trimmed = program.title.trim();
     if (trimmed.isEmpty) return program.title;
-    final isNews = channel != null && ProgramClassifier.isNewsProgram(program, channel);
+    final isNews =
+        channel != null && ProgramClassifier.isNewsProgram(program, channel);
     final isSports = ProgramClassifier.isSportsProgram(program, channel);
-    final isMovie = channel != null && ProgramClassifier.isMovieProgram(program, channel);
+    final isMovie =
+        channel != null && ProgramClassifier.isMovieProgram(program, channel);
     return EPGMatchingUtils.normalizeForDisplayTitle(
       trimmed,
       stripEpisodeSubtitle: !(isNews || isSports || isMovie),
@@ -3034,22 +3058,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     debugLog(message);
   }
 
-
-
-
-
   void _trackCachedCategory(String category) {
     // Only tracking for cache size management now
     if (_categoryChannelCache.containsKey(category)) {
       // handled by map
     }
   }
-
-
-
-
-
-
 
   List<_HeroCandidate> _buildHeroCandidates(
     List<Channel> channels,
@@ -3108,8 +3122,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Only return artwork if we have a specific program from the EPG
     if (program != null) {
       // 1. Try cached TMDB program artwork
-      final cached =
-          _normalizeArtworkUrl(_artworkService.getArtwork(program.id), isHero: true);
+      final cached = _normalizeArtworkUrl(
+          _artworkService.getArtwork(program.id),
+          isHero: true);
       if (_isValidProgramArtwork(
         cached,
         channel,
@@ -3207,10 +3222,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-
-
-
-
   bool _shouldPrefetchArt(
     BuildContext context,
     String sectionKey,
@@ -3279,9 +3290,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelSection(
       BuildContext context, String title, List<Channel> channels,
-      {bool isFirstRow = false, 
-       bool isFirstCategoryRow = false,
-       bool allowCategoryPaging = true}) {
+      {bool isFirstRow = false,
+      bool isFirstCategoryRow = false,
+      bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
     final epgService = context.read<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
@@ -3351,13 +3362,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const titleFontSize = 11.0;
     const timeFontSize = 10.0;
     const lineHeight = 1.1;
-    final infoHeight = infoGapAboveTitle + 
-        (titleFontSize * lineHeight) + 
-        infoGapBelowTitle + 
+    final infoHeight = infoGapAboveTitle +
+        (titleFontSize * lineHeight) +
+        infoGapBelowTitle +
         (timeFontSize * lineHeight);
     // Tight row height - no extra padding
-    final rowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5;
+    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + _sidebarInset();
 
     final sectionKey = title;
@@ -3380,14 +3390,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         if (rowController.hasClients) {
-          // For featured row, start slightly scrolled to show card peeking effect
-          if (isFirstRow && filteredChannels.length > 1) {
-            // Scroll to show partial peek of next card (about 20% of card width)
-            final peekOffset = cardWidth * 0.2;
-            rowController.jumpTo(peekOffset);
-          } else {
-            rowController.jumpTo(0);
-          }
+          rowController.jumpTo(0);
         }
       });
     }
@@ -3395,7 +3398,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingXs() * 0.5),
+          padding: EdgeInsets.only(
+              left: rowInset, bottom: context.spacingXs() * 0.5),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
@@ -3486,10 +3490,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // FALLBACK: If cache is empty, try sync load from ChannelProvider in-memory list
         var effectiveChannels = channels;
         if (effectiveChannels.isEmpty) {
-          final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+          final channelProvider =
+              Provider.of<ChannelProvider>(context, listen: false);
           final syncChannels = channelProvider.getFilteredChannels(
-              category: category,
-              limit: 20);
+              category: category, limit: 20);
           if (syncChannels.isNotEmpty) {
             _categoryChannelCache[category] = syncChannels;
             effectiveChannels = syncChannels;
@@ -3604,9 +3608,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const titleFontSize = 11.0;
     const timeFontSize = 10.0;
     const lineHeight = 1.1;
-    final infoHeight = infoGapAboveTitle + 
-        (titleFontSize * lineHeight) + 
-        infoGapBelowTitle + 
+    final infoHeight = infoGapAboveTitle +
+        (titleFontSize * lineHeight) +
+        infoGapBelowTitle +
         (timeFontSize * lineHeight);
     // Account for category header + spacers (no underline anymore)
     final captionStyle = AppTypography.caption(context);
@@ -3617,18 +3621,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowBottomSpacing = context.spacingXs() * 0.5;
 
     // Total calculated height of one full row block in the list
-    final cardRowHeight =
-        cardHeight + infoHeight + focusExtra * 0.5;
-    final totalHeight = cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
+    final cardRowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    final totalHeight =
+        cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
     // Safety minimum to prevent zero-height rows if measurements fail
     return math.max(120.0, totalHeight);
   }
 
   double _sidebarInset() => AppSpacing.sidebarCollapsedWidth;
-
-
-
-
 
   void _prefetchEpgForRow(String category, List<Channel> channels) {
     if (_epgPrefetchedRows.contains(category)) return;
@@ -3648,6 +3648,93 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         channelNames: channelNames,
       ));
     });
+  }
+
+  void _prefetchTitleLogosForCandidates(
+    List<_HeroCandidate> candidates, {
+    int limit = 4,
+  }) {
+    if (candidates.isEmpty) return;
+    var queued = 0;
+    for (final candidate in candidates) {
+      if (queued >= limit) break;
+      final program = candidate.program;
+      if (program == null) continue;
+
+      final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
+      if (normalized.isEmpty) continue;
+      final key = '${candidate.channel.epgLookupId}|$normalized';
+
+      if (_prefetchedTitleLogoKeys.contains(key)) continue;
+
+      final cached =
+          _artworkService.getTitleLogoForProgram(program, candidate.channel);
+      if (cached != null && cached.isNotEmpty) {
+        _prefetchedTitleLogoKeys.add(key);
+        _prefetchedTitleLogoOrder.add(key);
+        _trimPrefetchedTitleLogos();
+        continue;
+      }
+
+      if (_artworkService.isTitleLogoRequestPendingForProgram(
+          program, candidate.channel)) {
+        continue;
+      }
+
+      _prefetchedTitleLogoKeys.add(key);
+      _prefetchedTitleLogoOrder.add(key);
+      _trimPrefetchedTitleLogos();
+      unawaited(_artworkService.fetchTitleLogo(program, candidate.channel));
+      queued++;
+    }
+  }
+
+  void _trimPrefetchedTitleLogos() {
+    const maxEntries = 120;
+    while (_prefetchedTitleLogoOrder.length > maxEntries) {
+      final removed = _prefetchedTitleLogoOrder.removeFirst();
+      _prefetchedTitleLogoKeys.remove(removed);
+    }
+  }
+
+  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 8}) {
+    if (channels.isEmpty) return;
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    var queued = 0;
+    for (final channel in channels) {
+      if (queued >= limit) break;
+      final program = epgService.getCurrentProgram(
+        channel.epgLookupId,
+        channelName: channel.epgLookupName,
+        groupTitle: channel.groupTitle,
+      );
+      if (program == null) continue;
+
+      final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
+      if (normalized.isEmpty) continue;
+
+      final key = '${channel.epgLookupId}|$normalized';
+      if (_prefetchedArtworkKeys.contains(key)) continue;
+
+      _prefetchedArtworkKeys.add(key);
+      _prefetchedArtworkOrder.add(key);
+      _trimPrefetchedArtwork();
+      _artworkService.ensureFreshProgramArtwork(
+        program,
+        channel,
+        highPriority: false,
+      );
+      queued++;
+    }
+  }
+
+  void _trimPrefetchedArtwork() {
+    const maxEntries = 200;
+    while (_prefetchedArtworkOrder.length > maxEntries) {
+      final removed = _prefetchedArtworkOrder.removeFirst();
+      _prefetchedArtworkKeys.remove(removed);
+    }
   }
 
   Widget _buildChannelCard(
@@ -3676,8 +3763,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             if (hasFocus) {
               // Update focused index without triggering full screen rebuild if possible
               _focusedIndexBySection[sectionKey] = index;
-              _lastFocusedCardKey =
-                  '$sectionKey|${channel.epgLookupId}|$index';
+              _lastFocusedCardKey = '$sectionKey|${channel.epgLookupId}|$index';
               _scrollToHeroPeekOnFocus();
               onItemFocus?.call();
             } else if (_focusedIndexBySection[sectionKey] == index) {
@@ -3708,8 +3794,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   }
                   return KeyEventResult.handled;
                 }
-                final moved =
-                    FocusScope.of(context).focusInDirection(TraversalDirection.up);
+                final moved = FocusScope.of(context)
+                    .focusInDirection(TraversalDirection.up);
                 if (!moved && _scrollController.hasClients) {
                   final nextOffset = (_safeScrollOffset() - rowHeight).clamp(
                     0.0,
@@ -3723,7 +3809,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 }
                 return KeyEventResult.handled;
               }
-              if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index == 0) {
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                  index == 0) {
                 if (rowScrollController.hasClients &&
                     rowScrollController.offset >
                         rowScrollController.position.minScrollExtent + 1) {
@@ -3827,7 +3914,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
     );
   }
-
 
   Widget _buildCardContent(
       BuildContext context,
@@ -4160,7 +4246,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     if (effectiveLogoUrl != null && effectiveLogoUrl.isNotEmpty) {
       final url = normalizeImageUrl(effectiveLogoUrl);
-      if (ImageFailureCache.shouldSkip(url)) {
+      if (ImageFailureCache.shouldSkipLogo(url)) {
         return Container(
           decoration: BoxDecoration(
             color: Colors.white.withAlpha((0.1 * 255).round()),
@@ -4553,8 +4639,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
-
   String _formatTime(DateTime dt) {
     final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
     final period = dt.hour < 12 ? 'AM' : 'PM';
@@ -4596,7 +4680,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Clear hero image cache to free memory
 
-
     if (!mounted) return;
     try {
       debugLog('Navigating to player screen...');
@@ -4628,8 +4711,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     MemoryManager.clearCaches();
     MemoryManager.forceGarbageCollection();
     _categoryChannelCache.clear();
-
-
   }
 
   Widget _buildHeroContent(
@@ -4671,7 +4752,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // This ensures the user sees "Loading..." instead of a partially empty screen.
     final epgService = context.read<IncrementalEpgService>();
     final isInitialLoad = epgService.isLoading || epgService.isParsing;
-    
+
     // Check if we have actual PROGRAM data, not just channel definitions.
     // If parsing is happening and we have no programs yet, we must show the loader.
     final hasPrograms = epgService.hasLoadedPrograms;
@@ -4882,7 +4963,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     memCacheWidth: cacheWidth,
                     memCacheHeight: cacheHeight,
                     imageBuilder: (context, imageProvider) {
-
                       ImageFailureCache.recordSuccess(normalizedHeroUrl);
                       ImageLoadProbe.recordSuccess(
                           normalizedHeroUrl, 'hero_poster');
@@ -4931,7 +5011,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (ProgramClassifier.isMusicProgram(currentProgram, featuredChannel)) {
       return _buildMusicHeroFallback(featuredChannel);
     }
-    if (ProgramClassifier.isDocumentaryProgram(currentProgram, featuredChannel)) {
+    if (ProgramClassifier.isDocumentaryProgram(
+        currentProgram, featuredChannel)) {
       return _buildDocumentaryHeroFallback(featuredChannel);
     }
     if (ProgramClassifier.isMovieProgram(currentProgram, featuredChannel)) {
@@ -4939,8 +5020,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     return _buildLogoHeroFallback(featuredChannel);
   }
-
-
 
   Widget _buildColdStartOverlayCard({
     String? titleText,
@@ -5018,8 +5097,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  
-
   Widget _buildSkeletonLoaderTracked({
     bool? showColdStartOverlay,
     String? titleText,
@@ -5041,8 +5118,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         epgService.isLoading;
     if (epgBusy) {
       resolvedTitle ??= 'Loading EPG';
-      resolvedStatus = _replaceEpgWithData(
-          epgService.epgProgressLabel ?? resolvedStatus);
+      resolvedStatus =
+          _replaceEpgWithData(epgService.epgProgressLabel ?? resolvedStatus);
       if (epgService.epgProgress > 0.0) {
         resolvedProgress = epgService.epgProgress;
       }
@@ -5057,7 +5134,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-            Widget _buildSkeletonLoader({
+  Widget _buildSkeletonLoader({
     bool showColdStartOverlay = false,
     String? titleText,
     String? statusText,
@@ -5325,31 +5402,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
-
-
-
-
-
-  double _contentTopForLayout(BuildContext context, double heroHeight, double cardPeek) {
+  double _contentTopForLayout(
+      BuildContext context, double heroHeight, double cardPeek) {
     return heroHeight - cardPeek;
   }
 
-  int _initialRowVisibleCount(BuildContext context, double cardWidth, double rowInset) {
+  int _initialRowVisibleCount(
+      BuildContext context, double cardWidth, double rowInset) {
     if (cardWidth <= 0) return 6;
     final width = MediaQuery.of(context).size.width - rowInset;
     return (width / cardWidth).ceil() + 1;
   }
 
-
-
-
-
-
-
   void _showEpgChannelSelector(Channel channel) async {
     if (!mounted) return;
-    
+
     // Use the helper from epg_channel_selector_dialog.dart
     final result = await showEpgChannelSelector(
       context: context,
@@ -5358,7 +5425,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     if (!mounted || result == null) return;
 
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
 
     if (result.isEmpty) {
       unawaited(epgService.removeManualMapping(channel.epgLookupId));
@@ -5390,8 +5458,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       channelName: channel.epgLookupName,
       // forceRefresh parameter removed as it does not exist
     ));
-     
-     // Force generic rebuild if needed
-     if (mounted) setState(() {});
+
+    // Force generic rebuild if needed
+    if (mounted) setState(() {});
   }
 }

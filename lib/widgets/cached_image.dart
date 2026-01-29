@@ -12,6 +12,7 @@ class CachedImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Alignment alignment;
   final Widget? placeholder;
   final Widget? errorWidget;
   final BorderRadius? borderRadius;
@@ -24,6 +25,7 @@ class CachedImage extends StatelessWidget {
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
@@ -41,15 +43,19 @@ class CachedImage extends StatelessWidget {
     int? finalMemCacheWidth = memCacheWidth;
     int? finalMemCacheHeight = memCacheHeight;
     if (finalMemCacheWidth == null && width != null && width!.isFinite) {
-      finalMemCacheWidth = (width! * MediaQuery.of(context).devicePixelRatio).round();
+      finalMemCacheWidth =
+          (width! * MediaQuery.of(context).devicePixelRatio).round();
     }
     if (finalMemCacheHeight == null && height != null && height!.isFinite) {
-      finalMemCacheHeight = (height! * MediaQuery.of(context).devicePixelRatio).round();
+      finalMemCacheHeight =
+          (height! * MediaQuery.of(context).devicePixelRatio).round();
     }
     // If still null (e.g. full-screen hero), limit to screen size to avoid huge decodes
     final screen = MediaQuery.of(context).size;
-    final screenWidthPx = (screen.width * MediaQuery.of(context).devicePixelRatio).round();
-    final screenHeightPx = (screen.height * MediaQuery.of(context).devicePixelRatio).round();
+    final screenWidthPx =
+        (screen.width * MediaQuery.of(context).devicePixelRatio).round();
+    final screenHeightPx =
+        (screen.height * MediaQuery.of(context).devicePixelRatio).round();
     finalMemCacheWidth ??= screenWidthPx;
     finalMemCacheHeight ??= screenHeightPx;
 
@@ -61,6 +67,7 @@ class CachedImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      alignment: alignment,
       memCacheWidth: finalMemCacheWidth,
       memCacheHeight: finalMemCacheHeight,
       imageBuilder: (context, imageProvider) {
@@ -71,12 +78,13 @@ class CachedImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
+          alignment: alignment,
           filterQuality: FilterQuality.low,
           gaplessPlayback: true,
         );
       },
-      placeholder: (context, url) => placeholder ??
-          _buildGradientFallback(width, height, Icons.image),
+      placeholder: (context, url) =>
+          placeholder ?? _buildGradientFallback(width, height, Icons.image),
       errorWidget: (context, url, error) {
         ImageFailureCache.recordFailure(url, error);
         ImageLoadProbe.recordFailure(url, 'cached_image', error);
@@ -131,10 +139,10 @@ class CachedChannelLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  if (logoUrl == null || logoUrl!.isEmpty) {
+    if (logoUrl == null || logoUrl!.isEmpty) {
       return _buildLogoPlaceholder(size, fallbackIcon);
     }
-    if (ImageFailureCache.shouldSkip(logoUrl!)) {
+    if (ImageFailureCache.shouldSkipLogo(logoUrl!)) {
       return _buildLogoPlaceholder(size, fallbackIcon);
     }
 

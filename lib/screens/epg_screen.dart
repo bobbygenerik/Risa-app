@@ -192,8 +192,7 @@ class _EPGScreenState extends State<EPGScreen>
           playlistId != currentPlaylistId) {
         return;
       }
-      final provider =
-          Provider.of<ChannelProvider>(context, listen: false);
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
       if (snapshotChannelCount != null &&
           provider.channelCount > 0 &&
           (snapshotChannelCount - provider.channelCount).abs() >
@@ -302,8 +301,7 @@ class _EPGScreenState extends State<EPGScreen>
     Program? current;
     Program? next;
     for (final program in programs) {
-      if (program.startTime.isBefore(now) &&
-          program.endTime.isAfter(now)) {
+      if (program.startTime.isBefore(now) && program.endTime.isAfter(now)) {
         current = program;
       } else if (program.startTime.isAfter(now)) {
         final nextProgram = next;
@@ -745,16 +743,17 @@ class _EPGScreenState extends State<EPGScreen>
                 _scheduleSnapshotSave(allFilteredChannels);
 
                 // FIX: Do NOT update state during build. Use the data directly.
-                // We only update the state when the page changes or filters change, 
+                // We only update the state when the page changes or filters change,
                 // which is handled by the controllers, not the build method.
-                if (_epgState.paginatedChannels.isEmpty && allFilteredChannels.isNotEmpty) {
-                   // Initial seed only - safe to defer
-                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        _epgState.setHasMore(hasMore);
-                        _epgState.updatePaginatedChannels(allFilteredChannels);
-                      }
-                   });
+                if (_epgState.paginatedChannels.isEmpty &&
+                    allFilteredChannels.isNotEmpty) {
+                  // Initial seed only - safe to defer
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _epgState.setHasMore(hasMore);
+                      _epgState.updatePaginatedChannels(allFilteredChannels);
+                    }
+                  });
                 }
 
                 // Use the fresh data directly for this frame
@@ -1003,6 +1002,8 @@ class _EPGScreenState extends State<EPGScreen>
     bool isLoading = false,
     bool showCenteredUpdating = false,
   }) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return Container(
       width: context.categoryBarWidth(),
       decoration: const BoxDecoration(
@@ -1017,6 +1018,7 @@ class _EPGScreenState extends State<EPGScreen>
                   key: const PageStorageKey<String>('epg_category_list'),
                   physics: const BouncingScrollPhysics(),
                   primary: false,
+                  itemExtent: rowHeight + rowGap,
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final category = categories[index];
@@ -1075,6 +1077,8 @@ class _EPGScreenState extends State<EPGScreen>
     required VoidCallback onTap,
     bool isFirst = false,
   }) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return Focus(
       focusNode: isFirst ? _firstCategoryFocus : null,
       canRequestFocus: true,
@@ -1105,18 +1109,17 @@ class _EPGScreenState extends State<EPGScreen>
             duration: const Duration(milliseconds: 90),
             curve: Curves.easeOut,
             scale: isFocused ? 1.05 : 1.0,
-              child: AnimatedContainer(
+            child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
-              height: AppSpacing.epgRowHeight + 4.0, // Match header row height
+              height: rowHeight,
               margin: EdgeInsets.only(
                 left: context.spacingXs(),
                 right: context.spacingXs(),
-                bottom: 0,
+                bottom: rowGap,
               ),
               padding: EdgeInsets.symmetric(
                 horizontal: context.spacingXs(),
-                vertical: context.spacingXs(),
               ),
               decoration: BoxDecoration(
                 color: (isFocused || isSelected)
@@ -1125,7 +1128,8 @@ class _EPGScreenState extends State<EPGScreen>
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused
                     ? Border.all(color: AppTheme.focusBorder, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                    : Border.all(
+                        color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
               child: Center(
                 child: Text(
@@ -1205,7 +1209,7 @@ class _EPGScreenState extends State<EPGScreen>
                 children: [
                   // Time header (scrolls horizontally)
                   Container(
-                    height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
+                    height: AppSpacing.epgRowHeight,
                     margin: const EdgeInsets.only(bottom: 4),
                     child: SingleChildScrollView(
                       controller: _timeHeaderScrollController,
@@ -1262,11 +1266,13 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   Widget _buildChannelColumn(List<Channel> channels) {
+    const rowHeight = AppSpacing.epgRowHeight;
+    const rowGap = 4.0;
     return Column(
       children: [
         Container(
-          height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
-          margin: const EdgeInsets.only(bottom: 4, right: 4),
+          height: rowHeight,
+          margin: const EdgeInsets.only(bottom: rowGap, right: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
@@ -1323,9 +1329,10 @@ class _EPGScreenState extends State<EPGScreen>
     final startHour = now.hour; // Start from current hour, not 1 hour before
     final hoursToShow = 12;
     final cellWidth = 240.0;
+    const rowHeight = AppSpacing.epgRowHeight;
 
     return SizedBox(
-      height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
+      height: rowHeight,
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -1333,7 +1340,7 @@ class _EPGScreenState extends State<EPGScreen>
 
           return Container(
             width: cellWidth,
-            height: AppSpacing.epgRowHeight + 4.0, // Match channel item height
+            height: rowHeight,
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
@@ -1806,8 +1813,8 @@ class _EPGScreenState extends State<EPGScreen>
 
                         final epgId = filteredIds[adjustedIndex];
                         final preview = epgService.getChannelPreview(epgId);
-                        final currentMapping = epgService
-                            .getManualMapping(channel.epgLookupId);
+                        final currentMapping =
+                            epgService.getManualMapping(channel.epgLookupId);
                         final isCurrentlyMapped = currentMapping == epgId;
                         final isSuggested = showingSuggestions &&
                             adjustedIndex < suggestions.length;
@@ -1950,8 +1957,7 @@ class _EPGScreenState extends State<EPGScreen>
   Future<void> _setEpgMapping(Channel channel, String epgChannelId) async {
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
-    await epgService.setManualMapping(
-        channel.epgLookupId, epgChannelId);
+    await epgService.setManualMapping(channel.epgLookupId, epgChannelId);
 
     if (mounted) {
       showAppSnackBar(

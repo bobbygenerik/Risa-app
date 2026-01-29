@@ -70,9 +70,16 @@ class ContentHero extends StatelessWidget {
             child: CachedImage(
               imageUrl: heroImage!,
               fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
               width: double.infinity,
               height: double.infinity,
               errorWidget: _buildFallbackBackground(context),
+            ),
+          ),
+          // Left scrim for info box readability with feathered diagonal edge
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _HeroLeftScrimPainter(),
             ),
           ),
           // Overlay gradient
@@ -111,7 +118,7 @@ class ContentHero extends StatelessWidget {
           ],
         ),
       ),
-        child: Center(
+      child: Center(
         child: Icon(
           Icons.tv,
           size: 80,
@@ -381,6 +388,92 @@ class HeroInfoBox extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HeroLeftScrimPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double width = size.width;
+    final double height = size.height;
+
+    final double baseWidth = width * 0.38;
+    final double extraWidth = width * 0.05;
+    final double curvePull = width * 0.12;
+    final double topInset = height * 0.05;
+    final double bottomInset = height * 0.08;
+
+    final Path edgePath = Path()
+      ..moveTo(baseWidth, topInset)
+      ..quadraticBezierTo(
+        baseWidth + curvePull,
+        height * 0.5,
+        baseWidth - curvePull * 0.15,
+        height - bottomInset,
+      );
+
+    final Path scrimShape = Path()
+      ..moveTo(0, 0)
+      ..lineTo(baseWidth, 0)
+      ..lineTo(baseWidth, topInset)
+      ..addPath(edgePath, Offset.zero)
+      ..lineTo(0, height)
+      ..close();
+
+    final Paint fillPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF050608),
+          Color(0xD9050608),
+          Color(0x00050608),
+        ],
+        stops: [0.0, 0.78, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, baseWidth + extraWidth, height));
+
+    canvas.drawPath(scrimShape, fillPaint);
+
+    final Path featherBand = Path()
+      ..moveTo(baseWidth - curvePull * 0.05, topInset)
+      ..quadraticBezierTo(
+        baseWidth + curvePull * 0.95,
+        height * 0.52,
+        baseWidth - curvePull * 0.3,
+        height - bottomInset,
+      )
+      ..lineTo(baseWidth + extraWidth, height - bottomInset)
+      ..quadraticBezierTo(
+        baseWidth + extraWidth + curvePull * 0.4,
+        height * 0.52,
+        baseWidth + extraWidth - curvePull * 0.2,
+        topInset,
+      )
+      ..close();
+
+    final Paint featherPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          const Color(0xCC050608),
+          const Color(0x7A050608),
+          const Color(0x00050608),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(
+        Rect.fromLTWH(
+          baseWidth - curvePull * 0.3,
+          0,
+          extraWidth + curvePull * 1.4,
+          height,
+        ),
+      );
+
+    canvas.drawPath(featherBand, featherPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// EPG-enhanced hero that automatically fetches current program data

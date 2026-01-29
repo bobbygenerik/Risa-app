@@ -60,7 +60,8 @@ class EPGChannelSidebar extends StatelessWidget {
         physics: const ClampingScrollPhysics(),
         itemCount: channels.length + (isLoadingMore ? 1 : 0),
         itemExtent: rowHeight + rowGap,
-        cacheExtent: (rowHeight + rowGap) * 15, // Cache more items for smoother scrolling
+        cacheExtent: (rowHeight + rowGap) *
+            15, // Cache more items for smoother scrolling
         addAutomaticKeepAlives: true, // Keep channel widgets alive
         itemBuilder: (context, index) {
           if (index >= channels.length) {
@@ -120,7 +121,7 @@ class EPGChannelItem extends StatefulWidget {
 
 class _EPGChannelItemState extends State<EPGChannelItem> {
   bool _isFocused = false;
-  
+
   @override
   Widget build(BuildContext context) {
     const rowHeight = AppSpacing.epgRowHeight;
@@ -167,7 +168,7 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
         onLongPress: widget.onLongPress,
         child: Container(
           height: rowHeight,
-          margin: const EdgeInsets.only(bottom: rowGap, right: 2),
+          margin: const EdgeInsets.only(bottom: rowGap, right: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
@@ -283,8 +284,9 @@ class EPGProgramRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelKey = channel.epgLookupId;
-    epgService.ensureChannelLoaded(channelKey, channelName: channel.epgLookupName);
-    
+    epgService.ensureChannelLoaded(channelKey,
+        channelName: channel.epgLookupName);
+
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     const cellWidth = 240.0;
@@ -310,8 +312,9 @@ class EPGProgramRow extends StatelessWidget {
       return program.isCurrentlyPlaying;
     });
 
-    final isBusy =
-        epgService.isLoading || epgService.isParsing || epgService.isDownloading;
+    final isBusy = epgService.isLoading ||
+        epgService.isParsing ||
+        epgService.isDownloading;
     return Container(
       height: rowHeight,
       width: totalWidth,
@@ -438,23 +441,20 @@ class EPGVirtualProgramRow extends StatelessWidget {
 
         final focusNode =
             isFirstRow && programIndex == 0 ? firstProgramFocusNode : null;
-        final resolvedFocusNode = (focusProgramIndex != null &&
-                focusProgramIndex == programIndex)
-            ? currentProgramFocusNode
-            : focusNode;
+        final resolvedFocusNode =
+            (focusProgramIndex != null && focusProgramIndex == programIndex)
+                ? currentProgramFocusNode
+                : focusNode;
         return Positioned(
           left: leftOffset,
           top: 0,
           height: rowHeight,
           width: width,
-          child: Container(
-            margin: const EdgeInsets.only(right: 2),
-            child: EPGProgramCell(
-              program: program,
-              onTap: () => onProgramTap(program),
-              focusNode: resolvedFocusNode,
-              onMoveLeft: onMoveLeft,
-            ),
+          child: EPGProgramCell(
+            program: program,
+            onTap: () => onProgramTap(program),
+            focusNode: resolvedFocusNode,
+            onMoveLeft: onMoveLeft,
           ),
         );
       }).toList(),

@@ -147,10 +147,14 @@ class LiveTvArtworkService {
 
   /// Get cached title logo for a program.
   String? getTitleLogo(String programId) => _programTitleLogos[programId];
+  String? getTitleLogoForProgram(Program program, Channel channel) =>
+      _programTitleLogos[_titleLogoCacheKey(program, channel)];
 
   /// Check if a title logo request is pending.
   bool isTitleLogoRequestPending(String programId) =>
       _titleLogoRequests.contains(programId);
+  bool isTitleLogoRequestPendingForProgram(Program program, Channel channel) =>
+      _titleLogoRequests.contains(_titleLogoCacheKey(program, channel));
 
   /// Get the channel lookup for a program.
   Channel? getChannelForProgram(String programId) =>
@@ -683,7 +687,7 @@ class LiveTvArtworkService {
 
   /// Request a title logo for a program.
   Future<void> fetchTitleLogo(Program program, Channel channel) async {
-    final cacheKey = program.id;
+    final cacheKey = _titleLogoCacheKey(program, channel);
     if (_titleLogoRequests.contains(cacheKey)) return;
     _titleLogoRequests.add(cacheKey);
 
@@ -703,9 +707,11 @@ class LiveTvArtworkService {
       final isValid = _isValidTitleLogo(logo, channel);
       final stored = isValid ? (logo ?? '') : '';
       _setProgramTitleLogo(cacheKey, stored);
+      _setProgramTitleLogo(program.id, stored);
     } catch (e) {
       debugLog('Error fetching title logo for "${program.title}": $e');
       _setProgramTitleLogo(cacheKey, '');
+      _setProgramTitleLogo(program.id, '');
     } finally {
       _titleLogoRequests.remove(cacheKey);
     }
@@ -757,7 +763,7 @@ class LiveTvArtworkService {
 
     // Fallback to Fanart.tv
     try {
-      final fanartLogo = await _fetchFanartArtwork(program);
+      final fanartLogo = await _fetchFanartTitleLogo(program);
       if (fanartLogo != null && fanartLogo.isNotEmpty) {
         return fanartLogo;
       }
@@ -765,6 +771,33 @@ class LiveTvArtworkService {
       debugLog('Fanart logo failed: $e');
     }
 
+    return null;
+  }
+
+  String _titleLogoCacheKey(Program program, Channel channel) {
+    final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
+    final isSports = _isSportsProgram(program, channel);
+    return '${isSports ? 'sports' : 'general'}|$normalized';
+  }
+
+  Future<String?> _fetchFanartTitleLogo(Program program) async {
+    final channel = _programChannelLookup[program.id];
+    final queryTitles = _buildArtworkQueryTitles(program, channel);
+    for (final queryTitle in queryTitles) {
+      final details = await _resolveTmdbDetails(queryTitle);
+      final tmdbId = details?['tmdbId'] as int?;
+      final mediaType = (details?['mediaType'] as String?)?.toLowerCase();
+      if (tmdbId == null || mediaType == null) {
+        continue;
+      }
+      return FanartService.getTitleLogo(
+        tmdbId,
+        isTv: mediaType == 'tv',
+      );
+    }
+    _logArtworkDecision(
+      'LiveTV artwork: source=fanart_logo program="${program.title}" result=missing_tmdb_details',
+    );
     return null;
   }
 

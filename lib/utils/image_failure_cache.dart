@@ -40,6 +40,33 @@ class ImageFailureCache {
     return DateTime.now().difference(last) < _cooldown;
   }
 
+  static bool shouldSkipLogo(String url) {
+    if (url.isEmpty) return true;
+    final disableUntil = _globalDisableUntil;
+    if (disableUntil != null && DateTime.now().isBefore(disableUntil)) {
+      return true;
+    }
+    final cooldownUntil = _globalCooldownUntil;
+    if (cooldownUntil != null && DateTime.now().isBefore(cooldownUntil)) {
+      return true;
+    }
+    if (_permanent.contains(url)) {
+      final last = _lastFailureAt[url];
+      if (_isSvgUrl(url) &&
+          last != null &&
+          DateTime.now().difference(last) > _cooldown) {
+        _permanent.remove(url);
+      } else {
+        return true;
+      }
+    }
+    final last = _lastFailureAt[url];
+    if (last == null) return false;
+    final failures = _failures[url] ?? 0;
+    if (failures < _recentFailureLimit) return false;
+    return DateTime.now().difference(last) < _cooldown;
+  }
+
   static void recordSuccess(String url) {
     if (url.isEmpty) return;
     _failures.remove(url);
@@ -56,7 +83,7 @@ class ImageFailureCache {
     if (url.isEmpty) return;
     // Don't cache network timeouts - retry them
     if (error.toString().toLowerCase().contains('timeout')) return;
-    
+
     _lastFailureAt[url] = DateTime.now();
     _failures[url] = (_failures[url] ?? 0) + 1;
     if (_isPermanentError(error, url)) {
@@ -77,8 +104,9 @@ class ImageFailureCache {
       return;
     }
     _globalFailureCount += 1;
-    final threshold =
-        _aggressiveMode ? _globalFailureThresholdAggressive : _globalFailureThreshold;
+    final threshold = _aggressiveMode
+        ? _globalFailureThresholdAggressive
+        : _globalFailureThreshold;
     final cooldown =
         _aggressiveMode ? _globalCooldownAggressive : _globalCooldown;
     if (_globalFailureCount >= threshold) {
@@ -112,5 +140,10 @@ class ImageFailureCache {
         message.contains('unimplemented') ||
         message.contains('invalid image data') ||
         message.contains('unsupported');
+  }
+
+  static bool _isSvgUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('.svg') || lower.contains('image/svg');
   }
 }
