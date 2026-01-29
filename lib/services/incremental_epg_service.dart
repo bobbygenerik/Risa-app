@@ -2343,13 +2343,16 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     if (startIndex >= events.length) return null;
     final startNode = events[startIndex];
     if (startNode is! XmlStartElementEvent) return null;
+    if (startNode.isSelfClosing) return '';
 
     final sb = StringBuffer();
     var depth = 1;
     for (var i = startIndex + 1; i < events.length; i++) {
       final node = events[i];
       if (node is XmlStartElementEvent) {
-        depth++;
+        if (!node.isSelfClosing) {
+          depth++;
+        }
       } else if (node is XmlEndElementEvent) {
         depth--;
         if (depth == 0) break;
@@ -2398,7 +2401,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             final val = _extractTagContent(events, i);
             if (val != null && val.isNotEmpty) {
               displayNames.add(val);
+            } else {
+              debugLog('EPG: Failed to extract display-name content for ID=$id');
             }
+          }
           } else if (event.name == 'icon') {
             channelIcon = event.attributes
                 .firstWhere((a) => a.name == 'src',
