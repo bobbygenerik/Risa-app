@@ -38,9 +38,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String> _epgIdsLowerToRaw = {};
   Map<String, List<String>> _epgDisplayNamesById = {};
   List<MapEntry<String, String>> _epgNameCandidates = const [];
-  final Set<String> _diagnosticMatchedChannels = {};
-  int _diagnosticIdMatches = 0;
-  int _diagnosticNameMatches = 0;
   final bool _enableMatchingDiagnostics = kDebugMode;
   final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
@@ -2740,10 +2737,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     for (final entry in _epgDisplayNamesById.entries) {
       final epgId = entry.key;
       final names = entry.value;
-      if (names.isEmpty) {
-        candidates.add(MapEntry(epgId, epgId));
-        continue;
-      }
+      // Always include the EPG id as a fallback candidate name.
+      candidates.add(MapEntry(epgId, epgId));
       for (final name in names) {
         if (name.trim().isEmpty) continue;
         candidates.add(MapEntry(epgId, name));
@@ -2792,28 +2787,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     return _epgIdsLowerToRaw[trimmed.toLowerCase()];
   }
 
-  void _resetMatchDiagnostics() {
-    _diagnosticMatchedChannels.clear();
-    _diagnosticIdMatches = 0;
-    _diagnosticNameMatches = 0;
-  }
+  void _resetMatchDiagnostics() {}
 
-  void _recordMatchDiagnostic(String channelId, {required bool idMatch}) {
-    if (!_enableMatchingDiagnostics) return;
-    if (!_diagnosticMatchedChannels.add(channelId)) return;
-    if (idMatch) {
-      _diagnosticIdMatches++;
-    } else {
-      _diagnosticNameMatches++;
-    }
-  }
-
-  void _logMatchDiagnostics({String context = 'EPG'}) {
-    if (!_enableMatchingDiagnostics) return;
-    final total = _diagnosticIdMatches + _diagnosticNameMatches;
-    debugLog(
-        '$context: Matching diagnostics - total=$total idMatches=$_diagnosticIdMatches nameMatches=$_diagnosticNameMatches');
-  }
+  void _logMatchDiagnostics({String context = 'EPG'}) {}
 
   static String _removeDiacritics(String input) {
     const Map<String, String> map = {
@@ -2978,76 +2954,56 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     bool allowLoose = true,
     String? countryHint,
   }) {
-    // 1. Manual mappings (highest priority)
+    // 1. Manual mappings (Highest Priority)
     final manual = _manualMappings[channelId];
     if (manual != null && manual.isNotEmpty) {
       _internalToEpgIdMapping[channelId] = manual;
       return manual;
     }
 
-    // 2. Check cache
+    // 2. Memory Cache Check
     if (_internalToEpgIdMapping.containsKey(channelId)) {
       final cached = _internalToEpgIdMapping[channelId];
-      if (cached == null) {
-        return null;
-      }
-      if (_epgIdsRaw.isEmpty || _epgIdsRaw.contains(cached)) {
-        return cached;
-      }
-      _internalToEpgIdMapping.remove(channelId);
+      if (cached != null) return cached;
     }
 
-    // 3. Exact ID match (raw, authoritative)
+    // 3. Exact ID match (Authoritative)
     final rawMatch = _matchRawEpgId(channelId);
     if (rawMatch != null) {
-      _recordMatchDiagnostic(channelId, idMatch: true);
       return _cacheResolvedMapping(channelId, rawMatch);
     }
 
+    // 4. Normalized ID/Name Match (Non-aggressive)
     _ensureNormalizedMap();
-
-    // 4. Try matching by channel NAME if provided (normalized match)
     if (channelName != null && channelName.isNotEmpty) {
-      final normalizedName = _normalize(channelName);
+      // Note: We use the Utility normalization here for consistency
+      final normalizedName =
+          EPGMatchingUtils.normalizeForFuzzyMatch(channelName);
       if (normalizedName.isNotEmpty &&
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final candidates = _normalizedAvailableChannels![normalizedName];
         if (candidates != null && candidates.isNotEmpty) {
-          _recordMatchDiagnostic(channelId, idMatch: false);
-          return _cacheResolvedMapping(channelId, candidates.first);
-        }
-      }
-
-      // Try number word conversion on channel name
-      final nameWithNumbers = _convertNumberWords(normalizedName);
-      if (nameWithNumbers != normalizedName &&
-          _normalizedAvailableChannels != null &&
-          _normalizedAvailableChannels!.containsKey(nameWithNumbers)) {
-        final candidates = _normalizedAvailableChannels![nameWithNumbers];
-        if (candidates != null && candidates.isNotEmpty) {
-          _recordMatchDiagnostic(channelId, idMatch: false);
           return _cacheResolvedMapping(channelId, candidates.first);
         }
       }
     }
 
-    // 5. Fuzzy name match (multi-tier scoring)
+    // 5. THE CRITICAL FIX: Fuzzy name match (raw name only)
     if (allowLoose &&
         channelName != null &&
         channelName.trim().isNotEmpty &&
         _epgNameCandidates.isNotEmpty) {
       final best = EPGMatchingUtils.findBestFuzzyMatch(
-        channelName,
+        channelName, // Raw name
         _epgNameCandidates,
       );
       if (best != null) {
-        _recordMatchDiagnostic(channelId, idMatch: false);
         return _cacheResolvedMapping(channelId, best.key);
       }
     }
 
-    // No match found - cache null result to avoid repeated lookups
+    // Cache null to prevent repeated expensive fuzzy searches
     if (_hasParsed && !_isLoading && !_isParsing) {
       return _cacheResolvedMapping(channelId, null);
     }
