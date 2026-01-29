@@ -66,3 +66,6 @@ apk_downloads/
 cmdline-tools.zip
 Modelfile
 ollama-*.service
+
+# Large local EPG files
+docs/IPTVEditor_epg.txt
