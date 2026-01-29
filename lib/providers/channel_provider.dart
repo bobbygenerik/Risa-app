@@ -1348,7 +1348,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         channelId,
         channelName: channelNameForLookup,
         cache: true,
-        allowLoose: false,
+        allowLoose: true,
       );
       if (epgId != null) {
         batch[channelId] = epgId;

@@ -37,7 +37,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Set<String> _epgIdsRaw = {};
   final Map<String, String> _epgIdsLowerToRaw = {};
   Map<String, List<String>> _epgDisplayNamesById = {};
-  List<MapEntry<String, String>> _epgNameCandidates = const [];
+
   final bool _enableMatchingDiagnostics = kDebugMode;
   final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
@@ -192,7 +192,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _epgProgressLabel.isNotEmpty ? _epgProgressLabel : null;
 
   static String normalizeForFilter(String input) {
-    return EPGMatchingUtils.normalizeForFuzzyMatch(input);
+    return EPGMatchingUtils.normalizeChannelName(input);
   }
 
   /// Allowed-set normalization: trim + lowercase only.
@@ -1382,14 +1382,23 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                 // Also ensure availableChannels is populated
                 _availableChannels.clear();
                 _availableChannels.addAll(_programsByChannel.keys);
+                // CRITICAL: Ensure normalized mapping is loaded before hydrating availableChannels
+                if (_normalizedAvailableChannels == null || _normalizedAvailableChannels!.isEmpty) {
+                   debugLog('EPG: Normalized mapping missing during DB load, attempting reload...');
+                   await _loadNormalizedMappingFromPrefs();
+                }
+
                 if (_normalizedAvailableChannels != null) {
                   _availableChannels.addAll(_normalizedAvailableChannels!.values
                       .expand((list) => list));
+                  debugLog('EPG: Added ${_normalizedAvailableChannels!.length} normalized entries to availableChannels. Total now: ${_availableChannels.length}');
+                } else {
+                  debugLog('EPG: _normalizedAvailableChannels is null even after reload attempt');
                 }
                 _rebuildEpgIdIndexFromIds(_availableChannels);
                 _internalToEpgIdMapping.clear();
 
-                // CRITICAL: Rebuild normalized mapping from DB keys if missing
+                // CRITICAL: Rebuild normalized mapping from DB keys if STILL missing (fallback)
                 if (_normalizedAvailableChannels == null ||
                     _normalizedAvailableChannels!.isEmpty) {
                   debugLog(
@@ -2330,6 +2339,29 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     };
   }
 
+  static String? _extractTagContent(List<XmlEvent> events, int startIndex) {
+    if (startIndex >= events.length) return null;
+    final startNode = events[startIndex];
+    if (startNode is! XmlStartElementEvent) return null;
+
+    final sb = StringBuffer();
+    var depth = 1;
+    for (var i = startIndex + 1; i < events.length; i++) {
+      final node = events[i];
+      if (node is XmlStartElementEvent) {
+        depth++;
+      } else if (node is XmlEndElementEvent) {
+        depth--;
+        if (depth == 0) break;
+      } else if (node is XmlTextEvent) {
+        sb.write(node.value);
+      } else if (node is XmlCDATAEvent) {
+        sb.write(node.value);
+      }
+    }
+    return sb.toString().trim();
+  }
+
   static void _processChannel(
     List<XmlEvent> events,
     Set<String> channelIds,
@@ -2350,10 +2382,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final id = rawId.trim();
     if (id.isNotEmpty) {
       final normalizedId = normalize(id);
-      // ALWAYS add channel IDs from <channel> tags to build complete EPG index.
-      // Do not filter here - filtering is applied to programmes (by time window).
-      // This ensures all channels in the EPG are available for matching even if
-      // they have no programs in the current time window.
       channelIds.add(id);
       if (normalizedId.isNotEmpty) {
         normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
@@ -2362,18 +2390,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       // Parse <icon> and <display-name> elements
       final displayNames = <String>[];
       String? channelIcon;
-      for (final event in events) {
+      // Index-based iteration to pass to extractTagContent
+      for (var i = 0; i < events.length; i++) {
+        final event = events[i];
         if (event is XmlStartElementEvent) {
           if (event.name == 'display-name') {
-            final idx = events.indexOf(event);
-            if (idx + 1 < events.length) {
-              final next = events[idx + 1];
-              if (next is XmlTextEvent) {
-                final value = next.value.trim();
-                if (value.isNotEmpty) {
-                  displayNames.add(value);
-                }
-              }
+            final val = _extractTagContent(events, i);
+            if (val != null && val.isNotEmpty) {
+              displayNames.add(val);
             }
           } else if (event.name == 'icon') {
             channelIcon = event.attributes
@@ -2415,7 +2439,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     Map<String, int>? channelHashes,
   }) {
     // Parse programme subtree
-    // <programme start="..." stop="..." channel="..."> ... </programme>
     final startEvent = events.first as XmlStartElementEvent;
 
     final rawChannelId = startEvent.attributes
@@ -2441,9 +2464,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
     final normalizedChannelId = normalize(channelId);
 
-    // CRITICAL: Always register channel ID for matching BEFORE time filtering.
-    // This ensures all channels in the EPG are available for M3U matching,
-    // even if no programs are in the current time window.
     channelIds.add(channelId);
     if (normalizedChannelId.isNotEmpty) {
       normalizedChannels
@@ -2451,7 +2471,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           .add(channelId);
     }
 
-    // Time filter for programs - only store programs in current window
     if (!_shouldIncludeProgramme(channelId, start, end, allowedNormalized,
         catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId)) {
       return;
@@ -2462,35 +2481,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     String? category;
     String? icon;
 
-    // Iterate events to find child tags
-    for (final event in events) {
+    // Index-based iteration
+    for (var i = 0; i < events.length; i++) {
+      final event = events[i];
       if (event is XmlStartElementEvent) {
         if (event.name == 'title') {
-          // The next event should be text
-          final idx = events.indexOf(event);
-          if (idx + 1 < events.length) {
-            final next = events[idx + 1];
-            if (next is XmlTextEvent) {
-              title = next.value;
-            }
-          }
+          title = _extractTagContent(events, i) ?? 'Unknown';
         } else if (event.name == 'desc') {
-          final idx = events.indexOf(event);
-          if (idx + 1 < events.length) {
-            final next = events[idx + 1];
-            if (next is XmlTextEvent) {
-              description = next.value;
-            }
-          }
+          description = _extractTagContent(events, i);
         } else if (event.name == 'category') {
-          final idx = events.indexOf(event);
-          if (idx + 1 < events.length) {
-            final next = events[idx + 1];
-            if (next is XmlTextEvent) {
-              category = next.value;
-            }
-          }
+          category = _extractTagContent(events, i);
         } else if (event.name == 'icon') {
+          // Icon is an empty tag usually, check attributes
           icon = event.attributes
               .firstWhere((a) => a.name == 'src',
                   orElse: () => XmlEventAttribute(
@@ -2499,6 +2501,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
     }
+    
+    // Fallback icon from channel if missing
+    if ((icon == null || icon.isEmpty) && channelIcons != null) {
+      icon = channelIcons[channelId];
+    }
+
 
     if ((icon == null || icon.isEmpty) &&
         channelIcons != null &&
@@ -2628,7 +2636,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     final startUtc =
         DateTime.fromMillisecondsSinceEpoch(startTs, isUtc: false).toUtc();
     final startStr = _formatCatchupTime(startUtc);
-    final base = server.replaceAll(EPGMatchingUtils.trailingSlashRe, '');
+    final base = server.endsWith('/') ? server.substring(0, server.length - 1) : server;
     return '$base/timeshift.php?username=$username&password=$password&stream=${info.streamId}&start=$startStr&duration=$durationMinutes';
   }
 
@@ -2661,80 +2669,79 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     if (_normalizeCache.length > 50000) {
       _normalizeCache.clear();
     }
-    final normalized = EPGMatchingUtils.normalizeForFuzzyMatch(text);
+    final normalized = EPGMatchingUtils.normalizeChannelName(text);
     _normalizeCache[text] = normalized;
     return normalized;
   }
 
-  void _ensureNormalizedMap() {
-    if (_availableChannels.isEmpty) return;
-    _normalizedAvailableChannels ??= {};
-    for (final id in _availableChannels) {
-      final normalized = _normalize(id);
-      if (normalized.isEmpty) continue;
-      _normalizedAvailableChannels!.putIfAbsent(normalized, () => []).add(id);
-    }
-  }
+
+
+  List<EpgMatchCandidate> _matchCandidates = [];
+  
+  // ... (keep existing fields)
 
   void _rebuildFuzzyCandidates() {
-    final List<MapEntry<String, String>> newList = [];
-
+    final candidates = <EpgMatchCandidate>[];
+    
+    // 1. Add candidates from Display Names (preferred)
     if (_epgDisplayNamesById.isNotEmpty) {
       for (final entry in _epgDisplayNamesById.entries) {
         final epgId = entry.key;
-        // Add the ID itself as a candidate name
-        newList.add(MapEntry(epgId, epgId));
-        // Add all Display Names from XML
+        if (epgId.isEmpty) continue;
+
+        // Add the ID itself as a candidate (often generic but useful fallback)
+        candidates.add(EpgMatchCandidate(
+          id: epgId,
+          displayName: epgId,
+        ));
+
+        // Add all <display-name> entries from XML
         for (final name in entry.value) {
           if (name.trim().isNotEmpty) {
-            newList.add(MapEntry(epgId, name));
+            candidates.add(EpgMatchCandidate(
+              id: epgId,
+              displayName: name,
+            ));
           }
         }
       }
-    } else if (_availableChannels.isNotEmpty) {
-      // Total fallback: use available channel IDs as their own names
+    } 
+    // 2. Fallback: If no display names recorded, use available channel IDs
+    else if (_availableChannels.isNotEmpty) {
       for (final id in _availableChannels) {
-        newList.add(MapEntry(id, id));
+         if (id.isEmpty) continue;
+         candidates.add(EpgMatchCandidate(
+           id: id,
+           displayName: id,
+         ));
       }
+    } else {
+        // Last resort: use normalized mapping keys
+        if (_normalizedAvailableChannels != null) {
+            for (final entry in _normalizedAvailableChannels!.entries) {
+                for (final id in entry.value) {
+                    candidates.add(EpgMatchCandidate(
+                        id: id,
+                        displayName: id, 
+                    ));
+                }
+            }
+        }
     }
 
-    _epgNameCandidates = newList;
+    _matchCandidates = candidates;
     debugLog(
-        'EPG: Rebuilt fuzzy search pool with ${_epgNameCandidates.length} entries.');
+        'EPG: Rebuilt fuzzy match index with ${_matchCandidates.length} candidates.');
   }
 
   void _resetEpgIdIndex() {
     _epgIdsRaw.clear();
     _epgIdsLowerToRaw.clear();
     _epgDisplayNamesById.clear();
-    _epgNameCandidates = const [];
+    _matchCandidates = [];
   }
 
-  void _indexEpgIdRaw(String id) {
-    final trimmed = id.trim();
-    if (trimmed.isEmpty) return;
-    _epgIdsRaw.add(trimmed);
-    _epgIdsLowerToRaw.putIfAbsent(trimmed.toLowerCase(), () => trimmed);
-  }
-
-  void _rebuildEpgIdIndexFromIds(Iterable<String> ids) {
-    _resetEpgIdIndex();
-    for (final id in ids) {
-      _indexEpgIdRaw(id);
-    }
-  }
-
-  void _registerAvailableChannel(String epgId) {
-    if (epgId.isEmpty) return;
-    _availableChannels.add(epgId);
-    _indexEpgIdRaw(epgId);
-  }
-
-  void _registerAvailableChannels(Iterable<String> ids) {
-    for (final id in ids) {
-      _registerAvailableChannel(id);
-    }
-  }
+  // ... (keep _indexEpgIdRaw, _rebuildEpgIdIndexFromIds etc) ...
 
   String? _matchRawEpgId(String channelId) {
     final trimmed = channelId.trim();
@@ -2743,12 +2750,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     return _epgIdsLowerToRaw[trimmed.toLowerCase()];
   }
 
-  void _resetMatchDiagnostics() {}
-
+  void _resetMatchDiagnostics() {} // Keep empty for now
   void _logMatchDiagnostics({String context = 'EPG'}) {}
-
-  // _removeDiacritics moved to EPGMatchingUtils
-
 
   String? _findBestEpgId(
     String channelId,
@@ -2757,47 +2760,81 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     bool allowLoose = true,
     String? countryHint,
   }) {
-    // Tier 1: Manual mappings (User overrides)
+    // ------------------------------------------
+    // TIER 1: Manual Constraints & Overrides
+    // ------------------------------------------
     final manual = _manualMappings[channelId];
     if (manual != null && manual.isNotEmpty) {
       return manual;
     }
 
-    // Tier 2: Exact ID match (Authoritative)
+    // ------------------------------------------
+    // TIER 2: Exact ID Match (Authoritative)
+    // ------------------------------------------
+    // Check strict ID equality (case-sensitive then insensitive)
     final rawMatch = _matchRawEpgId(channelId);
     if (rawMatch != null) {
       return _cacheResolvedMapping(channelId, rawMatch);
     }
+    
+    // Also try normalizing the ID itself (common XMLTV convention changes)
+    if (_normalizedAvailableChannels != null) {
+         final normId = EPGMatchingUtils.normalizeChannelName(channelId);
+         // Lookup directly in normalized index
+         if (normId.isNotEmpty && _normalizedAvailableChannels!.containsKey(normId)) {
+             return _cacheResolvedMapping(channelId, _normalizedAvailableChannels![normId]!.first);
+         }
+    }
+    
+    if (!allowLoose) return null;
 
-    // Tier 3: Normalized ID Match
-    _ensureNormalizedMap();
-    final normalizedId = EPGMatchingUtils.normalizeForFuzzyMatch(channelId);
-    if (normalizedId.isNotEmpty &&
-        _normalizedAvailableChannels != null &&
-        _normalizedAvailableChannels!.containsKey(normalizedId)) {
-      final candidates = _normalizedAvailableChannels![normalizedId];
-      if (candidates != null && candidates.isNotEmpty) {
-        return _cacheResolvedMapping(channelId, candidates.first);
+    final searchName = channelName?.trim() ?? '';
+    if (searchName.isEmpty) return null;
+
+    // ------------------------------------------
+    // TIER 3-5: The "Matching Pipeline"
+    // ------------------------------------------
+    if (_matchCandidates.isEmpty) return null;
+
+    final searchNameNorm = EPGMatchingUtils.normalizeChannelName(searchName);
+    // OPTIMIZATION: If aggressive normalization yields empty string, abort
+    if (searchNameNorm.isEmpty) return null;
+    
+    final searchTokens = EPGMatchingUtils.tokenize(searchName);
+
+    double bestScore = 0.0;
+    EpgMatchCandidate? bestCandidate;
+
+    for (final candidate in _matchCandidates) {
+      final score = EPGMatchingUtils.calculateMatchScore(
+        searchName,
+        candidate,
+        playlistTokens: searchTokens,
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+        // Optimization: Early exit on perfect match
+        if (bestScore >= 99.0) break;
       }
     }
 
-    // Tier 4: Fuzzy Logic Match (Raw Name)
-    if (allowLoose &&
-        channelName != null &&
-        channelName.trim().isNotEmpty &&
-        _epgNameCandidates.isNotEmpty) {
-      final best = EPGMatchingUtils.findBestFuzzyMatch(
-        channelName,
-        _epgNameCandidates,
-      );
-      if (best != null) {
-        return _cacheResolvedMapping(channelId, best.key);
-      }
+    // Thresholds
+    // 90+: Excellent match
+    // 70-90: Good match (usually missing minor words or typo)
+    // <70: Risky
+    if (bestCandidate != null && bestScore >= 65.0) {
+        if (_enableMatchingDiagnostics && bestScore < 85.0) {
+           debugLog(
+               'EPG: Fuzzy Match "$searchName" -> "${bestCandidate.displayName}" (Score: ${bestScore.toStringAsFixed(1)})');
+        }
+        return _cacheResolvedMapping(channelId, bestCandidate.id);
     }
 
     return null;
   }
-
+  
   List<Program> getProgramsForChannel(String channelId,
       {String? channelName, String? groupTitle}) {
     // First try strict matching for fast exact lookups
@@ -2984,47 +3021,83 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         null;
   }
 
-  /// Fast match estimator for diagnostics (no fuzzy matching).
-  int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
-    _ensureNormalizedMap();
-    if ((_normalizedAvailableChannels == null ||
-            _normalizedAvailableChannels!.isEmpty) &&
-        _epgIdsRaw.isEmpty) {
-      return _internalToEpgIdMapping.length;
+  void _registerAvailableChannel(String epgId) {
+    if (epgId.isEmpty) return;
+    _availableChannels.add(epgId);
+    _indexEpgIdRaw(epgId);
+  }
+
+  void _registerAvailableChannels(Iterable<String> ids) {
+    for (final id in ids) {
+      _registerAvailableChannel(id);
     }
+  }
+
+  void _indexEpgIdRaw(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return;
+    _epgIdsRaw.add(trimmed);
+    _epgIdsLowerToRaw.putIfAbsent(trimmed.toLowerCase(), () => trimmed);
+  }
+
+  void _rebuildEpgIdIndexFromIds(Iterable<String> ids) {
+    _resetEpgIdIndex();
+    for (final id in ids) {
+      _indexEpgIdRaw(id);
+    }
+  }
+
+
+  /// Fast match estimator for diagnostics using the new pipeline
+  int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
+    if (_availableChannels.isEmpty && _matchCandidates.isEmpty) {
+        // Fallback: simple mapping count if no EPG loaded
+        return _internalToEpgIdMapping.length;
+    }
+    
     int matched = 0;
-    for (final map in channelMaps) {
+    // We only sample for performance in diagnostics if list is huge
+    final sample = channelMaps.length > 500 ? channelMaps.take(500) : channelMaps;
+    
+    for (final map in sample) {
       final tvgId = (map['tvgId'] as String?) ?? '';
       final id = (map['id'] as String?) ?? '';
       final name = (map['name'] as String?) ?? '';
+      
+      // 1. Try ID Match
       final primary = tvgId.trim().isNotEmpty ? tvgId : id;
-      if (primary.trim().isNotEmpty) {
-        if (_matchRawEpgId(primary) != null) {
-          matched++;
-          continue;
-        }
+      if (primary.isNotEmpty && _matchRawEpgId(primary) != null) {
+        matched++;
+        continue;
       }
-      if (name.trim().isNotEmpty) {
-        final normalizedName = EPGMatchingUtils.normalizeForFuzzyMatch(name);
-        if (normalizedName.isNotEmpty) {
-          // Tier 1: Exact normalized match
-          if (_normalizedAvailableChannels!.containsKey(normalizedName)) {
-            matched++;
-            continue;
-          }
-          // Tier 2: Fuzzy match (simulated)
-          if (_epgNameCandidates.isNotEmpty) {
-             final best = EPGMatchingUtils.findBestFuzzyMatch(name, _epgNameCandidates);
-             if (best != null) {
-               matched++;
-               continue;
+      
+      // 2. Try Fuzzy Match (Pipeline)
+      if (name.isNotEmpty && _matchCandidates.isNotEmpty) {
+         final searchTokens = EPGMatchingUtils.tokenize(name);
+         bool found = false;
+         for (final candidate in _matchCandidates) {
+             final score = EPGMatchingUtils.calculateMatchScore(
+                 name, candidate, playlistTokens: searchTokens
+             );
+             if (score >= 65.0) {
+                 found = true;
+                 break; 
              }
-          }
-        }
+         }
+         if (found) {
+             matched++;
+             continue;
+         }
       }
+    }
+    
+    // Extrapolate if sampled
+    if (channelMaps.length > 500) {
+        return (matched * (channelMaps.length / 500)).round();
     }
     return matched;
   }
+
 
   Program? getCurrentProgram(String channelId,
       {String? channelName, String? groupTitle}) {
@@ -3033,7 +3106,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     var epgId = _findBestEpgId(channelId, channelName,
         countryHint: groupTitle, logIfMissing: false, allowLoose: false);
-    
+
     // Fallback 1: Try direct lookup in _programsByChannel
     if (epgId == null) {
       final directPrograms = _programsByChannel[channelId];
@@ -3042,8 +3115,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _cacheResolvedMapping(channelId, channelId);
       }
     }
-    // Intentionally skip normalized ID matching for tvg-id paths.
-    
+
+    // Fallback 2: Try fuzzy name match (same as hasProgramsForChannel / getProgramsForChannel)
+    if (epgId == null &&
+        channelName != null &&
+        channelName.trim().isNotEmpty) {
+      epgId = _findBestEpgId(channelId, channelName,
+          countryHint: groupTitle, logIfMissing: false, allowLoose: true);
+    }
+
     if (epgId == null) {
       _maybeLogMissingEpgId(channelId, channelName);
       _recordChannelFailure(channelId);
@@ -3292,14 +3372,24 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   List<MapEntry<String, double>> getSuggestedMatches(
       String channelId, String? channelName,
       {int limit = 10}) {
-    final allKeys = {..._availableChannels};
-    if (allKeys.isEmpty) return [];
-    return EPGMatchingUtils.getSuggestedMatches(
-      channelId,
-      channelName,
-      allKeys,
-      limit: limit,
-    );
+    if (_matchCandidates.isEmpty || channelName == null || channelName.isEmpty) return [];
+    
+    final searchTokens = EPGMatchingUtils.tokenize(channelName);
+    final results = <MapEntry<String, double>>[];
+
+    for (final candidate in _matchCandidates) {
+      final score = EPGMatchingUtils.calculateMatchScore(
+        channelName,
+        candidate,
+        playlistTokens: searchTokens,
+      );
+      if (score > 30.0) {
+        results.add(MapEntry(candidate.id, score));
+      }
+    }
+
+    results.sort((a, b) => b.value.compareTo(a.value));
+    return results.take(limit).toList();
   }
 
   String? getChannelPreview(String epgChannelId) {
