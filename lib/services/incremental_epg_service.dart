@@ -2404,7 +2404,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             } else {
               debugLog('EPG: Failed to extract display-name content for ID=$id');
             }
-          }
           } else if (event.name == 'icon') {
             channelIcon = event.attributes
                 .firstWhere((a) => a.name == 'src',
