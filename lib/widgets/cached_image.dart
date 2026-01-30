@@ -4,6 +4,7 @@ import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
 /// Provides automatic caching, loading states, and error handling
@@ -123,6 +124,8 @@ Widget _buildGradientFallback(double? width, double? height, IconData icon) {
 /// Specialized cached image for channel logos
 class CachedChannelLogo extends StatelessWidget {
   final String? logoUrl;
+  final String? channelName;
+  final String? tvgId;
   final double size;
   final IconData fallbackIcon;
   final int? cacheWidth;
@@ -131,6 +134,8 @@ class CachedChannelLogo extends StatelessWidget {
   const CachedChannelLogo({
     super.key,
     required this.logoUrl,
+    this.channelName,
+    this.tvgId,
     this.size = 48,
     this.fallbackIcon = Icons.tv,
     this.cacheWidth,
@@ -140,10 +145,35 @@ class CachedChannelLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (logoUrl == null || logoUrl!.isEmpty) {
-      return _buildLogoPlaceholder(size, fallbackIcon);
+      if (channelName == null || channelName!.isEmpty) {
+        return _buildLogoPlaceholder(size, fallbackIcon);
+      }
+      return ChannelLogoWidget(
+        channelName: channelName!,
+        tvgId: tvgId,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        placeholder: _buildLogoPlaceholder(size, fallbackIcon),
+        errorWidget: _buildLogoPlaceholder(size, fallbackIcon),
+        borderRadius: BorderRadius.circular(8),
+      );
     }
     if (ImageFailureCache.shouldSkipLogo(logoUrl!)) {
-      return _buildLogoPlaceholder(size, fallbackIcon);
+      if (channelName == null || channelName!.isEmpty) {
+        return _buildLogoPlaceholder(size, fallbackIcon);
+      }
+      return ChannelLogoWidget(
+        channelName: channelName!,
+        logoUrl: logoUrl,
+        tvgId: tvgId,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        placeholder: _buildLogoPlaceholder(size, fallbackIcon),
+        errorWidget: _buildLogoPlaceholder(size, fallbackIcon),
+        borderRadius: BorderRadius.circular(8),
+      );
     }
 
     ImageLoadProbe.recordAttempt(logoUrl!, 'channel_logo');

@@ -1,0 +1,399 @@
+playlist_id	playlist_name	best_score	epg_id	epg_name
+Tva Sports 2	Tva Sports 2	95.0	jsports2.jp	J Sports 2
+E4 Hevc Hb (1080p)	E4 Hevc Hb (1080p)	95.0	e4.uk	E4
+S4c Hevc Hb (1080p)	S4c Hevc Hb (1080p)	95.0	s4c.uk	S4C
+Tnt Sports 2 Hevc Hb (1080p)	Tnt Sports 2 Hevc Hb (1080p)	95.0	tntsports2.uk	TNT Sports 2
+Nrl Tv 24/7 (national Rugby League)	Nrl Tv 24/7 (national Rugby League)	95.0	etv.ru	E TV
+Cctv 4 中文国际（欧）eu	Cctv 4 中文国际（欧）eu	95.0	cctv4.ru.minus4	Cctv-4
+Good Tv真理台	Good Tv真理台	95.0	good.au	GOOD
+Good Tv综合台	Good Tv综合台	95.0	good.au	GOOD
+Mbs Tv	Mbs Tv	95.0	etv.ru	E TV
+Sun	Sun	95.0	suntv.jp	Sun Tv
+Dr.la 1	Dr.la 1	95.0	la1.es	LA 1
+It: Rai 1	It: Rai 1	95.0	jone.fr	J-one
+It: Sky Cinema Uno	It: Sky Cinema Uno	95.0	skycinema.de	Sky Cinema
+It: Super!	It: Super!	95.0	super3.es	SUPER 3
+It: Sky Sport 24	It: Sky Sport 24	95.0	skysport.ch	Sky Sport
+Tv3 Sport	Tv3 Sport	95.0	vsport+.no	V Sport+
+Tv2 Sport	Tv2 Sport	95.0	vsport+.no	V Sport+
+Tv2 Sport X	Tv2 Sport X	95.0	tv2sport1.no	TV2 Sport 1
+Fi: V Sport Live 2	Fi: V Sport Live 2	95.0	vsport2live.no	V Sport 2 Live
+Se: Tv4 Sport Live 2	Se: Tv4 Sport Live 2	95.0	vsport2live.no	V Sport 2 Live
+Sky Sports Main Event U	Sky Sports Main Event U	95.0	skysportsmainevent.uk	Sky Sports Main Event
+De: Sky Sport U	De: Sky Sport U	95.0	skysport4.de	Sky Sport 4[ Match Time ]
+De: Sky Sport Bundesliga U	De: Sky Sport Bundesliga U	95.0	skysportbundesliga.de	Sky Sport Bundesliga
+La 1 U	La 1 U	95.0	jone.fr	J-one
+France 2 U	France 2 U	95.0	france2.fr	FRANCE 2
+France 2 U Hdr	France 2 U Hdr	95.0	france2.fr	FRANCE 2
+France 3 U	France 3 U	95.0	france3.fr	FRANCE 3
+M6 U	M6 U	95.0	m6.fr	M6
+Canal+ Box Office U	Canal+ Box Office U	95.0	canal+boxoffice.fr	CANAL+ BOX OFFICE
+Arte U	Arte U	95.0	arte.fr	ARTE
+3+ U	3+ U	95.0	3+.ch	3+.ch
+4+ U	4+ U	95.0	4+.ch	4+.ch
+Tv24 U	Tv24 U	95.0	tv24.ch	TV24
+Rtl U	Rtl U	95.0	rtl.be	rtl.be
+Il: 5 Sport	Il: 5 Sport	95.0	sports.pk	sports
+Il: 5 Sport U	Il: 5 Sport U	95.0	skysport5.nz	SKY Sport 5
+Aa+ Tv	Aa+ Tv	95.0	ktv.de	K-tv
+Liverpool Tv	Liverpool Tv	95.0	liverpoolfctv.uk	Liverpool FC TV
+Tbc 1	Tbc 1	95.0	jone.fr	J-one
+Abs Tv	Abs Tv	95.0	etv.ru	E TV
+Bbs Tv	Bbs Tv	95.0	etv.ru	E TV
+Top Tv	Top Tv	95.0	etv.ru	E TV
+Kbs Tv	Kbs Tv	95.0	etv.ru	E TV
+Nhk News	Nhk News	95.0	cnews.fr	C News
+Via	Via	95.0	ATV.II.de	Via Tv
+Kyk Net	Kyk Net	95.0	MNE.at	M-net
+1 Kzn	1 Kzn	95.0	jone.fr	J-one
+Arg: Axn Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Axn Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	axn.pt	axn.pt
+Arg: Disney Xd Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Disney Xd Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	disneyxd.mx	Disney XD
+Arg: Espn Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Espn Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	espn.mx	ESPN
+Arg: Espn 3 Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Espn 3 Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	espn.br	ESPN
+Arg: Espn 4 Extra Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Espn 4 Extra Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	espnextra.br	ESPN Extra
+Arg: Star Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Star Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	Star.ca2	Star
+Arg: Universal Crime Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Universal Crime Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	universalcrime.mx	Universal Crime
+Arg: Fx Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Fx Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	fx.us	fx.us
+Arg: H2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: H2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	h2.ca	h2.ca
+Arg: Hbo Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Hbo Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	hbo.ar	hbo.ar
+Arg: Hbo 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Hbo 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	hbo.mx	HBO
+Arg: Htv Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Htv Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	htv.pe	htv.pe
+Arg: Mtv Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Mtv Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	mtv.jp	mtv.jp
+Arg: Nat Geo Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Nat Geo Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	natgeo.de	Nat Geo
+Arg: Tnt Sports ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: Tnt Sports ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	95.0	vsport+.no	V Sport+
+Arg: Directv Sports Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Directv Sports Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	DIRECTV.SPORTS(DTS7).co	DIRECTV.SPORTS(DTS7).co
+Arg: Directv Sports 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Directv Sports 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	DIRECTV.SPORTS(DTS7).co	DIRECTV SPORTS(DTS7)
+Arg: Directv Sports+ Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Directv Sports+ Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	DIRECTV.SPORTS(DTS7).co	DIRECTV.SPORTS(DTS7).co
+Arg: A&e Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: A&e Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	a&e.mx	a&e.mx
+Arg: Amc Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Amc Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	amc.us	amc.us
+Arg: I-sat Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: I-sat Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	riksat.gr	Rik Sat
+Arg: Warner Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Warner Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	warnertv.es	Warner TV
+Arg: Tnt Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Tnt Pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	tnt.br	tnt.br
+Arg: Espn 2pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Espn 2pʳᵉᵐⁱᵘᵐ ʜᴅ	95.0	espn.mx	ESPN
+Arg: Tnt Sports	Arg: Tnt Sports	95.0	vsport+.no	V Sport+
+Arg: Tnt Sports ᴾᴿᴵᴹᴱᴿᴬ ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: Tnt Sports ᴾᴿᴵᴹᴱᴿᴬ ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	95.0	vsport+.no	V Sport+
+Chile: Tnt Sports	Chile: Tnt Sports	95.0	sports2.il	Chile: Tnt Sports 2
+Vox 1	Vox 1	95.0	jone.fr	J-one
+Vox 2	Vox 2	95.0	vox.de	VOX
+Viva Tv (yurimaguas)	Viva Tv (yurimaguas)	95.0	viva.br	Viva
+Vz Tv	Vz Tv	95.0	ktv.de	K-tv
+Vz Tv (chachapoyas)	Vz Tv (chachapoyas)	95.0	ktv.de	K-tv
+Mega Tv (jaen)	Mega Tv (jaen)	95.0	mega.es	Mega
+Mega Tv	Mega Tv	95.0	mega.es	Mega
+Canal La X	Canal La X	95.0	canal7.ar	Canal+ U
+Sg Cinemax	Sg Cinemax	95.0	cinemax.mx	Cinemax
+X Sport	X Sport	95.0	sports.pk	sports.pk
+Canal+ Box Officeu	Canal+ Box Officeu	93.3	canal+boxoffice.fr	CANAL+ BOX OFFICE
+(fr)emci Tv	(fr)emci Tv	85.0	tv.in	TV
+Ctv Wild Channel	Ctv Wild Channel	85.0	ctvwild.ca	CTV Wild
+Global News National	Global News National	85.0	cnews.fr	C News
+Global National News	Global National News	85.0	cnews.fr	C News
+Quo Vadis Tv	Quo Vadis Tv	85.0	tv.in	TV
+W Hevc Hb (1080p)	W Hevc Hb (1080p)	85.0	alibi.uk	Alibi Hevc Hb (1080p)
+Sport Tv Nba	Sport Tv Nba	85.0	etv+.ru	Tv+
+A-league : Wellington Phoenix	A-league : Wellington Phoenix	85.0	phoenix.de	Phoenix
+Afl : Gold Coast	Afl : Gold Coast	85.0	gold.uk	GOLD
+Afl : Greater Western Sydney	Afl : Greater Western Sydney	85.0	9Sydney.au	Afl : Sydney
+Afl : West Coast	Afl : West Coast	85.0	e!entertainmenttelevisionwest.us	E! West
+Aflw : Gold Coast	Aflw : Gold Coast	85.0	gold.uk	GOLD
+Aflw : Greater Western Sydney	Aflw : Greater Western Sydney	85.0	9Sydney.au	Aflw : Sydney
+Aflw : West Coast	Aflw : West Coast	85.0	e!entertainmenttelevisionwest.us	E! West
+Nrl : Gold Coast Titans	Nrl : Gold Coast Titans	85.0	gold.uk	GOLD
+Cctv 4 中文国际（亚）asia	Cctv 4 中文国际（亚）asia	85.0	cctv4.ru.minus4	Cctv-4
+Good Tv 35	Good Tv 35	85.0	good.au	GOOD
+Good Tv 39	Good Tv 39	85.0	good.au	GOOD
+Good Tv 42	Good Tv 42	85.0	good.au	GOOD
+Good Tv 43	Good Tv 43	85.0	good.au	GOOD
+Good Tv 46	Good Tv 46	85.0	good.au	GOOD
+Good Tv 48	Good Tv 48	85.0	good.au	GOOD
+Tv Brics Chinese	Tv Brics Chinese	85.0	tv.in	TV
+Tvo Kids	Tvo Kids	85.0	TVO.ca2	TVO
+台-good Tv好消息1	台-good Tv好消息1	85.0	good.au	GOOD
+翡翠台（81）	翡翠台（81）	85.0	max81.se	Max Se 81 :
+Japan Movie Channel	Japan Movie Channel	85.0	Channel.4.ch	Channel U
+Channel Ginga	Channel Ginga	85.0	Channel.4.ch	Channel U
+Fishing Vision	Fishing Vision	85.0	visiontv.ca	Vision
+Movie Plus	Movie Plus	85.0	Plus.cy	Plus
+Nhk G Osaka	Nhk G Osaka	85.0	nhkg.jp	Nhk G
+Wowow Cinema	Wowow Cinema	85.0	wowowシネマ.jp	WOWOWシネマ
+Wowow Live	Wowow Live	85.0	wowowシネマ.jp	Wowowシネマ (720p Willfon)
+Wowow Prime	Wowow Prime	85.0	wowowシネマ.jp	WOWOWシネマ
+Nhk E 540	Nhk E 540	85.0	nhkg.jp	Nhk G
+It: Rai 2	It: Rai 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+It: Rai 3	It: Rai 3	85.0	スターチャンネル1.jp	スターチャンネル3 (720p Willfon)
+It: Rai 4	It: Rai 4	85.0	4+.ch	4+
+It: Rai 5	It: Rai 5	85.0	5usa.uk	5 USA
+It: Mediaset Extra	It: Mediaset Extra	85.0	extra.gr	Extra
+It: Mediaset La 5	It: Mediaset La 5	85.0	5usa.uk	5 USA
+It: Rai News 24	It: Rai News 24	85.0	cnews.fr	C News
+It: Rete 4	It: Rete 4	85.0	4+.ch	4+
+It: Tv 2000	It: Tv 2000	85.0	tv.in	TV
+It: Zona Dazn 2	It: Zona Dazn 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+It: Sky Arte	It: Sky Arte	85.0	arte.fr	ARTE
+It: Sky Cinema Collection	It: Sky Cinema Collection	85.0	cinema.ru	Cinema
+It: Sky Cinema Due	It: Sky Cinema Due	85.0	cinema.ru	Cinema
+It: Sky Cinema Due +1	It: Sky Cinema Due +1	85.0	cinema.ru	Cinema
+It: Sky Cinema Romance	It: Sky Cinema Romance	85.0	cinema.ru	Cinema
+It: Sky Cinema Suspense	It: Sky Cinema Suspense	85.0	cinema.ru	Cinema
+It: Discovery Food Network	It: Discovery Food Network	85.0	discovery.in	Discovery
+It: Hgtv Home Garden	It: Hgtv Home Garden	85.0	hgtv.nl	HGTV
+It: Italian Fishing Tv	It: Italian Fishing Tv	85.0	tv.in	TV
+It: Boing	It: Boing	85.0	boingplus.it	Boing Plus
+It: Sky Sport Calcio	It: Sky Sport Calcio	85.0	skysport.ch	Sky Sport
+It: Milan Tv	It: Milan Tv	85.0	tv.in	TV
+Fi: V Sport Fotboll	Fi: V Sport Fotboll	85.0	sports.pk	sports
+Fi: V Sport Vinter	Fi: V Sport Vinter	85.0	sports.pk	sports
+Se V Sport Vinter	Se V Sport Vinter	85.0	sports.pk	sports
+Directvlive 2	Directvlive 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Nbc Sports Chicagou (event Only)	Nbc Sports Chicagou (event Only)	85.0	sports.pk	sports
+De: Fussball.tv 1 U	De: Fussball.tv 1 U	85.0	tv.in	TV
+Evenement Sport U Hdr	Evenement Sport U Hdr	85.0	sports.pk	sports
+Orange Canal+ Sa U	Orange Canal+ Sa U	85.0	canal+.de	Canal+
+Canal+ Evenement	Canal+ Evenement	85.0	canal+.de	Canal+
+Prosiebensat.1 U	Prosiebensat.1 U	85.0	スターチャンネル1.jp	スターチャンネル1
+M+ Liga De Campeones 2 U	M+ Liga De Campeones 2 U	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Pl: Funbox U	Pl: Funbox U	85.0	fast&funbox.ru	fast&funbox.ru
+Pl: Canal+ultra	Pl: Canal+ultra	85.0	canal+.de	Canal+
+Funbox U	Funbox U	85.0	fast&funbox.ru	fast&funbox.ru
+Cy: Cytavision Sports	Cy: Cytavision Sports	85.0	sports.pk	sports
+International Food	International Food	85.0	foodfood.in	Food Food
+Acanal+ Cinema Centre	Acanal+ Cinema Centre	85.0	cinema.ru	Cinema
+Afrance 2	Afrance 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Afrance 3	Afrance 3	85.0	スターチャンネル1.jp	スターチャンネル3 (720p Willfon)
+Afrance 5	Afrance 5	85.0	5usa.uk	5 USA
+Aa2i Tv	Aa2i Tv	85.0	tv.in	TV
+Adigital Black Music	Adigital Black Music	85.0	black.ru	Black
+nollywood Flix Francais	nollywood Flix Francais	85.0	nollywoodtv.fr	Nollywood
+piwi+ Africa	piwi+ Africa	85.0	piwi+.fr	PIWI+
+Arti 1	Arti 1	85.0	スターチャンネル1.jp	スターチャンネル1
+Arti 2	Arti 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Asyfy Tv French	Asyfy Tv French	85.0	tv.in	TV
+vox Africa English	vox Africa English	85.0	vox.no	VOX
+Azam One	Azam One	85.0	スターチャンネル1.jp	スターチャンネル1
+Azam Two	Azam Two	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Tbc 2	Tbc 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Eatv 5	Eatv 5	85.0	5usa.uk	5 USA
+Africa Movie Channel	Africa Movie Channel	85.0	Channel.4.ch	Channel U
+Nina Tv	Nina Tv	85.0	tv.in	TV
+Bukedde 1	Bukedde 1	85.0	スターチャンネル1.jp	スターチャンネル1
+Bukedde Tv 2	Bukedde Tv 2	85.0	tv.in	TV
+Wasafi Tv	Wasafi Tv	85.0	tv.in	TV
+Zbc 2	Zbc 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Salt Tv	Salt Tv	85.0	tv.in	TV
+Zodiak Tv	Zodiak Tv	85.0	tv.in	TV
+Horizon Tv	Horizon Tv	85.0	tv.in	TV
+Ntv Uganda	Ntv Uganda	85.0	NTV.ca2	Ntv
+Jive Tv	Jive Tv	85.0	tv.in	TV
+Chamuca Tv	Chamuca Tv	85.0	tv.in	TV
+Ktn	Ktn	85.0	ATN.News.dk	Ktn News
+France 24	France 24	85.0	france24eng.fr	FRANCE 24 ENG
+Emovies Extra	Emovies Extra	85.0	moremovies.au	Emovies
+Super Sports Motorsports	Super Sports Motorsports	85.0	sports.pk	sports
+Supersport Maximo 1	Supersport Maximo 1	85.0	スターチャンネル1.jp	スターチャンネル1
+Cnbc Africa	Cnbc Africa	85.0	cnbc.se	CNBC
+Business Day Tv	Business Day Tv	85.0	tv.in	TV
+Pbs Kids	Pbs Kids	85.0	khet.us	Hi | Honolulu | Pbs Kids Khet
+Da Vinci	Da Vinci	85.0	davincilearning.ru	Da Vinci Learning
+The Home Channel	The Home Channel	85.0	Channel.4.ch	Channel U
+Emmanuel Tv	Emmanuel Tv	85.0	tv.in	TV
+M-net Movies 1	M-net Movies 1	85.0	スターチャンネル1.jp	スターチャンネル1
+M-net Movies 2	M-net Movies 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+M-net Movies 3	M-net Movies 3	85.0	MNE.at	M-net
+M-net Movies 4	M-net Movies 4	85.0	MNE.at	M-net
+Kix	Kix	85.0	movieskids.au	Kix Movies
+Me	Me	85.0	metvnetwork.us	Me TV Network
+1 Magic	1 Magic	85.0	スターチャンネル1.jp	スターチャンネル1
+Tnt Africa	Tnt Africa	85.0	tnt.mx	TNT
+Kyk Net & Kie	Kyk Net & Kie	85.0	MNE.at	M-net
+Africa Magic Epic	Africa Magic Epic	85.0	epic.in	EPIC
+Africa Magic Family	Africa Magic Family	85.0	family.au	Family
+Sabc 1	Sabc 1	85.0	スターチャンネル1.jp	スターチャンネル1
+Sabc 2	Sabc 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Sabc 3	Sabc 3	85.0	スターチャンネル1.jp	スターチャンネル3 (720p Willfon)
+Soweto Tv	Soweto Tv	85.0	tv.in	TV
+Mpuma Kapa Tv	Mpuma Kapa Tv	85.0	tv.in	TV
+Tshwane Tv	Tshwane Tv	85.0	tv.in	TV
+Cape Town Tv	Cape Town Tv	85.0	tv.in	TV
+Lesotho Tv	Lesotho Tv	85.0	tv.in	TV
+M-net City	M-net City	85.0	MNE.at	M-net
+Boss Brothers Tv	Boss Brothers Tv	85.0	tv.in	TV
+Kyk Net Nou!	Kyk Net Nou!	85.0	MNE.at	M-net
+Mzansi Magic Music	Mzansi Magic Music	85.0	music.in	Music
+One Gospel	One Gospel	85.0	スターチャンネル1.jp	スターチャンネル1
+Arg: Info Periodística	Arg: Info Periodística	85.0	info.fr	info
+Arg: Cine Latino Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Cine Latino Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	cine.mx	Cine
+Arg: Cnn Espanol Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Cnn Espanol Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	cnnj.jp	Cnn J
+Arg: Star Channel Cinema Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Star Channel Cinema Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	channel.gr	CHANNEL
+Arg: Tyc Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Tyc Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	tycsports.cl	TyC Sports
+Arg: Golden Premier 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Golden Premier 2 Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	golden.mx	Golden
+Arg: Espn Sports Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Espn Sports Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	espn.mx	ESPN
+Arg: Mtv Hit Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Mtv Hit Pʳᵉᵐⁱᵘᵐ ʜᴅ	85.0	россия1.ru	Mtv Россия
+Arg: Ciudad Tv Resistencia	Arg: Ciudad Tv Resistencia	85.0	tv.in	TV
+Arg: Quatro Tv Cordoba ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: Quatro Tv Cordoba ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	85.0	tv.in	TV
+Arg: Espn Premium	Arg: Espn Premium	85.0	espn.mx	ESPN
+Chile: Espn	Chile: Espn	85.0	espn.mx	ESPN
+Chile: Tnt Sports Premium	Chile: Tnt Sports Premium	85.0	tnt.mx	TNT
+Cuba Max Play	Cuba Max Play	85.0	max.ca	Max
+Tele Rebelde	Tele Rebelde	85.0	teled.ch	Tele D
+Prensa Latina	Prensa Latina	85.0	latina.pe	Latina ᴸᴵᴳᴬ ¹
+Cubavision	Cubavision	85.0	Cubavisión.Internacional.es	Cubavision Internacional
+Irib Tv 1	Irib Tv 1	85.0	tv.in	TV
+Irib Tv 2	Irib Tv 2	85.0	tv.in	TV
+Irib Tv 3	Irib Tv 3	85.0	tv.in	TV
+Irib Tv 4	Irib Tv 4	85.0	tv.in	TV
+Irib Tv 5	Irib Tv 5	85.0	5usa.uk	5 USA
+Sᵘʳ Aᵐᵉʳⁱᶜᵃ | Mega Tv (perú)	Sᵘʳ Aᵐᵉʳⁱᶜᵃ | Mega Tv (perú)	85.0	mega.es	Mega
+Monterrico Tv (eventos)	Monterrico Tv (eventos)	85.0	tv.in	TV
+Tv Perú Noticias	Tv Perú Noticias	85.0	tv.in	TV
+Bella Asuncion Tv	Bella Asuncion Tv	85.0	tv.in	TV
+Best Cable Music	Best Cable Music	85.0	music.in	Music
+Best Cable Sports Perú	Best Cable Sports Perú	85.0	sports.pk	sports
+Lotplus Tv (piura)	Lotplus Tv (piura)	85.0	tv.in	TV
+Controversia Tv (moyobamba)	Controversia Tv (moyobamba)	85.0	tv.in	TV
+Nacional Tv (moyobamba)	Nacional Tv (moyobamba)	85.0	tv.in	TV
+Exitosa Tv	Exitosa Tv	85.0	tv.in	TV
+Trivu Tv Lima (peru)	Trivu Tv Lima (peru)	85.0	tv.in	TV
+Genios Tv (moyobamba)	Genios Tv (moyobamba)	85.0	tv.in	TV
+Huacho Perú Tv	Huacho Perú Tv	85.0	tv.in	TV
+Nativa Tv Cable	Nativa Tv Cable	85.0	tv.in	TV
+Identidad Tv	Identidad Tv	85.0	tv.in	TV
+Region Tv	Region Tv	85.0	tv.in	TV
+Autentica Tv	Autentica Tv	85.0	tv.in	TV
+La Luz Tv	La Luz Tv	85.0	tv.in	TV
+Emanuel Tv (pucallpa)	Emanuel Tv (pucallpa)	85.0	tv.in	TV
+Telelima Tv (lima)	Telelima Tv (lima)	85.0	tv.in	TV
+Millenium 49 Tv (pucallpa)	Millenium 49 Tv (pucallpa)	85.0	tv.in	TV
+Satipo Nativa Tv	Satipo Nativa Tv	85.0	tv.in	TV
+Monterrico Tv	Monterrico Tv	85.0	tv.in	TV
+Canal Identidad Peruana	Canal Identidad Peruana	85.0	canal+.de	Canal+
+Vz Tv Digital	Vz Tv Digital	85.0	tv.in	TV
+Ovacion Tv	Ovacion Tv	85.0	tv.in	TV
+Ovación Tv	Ovación Tv	85.0	tv.in	TV
+Via Tv Alto Mayo	Via Tv Alto Mayo	85.0	tv.in	TV
+Top Mix Tv	Top Mix Tv	85.0	tv.in	TV
+Sistema 1 (huaraz)	Sistema 1 (huaraz)	85.0	スターチャンネル1.jp	スターチャンネル1
+Dmj Cuzco Tv (huaraz)	Dmj Cuzco Tv (huaraz)	85.0	tv.in	TV
+Planea Tv (lima)	Planea Tv (lima)	85.0	tv.in	TV
+Super Canal (yurimaguas)	Super Canal (yurimaguas)	85.0	canal+.de	Canal+
+Tpto Tv (tarapoto)	Tpto Tv (tarapoto)	85.0	tv.in	TV
+Tv Cosmos	Tv Cosmos	85.0	tv.in	TV
+Tv Peruanísima	Tv Peruanísima	85.0	tv.in	TV
+Tv Perú Internacional Sdt	Tv Perú Internacional Sdt	85.0	tv.in	TV
+Identidad Tv (chanchamayo)	Identidad Tv (chanchamayo)	85.0	tv.in	TV
+Tropical Tv (puerto Maldonado)	Tropical Tv (puerto Maldonado)	85.0	tv.in	TV
+Doble Aa Tv	Doble Aa Tv	85.0	tv.in	TV
+Peru Liga 1 ᴴ.²⁶⁵	Peru Liga 1 ᴴ.²⁶⁵	85.0	スターチャンネル1.jp	スターチャンネル1
+Liga 1 Max ᴸᴵᴳᴬ ¹	Liga 1 Max ᴸᴵᴳᴬ ¹	85.0	スターチャンネル1.jp	スターチャンネル1
+Nativa Deportes (solo Eventos)	Nativa Deportes (solo Eventos)	85.0	M+.Deportes.es	M+ Deportes
+Liga 1 ᴸᴵᴳᴬ ¹	Liga 1 ᴸᴵᴳᴬ ¹	85.0	スターチャンネル1.jp	スターチャンネル1
+Nazarenas Tv Lima	Nazarenas Tv Lima	85.0	tv.in	TV
+Wipr Canal 6	Wipr Canal 6	85.0	canal+.de	Canal+
+Wapa	Wapa	85.0	M+.Deportes.es	Wapa Deportes
+Boricua Tv	Boricua Tv	85.0	tv.in	TV
+Viju+ Sport	Viju+ Sport	85.0	sports.pk	sports
+Gma Life Tv	Gma Life Tv	85.0	tv.in	TV
+Live Event 10 - No Event	Live Event 10 - No Event	85.0	ten.es	Ten
+Live Event 33 -	Live Event 33 -	85.0	canal33.es	33
+Boxing Tv	Boxing Tv	85.0	tv.in	TV
+Bkfc Tv	Bkfc Tv	85.0	tv.in	TV
+Al | Birmingham | Abc 33/40 Wbma	Al | Birmingham | Abc 33/40 Wbma	85.0	abcmelbourne.au	Abc (melbourne)
+Id | Twin Falls | Abc Ksaw	Id | Twin Falls | Abc Ksaw	85.0	abcmelbourne.au	Abc (melbourne)
+In |lafayette | Abc Wpby-ld	In |lafayette | Abc Wpby-ld	85.0	abcmelbourne.au	Abc (melbourne)
+Oh | Lima | Abc Wohl	Oh | Lima | Abc Wohl	85.0	abcmelbourne.au	Abc (melbourne)
+Or | Bend | Abc Ko	Or | Bend | Abc Ko	85.0	abcmelbourne.au	Abc (melbourne)
+Tx | San Angelo | Abc 12 Ktxe	Tx | San Angelo | Abc 12 Ktxe	85.0	abcmelbourne.au	Abc (melbourne)
+Va | Lynchburg | Abc 13wset	Va | Lynchburg | Abc 13wset	85.0	abcmelbourne.au	Abc (melbourne)
+Wy | Cheyenne | Abc 16 Kktq	Wy | Cheyenne | Abc 16 Kktq	85.0	abcmelbourne.au	Abc (melbourne)
+Wv | Parkersburg | Fox Wova-ld	Wv | Parkersburg | Fox Wova-ld	85.0	fox.jp	FOX
+Ms | Laurel | Fox 23 Whpm-ld	Ms | Laurel | Fox 23 Whpm-ld	85.0	fox.nl	FOX
+Mo | St. Joseph | Fox Knpn	Mo | St. Joseph | Fox Knpn	85.0	fox.nl	FOX
+| San Luis Obispo | Fox Kkfx	| San Luis Obispo | Fox Kkfx	85.0	fox.nl	FOX
+Id | Idaho Falls–pocatello| Fox 5 Kxpi	Id | Idaho Falls–pocatello| Fox 5 Kxpi	85.0	fox.jp	FOX
+Mo |jefferson City | Fox 22 Kqfx	Mo |jefferson City | Fox 22 Kqfx	85.0	fox.nl	FOX
+Or | Bend | Fox 39 Kfxo	Or | Bend | Fox 39 Kfxo	85.0	fox.nl	FOX
+Wa | Yakima | Fox Kcyu	Wa | Yakima | Fox Kcyu	85.0	fox.nl	FOX
+Wi | Wausau | Fox Wzaw	Wi | Wausau | Fox Wzaw	85.0	fox.jp	FOX
+Ny | Watertown | Fox 28 Wny	Ny | Watertown | Fox 28 Wny	85.0	fox.nl	FOX
+Ak | Juneau | Nbc Kath	Ak | Juneau | Nbc Kath	85.0	CNBC.cy	Nbc
+Me | Presque Isle | Nbc Wwpi	Me | Presque Isle | Nbc Wwpi	85.0	CNBC.cy	Nbc
+Ms | Greenwood | Nbc 33 Wnbd	Ms | Greenwood | Nbc 33 Wnbd	85.0	CNBC.cy	Nbc
+Tx | Beaumont | Nbc Kjac	Tx | Beaumont | Nbc Kjac	85.0	CNBC.cy	Nbc
+Tx | Bryan | Nbc 23 Kags	Tx | Bryan | Nbc 23 Kags	85.0	CNBC.cy	Nbc
+Va | Harrisonburg | Nbc Wsvw	Va | Harrisonburg | Nbc Wsvw	85.0	CNBC.cy	Nbc
+Mn | Mankato | Nbc Kmn Lp	Mn | Mankato | Nbc Kmn Lp	85.0	CNBC.cy	Nbc
+Ma | Springfield | Cbs 3 Wshm	Ma | Springfield | Cbs 3 Wshm	85.0	スターチャンネル1.jp	スターチャンネル3 (720p Willfon)
+Fl | Jacksonville | Channel 4wjxt	Fl | Jacksonville | Channel 4wjxt	85.0	Channel.4.ch	Channel U
+Id | Boise | Cw Kyuu-ld	Id | Boise | Cw Kyuu-ld	85.0	id.uk	ID
+Nfl Redzone Sunday	Nfl Redzone Sunday	85.0	nflredzone.us	NFL RedZone
+Cin @ Min, Atl @ Car, Lv @ Was @ 01:00 Pm Et" tvg-logo="https://cdn.iptvboss.pro/logos/USA/NFL01.v.png" group-title="USA | NFL 🏈",Nfl Multi Screen / Hdr 1 : Lar @ Phi, Cin @ Min, Atl @ Car, Lv @ Was @ 01:00 Pm Et	Nfl Multi Screen / Hdr 1 : Lar @ Phi, Cin @ Min, Atl @ Car, Lv @ Was @ 01:00 Pm Et	85.0	a&e.us	A&E
+Hou @ Jax, Atl @ Car, Ind @ Ten @ 01:00 Pm Et" tvg-logo="https://cdn.iptvboss.pro/logos/USA/NFL01.v.png" group-title="USA | NFL 🏈",Nfl Multi Screen / Hdr 2 :cin @ Min, Hou @ Jax, Atl @ Car, Ind @ Ten @ 01:00 Pm Et	Nfl Multi Screen / Hdr 2 :cin @ Min, Hou @ Jax, Atl @ Car, Ind @ Ten @ 01:00 Pm Et	85.0	a&e.us	A&E
+Nfl Multi Screen / Hdr 3 :	Nfl Multi Screen / Hdr 3 :	85.0	スターチャンネル1.jp	スターチャンネル3 (720p Willfon)
+Nfl Multi Screen / Hdr 4 :	Nfl Multi Screen / Hdr 4 :	85.0	4+.ch	4+
+Nfl Multi Screen / Hdr 5 :	Nfl Multi Screen / Hdr 5 :	85.0	5usa.uk	5 USA
+Nfl Multi Screen / Hdr 6 :	Nfl Multi Screen / Hdr 6 :	85.0	6+.ch	6+
+Nfl Multi Screen / Hdr 7 :	Nfl Multi Screen / Hdr 7 :	85.0	seven.au	Seven
+Nfl Multi Screen / Hdr 10 :	Nfl Multi Screen / Hdr 10 :	85.0	ten.es	Ten
+Ohl 10: Saginaw @ London - #636	Ohl 10: Saginaw @ London - #636	85.0	ten.es	Ten
+Ohl 11: Chl - Usa Prospects Challenge Game 1	Ohl 11: Chl - Usa Prospects Challenge Game 1	85.0	россия1.ru	Россия 1
+Ohl 12: Dã©fi Des Espoirs De La Lch/ã‰.-u - Match 1	Ohl 12: Dã©fi Des Espoirs De La Lch/ã‰.-u - Match 1	85.0	la1.es	LA 1
+Ohl 13: Prospects Challenge Post-game Press Conference 1	Ohl 13: Prospects Challenge Post-game Press Conference 1	85.0	スターチャンネル1.jp	スターチャンネル1
+Ohl 14: Chl - Usa Prospects Challenge Game 2	Ohl 14: Chl - Usa Prospects Challenge Game 2	85.0	スターチャンネル1.jp	スターチャンネル2 (720p Willfon)
+Ohl 15: Dã©fi Des Espoirs De La Lch/ã‰.-u - Match 2	Ohl 15: Dã©fi Des Espoirs De La Lch/ã‰.-u - Match 2	85.0	la2.es	LA 2
+Ohl Fixture 17: Round 2 - Game 5: Er @ Ldn| Fri 18th 11:00pm	Ohl Fixture 17: Round 2 - Game 5: Er @ Ldn| Fri 18th 11:00pm	85.0	5usa.uk	5 USA
+Ohl Fixture 18: Round 2 - Game 5: Kit @ Wsr| Fri 18th 11:05pm	Ohl Fixture 18: Round 2 - Game 5: Kit @ Wsr| Fri 18th 11:05pm	85.0	5usa.uk	5 USA
+Ohl Fixture 19: Round 2 - Game 5: Osh @ Bfd| Sat 19th 11:00pm	Ohl Fixture 19: Round 2 - Game 5: Osh @ Bfd| Sat 19th 11:00pm	85.0	5usa.uk	5 USA
+Ohl Fixture 20: Round 2 - Game 5: Kgn @ Bar| Sat 19th 11:30pm	Ohl Fixture 20: Round 2 - Game 5: Kgn @ Bar| Sat 19th 11:30pm	85.0	5usa.uk	5 USA
+Uefa Champions League 10	Uefa Champions League 10	85.0	ten.es	Ten
+Uefa Europa League 01: Tottenham Hotspur 20:00 Manchester United 08/21	Uefa Europa League 01: Tottenham Hotspur 20:00 Manchester United 08/21	85.0	europaeuropa.ar	Europa Europa
+Uefa Europa League 02:	Uefa Europa League 02:	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 03:	Uefa Europa League 03:	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 04:	Uefa Europa League 04:	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 05	Uefa Europa League 05	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 06	Uefa Europa League 06	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 07	Uefa Europa League 07	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 08	Uefa Europa League 08	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 09	Uefa Europa League 09	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 10	Uefa Europa League 10	85.0	ten.es	Ten
+Uefa Europa League 11	Uefa Europa League 11	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 12	Uefa Europa League 12	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 13	Uefa Europa League 13	85.0	europaeuropa.ar	Europa Europa
+Uefa Europa League 14	Uefa Europa League 14	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 15	Uefa Europa League 15	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 16	Uefa Europa League 16	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 17	Uefa Europa League 17	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 18	Uefa Europa League 18	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 19	Uefa Europa League 19	85.0	europaeuropa.mx	Europa Europa
+Uefa Europa League 20	Uefa Europa League 20	85.0	europaeuropa.mx	Europa Europa
+Uefa/fifa 10	Uefa/fifa 10	85.0	ten.es	Ten
+Fiba 10 :	Fiba 10 :	85.0	ten.es	Ten
+Fiba 33 :	Fiba 33 :	85.0	canal33.es	33
+Setanta Sports 01 : Brentford - Aston Villa 16 Sep 3:00 Pm Et	Setanta Sports 01 : Brentford - Aston Villa 16 Sep 3:00 Pm Et	85.0	a&e.us	A&E
+Setanta Sports 02 : Crystal Palace - Millwall 16 Sep 3:00 Pm Et	Setanta Sports 02 : Crystal Palace - Millwall 16 Sep 3:00 Pm Et	85.0	a&e.us	A&E
+Supersport Wwe Network	Supersport Wwe Network	85.0	W.Network.ca2	W Network
+Se: Tv10	Se: Tv10	80.0	tv100.gr	TV 100
+Tx | Wichita Falls | My Kjbo	Tx | Wichita Falls | My Kjbo	76.2	kswo.us	Tx | Wichita Falls | Abc Kswo
+Co | Colorado Springs | Cw Kxtu-ld	Co | Colorado Springs | Cw Kxtu-ld	76.0	kktv.us	Co | Colorado Springs | Cbs Kktv
+Cnc中文	Cnc中文	75.0	cnbc.us	CNBC
+Cnc英文	Cnc英文	75.0	cnbc.us	CNBC
+It: La7d	It: La7d	75.0	la7.es	La 7
+It: La 7d	It: La 7d	75.0	la7.es	La 7
+It: Nove	It: Nove	75.0	nova.es	Nova
+Fi: Mtv3	Fi: Mtv3	75.0	itv3.uk	ITV3
+Se: Tv12	Se: Tv12	75.0	tvone.us	TV ONE
+Tr: Trt	Tr: Trt	75.0	tgrt.de	TGRT
+Artb	Artb	75.0	arte.fr	ARTE
+Atfm	Atfm	75.0	tf1.de	Atf1
+Cnc (cajamarca)	Cnc (cajamarca)	75.0	cnbc.us	CNBC
+Fite 24/7	Fite 24/7	75.0	xite.be	Xite
+La | Lake Charles | Cbs Kswl	La | Lake Charles | Cbs Kswl	75.0	kplc.us	La | Lake Charles | Nbc Kplc
+Mo | St. Joseph | Cbs Kcjo-ld	Mo | St. Joseph | Cbs Kcjo-ld	73.7	nbc21knpgstjoseph.us	Mo | St. Joseph | Nbc Knpg-ld
+Tln	Tln	66.7	hln.ca	HLN
+Ntd	Ntd	66.7	NTV.ca2	NTV
+Mbs	Mbs	66.7	tbs.us	TBS
+Tr: Ftv	Tr: Ftv	66.7	mtv.ca	MTV
+Ttv	Ttv	66.7	mtv.ca	MTV
+Enca	Enca	66.7	ewtn.ca	ewtn.ca
+Rpp	Rpp	66.7	rpc.py	RPC
+Nd | Fargo | Cw Kxjb-d2	Nd | Fargo | Cw Kxjb-d2	62.5	cbs30kxjbfargo.us	Nd | Fargo | Cbs 30 Kxjb
+Arg: 24a ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: 24a ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	60.0	a24.ar	a24.ar
+Ctc	Ctc	60.0	cmt.ca	cmt.ca

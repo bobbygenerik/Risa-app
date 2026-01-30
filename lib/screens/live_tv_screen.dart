@@ -36,6 +36,7 @@ import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
@@ -48,7 +49,6 @@ import 'package:iptv_player/widgets/live_tv/epg_channel_selector_dialog.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
-import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
@@ -68,6 +68,105 @@ class _HeroCandidate {
     this.program,
     required this.heroImage,
   });
+}
+
+class _LandscapeGuardedImage extends StatefulWidget {
+  const _LandscapeGuardedImage({
+    required this.url,
+    required this.imageProvider,
+    required this.fit,
+    required this.fallback,
+    required this.probeTag,
+  });
+
+  final String url;
+  final ImageProvider imageProvider;
+  final BoxFit fit;
+  final Widget fallback;
+  final String probeTag;
+
+  @override
+  State<_LandscapeGuardedImage> createState() => _LandscapeGuardedImageState();
+}
+
+class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
+  ImageStream? _stream;
+  ImageInfo? _info;
+  late final ImageStreamListener _streamListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamListener = ImageStreamListener(
+      _handleImage,
+      onError: (error, stackTrace) {
+        if (!mounted) return;
+        ImageFailureCache.recordFailure(widget.url, error);
+        setState(() {
+          _info = null;
+        });
+      },
+    );
+    _resolveImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LandscapeGuardedImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageProvider != widget.imageProvider) {
+      _resolveImage();
+    }
+  }
+
+  void _resolveImage() {
+    _stream?.removeListener(_streamListener);
+    _info = null;
+    final stream = widget.imageProvider.resolve(
+      const ImageConfiguration(),
+    );
+    _stream = stream;
+    stream.addListener(_streamListener);
+  }
+
+  void _handleImage(ImageInfo info, bool sync) {
+    if (!mounted) return;
+    setState(() {
+      _info = info;
+    });
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_streamListener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = _info;
+    if (info == null) {
+      return widget.fallback;
+    }
+    final width = info.image.width;
+    final height = info.image.height;
+    const double minLandscapeRatio = 1.5;
+    if (width / height < minLandscapeRatio) {
+      ImageFailureCache.recordPortrait(widget.url);
+      ImageLoadProbe.recordFailure(
+        widget.url,
+        widget.probeTag,
+        Exception('Portrait artwork rejected'),
+      );
+      return widget.fallback;
+    }
+    ImageFailureCache.recordSuccess(widget.url);
+    ImageLoadProbe.recordSuccess(widget.url, widget.probeTag);
+    return Image(
+      image: widget.imageProvider,
+      fit: widget.fit,
+      gaplessPlayback: true,
+    );
+  }
 }
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
@@ -2089,21 +2188,37 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       // Full-height left scrim to avoid blocky panel edges.
                       Positioned.fill(
                         child: IgnorePointer(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: const Alignment(-1.0, -0.2),
-                                end: const Alignment(0.6, 0.4),
-                                colors: [
-                                  AppTheme.darkBackground
-                                      .withValues(alpha: 0.88),
-                                  AppTheme.darkBackground
-                                      .withValues(alpha: 0.52),
-                                  Colors.transparent,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final scrimWidth = constraints.maxWidth * 0.35;
+                              final scrimBase = AppTheme.darkBackground
+                                  .withAlpha((0.8 * 255).round());
+                              return Row(
+                                children: [
+                                  Container(
+                                    width: scrimWidth,
+                                    color: scrimBase,
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          colors: [
+                                            scrimBase,
+                                            AppTheme.darkBackground
+                                                .withValues(alpha: 0.65),
+                                            Colors.transparent,
+                                          ],
+                                          stops: const [0.0, 0.4, 1.0],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
-                                stops: const [0.0, 0.35, 0.7],
-                              ),
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -2655,54 +2770,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
     if (channel.logoUrl == null || channel.logoUrl!.isEmpty) {
-      return const SizedBox.shrink();
+      // Try enrichment for channels missing playlist logos.
+      return ChannelLogoWidget(
+        channelName: channel.name,
+        tvgId: channel.tvgId,
+        width: 72,
+        height: 48,
+        fit: BoxFit.contain,
+        backgroundColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      );
     }
-    return SizedBox(
-      height: 48,
+    return ChannelLogoWidget(
+      channelName: channel.name,
+      logoUrl: channel.logoUrl,
+      tvgId: channel.tvgId,
       width: 72,
-      child: Center(
-        child: Builder(builder: (context) {
-          final url = normalizeImageUrl(channel.logoUrl!);
-          if (ImageFailureCache.shouldSkip(url)) {
-            return const SizedBox.shrink();
-          }
-          final isSvg = url.toLowerCase().endsWith('.svg') ||
-              url.toLowerCase().contains('.svg?');
-          if (isSvg) {
-            return SvgPicture.network(
-              url,
-              // Removed fixed width/height to let it fill available space
-              fit: BoxFit.contain,
-              headers: HttpClientService().imageHeaders,
-              placeholderBuilder: (_) => const SizedBox.shrink(),
-              // onPictureError handler to avoid crashing on bad svg
-              clipBehavior: Clip.hardEdge,
-            );
-          }
-
-          final provider = LogoImageCache.providerFor(
-            url,
-            headers: HttpClientService().imageHeaders,
-          );
-          return Image(
-            image: provider,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-            frameBuilder: (context, child, frame, wasSync) {
-              if (wasSync || frame != null) {
-                ImageFailureCache.recordSuccess(url);
-                return child;
-              }
-              return const SizedBox.shrink();
-            },
-            errorBuilder: (context, error, stackTrace) {
-              ImageFailureCache.recordFailure(url, error);
-              ImageLoadProbe.recordFailure(url, 'channel_logo', error);
-              return const SizedBox.shrink();
-            },
-          );
-        }),
-      ),
+      height: 48,
+      fit: BoxFit.contain,
+      backgroundColor: Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
     );
   }
 
@@ -2809,6 +2896,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return false;
   }
 
+  bool _isLikelyLandscapeUrl(String url) {
+    if (url.isEmpty) return false;
+    if (_isExplicitBackdropUrl(url)) return true;
+    final lower = url.toLowerCase();
+    if (lower.contains('backdrop') ||
+        lower.contains('background') ||
+        lower.contains('fanart') ||
+        lower.contains('landscape') ||
+        lower.contains('banner')) {
+      return true;
+    }
+    final dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
+    final match = dimensionPattern.firstMatch(lower);
+    if (match != null) {
+      final width = int.tryParse(match.group(1) ?? '') ?? 0;
+      final height = int.tryParse(match.group(2) ?? '') ?? 0;
+      if (width > 0 && height > 0) {
+        return width >= (height * 1.1);
+      }
+    }
+    return false;
+  }
+
   bool _isLikelyChannelLogoUrl(String url) {
     if (url.isEmpty) return false;
     final lower = url.toLowerCase();
@@ -2846,6 +2956,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (_isLikelyPosterUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_poster',
+      );
+      return false;
+    }
+    if (!_isLikelyLandscapeUrl(url)) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_not_landscape',
       );
       return false;
     }
@@ -4237,405 +4353,323 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     int cacheWidth,
     int cacheHeight,
   ) {
-    // 1. Try Playlist Logo first explicitly
-    final playlistLogo = channel.logoUrl;
-    // 2. Fallback to Online/EPG Title Logo if playlist logo is missing
-    final effectiveLogoUrl = (playlistLogo != null && playlistLogo.isNotEmpty)
-        ? playlistLogo
-        : _resolveProgramTitleLogo(program, channel);
-
-    if (effectiveLogoUrl != null && effectiveLogoUrl.isNotEmpty) {
-      final url = normalizeImageUrl(effectiveLogoUrl);
-      if (ImageFailureCache.shouldSkipLogo(url)) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha((0.1 * 255).round()),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Icon(
-            Icons.tv,
-            color: Colors.white.withAlpha((0.6 * 255).round()),
-            size: 16,
-          ),
-        );
-      }
-      final isSvg = url.toLowerCase().endsWith('.svg') ||
-          url.toLowerCase().contains('.svg?');
-
-      if (isSvg) {
-        return SvgPicture.network(
-          url,
-          fit: BoxFit.contain,
-          headers: HttpClientService().imageHeaders,
-          placeholderBuilder: (_) => const SizedBox.shrink(),
-          clipBehavior: Clip.hardEdge,
-        );
-      }
-
-      // Use a consistent provider for both sources
-      final provider = LogoImageCache.providerFor(
-        url,
-        headers: HttpClientService().imageHeaders,
-      );
-      final placeholder = Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha((0.1 * 255).round()),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Icon(
-          Icons.tv,
-          color: Colors.white.withAlpha((0.6 * 255).round()),
-          size: 16,
-        ),
-      );
-
-      return Image(
-        image: provider,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-        gaplessPlayback: true,
-        frameBuilder: (context, child, frame, wasSync) {
-          if (wasSync || frame != null) {
-            ImageFailureCache.recordSuccess(url);
-            return child;
-          }
-          return placeholder;
-        },
-        errorBuilder: (context, error, stackTrace) {
-          ImageFailureCache.recordFailure(url, error);
-          // If the image fails to load, we can try to return the placeholder
-          // or just swallow the error.
-          return placeholder;
-        },
-      );
-    }
-
-    // No logo found
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.1 * 255).round()),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Icon(
-        Icons.tv,
-        color: Colors.white.withAlpha((0.6 * 255).round()),
-        size: 16,
-      ),
+    return ChannelLogoWidget(
+      channelName: channel.name,
+      logoUrl: channel.logoUrl,
+      tvgId: channel.tvgId,
+      width: 40,
+      height: 24,
+      fit: BoxFit.contain,
+      backgroundColor: Colors.black.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(4),
     );
   }
 
   // Removed unused _buildLogoHeroFallbackWithBlur to avoid analyzer unused_element warning.
 
   Widget _buildLogoHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF1B1E2B),
-        Color(0xFF141722),
-        AppTheme.darkBackground,
-      ],
-    );
+    final label = _resolveFallbackCategoryLabel(channel);
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.tv,
+      label: label,
+      showLogo: false,
     );
+  }
+
+  String _resolveFallbackCategoryLabel(Channel channel) {
+    final rawGroup = (channel.groupTitle ?? '').trim();
+    if (rawGroup.isEmpty) {
+      return 'LIVE TV';
+    }
+    final cleaned =
+        rawGroup.replaceAll(RegExp(r'[^A-Za-z0-9]+'), ' ').trim();
+    if (cleaned.isEmpty) {
+      return 'LIVE TV';
+    }
+    final stopWords = <String>{
+      'hd',
+      'sd',
+      'uhd',
+      '4k',
+      'tv',
+      'us',
+      'uk',
+      'ca',
+    };
+    final tokens = cleaned.split(RegExp(r'\s+'));
+    String? pick;
+    for (final token in tokens) {
+      final lower = token.toLowerCase();
+      if (lower.length < 3) continue;
+      if (stopWords.contains(lower)) continue;
+      pick = token;
+      break;
+    }
+    pick ??= tokens.first;
+    if (pick.length > 12) {
+      pick = pick.substring(0, 12);
+    }
+    return pick.toUpperCase();
   }
 
   Widget _buildCategoryHeroFallback(
     Channel channel, {
-    required LinearGradient gradient,
     required IconData icon,
     String? label,
+    bool showLogo = true,
   }) {
     final logoUrl = channel.logoUrl;
     final normalizedLogoUrl =
         logoUrl == null ? null : normalizeImageUrl(logoUrl);
 
-    return Container(
-      decoration: BoxDecoration(gradient: gradient),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final dpr = MediaQuery.of(context).devicePixelRatio;
-          final maxLogoWidth = constraints.maxWidth * 0.55;
-          final maxLogoHeight = constraints.maxHeight * 0.32;
-          final logoCacheWidth = math.min(480, (maxLogoWidth * dpr).round());
-          final logoCacheHeight = math.min(480, (maxLogoHeight * dpr).round());
+    return ChannelCardFallbackBackground(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: FractionallySizedBox(
+              widthFactor: 0.6,
+              heightFactor: 1.0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final dpr = MediaQuery.of(context).devicePixelRatio;
+                  final maxLogoWidth = constraints.maxWidth * 0.55;
+                  final maxLogoHeight = constraints.maxHeight * 0.32;
+                  final logoCacheWidth =
+                      math.min(480, (maxLogoWidth * dpr).round());
+                  final logoCacheHeight =
+                      math.min(480, (maxLogoHeight * dpr).round());
 
-          final fallbackIcon = Icon(
-            icon,
-            color: Colors.white70,
-            size: 64,
-          );
+                  final fallbackIcon = Icon(
+                    icon,
+                    color: Colors.white70,
+                    size: 64,
+                  );
 
-          Widget buildCenteredLogo(Widget child) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(gradient: gradient),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.85,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.06),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 18,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
+                  Widget buildCenteredLogo(Widget child) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              center: Alignment.center,
+                              radius: 0.85,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.06),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 18,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.28),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 14),
+                                ),
+                              ],
+                            ),
+                            child: child,
+                          ),
                         ),
                       ],
-                    ),
-                    child: child,
-                  ),
-                ),
-              ],
-            );
-          }
+                    );
+                  }
 
-          Widget buildLogoBlock(Widget child) {
-            return SizedBox(
-              width: maxLogoWidth,
-              height: maxLogoHeight,
-              child: Align(
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: Transform.translate(
-                    offset: const Offset(0, -4),
-                    child: child,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          Widget buildFallbackContent() {
-            final labelText = label;
-            if (labelText == null || labelText.isEmpty) {
-              return buildCenteredLogo(fallbackIcon);
-            }
-            return buildCenteredLogo(
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  buildLogoBlock(fallbackIcon),
-                  const SizedBox(height: 12),
-                  Text(
-                    labelText,
-                    style: AppTypography.heroTitle(context).copyWith(
-                      letterSpacing: 6,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (normalizedLogoUrl == null ||
-              normalizedLogoUrl.isEmpty ||
-              ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
-            return buildFallbackContent();
-          }
-
-          return CachedNetworkImage(
-            imageUrl: normalizedLogoUrl,
-            httpHeaders: HttpClientService().imageHeaders,
-            fit: BoxFit.contain,
-            width: maxLogoWidth,
-            height: maxLogoHeight,
-            memCacheWidth: logoCacheWidth,
-            memCacheHeight: logoCacheHeight,
-            imageBuilder: (context, imageProvider) {
-              ImageFailureCache.recordSuccess(normalizedLogoUrl);
-              final logo = Image(
-                image: imageProvider,
-                fit: BoxFit.contain,
-                width: maxLogoWidth,
-                height: maxLogoHeight,
-                gaplessPlayback: true,
-              );
-              final labelText = label;
-              if (labelText == null || labelText.isEmpty) {
-                return buildCenteredLogo(logo);
-              }
-              return buildCenteredLogo(
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    buildLogoBlock(logo),
-                    const SizedBox(height: 12),
-                    Text(
-                      labelText,
-                      style: AppTypography.heroTitle(context).copyWith(
-                        letterSpacing: 6,
-                        color: Colors.white70,
+                  Widget buildLogoBlock(Widget child) {
+                    return SizedBox(
+                      width: maxLogoWidth,
+                      height: maxLogoHeight,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: Transform.translate(
+                            offset: const Offset(0, -4),
+                            child: child,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-            placeholder: (_, __) => buildFallbackContent(),
-            errorWidget: (_, url, error) {
-              ImageFailureCache.recordFailure(url, error);
-              logHandshakeIfNeeded(url, error, context: 'LiveTV hero logo');
-              return buildFallbackContent();
-            },
-            useOldImageOnUrlChange: true,
-          );
-        },
+                    );
+                  }
+
+                  Widget buildLabelBlock(String labelText) {
+                    final resolvedLabel = labelText.toUpperCase();
+                    final baseFontSize = maxLogoHeight * 0.6;
+                    return SizedBox(
+                      width: maxLogoWidth,
+                      height: maxLogoHeight,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: Text(
+                            resolvedLabel,
+                            maxLines: 1,
+                            style: AppTypography.heroTitle(context).copyWith(
+                              fontSize: baseFontSize,
+                              letterSpacing: 6,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  Widget buildFallbackContent() {
+                    final labelText = label;
+                    if (labelText == null || labelText.isEmpty) {
+                      return buildCenteredLogo(fallbackIcon);
+                    }
+                    return buildCenteredLogo(
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (showLogo) ...[
+                            buildLogoBlock(fallbackIcon),
+                            const SizedBox(height: 12),
+                          ],
+                          buildLabelBlock(labelText),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (!showLogo ||
+                      normalizedLogoUrl == null ||
+                      normalizedLogoUrl.isEmpty ||
+                      ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
+                    return buildFallbackContent();
+                  }
+
+                  return CachedNetworkImage(
+                    imageUrl: normalizedLogoUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.contain,
+                    width: maxLogoWidth,
+                    height: maxLogoHeight,
+                    memCacheWidth: logoCacheWidth,
+                    memCacheHeight: logoCacheHeight,
+                    imageBuilder: (context, imageProvider) {
+                      ImageFailureCache.recordSuccess(normalizedLogoUrl);
+                      final logo = Image(
+                        image: imageProvider,
+                        fit: BoxFit.contain,
+                        width: maxLogoWidth,
+                        height: maxLogoHeight,
+                        gaplessPlayback: true,
+                      );
+                      final labelText = label;
+                      if (labelText == null || labelText.isEmpty) {
+                        return buildCenteredLogo(logo);
+                      }
+                      return buildCenteredLogo(
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (showLogo) ...[
+                              buildLogoBlock(logo),
+                              const SizedBox(height: 12),
+                            ],
+                            buildLabelBlock(labelText),
+                          ],
+                        ),
+                      );
+                    },
+                    placeholder: (_, __) => buildFallbackContent(),
+                    errorWidget: (_, url, error) {
+                      ImageFailureCache.recordFailure(url, error);
+                      logHandshakeIfNeeded(url, error,
+                          context: 'LiveTV hero logo');
+                      return buildFallbackContent();
+                    },
+                    useOldImageOnUrlChange: true,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildNewsHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF0B1E3A),
-        Color(0xFF102A4A),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.newspaper,
       label: 'NEWS',
+      showLogo: false,
     );
   }
 
   Widget _buildSportsHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF1A2E1A),
-        Color(0xFF0F1F0F),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.sports,
       label: 'SPORTS',
+      showLogo: false,
     );
   }
 
   Widget _buildWeatherHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF1D2A3A),
-        Color(0xFF15212E),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.cloud,
       label: 'WEATHER',
+      showLogo: false,
     );
   }
 
   Widget _buildKidsHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF2C2A1A),
-        Color(0xFF1F1C0F),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.child_care,
       label: 'KIDS',
+      showLogo: false,
     );
   }
 
   Widget _buildMusicHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF2A1A2E),
-        Color(0xFF1D141F),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.music_note,
       label: 'MUSIC',
+      showLogo: false,
     );
   }
 
   Widget _buildDocumentaryHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF1C2529),
-        Color(0xFF141B1F),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.menu_book,
       label: 'DOCS',
+      showLogo: false,
     );
   }
 
   Widget _buildMovieHeroFallback(Channel channel) {
-    const gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFF2B2217),
-        Color(0xFF1D1711),
-        AppTheme.darkBackground,
-      ],
-    );
     return _buildCategoryHeroFallback(
       channel,
-      gradient: gradient,
       icon: Icons.movie,
       label: 'MOVIES',
+      showLogo: false,
     );
   }
 
@@ -4793,55 +4827,65 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final cacheHeight =
                 math.min(1500, (constraints.maxHeight * dpr).round());
 
+            const heroImageWidthFactor = 0.6;
+
             if (isChannelLogoFallback) {
               // Special handling for channel logo fallback with blurred background
               return Stack(
                 children: [
                   // Blurred background
-                  SizedBox.expand(
-                    child: CachedNetworkImage(
-                      imageUrl: normalizedHeroUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      filterQuality: FilterQuality.low,
-                      memCacheWidth: cacheWidth ~/ 2,
-                      memCacheHeight: cacheHeight ~/ 2,
-                      imageBuilder: (context, imageProvider) {
-                        ImageLoadProbe.recordSuccess(
-                            normalizedHeroUrl, 'hero_logo_bg');
-                        return ImageFiltered(
-                          imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              image: DecorationImage(
-                                image: imageProvider,
-                                fit: BoxFit.cover,
-                                alignment: Alignment.center,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: heroImageWidthFactor,
+                      heightFactor: 1.0,
+                      child: CachedNetworkImage(
+                        imageUrl: normalizedHeroUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.centerRight,
+                        filterQuality: FilterQuality.low,
+                        memCacheWidth: cacheWidth ~/ 2,
+                        memCacheHeight: cacheHeight ~/ 2,
+                        imageBuilder: (context, imageProvider) {
+                          ImageLoadProbe.recordSuccess(
+                              normalizedHeroUrl, 'hero_logo_bg');
+                          return ImageFiltered(
+                            imageFilter:
+                                ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.centerRight,
+                                ),
+                              ),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.4),
                               ),
                             ),
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.4),
-                            ),
-                          ),
-                        );
-                      },
-                      placeholder: (_, __) => _buildGradientPlaceholder(),
-                      errorWidget: (_, url, error) {
-                        ImageFailureCache.recordFailure(url, error);
-                        ImageLoadProbe.recordFailure(
-                            url, 'hero_logo_bg', error);
-                        return _buildGradientPlaceholder();
-                      },
-                      useOldImageOnUrlChange: true,
+                          );
+                        },
+                        placeholder: (_, __) => _buildGradientPlaceholder(),
+                        errorWidget: (_, url, error) {
+                          ImageFailureCache.recordFailure(url, error);
+                          ImageLoadProbe.recordFailure(
+                              url, 'hero_logo_bg', error);
+                          return _buildGradientPlaceholder();
+                        },
+                        useOldImageOnUrlChange: true,
+                      ),
                     ),
                   ),
-                  // Centered logo
-                  Center(
+                  // Right-aligned logo
+                  Align(
+                    alignment: Alignment.centerRight,
                     child: CachedNetworkImage(
                       imageUrl: normalizedHeroUrl,
                       httpHeaders: HttpClientService().imageHeaders,
                       fit: BoxFit.contain,
+                      alignment: Alignment.centerRight,
                       filterQuality: FilterQuality.high,
                       width: constraints.maxWidth * 0.3,
                       height: constraints.maxHeight * 0.25,
@@ -4855,6 +4899,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         return Image(
                           image: imageProvider,
                           fit: BoxFit.contain,
+                          alignment: Alignment.centerRight,
                           filterQuality: FilterQuality.high,
                           gaplessPlayback: true,
                         );
@@ -4874,29 +4919,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }
 
-            // Adaptive handling:
-            // Use heuristics since aspect ratio cache is removed.
-            final isLandscape = _isExplicitBackdropUrl(normalizedHeroUrl);
-
-            if (isLandscape) {
-              // It's a Backdrop/Landscape image -> Render Full Bleed (Cover)
-              return SizedBox.expand(
+            // Render only landscape artwork. Portrait gets rejected by the
+            // image guard and falls back to the category/hero fallback.
+            return Align(
+              alignment: Alignment.centerRight,
+              child: FractionallySizedBox(
+                widthFactor: heroImageWidthFactor,
+                heightFactor: 1.0,
                 child: CachedNetworkImage(
                   imageUrl: normalizedHeroUrl,
                   httpHeaders: HttpClientService().imageHeaders,
                   fit: BoxFit.cover,
+                  alignment: Alignment.centerRight,
                   filterQuality: FilterQuality.high,
                   memCacheWidth: cacheWidth,
                   memCacheHeight: cacheHeight,
                   imageBuilder: (context, imageProvider) {
-                    ImageFailureCache.recordSuccess(normalizedHeroUrl);
-                    ImageLoadProbe.recordSuccess(
-                        normalizedHeroUrl, 'hero_backdrop');
-                    return Image(
-                      image: imageProvider,
+                    return _LandscapeGuardedImage(
+                      url: normalizedHeroUrl,
+                      imageProvider: imageProvider,
                       fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                      gaplessPlayback: true,
+                      fallback: heroFallback,
+                      probeTag: 'hero_backdrop',
                     );
                   },
                   placeholder: (_, __) => _buildGradientPlaceholder(),
@@ -4910,82 +4954,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   fadeInDuration: const Duration(milliseconds: 300),
                   useOldImageOnUrlChange: true,
                 ),
-              );
-            }
-
-            // It's a Poster/Portrait image -> Use Blurred Background + Contained Image
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // Blurred background (fills screen)
-                CachedNetworkImage(
-                  imageUrl: normalizedHeroUrl,
-                  httpHeaders: HttpClientService().imageHeaders,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                  filterQuality: FilterQuality.low,
-                  memCacheWidth: cacheWidth ~/ 4,
-                  memCacheHeight: cacheHeight ~/ 4,
-                  imageBuilder: (context, imageProvider) {
-                    ImageLoadProbe.recordSuccess(
-                        normalizedHeroUrl, 'hero_poster_bg');
-                    return ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: imageProvider,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                          ),
-                        ),
-                        child: Container(
-                          color: Colors.black.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    );
-                  },
-                  placeholder: (_, __) => _buildGradientPlaceholder(),
-                  errorWidget: (_, url, error) {
-                    ImageFailureCache.recordFailure(url, error);
-                    ImageLoadProbe.recordFailure(url, 'hero_poster_bg', error);
-                    return _buildGradientPlaceholder();
-                  },
-                  useOldImageOnUrlChange: true,
-                ),
-                // Main Image (Contained - shows full content)
-                Center(
-                  child: CachedNetworkImage(
-                    imageUrl: normalizedHeroUrl,
-                    httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    memCacheWidth: cacheWidth,
-                    memCacheHeight: cacheHeight,
-                    imageBuilder: (context, imageProvider) {
-                      ImageFailureCache.recordSuccess(normalizedHeroUrl);
-                      ImageLoadProbe.recordSuccess(
-                          normalizedHeroUrl, 'hero_poster');
-                      return Image(
-                        image: imageProvider,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                        gaplessPlayback: true,
-                      );
-                    },
-                    placeholder: (_, __) => const SizedBox.shrink(),
-                    errorWidget: (_, url, error) {
-                      ImageFailureCache.recordFailure(url, error);
-                      ImageLoadProbe.recordFailure(url, 'hero_poster', error);
-                      logHandshakeIfNeeded(url, error,
-                          context: 'LiveTV hero main');
-                      return heroFallback;
-                    },
-                    fadeInDuration: const Duration(milliseconds: 300),
-                    useOldImageOnUrlChange: true,
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),
@@ -5301,79 +5270,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return fallback;
     }
     ImageLoadProbe.recordAttempt(url, 'live_tv_adaptive');
-    final isPoster = _isLikelyPosterUrl(url);
-
-    if (isPoster) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          // Blurred background
-          CachedNetworkImage(
-            imageUrl: url,
-            httpHeaders: HttpClientService().imageHeaders,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            fadeInDuration: Duration.zero,
-            fadeOutDuration: Duration.zero,
-            useOldImageOnUrlChange: true,
-            memCacheWidth: (cacheWidth ?? 400) ~/ 4,
-            memCacheHeight: (cacheHeight ?? 240) ~/ 4,
-            imageBuilder: (context, imageProvider) {
-              ImageFailureCache.recordSuccess(url);
-              ImageLoadProbe.recordSuccess(url, 'live_tv_poster_bg');
-              return ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: imageProvider,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                    ),
-                  ),
-                  foregroundDecoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.4),
-                  ),
-                ),
-              );
-            },
-            placeholder: (context, url) => _buildGradientPlaceholder(),
-            errorWidget: (context, url, err) {
-              ImageFailureCache.recordFailure(url, err);
-              ImageLoadProbe.recordFailure(url, 'live_tv_poster_bg', err);
-              return fallback;
-            },
-          ),
-          // Centered image content (Contain)
-          CachedNetworkImage(
-            imageUrl: url,
-            httpHeaders: HttpClientService().imageHeaders,
-            fit: BoxFit.contain,
-            memCacheWidth: cacheWidth,
-            memCacheHeight: cacheHeight,
-            fadeInDuration: Duration.zero,
-            fadeOutDuration: Duration.zero,
-            useOldImageOnUrlChange: true,
-            imageBuilder: (context, imageProvider) {
-              ImageFailureCache.recordSuccess(url);
-              ImageLoadProbe.recordSuccess(url, 'live_tv_poster');
-              return Image(
-                image: imageProvider,
-                fit: BoxFit.contain,
-                gaplessPlayback: true,
-              );
-            },
-            placeholder: (context, url) => fallback,
-            errorWidget: (context, url, err) {
-              ImageFailureCache.recordFailure(url, err);
-              ImageLoadProbe.recordFailure(url, 'live_tv_poster', err);
-              return fallback;
-            },
-          ),
-        ],
-      );
-    }
-
     return CachedNetworkImage(
       imageUrl: url,
       httpHeaders: HttpClientService().imageHeaders,
@@ -5384,12 +5280,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       fadeOutDuration: Duration.zero,
       useOldImageOnUrlChange: true,
       imageBuilder: (context, imageProvider) {
-        ImageFailureCache.recordSuccess(url);
-        ImageLoadProbe.recordSuccess(url, 'live_tv_card');
-        return Image(
-          image: imageProvider,
+        return _LandscapeGuardedImage(
+          url: url,
+          imageProvider: imageProvider,
           fit: defaultFit,
-          gaplessPlayback: true,
+          fallback: fallback,
+          probeTag: 'live_tv_card',
         );
       },
       placeholder: (context, url) => fallback,
@@ -5401,6 +5297,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       },
     );
   }
+
 
   double _contentTopForLayout(
       BuildContext context, double heroHeight, double cardPeek) {

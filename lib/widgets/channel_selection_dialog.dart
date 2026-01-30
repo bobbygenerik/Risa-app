@@ -6,6 +6,7 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 class ChannelSelectionDialog extends StatefulWidget {
   const ChannelSelectionDialog({super.key});
@@ -224,21 +225,26 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                               .withValues(alpha: 0.2)
                                           : Colors.transparent,
                                       child: ListTile(
-                                        leading: (channel.logoUrl?.isNotEmpty ??
-                                                false)
-                                            ? Image.network(
-                                                channel.logoUrl!,
-                                                width: 48,
-                                                height: 48,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (_, __, ___) =>
-                                                    const Icon(
-                                                  Icons.tv,
-                                                  color: Colors.white54,
-                                                ),
-                                              )
-                                            : const Icon(Icons.tv,
-                                                color: Colors.white54),
+                                        leading: SizedBox(
+                                          width: 48,
+                                          height: 48,
+                                          child: ChannelLogoWidget(
+                                            channelName: channel.name,
+                                            logoUrl: channel.logoUrl,
+                                            tvgId: channel.tvgId,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.contain,
+                                            placeholder: const Icon(
+                                              Icons.tv,
+                                              color: Colors.white54,
+                                            ),
+                                            errorWidget: const Icon(
+                                              Icons.tv,
+                                              color: Colors.white54,
+                                            ),
+                                          ),
+                                        ),
                                         title: Text(
                                           channel.name,
                                           style: const TextStyle(

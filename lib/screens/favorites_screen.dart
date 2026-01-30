@@ -1,20 +1,17 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/services/http_client_service.dart';
-import 'package:iptv_player/utils/image_failure_cache.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -223,68 +220,28 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                 top: Radius.circular(AppSizes.radiusMd),
                               ),
                             ),
-                            child: channel.logoUrl != null &&
-                                    channel.logoUrl!.isNotEmpty
-                                ? ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(AppSizes.radiusMd),
-                                    ),
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final dpr =
-                                            MediaQuery.of(context).devicePixelRatio;
-                                        final cacheWidth = math.min(
-                                          400,
-                                          (constraints.maxWidth * dpr).round(),
-                                        );
-                                        final cacheHeight = math.min(
-                                          300,
-                                          (constraints.maxHeight * dpr).round(),
-                                        );
-                                        if (ImageFailureCache.shouldSkip(
-                                            channel.logoUrl!)) {
-                                          return _buildChannelPlaceholder(
-                                              channel.name);
-                                        }
-                                        return CachedNetworkImage(
-                                          imageUrl: channel.logoUrl!,
-                                          httpHeaders: {
-                                            ...HttpClientService().imageHeaders,
-                                            'User-Agent':
-                                                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                          },
-                                          fit: BoxFit.contain,
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          memCacheWidth: cacheWidth,
-                                          memCacheHeight: cacheHeight,
-                                          imageBuilder:
-                                              (context, imageProvider) {
-                                            ImageFailureCache.recordSuccess(
-                                                channel.logoUrl!);
-                                            return Image(
-                                              image: imageProvider,
-                                              fit: BoxFit.contain,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              gaplessPlayback: true,
-                                            );
-                                          },
-                                          placeholder: (context, url) =>
-                                              _buildChannelPlaceholder(
-                                                  channel.name),
-                                          errorWidget: (context, url, error) {
-                                            ImageFailureCache.recordFailure(
-                                                url, error);
-                                            return _buildChannelPlaceholder(
-                                                channel.name);
-                                          },
-                                          useOldImageOnUrlChange: true,
-                                        );
-                                      },
-                                    ),
-                                  )
-                                : _buildChannelPlaceholder(channel.name),
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(AppSizes.radiusMd),
+                              ),
+                              child: ChannelLogoWidget(
+                                channelName: channel.name,
+                                logoUrl: channel.logoUrl,
+                                tvgId: channel.tvgId,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.contain,
+                                placeholder: _buildChannelPlaceholder(
+                                  channel.name,
+                                ),
+                                errorWidget: _buildChannelPlaceholder(
+                                  channel.name,
+                                ),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(AppSizes.radiusMd),
+                                ),
+                              ),
+                            ),
                           ),
 
                           // Live badge

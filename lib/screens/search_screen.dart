@@ -9,6 +9,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/widgets/voice_search_button.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -351,27 +352,29 @@ class _SearchScreenState extends State<SearchScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (channel.logoUrl != null &&
-                            channel.logoUrl!.isNotEmpty)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.network(
-                                channel.logoUrl!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.tv,
-                                  size: 32,
-                                  color: AppTheme.textSecondary,
-                                ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: ChannelLogoWidget(
+                              channelName: channel.name,
+                              logoUrl: channel.logoUrl,
+                              tvgId: channel.tvgId,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.contain,
+                              placeholder: const Icon(
+                                Icons.tv,
+                                size: 32,
+                                color: AppTheme.textSecondary,
+                              ),
+                              errorWidget: const Icon(
+                                Icons.tv,
+                                size: 32,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
-                          )
-                        else
-                          const Expanded(
-                            child: Icon(Icons.tv,
-                                size: 32, color: AppTheme.textSecondary),
                           ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                           child: Text(

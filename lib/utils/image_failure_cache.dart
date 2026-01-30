@@ -6,6 +6,7 @@ class ImageFailureCache {
   static final Map<String, int> _failures = {};
   static final Map<String, DateTime> _lastFailureAt = {};
   static final Set<String> _permanent = {};
+  static final Set<String> _portrait = {};
   static int _globalFailureCount = 0;
   static DateTime? _globalWindowStart;
   static DateTime? _globalCooldownUntil;
@@ -33,6 +34,7 @@ class ImageFailureCache {
       return true;
     }
     if (_permanent.contains(url)) return true;
+    if (_portrait.contains(url)) return true;
     final last = _lastFailureAt[url];
     if (last == null) return false;
     final failures = _failures[url] ?? 0;
@@ -72,6 +74,7 @@ class ImageFailureCache {
     _failures.remove(url);
     _lastFailureAt.remove(url);
     _permanent.remove(url);
+    _portrait.remove(url);
     // Reset global failure window on success to avoid long global cooldowns.
     _globalFailureCount = 0;
     _globalWindowStart = null;
@@ -93,6 +96,11 @@ class ImageFailureCache {
       _globalDisableUntil = DateTime.now().add(_globalDisableAggressive);
     }
     _trackGlobalFailure();
+  }
+
+  static void recordPortrait(String url) {
+    if (url.isEmpty) return;
+    _portrait.add(url);
   }
 
   static void _trackGlobalFailure() {

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_typography.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 
 /// A hero component that displays channel information with EPG data
@@ -22,6 +24,8 @@ class ContentHero extends StatelessWidget {
   final bool isLive;
   final String title;
   final String? description;
+  final double? scrimMaxRight;
+  final double? spotlightStartX;
 
   const ContentHero({
     super.key,
@@ -34,6 +38,8 @@ class ContentHero extends StatelessWidget {
     this.isLive = false,
     this.title = '',
     this.description,
+    this.scrimMaxRight,
+    this.spotlightStartX,
   });
 
   @override
@@ -79,7 +85,10 @@ class ContentHero extends StatelessWidget {
           // Left scrim for info box readability with feathered diagonal edge
           Positioned.fill(
             child: CustomPaint(
-              painter: _HeroLeftScrimPainter(),
+              painter: _HeroLeftScrimPainter(
+                scrimMaxRight: scrimMaxRight,
+                spotlightStartX: spotlightStartX,
+              ),
             ),
           ),
           // Overlay gradient
@@ -391,13 +400,23 @@ class HeroInfoBox extends StatelessWidget {
 }
 
 class _HeroLeftScrimPainter extends CustomPainter {
+  final double? scrimMaxRight;
+  final double? spotlightStartX;
+
+  const _HeroLeftScrimPainter({
+    this.scrimMaxRight,
+    this.spotlightStartX,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
     final double width = size.width;
     final double height = size.height;
 
-    final double baseWidth = width * 0.38;
-    final double extraWidth = width * 0.05;
+    final double maxRight = scrimMaxRight ?? width * 0.22;
+    final double baseWidth = math.min(width * 0.22, maxRight);
+    final double extraWidth =
+        math.min(width * 0.05, math.max(4.0, maxRight * 0.25));
     final double curvePull = width * 0.12;
     final double topInset = height * 0.05;
     final double bottomInset = height * 0.08;
@@ -431,6 +450,8 @@ class _HeroLeftScrimPainter extends CustomPainter {
         stops: [0.0, 0.78, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, baseWidth + extraWidth, height));
 
+    final Rect bounds = Rect.fromLTWH(0, 0, width, height);
+    canvas.saveLayer(bounds, Paint());
     canvas.drawPath(scrimShape, fillPaint);
 
     final Path featherBand = Path()
@@ -470,6 +491,27 @@ class _HeroLeftScrimPainter extends CustomPainter {
       );
 
     canvas.drawPath(featherBand, featherPaint);
+
+    final Paint spotlightPaint = Paint()
+      ..blendMode = BlendMode.dstOut
+      ..shader = const RadialGradient(
+        center: Alignment(0.78, 0.08),
+        radius: 0.7,
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0x00FFFFFF),
+        ],
+        stops: [0.0, 1.0],
+      ).createShader(bounds);
+    final double spotlightClipLeft =
+        spotlightStartX ?? math.max(baseWidth + extraWidth, width * 0.28);
+    final Rect spotlightClip =
+        Rect.fromLTWH(spotlightClipLeft, 0, width - spotlightClipLeft, height);
+    canvas.save();
+    canvas.clipRect(spotlightClip);
+    canvas.drawRect(bounds, spotlightPaint);
+    canvas.restore();
+    canvas.restore();
   }
 
   @override
@@ -505,6 +547,8 @@ class EPGHero extends StatelessWidget {
         final description = currentProgram?.description;
         final heroImage = customHeroImage ?? currentProgram?.imageUrl;
         final isLive = currentProgram?.isCurrentlyPlaying == true;
+        final scrimMaxRight = context.spacingSm();
+        final spotlightStartX = scrimMaxRight + context.spacingSm();
 
         return Stack(
           fit: StackFit.expand,
@@ -518,6 +562,8 @@ class EPGHero extends StatelessWidget {
               title: title,
               description: description,
               onTap: onTap,
+              scrimMaxRight: scrimMaxRight,
+              spotlightStartX: spotlightStartX,
             ),
             // Info overlay
             Positioned(

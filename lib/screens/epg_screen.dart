@@ -1586,6 +1586,8 @@ class _EPGScreenState extends State<EPGScreen>
                 children: [
                   CachedChannelLogo(
                     logoUrl: channel.logoUrl,
+                    channelName: channel.name,
+                    tvgId: channel.tvgId,
                     size: 40,
                     fallbackIcon: Icons.tv,
                   ),

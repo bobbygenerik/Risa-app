@@ -90,6 +90,7 @@ class HeroInfoBox extends StatelessWidget {
                 margin: EdgeInsets.only(bottom: context.spacingSm()),
                 child: CachedChannelLogo(
                   logoUrl: channelLogoUrl!,
+                  channelName: title,
                   size: context.spacingMd(),
                   fallbackIcon: Icons.tv,
                 ),

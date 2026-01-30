@@ -30,6 +30,7 @@ class CatchupInfo {
 }
 
 class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
+  static const bool _enableLenientParserFallback = false;
   final Set<String> _availableChannels = {};
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
@@ -2344,29 +2345,40 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         } catch (e3, s3) {
           debugLog('EPG: Latin1 retry also failed: $e3');
           debugLog(s3.toString());
-          debugLog('EPG: Falling back to lenient parser after XML errors.');
-          channelIds.clear();
-          normalizedChannels.clear();
-          channelHashes.clear();
-          programCount = 0;
-          tempFile = File(
-              '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
-          usedLenient = true;
-          await runLenientParse();
+          if (_enableLenientParserFallback) {
+            debugLog('EPG: Falling back to lenient parser after XML errors.');
+            channelIds.clear();
+            normalizedChannels.clear();
+            channelHashes.clear();
+            programCount = 0;
+            tempFile = File(
+                '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
+            usedLenient = true;
+            await runLenientParse();
+          } else {
+            debugLog(
+                'EPG: Lenient parser fallback disabled; keeping XML error result.');
+          }
         }
       }
     }
 
-    if (!usedLenient && (programCount == 0 || (hadXmlErrors && programCount < 1000))) {
-      debugLog(
-          'EPG: Low program count ($programCount). Falling back to lenient parser.');
-      channelIds.clear();
-      normalizedChannels.clear();
-      channelHashes.clear();
-      programCount = 0;
-      tempFile = File(
-          '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
-      await runLenientParse();
+    if (!usedLenient &&
+        (programCount == 0 || (hadXmlErrors && programCount < 1000))) {
+      if (_enableLenientParserFallback) {
+        debugLog(
+            'EPG: Low program count ($programCount). Falling back to lenient parser.');
+        channelIds.clear();
+        normalizedChannels.clear();
+        channelHashes.clear();
+        programCount = 0;
+        tempFile = File(
+            '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
+        await runLenientParse();
+      } else {
+        debugLog(
+            'EPG: Lenient parser fallback disabled; keeping low-count result ($programCount).');
+      }
     }
 
     final channelHashStrings = channelHashes.map(

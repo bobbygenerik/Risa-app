@@ -178,18 +178,20 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
                     color: Colors.white.withValues(alpha: 0.1), width: 1),
           ),
           child: Center(
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: CachedChannelLogo(
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: CachedChannelLogo(
                 logoUrl: widget.channel.logoUrl,
+                channelName: widget.channel.name,
+                tvgId: widget.channel.tvgId,
                 size: 48,
                 cacheWidth: 96,
                 cacheHeight: 96,
                 fallbackIcon: Icons.dvr,
+                ),
               ),
             ),
-          ),
         ),
       ),
     );

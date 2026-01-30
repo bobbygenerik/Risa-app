@@ -1,0 +1,857 @@
+unmatched_count=997
+Nfl New England Patriots	Nfl New England Patriots
+Global Maritimes	Global Maritimes
+Champ | Portsmouth	Champ | Portsmouth
+Champ | Sheffield United	Champ | Sheffield United
+Champ | Wrexham Afc	Champ | Wrexham Afc
+L1 | Luton Town	L1 | Luton Town
+C44 (adelaide)	C44 (adelaide)
+Sky Greyhound	Sky Greyhound
+Kayo1 (footy)	Kayo1 (footy)
+Kayo2 (footy)	Kayo2 (footy)
+Kayo3 (league)	Kayo3 (league)
+Kayo4 (f1)	Kayo4 (f1)
+Kayo5 (netball)	Kayo5 (netball)
+A-league : Adelaide United	A-league : Adelaide United
+A-league : Auckland Fc	A-league : Auckland Fc
+A-league : Brisbane Roar	A-league : Brisbane Roar
+A-league : Central Coast Mariners	A-league : Central Coast Mariners
+A-league : Macarthur Fc	A-league : Macarthur Fc
+A-league : Melbourne City	A-league : Melbourne City
+A-league : Melbourne Victory	A-league : Melbourne Victory
+A-league : Newcastle Jets	A-league : Newcastle Jets
+A-league : Perth Glory	A-league : Perth Glory
+A-league : Sydney Fc	A-league : Sydney Fc
+A-league : Western Sydney Wanderers	A-league : Western Sydney Wanderers
+A-league : Western United	A-league : Western United
+Afl : Carlton	Afl : Carlton
+Afl : Collingwood	Afl : Collingwood
+Afl : Essendon	Afl : Essendon
+Afl : Fremantle	Afl : Fremantle
+Afl : Geelong	Afl : Geelong
+Afl : Hawthorn	Afl : Hawthorn
+Afl : Richmond	Afl : Richmond
+Afl : St Kilda	Afl : St Kilda
+Afl : Western Bulldogs	Afl : Western Bulldogs
+Aflw : Carlton	Aflw : Carlton
+Aflw : Collingwood	Aflw : Collingwood
+Aflw : Essendon	Aflw : Essendon
+Aflw : Fremantle	Aflw : Fremantle
+Aflw : Geelong	Aflw : Geelong
+Aflw : Hawthorn	Aflw : Hawthorn
+Aflw : Richmond	Aflw : Richmond
+Aflw : St Kilda	Aflw : St Kilda
+Aflw : Western Bulldogs	Aflw : Western Bulldogs
+Nrl : Brisbane Broncos	Nrl : Brisbane Broncos
+Nrl : Canberra Raiders	Nrl : Canberra Raiders
+Nrl : Canterbury Bankstown Bulldogs	Nrl : Canterbury Bankstown Bulldogs
+Nrl : Cronulla Sutherland Sharks	Nrl : Cronulla Sutherland Sharks
+Nrl : Dolphins	Nrl : Dolphins
+Nrl : Manly Warringah Sea Eagles	Nrl : Manly Warringah Sea Eagles
+Nrl : New Zealand Warriors	Nrl : New Zealand Warriors
+Nrl : Newcastle Knights	Nrl : Newcastle Knights
+Nrl : North Queensland Cowboys	Nrl : North Queensland Cowboys
+Nrl : Parramatta Eels	Nrl : Parramatta Eels
+Nrl : Penrith Panthers	Nrl : Penrith Panthers
+Nrl : South Sydney Rabbitohs	Nrl : South Sydney Rabbitohs
+Nrl : St George Illawarra Dragons	Nrl : St George Illawarra Dragons
+Nrl : Sydney Roosters	Nrl : Sydney Roosters
+Nrl : Wests Tigers	Nrl : Wests Tigers
+餘姚姚江文化	餘姚姚江文化
+高清电影	高清电影
+黃驊影視	黃驊影視
+黃驊渤海新區	黃驊渤海新區
+黑莓电竞	黑莓电竞
+黑龙江卫	黑龙江卫
+龙岩公共	龙岩公共
+Cgntv-kr华人媒体宣教教育电视台	Cgntv-kr华人媒体宣教教育电视台
+Cgntv华人媒体宣教教育电视台中文台	Cgntv华人媒体宣教教育电视台中文台
+Grtn 中山公共	Grtn 中山公共
+万州三峡移民	万州三峡移民
+万州影视	万州影视
+万州科教	万州科教
+万州综合	万州综合
+万盛新闻综合	万盛新闻综合
+三明公共	三明公共
+三明新闻综合	三明新闻综合
+上海外滩魔眼	上海外滩魔眼
+上海教育	上海教育
+上海第一财经	上海第一财经
+上海纪实	上海纪实
+上虞經濟文化	上虞經濟文化
+东南卫视	东南卫视
+东方卫视	东方卫视
+东方影视	东方影视
+东至影视	东至影视
+东至文化资讯	东至文化资讯
+东至新闻综合	东至新闻综合
+东莞综合	东莞综合
+中国天气	中国天气
+中牟综合	中牟综合
+临沂公共	临沂公共
+临沂农科	临沂农科
+云南 Ⅰ 文山公共台	云南 Ⅰ 文山公共台
+云南 Ⅰ 文山综合台	云南 Ⅰ 文山综合台
+云南 Ⅰ 红河综合台	云南 Ⅰ 红河综合台
+云南卫视	云南卫视
+云浮综合	云浮综合
+五星体育	五星体育
+交城電視台	交城電視台
+京视剧场	京视剧场
+亳州农村	亳州农村
+亳州新聞頻道	亳州新聞頻道
+优漫卡通	优漫卡通
+余姚姚江文化	余姚姚江文化
+佛山公共	佛山公共
+六安新闻综合	六安新闻综合
+兵团卫视	兵团卫视
+内江公共	内江公共
+内江科教	内江科教
+内江综合	内江综合
+内蒙卫视	内蒙卫视
+内蒙古	内蒙古
+内蒙古卫视	内蒙古卫视
+内蒙蒙语	内蒙蒙语
+凤凰中文	凤凰中文
+凤凰资讯	凤凰资讯
+凤凰香港	凤凰香港
+凤台文化生活	凤台文化生活
+凤台综合	凤台综合
+利川新闻综合	利川新闻综合
+动作电影	动作电影
+动画王国	动画王国
+北京体育	北京体育
+北京冬奥纪实	北京冬奥纪实
+北京卡酷少儿	北京卡酷少儿
+北京卫视	北京卫视
+北京家有购物	北京家有购物
+北京紀實	北京紀實
+北京财经	北京财经
+北京青年	北京青年
+北碚综合	北碚综合
+华亭电视台	华亭电视台
+华数	华数
+南京信息	南京信息
+南京十八	南京十八
+南京娱乐	南京娱乐
+南京少儿	南京少儿
+南京教科	南京教科
+南京新闻综合	南京新闻综合
+南京生活	南京生活
+南召一套	南召一套
+南宁影视娱乐	南宁影视娱乐
+南宁都市生活	南宁都市生活
+南川新闻综合	南川新闻综合
+南方卫视	南方卫视
+南陽公共頻道	南陽公共頻道
+原住民電視	原住民電視
+厦门卫视	厦门卫视
+双峰电视一套	双峰电视一套
+台視新聞	台視新聞
+台視新聞	台視新聞
+吉州新聞綜合	吉州新聞綜合
+吉林乡村	吉林乡村
+吉林卫视	吉林卫视
+周口图文信息	周口图文信息
+周口新闻综合	周口新闻综合
+呼伦贝尔新闻	呼伦贝尔新闻
+呼伦贝尔生活资讯	呼伦贝尔生活资讯
+咪咕视频	咪咕视频
+哈哈炫动卫视	哈哈炫动卫视
+唯心電視	唯心電視
+唯心電視	唯心電視
+嘉佳卡通	嘉佳卡通
+嘉佳卡通 东)	嘉佳卡通 东)
+四川 Ⅰ 四川影视台	四川 Ⅰ 四川影视台
+四川 Ⅰ 四川新闻台	四川 Ⅰ 四川新闻台
+四川 Ⅰ 四川经济台	四川 Ⅰ 四川经济台
+四川 Ⅰ 巴中综合台	四川 Ⅰ 巴中综合台
+四川 Ⅰ 星空购物台	四川 Ⅰ 星空购物台
+四川 Ⅰ 绵阳公共	四川 Ⅰ 绵阳公共
+四川 Ⅰ 绵阳科技	四川 Ⅰ 绵阳科技
+四川 Ⅰ 绵阳综合	四川 Ⅰ 绵阳综合
+四川 Ⅰ 达州公共台	四川 Ⅰ 达州公共台
+四川 Ⅰ 达州综合台	四川 Ⅰ 达州综合台
+四川 Ⅰ 雅安公共	四川 Ⅰ 雅安公共
+四川 Ⅰ 雅安综合	四川 Ⅰ 雅安综合
+四川公共	四川公共
+四川卫视	四川卫视
+四川妇女儿童	四川妇女儿童
+四川康巴卫视	四川康巴卫视
+四川文化旅游	四川文化旅游
+增城綜合	增城綜合
+壹電視新聞台	壹電視新聞台
+大立電視	大立電視
+天津卫视	天津卫视
+奇妙電視	奇妙電視
+奥视卫星	奥视卫星
+女性时尚	女性时尚
+如东新闻综合	如东新闻综合
+孝義新聞綜合	孝義新聞綜合
+宁夏卫视	宁夏卫视
+宁波少儿	宁波少儿
+宁波影视剧	宁波影视剧
+宁波教育科技	宁波教育科技
+宁波新闻综合	宁波新闻综合
+宁波经济生活	宁波经济生活
+宁波都市文体	宁波都市文体
+安徽 Ⅰ 淮北公共	安徽 Ⅰ 淮北公共
+安徽 Ⅰ 淮北综合	安徽 Ⅰ 淮北综合
+安徽 Ⅰ 郎溪综合台	安徽 Ⅰ 郎溪综合台
+安徽 Ⅰ 铜陵公共	安徽 Ⅰ 铜陵公共
+安徽 Ⅰ 铜陵综合	安徽 Ⅰ 铜陵综合
+安徽人物	安徽人物
+安徽公共	安徽公共
+安徽农业科教	安徽农业科教
+安徽卫视	安徽卫视
+安徽影视	安徽影视
+安徽综艺体育	安徽综艺体育
+完美游戏	完美游戏
+宜兴电视紫砂	宜兴电视紫砂
+宜章新闻综合	宜章新闻综合
+宜章社会法制	宜章社会法制
+家庭影院	家庭影院
+家庭理财	家庭理财
+家有购物	家有购物
+宿迁公共	宿迁公共
+山东教育	山东教育
+山西 Ⅰ 朔州新闻台	山西 Ⅰ 朔州新闻台
+山西优购物	山西优购物
+山西卫视	山西卫视
+岳西圖文頻道	岳西圖文頻道
+岳西影視頻道	岳西影視頻道
+岳西綜合頻道	岳西綜合頻道
+岳阳公共	岳阳公共
+已下线	已下线
+巴中综合	巴中综合
+广东 ‖ 岭南戏曲台	广东 ‖ 岭南戏曲台
+广东 ‖ 清新综合台	广东 ‖ 清新综合台
+广东 ‖ 高尔夫	广东 ‖ 高尔夫
+广东 Ⅰ 潮安综合	广东 Ⅰ 潮安综合
+广东 Ⅰ 韶关公共台	广东 Ⅰ 韶关公共台
+广东 Ⅰ 韶关综合台	广东 Ⅰ 韶关综合台
+广东体育	广东体育
+广东公共	广东公共
+广东南方卫视地面	广东南方卫视地面
+广东卫视	广东卫视
+广东嘉佳卡通	广东嘉佳卡通
+广东少儿	广东少儿
+广东影视	广东影视
+广东文化	广东文化
+广东新闻	广东新闻
+广东珠江	广东珠江
+广东经济科教	广东经济科教
+广东综艺	广东综艺
+广州影视	广州影视
+广州新闻	广州新闻
+广州法治	广州法治
+广州竞赛	广州竞赛
+广州综合	广州综合
+广西卫视	广西卫视
+广视网	广视网
+康巴卫视	康巴卫视
+开州综合	开州综合
+弈坛春秋	弈坛春秋
+张家港新闻综合	张家港新闻综合
+张家港社会生活	张家港社会生活
+彭水文化旅游	彭水文化旅游
+彭水新闻综合	彭水新闻综合
+徐州公共頻道	徐州公共頻道
+徐州影视	徐州影视
+徐州生活	徐州生活
+徐州贾汪旅游	徐州贾汪旅游
+忍者神龟	忍者神龟
+忠县文旅	忠县文旅
+忠县综合	忠县综合
+成都公共	成都公共
+成都大熊猫	成都大熊猫
+成都新闻综合	成都新闻综合
+抚州公共	抚州公共
+揭阳综合	揭阳综合
+撫州綜合頻道	撫州綜合頻道
+文山综合	文山综合
+斗鱼车评	斗鱼车评
+新昌休闲影视	新昌休闲影视
+新昌新聞綜合	新昌新聞綜合
+新泰乡村党建	新泰乡村党建
+新泰影視頻道	新泰影視頻道
+新泰生活	新泰生活
+新泰综合	新泰综合
+新泰鄉村黨建	新泰鄉村黨建
+新疆兵团卫视	新疆兵团卫视
+新疆卫视	新疆卫视
+新郑综合	新郑综合
+旺苍新闻	旺苍新闻
+明珠台	明珠台
+景县电视一套	景县电视一套
+智慧教育	智慧教育
+六安新闻综合	六安新闻综合
+兵团卫视	兵团卫视
+内蒙古卫视	内蒙古卫视
+南宁公共	南宁公共
+南宁新闻综合	南宁新闻综合
+南阳新闻频道	南阳新闻频道
+南阳科教频道	南阳科教频道
+吴江新闻综合	吴江新闻综合
+大爱海外	大爱海外
+大爱海外	大爱海外
+奥视卫星	奥视卫星
+妇科医生	妇科医生
+娄底	娄底
+娄底综合	娄底综合
+娄底综合频道	娄底综合频道
+孝感新闻综合	孝感新闻综合
+宜兴新闻频道	宜兴新闻频道
+宿州公共频道	宿州公共频道
+宿州新闻综合	宿州新闻综合
+宿州科教	宿州科教
+山东体育	山东体育
+山东农科	山东农科
+山东少儿	山东少儿
+山东居家购物	山东居家购物
+山东新闻	山东新闻
+山东生活	山东生活
+山东综艺	山东综艺
+山东齐鲁	山东齐鲁
+山西卫视	山西卫视
+嵊州综合	嵊州综合
+巴中公共频道	巴中公共频道
+常州新闻综合	常州新闻综合
+常州新闻综合	常州新闻综合
+常州都市	常州都市
+延边卫视	延边卫视
+心约之声公益广播	心约之声公益广播
+惠州公共	惠州公共
+惠州新闻综合	惠州新闻综合
+新唐人-美西频道	新唐人-美西频道
+新唐人亚太臺	新唐人亚太臺
+新唐人加东臺	新唐人加东臺
+新唐人加西臺	新唐人加西臺
+新唐人旧金山臺	新唐人旧金山臺
+新唐人美东臺	新唐人美东臺
+新唐人美西臺	新唐人美西臺
+新疆哈萨克语广播	新疆哈萨克语广播
+新疆维吾尔语综合广播	新疆维吾尔语综合广播
+新疆蒙古语广播	新疆蒙古语广播
+日本全天新聞	日本全天新聞
+晋中公共	晋中公共
+晋中综合	晋中综合
+東光一套	東光一套
+東光二套	東光二套
+東光綜藝	東光綜藝
+東森新聞	東森新聞
+東森財經新聞	東森財經新聞
+枣庄公共频道	枣庄公共频道
+枣庄教育频道	枣庄教育频道
+枣庄新闻综合	枣庄新闻综合
+柯桥时尚	柯桥时尚
+柯桥综合	柯桥综合
+栖霞新闻	栖霞新闻
+梁平综合	梁平综合
+梅州综合	梅州综合
+榆树综合频道	榆树综合频道
+武汉外语	武汉外语
+武汉文体	武汉文体
+武汉经济	武汉经济
+武进新闻	武进新闻
+武进生活	武进生活
+永新电视一套	永新电视一套
+永新电视三套	永新电视三套
+永新电视二套	永新电视二套
+汕头综合	汕头综合
+汕尾公共	汕尾公共
+汕尾综合	汕尾综合
+江津文化旅游	江津文化旅游
+江津新闻综合	江津新闻综合
+江津经济生活	江津经济生活
+江苏 Ⅰ 东海综合台	江苏 Ⅰ 东海综合台
+江苏 Ⅰ 苏州文化	江苏 Ⅰ 苏州文化
+江苏 Ⅰ 苏州生活	江苏 Ⅰ 苏州生活
+江苏 Ⅰ 苏州经济	江苏 Ⅰ 苏州经济
+江苏 Ⅰ 苏州综合	江苏 Ⅰ 苏州综合
+江苏 Ⅰ 连云港公共	江苏 Ⅰ 连云港公共
+江苏 Ⅰ 连云港综合	江苏 Ⅰ 连云港综合
+江苏优漫卡通	江苏优漫卡通
+江苏体育	江苏体育
+江苏体育休闲	江苏体育休闲
+江苏公共	江苏公共
+江苏公共新闻	江苏公共新闻
+江苏卫视	江苏卫视
+江苏国际	江苏国际
+江苏城市	江苏城市
+江苏学习	江苏学习
+江苏影视	江苏影视
+江苏教育	江苏教育
+江苏新闻广播	江苏新闻广播
+江苏经典流行音乐广播	江苏经典流行音乐广播
+江苏综艺	江苏综艺
+江苏金陵之声	江苏金陵之声
+江苏靓妆	江苏靓妆
+江西 Ⅰ 上饶综合台	江西 Ⅰ 上饶综合台
+江西公共农业	江西公共农业
+江西卫视	江西卫视
+江西少儿	江西少儿
+江西影视旅游	江西影视旅游
+江西新闻	江西新闻
+江西移动电视	江西移动电视
+江西经济生活	江西经济生活
+江西都市	江西都市
+江西风尚购物	江西风尚购物
+江门综合	江门综合
+沧县电视二套	沧县电视二套
+沧县电视综合	沧县电视综合
+河北公共	河北公共
+河北农民	河北农民
+河北农民	河北农民
+河北卫视	河北卫视
+河北少儿科教	河北少儿科教
+河北经济	河北经济
+河北经济生活	河北经济生活
+河北都市	河北都市
+河南卫视	河南卫视
+河源公共	河源公共
+河源综合	河源综合
+洛陽綜合頻道	洛陽綜合頻道
+洪雅新闻综合	洪雅新闻综合
+济宁公共频道	济宁公共频道
+济宁图文	济宁图文
+济宁教育	济宁教育
+浙江 Ⅰ 浙江休闲	浙江 Ⅰ 浙江休闲
+浙江 Ⅰ 浙江教育	浙江 Ⅰ 浙江教育
+浙江 Ⅰ 浙江易购	浙江 Ⅰ 浙江易购
+浙江 Ⅰ 浙江留学	浙江 Ⅰ 浙江留学
+浙江 Ⅰ 绍兴影视	浙江 Ⅰ 绍兴影视
+浙江 Ⅰ 绍兴综合	浙江 Ⅰ 绍兴综合
+浙江卫视	浙江卫视
+浙江国际	浙江国际
+浙江少儿	浙江少儿
+浙江影视	浙江影视
+浙江教科影视	浙江教科影视
+浙江数码时代	浙江数码时代
+浙江新闻	浙江新闻
+浙江民生休闲	浙江民生休闲
+浙江留学	浙江留学
+浙江经济生活	浙江经济生活
+浙江钱江频道	浙江钱江频道
+海南公共	海南公共
+海南卫视	海南卫视
+海南少儿	海南少儿
+海南文旅	海南文旅
+海南新闻	海南新闻
+海南经济	海南经济
+海南藏语	海南藏语
+海盐新闻	海盐新闻
+海西州综合频道	海西州综合频道
+涡阳新闻综合	涡阳新闻综合
+深圳公共	深圳公共
+深圳卫视	深圳卫视
+深圳娱乐	深圳娱乐
+深圳少儿	深圳少儿
+深圳电视剧	深圳电视剧
+深圳移动电视	深圳移动电视
+深圳蛇口	深圳蛇口
+深圳财经生活	深圳财经生活
+深圳都市	深圳都市
+深州綜合頻道	深州綜合頻道
+湖北卫视	湖北卫视
+湖南先锋乒羽	湖南先锋乒羽
+湖南公共	湖南公共
+湖南卫视	湖南卫视
+湖南国际	湖南国际
+湖南娱乐	湖南娱乐
+湖南快乐垂钓	湖南快乐垂钓
+湖南快乐购	湖南快乐购
+湖南电视剧	湖南电视剧
+湖南经视	湖南经视
+湖南茶	湖南茶
+湖南都市	湖南都市
+湖南金鹰卡通	湖南金鹰卡通
+湘潭公共频道	湘潭公共频道
+湘潭新闻综合	湘潭新闻综合
+湛江综合	湛江综合
+滁州公共	滁州公共
+滁州新闻综合	滁州新闻综合
+滁州科教	滁州科教
+滦县综合	滦县综合
+滦县综艺	滦县综艺
+滨州公共电视剧	滨州公共电视剧
+滨州新闻综合	滨州新闻综合
+滨州测试频道	滨州测试频道
+滨海新闻综合	滨海新闻综合
+滨海都市	滨海都市
+漳州新闻综合	漳州新闻综合
+潮安综合	潮安综合
+潮安综艺	潮安综艺
+潮州综合	潮州综合
+澳亚卫视	澳亚卫视
+澳大利亚天和电视	澳大利亚天和电视
+澳视澳门	澳视澳门
+澳视葡文	澳视葡文
+澳門綜藝	澳門綜藝
+澳门体育	澳门体育
+澳门体育	澳门体育
+澳门卫星	澳门卫星
+澳门综艺	澳门综艺
+澳门资讯	澳门资讯
+灵台新闻综合	灵台新闻综合
+炫动卡通	炫动卡通
+点掌财经	点掌财经
+犍为新闻综合	犍为新闻综合
+玉树新闻频道	玉树新闻频道
+珠江	珠江
+珠海生活	珠海生活
+甘肃公共	甘肃公共
+甘肃卫视	甘肃卫视
+甘肃移动	甘肃移动
+生活	生活
+电白综合	电白综合
+电白视窗	电白视窗
+番禺	番禺
+睛彩安徽	睛彩安徽
+石景山电视台	石景山电视台
+福 J公共	福 J公共
+福 J少儿	福 J少儿
+福 J新闻	福 J新闻
+福 J旅游	福 J旅游
+福 J电视	福 J电视
+福 J经济	福 J经济
+福山生活	福山生活
+福州少儿	福州少儿
+福州影视	福州影视
+福州生活	福州生活
+福州综合	福州综合
+秦皇岛影视	秦皇岛影视
+秦皇岛新闻	秦皇岛新闻
+秦皇島政法	秦皇島政法
+积石山电视台	积石山电视台
+立法院ivod直播交通委員會	立法院ivod直播交通委員會
+立法院ivod直播內政委員會	立法院ivod直播內政委員會
+立法院ivod直播司法及法制委員會	立法院ivod直播司法及法制委員會
+立法院ivod直播外交及國防委員會	立法院ivod直播外交及國防委員會
+立法院ivod直播教育及文化委員會	立法院ivod直播教育及文化委員會
+立法院ivod直播朝野協商	立法院ivod直播朝野協商
+立法院ivod直播社會福利及衛生環境委員會	立法院ivod直播社會福利及衛生環境委員會
+立法院ivod直播經濟委員會	立法院ivod直播經濟委員會
+立法院ivod直播財政委員會	立法院ivod直播財政委員會
+篮球资讯	篮球资讯
+精品电影	精品电影
+纪实人文	纪实人文
+纯享	纯享
+继续教育	继续教育
+置业	置业
+美国中文电视	美国中文电视
+美国亚美卫视	美国亚美卫视
+美国狗狗宠物	美国狗狗宠物
+翡翠台	翡翠台
+耀才財經台	耀才財經台
+耀才财经	耀才财经
+肃州电视台	肃州电视台
+肇庆综合	肇庆综合
+舟山公共生活	舟山公共生活
+舟山新闻综合	舟山新闻综合
+舟山群岛旅游	舟山群岛旅游
+芜湖公共频道	芜湖公共频道
+芜湖新闻综合	芜湖新闻综合
+芜湖生活频道	芜湖生活频道
+苏州文化生活	苏州文化生活
+苏州新闻综合	苏州新闻综合
+苏州生活资讯	苏州生活资讯
+苏州社会经济	苏州社会经济
+茂名综合	茂名综合
+荣昌综合	荣昌综合
+莒縣圖文頻道	莒縣圖文頻道
+莒縣電視一套	莒縣電視一套
+莒縣電視二套	莒縣電視二套
+莲花卫视	莲花卫视
+華藏衛視	華藏衛視
+華藏衛視	華藏衛視
+萍鄉公共頻道	萍鄉公共頻道
+萍鄉教育頻道	萍鄉教育頻道
+萍鄉新聞綜合	萍鄉新聞綜合
+萧山新闻综合	萧山新闻综合
+萬州三峽移民	萬州三峽移民
+萬州影視文藝	萬州影視文藝
+萬州科教頻道	萬州科教頻道
+萬州綜合頻道	萬州綜合頻道
+蓝屏 432	蓝屏 432
+蓬安新闻综合	蓬安新闻综合
+蕪湖教育頻道	蕪湖教育頻道
+西安丝路	西安丝路
+西安乐购购物	西安乐购购物
+西安健康	西安健康
+西安商务资讯	西安商务资讯
+西安影视	西安影视
+西安新闻	西安新闻
+西安白鸽	西安白鸽
+西安资讯	西安资讯
+西安音乐综艺	西安音乐综艺
+通州电视台	通州电视台
+阳江综合	阳江综合
+阿里郎	阿里郎
+随州综合	随州综合
+霸州新聞頻道	霸州新聞頻道
+霸州新闻	霸州新闻
+青州文化旅游	青州文化旅游
+青州生活	青州生活
+青州综合	青州综合
+青海卫视	青海卫视
+青海安多卫视	青海安多卫视
+靖江新闻綜合	靖江新闻綜合
+静宁综合	静宁综合
+韶关公共	韶关公共
+风尚购物	风尚购物
+香港开电视 / Hkstv-hks	香港开电视 / Hkstv-hks
+香港衛視	香港衛視
+高台电视台	高台电视台
+鹤壁新闻综合	鹤壁新闻综合
+鹿泉一套	鹿泉一套
+鹿泉二套	鹿泉二套
+黄骅一套	黄骅一套
+黄骅二套	黄骅二套
+黑龙卫视	黑龙卫视
+黑龙江	黑龙江
+黑龙江卫视	黑龙江卫视
+黔西南公共	黔西南公共
+黔西南综合	黔西南综合
+點掌財經	點掌財經
+龙岩综合	龙岩综合
+蕭山生活頻道	蕭山生活頻道
+衡水影视娱乐	衡水影视娱乐
+衡水新闻综合	衡水新闻综合
+袁州綜合頻道	袁州綜合頻道
+西藏卫视	西藏卫视
+西藏藏語	西藏藏語
+西青新闻综合	西青新闻综合
+贵州体育旅游	贵州体育旅游
+贵州公共	贵州公共
+贵州卫视	贵州卫视
+贵州大众生活	贵州大众生活
+贵州家有购物	贵州家有购物
+贵州影视文艺	贵州影视文艺
+贵州科教健康	贵州科教健康
+贵州经济	贵州经济
+赵县电视一套	赵县电视一套
+赵县电视二套	赵县电视二套
+辛集新聞頻道 (480p)	辛集新聞頻道 (480p)
+辛集生活頻道	辛集生活頻道
+辽宁卫视 (1080p)	辽宁卫视 (1080p)
+迪庆综合	迪庆综合
+迪庆藏语	迪庆藏语
+邵东综合	邵东综合
+酒泉新闻综合	酒泉新闻综合
+重庆卫视 (1080p)	重庆卫视 (1080p)
+重庆忠县	重庆忠县
+重庆移动	重庆移动
+重庆移动机场	重庆移动机场
+金鹰卡通	金鹰卡通
+金鹰卡通 南)	金鹰卡通 南)
+银川公共 (360p)	银川公共 (360p)
+银川生活 (360p)	银川生活 (360p)
+長豐新聞綜合	長豐新聞綜合
+阜城综合	阜城综合
+陕西卫视	陕西卫视
+隆化影视	隆化影视
+隆化综合	隆化综合
+隨州農村	隨州農村
+霍山综合	霍山综合
+霸州文化頻道	霸州文化頻道
+Shochiku Tokyu	Shochiku Tokyu
+テレ東	テレ東
+フジ	フジ
+朝日 (720p Willfon)	朝日 (720p Willfon)
+Gaki No Tsukai Typhome (eng Sub)	Gaki No Tsukai Typhome (eng Sub)
+Kayo Pops	Kayo Pops
+Kids Station	Kids Station
+アクションチャンネル (720p Willfon)	アクションチャンネル (720p Willfon)
+ゴルフネットワーク (720p Willfon)	ゴルフネットワーク (720p Willfon)
+チャンネル銀河 (720p Willfon)	チャンネル銀河 (720p Willfon)
+テレビ朝日 (720p Willfon)	テレビ朝日 (720p Willfon)
+テレビ東京 (720p Willfon)	テレビ東京 (720p Willfon)
+フジテレビ (720p Willfon)	フジテレビ (720p Willfon)
+ホームドラマチャンネル (720p Willfon)	ホームドラマチャンネル (720p Willfon)
+ムービープラス (720p Willfon)	ムービープラス (720p Willfon)
+囲碁・将棋チャンネル (720p Willfon)	囲碁・将棋チャンネル (720p Willfon)
+日本映画専門チャンネル (720p Willfon)	日本映画専門チャンネル (720p Willfon)
+時代劇専門チャンネル (720p Willfon)	時代劇専門チャンネル (720p Willfon)
+東映チャンネル (720p Willfon)	東映チャンネル (720p Willfon)
+釣りビジョン (720p Willfon)	釣りビジョン (720p Willfon)
+It: 20 Mediaset	It: 20 Mediaset
+It: 27 Twentyseven Fhd	It: 27 Twentyseven Fhd
+It: Focus	It: Focus
+It: Iris	It: Iris
+It: Rai Movie	It: Rai Movie
+It: Rai Premium	It: Rai Premium
+It: Rai Scuola	It: Rai Scuola
+It: Sky Tg 24	It: Sky Tg 24
+It: Giallo	It: Giallo
+It: Dea Kids	It: Dea Kids
+It: Zona Dazn	It: Zona Dazn
+It: Caccia E Pesca	It: Caccia E Pesca
+It: Motor Trend	It: Motor Trend
+It: Rai Gulp	It: Rai Gulp
+It: Rai Yoyo	It: Rai Yoyo
+It: Uniresat	It: Uniresat
+It: Tgcom 24	It: Tgcom 24
+Astro Supersport U	Astro Supersport U
+Directvlive	Directvlive
+Btnu	Btnu
+Fs 1u (event Only)	Fs 1u (event Only)
+Fubou	Fubou
+Tsnwest	Tsnwest
+Stingray Naturescape 4k	Stingray Naturescape 4k
+Stingray Festival	Stingray Festival
+Bein Sportsmena U	Bein Sportsmena U
+Stingray Now	Stingray Now
+My| Astro Supersports U	My| Astro Supersports U
+Travelxphdr [multi-audio]	Travelxphdr [multi-audio]
+Evenement Sportu	Evenement Sportu
+Museum Hdru	Museum Hdru
+Stingray Festival	Stingray Festival
+Liga De Campeones Por M+ U	Liga De Campeones Por M+ U
+Digi	Digi
+Acanal+ Centre	Acanal+ Centre
+Acanal+ Elles Centre	Acanal+ Elles Centre
+Acanal+ Elles Ouest	Acanal+ Elles Ouest
+Aa + International	Aa + International
+Aedan	Aedan
+Agulli Africa	Agulli Africa
+Azee Magic	Azee Magic
+Aafricable	Aafricable
+Aafrique Media	Aafrique Media
+Abblack Classik	Abblack Classik
+Adtv 24	Adtv 24
+Atrace Gospel	Atrace Gospel
+Atrace Misiki	Atrace Misiki
+Atrace Naija	Atrace Naija
+Sinema Zetu	Sinema Zetu
+Romanza Africa	Romanza Africa
+Trace Mziki	Trace Mziki
+Foodies	Foodies
+Ktn Farmer	Ktn Farmer
+Big Brother Naija	Big Brother Naija
+Bbc Brit	Bbc Brit
+Newzroom Afrika	Newzroom Afrika
+Parliamentary Service	Parliamentary Service
+Mindset	Mindset
+Wild Earth	Wild Earth
+People’s Weather	People’s Weather
+Ignition	Ignition
+Honey	Honey
+Dumisa	Dumisa
+Faith	Faith
+Tbn Africa	Tbn Africa
+Mzansi Magic	Mzansi Magic
+Mzansi Bioskop	Mzansi Bioskop
+Novela Magic	Novela Magic
+Rok	Rok
+Big Brother Naija	Big Brother Naija
+Mzansi Wethu	Mzansi Wethu
+Moja Love	Moja Love
+Bukedde	Bukedde
+Sound City	Sound City
+Arg: Quiero Musica	Arg: Quiero Musica
+Arg: Argentinisima	Arg: Argentinisima
+Arg: E! Entertaiments Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: E! Entertaiments Pʳᵉᵐⁱᵘᵐ ʜᴅ
+Arg: Syfi Pʳᵉᵐⁱᵘᵐ ʜᴅ	Arg: Syfi Pʳᵉᵐⁱᵘᵐ ʜᴅ
+Arg: 24a ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: 24a ᴬᴿᴳᴱᴺᵀᴵᴺᴬ
+Arg: Tn Noticias ᴬᴿᴳᴱᴺᵀᴵᴺᴬ	Arg: Tn Noticias ᴬᴿᴳᴱᴺᵀᴵᴺᴬ
+Cubamax	Cubamax
+Iran International	Iran International
+Iran International	Iran International
+Dd (punjabi)	Dd (punjabi)
+Exitosa Noticias	Exitosa Noticias
+Best Cable Más Cumbia	Best Cable Más Cumbia
+Best Cable Perú	Best Cable Perú
+Rtv Total	Rtv Total
+Chicos Ipe	Chicos Ipe
+Conecta2tv (lima)	Conecta2tv (lima)
+Creotv (cajamarca)	Creotv (cajamarca)
+Ctc	Ctc
+Monterrico Hipódromo	Monterrico Hipódromo
+Diario Hechicera (tumbes)	Diario Hechicera (tumbes)
+Dmj (cuzco)	Dmj (cuzco)
+Expresión (tacna)	Expresión (tacna)
+Rn Televisión	Rn Televisión
+Impacto Televisión (cajamarca)	Impacto Televisión (cajamarca)
+Qt Televisión	Qt Televisión
+La Abeja	La Abeja
+Maticestv (cañete)	Maticestv (cañete)
+Millenium 109 Fm (lamas)	Millenium 109 Fm (lamas)
+Nativa + (chanchamayo)	Nativa + (chanchamayo)
+Ok Teve (yurimaguas)	Ok Teve (yurimaguas)
+Usil Televisión	Usil Televisión
+Qt Televisión (cuzco)	Qt Televisión (cuzco)
+Quillavision (cuzco)	Quillavision (cuzco)
+Rn Televisión (yurimaguas)	Rn Televisión (yurimaguas)
+Rw Televisión (tarapoto)	Rw Televisión (tarapoto)
+Sanjuaneratv	Sanjuaneratv
+Tele2000 (ayacucho)	Tele2000 (ayacucho)
+Visión Noticias Vnp	Visión Noticias Vnp
+Tvenlinea (cuzco)	Tvenlinea (cuzco)
+Vía Altomayo	Vía Altomayo
+Visión Noticias Perú (vnp)	Visión Noticias Perú (vnp)
+Cmd Televisión	Cmd Televisión
+Telecolor (yurimaguas)	Telecolor (yurimaguas)
+Usmptv(sicusani)	Usmptv(sicusani)
+Charapatv (pucallpa)	Charapatv (pucallpa)
+Karibeña	Karibeña
+Contacto Deportivotbol (moyobamba)	Contacto Deportivotbol (moyobamba)
+Wapa America	Wapa America
+Americateve	Americateve
+Enlace Internacional	Enlace Internacional
+Telenorte	Telenorte
+Live Event 01 - 11pm Fusion Fighting Championship 96	Live Event 01 - 11pm Fusion Fighting Championship 96
+Live Event 02 - Wwe Nxt - Lights Out	Live Event 02 - Wwe Nxt - Lights Out
+Live Event 03 - No Event	Live Event 03 - No Event
+Live Event 04 - No Event	Live Event 04 - No Event
+Live Event 05 - No Event	Live Event 05 - No Event
+Live Event 06 - No Event	Live Event 06 - No Event
+Live Event 07 - No Event	Live Event 07 - No Event
+Live Event 08 - No Event	Live Event 08 - No Event
+Live Event 09 - No Event	Live Event 09 - No Event
+Live Event 11 -no Event	Live Event 11 -no Event
+Live Event 12 - No Event	Live Event 12 - No Event
+Live Event 13 -no Event	Live Event 13 -no Event
+Live Event 14 - No Event	Live Event 14 - No Event
+Live Event 15 - No Event	Live Event 15 - No Event
+Live Event 16 - No Event	Live Event 16 - No Event
+Live Event 17 - No Event	Live Event 17 - No Event
+Live Event 18 - No Event	Live Event 18 - No Event
+Live Event 19 - No Event	Live Event 19 - No Event
+Live Event 20 - No Event	Live Event 20 - No Event
+Live Event 21 - No Event	Live Event 21 - No Event
+Live Event 22 - No Event	Live Event 22 - No Event
+Live Event 23 -no Event	Live Event 23 -no Event
+Live Event 24 - No Event	Live Event 24 - No Event
+Live Event 25 - No Event	Live Event 25 - No Event
+Live Event 26 -	Live Event 26 -
+Live Event 27 -	Live Event 27 -
+Live Event 28 -	Live Event 28 -
+Live Event 29 -	Live Event 29 -
+Live Event 30 -	Live Event 30 -
+Live Event 31 -	Live Event 31 -
+Live Event 32 -	Live Event 32 -
+Live Event 34 -	Live Event 34 -
+Live Event 35 -	Live Event 35 -
+[ppv Event 36]	[ppv Event 36]
+[ppv Event 37]	[ppv Event 37]
+[ppv Event 38]	[ppv Event 38]
+[ppv Event 39]	[ppv Event 39]
+[ppv Event 40]	[ppv Event 40]
+Swerve Combat	Swerve Combat
+Pfl Mma	Pfl Mma
+Matchroom Boxing	Matchroom Boxing
+Glory Kickboxing	Glory Kickboxing
+| Eureka | Cbs Kviq	| Eureka | Cbs Kviq
+Fl | Panama City | Cbs 18 Wecp	Fl | Panama City | Cbs 18 Wecp
+Fl | Tampa | Cbs 10wtsp	Fl | Tampa | Cbs 10wtsp
+Ms | Greenwood | Cbs Wxvt	Ms | Greenwood | Cbs Wxvt
+Oh | Lima | Cbs Wohl-c2	Oh | Lima | Cbs Wohl-c2
+Wv | Parkersburg | Cbs Wiye-ld	Wv | Parkersburg | Cbs Wiye-ld
+Tx | Brownsville | Cw 21 Kcwt	Tx | Brownsville | Cw 21 Kcwt
+| Eureka | Cw Keca-ld	| Eureka | Cw Keca-ld
+| Palm Springs | Cw Kcwq	| Palm Springs | Cw Kcwq
+Nd | Fargo | Cw Kxjb-d2	Nd | Fargo | Cw Kxjb-d2
+Ne | Lincoln | Cw Knhl	Ne | Lincoln | Cw Knhl
+Usa My 9 New Jersey	Usa My 9 New Jersey
+
