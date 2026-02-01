@@ -13,6 +13,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -65,7 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   int _epgCacheDuration = 6; // hours
   int _epgRetentionDays = 7; // days
   // Focus nodes
-  final FocusNode _inputMethodFocusNode = FocusNode();
+  final FocusNode _m3uTabFocusNode = FocusNode();
+  final FocusNode _xtreamTabFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
@@ -164,7 +166,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _registerGeneralFocusNodes() {
     final nodes = [
-      _inputMethodFocusNode,
+      _m3uTabFocusNode,
+      _xtreamTabFocusNode,
       _m3uUrlFocusNode,
       _xtreamServerFocusNode,
       _xtreamUsernameFocusNode,
@@ -204,7 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _secondaryEpgUrlController.removeListener(_saveSecondaryEpgUrl);
     _secondaryEpgUrlController.dispose();
 
-    _inputMethodFocusNode.dispose();
+    _m3uTabFocusNode.dispose();
+    _xtreamTabFocusNode.dispose();
     _loadM3uButtonFocusNode.dispose();
     _loadXtreamButtonFocusNode.dispose();
     _clearM3uButtonFocusNode.dispose();
@@ -311,7 +315,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     FocusNode? target;
     switch (_selectedIndex) {
       case 0:
-        target = _lastGeneralFocusNode ?? _inputMethodFocusNode;
+        target = _lastGeneralFocusNode ??
+            (_playlistInputMethod == 0
+                ? _m3uTabFocusNode
+                : _xtreamTabFocusNode);
         break;
       case 1:
         target = _playbackFirstFocusNode;
@@ -361,6 +368,112 @@ class _SettingsScreenState extends State<SettingsScreen>
         return KeyEventResult.ignored;
       },
       child: content,
+    );
+  }
+
+  Widget _buildInputMethodSelector() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            for (final isM3u in [true, false])
+              Expanded(
+                child: Focus(
+                  focusNode: isM3u ? _m3uTabFocusNode : _xtreamTabFocusNode,
+                  onFocusChange: (v) {
+                    if (v) {
+                      Scrollable.ensureVisible(
+                        context,
+                        alignment: 0.2,
+                        duration: const Duration(milliseconds: 150),
+                      );
+                    }
+                    setState(() {});
+                  },
+                  onKeyEvent: (n, e) {
+                    if (e is! KeyDownEvent) return KeyEventResult.ignored;
+                    if ({
+                      LogicalKeyboardKey.select,
+                      LogicalKeyboardKey.enter,
+                      LogicalKeyboardKey.space
+                    }.contains(e.logicalKey)) {
+                      setState(() => _playlistInputMethod = isM3u ? 0 : 1);
+                      (isM3u ? _m3uTabFocusNode : _xtreamTabFocusNode)
+                          .requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (e.logicalKey ==
+                        (isM3u
+                            ? LogicalKeyboardKey.arrowRight
+                            : LogicalKeyboardKey.arrowLeft)) {
+                      (isM3u ? _xtreamTabFocusNode : _m3uTabFocusNode)
+                          .requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: Builder(builder: (c) {
+                    final isFocused = Focus.of(c).hasFocus;
+                    final isSelected = _playlistInputMethod == (isM3u ? 0 : 1);
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _playlistInputMethod = isM3u ? 0 : 1);
+                        (isM3u ? _m3uTabFocusNode : _xtreamTabFocusNode)
+                            .requestFocus();
+                      },
+                      child: AnimatedContainer(
+                        duration: TVFocusStyle.animationDuration,
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppTheme.primaryBlue
+                              : (isFocused
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : Colors.transparent),
+                          borderRadius: BorderRadius.circular(8),
+                          border: isFocused
+                              ? Border.all(color: AppTheme.focusBorder, width: 2)
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(isM3u ? Icons.playlist_play : Icons.dns,
+                                size: 18,
+                                color: isSelected || isFocused
+                                    ? Colors.white
+                                    : AppTheme.textSecondary),
+                            const SizedBox(width: 8),
+                            Text(
+                                isM3u
+                                    ? AppLocalizations.of(context)!.inputMethodM3u
+                                    : AppLocalizations.of(context)!
+                                        .inputMethodXtream,
+                                style: TextStyle(
+                                    color: isSelected || isFocused
+                                        ? Colors.white
+                                        : AppTheme.textSecondary,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -493,22 +606,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         SettingsGroup(
           title: AppLocalizations.of(context)!.playlists,
           children: [
-            SettingsActionTile(
-              title: _playlistInputMethod == 0
-                  ? AppLocalizations.of(context)!.inputMethodM3u
-                  : AppLocalizations.of(context)!.inputMethodXtream,
-              icon: Icons.swap_horiz,
-              focusNode: _inputMethodFocusNode,
-              onTap: () {
-                setState(
-                  () =>
-                      _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0,
-                );
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _inputMethodFocusNode.requestFocus();
-                });
-              },
-            ),
+            _buildInputMethodSelector(),
             if (_playlistInputMethod == 0) ...[
               SettingsInputTile(
                 label: AppLocalizations.of(context)!.m3uPlaylistUrl,
