@@ -77,6 +77,9 @@ class _EPGScreenState extends State<EPGScreen>
   final Map<String, FocusNode> _channelFocusNodes = {};
   final Queue<String> _channelFocusOrder = Queue<String>();
   static const int _maxChannelFocusNodes = 400;
+  // Category focus nodes for smooth D-pad navigation
+  final Map<int, FocusNode> _categoryFocusNodes = {};
+  static const int _maxCategoryFocusNodes = 100;
   static const String _epgSnapshotKey = 'epg_snapshot_v1';
   static const Duration _epgSnapshotTtl = Duration(hours: 6);
   static const int _epgSnapshotChannelLimit = 60;
@@ -434,6 +437,27 @@ class _EPGScreenState extends State<EPGScreen>
     return node;
   }
 
+  FocusNode _categoryFocusNodeForIndex(int index) {
+    if (index == 0) {
+      return _firstCategoryFocus;
+    }
+    final existing = _categoryFocusNodes[index];
+    if (existing != null) return existing;
+    final node = FocusNode(debugLabel: 'EPGCategory:$index');
+    _categoryFocusNodes[index] = node;
+    // Clean up old nodes if too many
+    if (_categoryFocusNodes.length > _maxCategoryFocusNodes) {
+      final keysToRemove = _categoryFocusNodes.keys
+          .where((k) => k != index && k != 0)
+          .take(_categoryFocusNodes.length - _maxCategoryFocusNodes ~/ 2)
+          .toList();
+      for (final key in keysToRemove) {
+        _categoryFocusNodes.remove(key)?.dispose();
+      }
+    }
+    return node;
+  }
+
   String _focusKeyForChannel(Channel channel) {
     final id = channel.id.trim();
     if (id.isNotEmpty) return id;
@@ -526,6 +550,10 @@ class _EPGScreenState extends State<EPGScreen>
     }
     _channelFocusNodes.clear();
     _channelFocusOrder.clear();
+    for (final node in _categoryFocusNodes.values) {
+      node.dispose();
+    }
+    _categoryFocusNodes.clear();
     _snapshotSaveDebounce?.cancel();
     unawaited(_saveEpgSnapshot(_epgState.paginatedChannels));
     _timerService.unregister('epg_auto_refresh');
@@ -1033,7 +1061,7 @@ class _EPGScreenState extends State<EPGScreen>
                     return _buildCategoryItem(
                       name: category,
                       isSelected: _epgState.selectedCategory == category,
-                      isFirst: index == 0,
+                      index: index,
                       onTap: () {
                         _epgState.setSelectedCategory(category);
                         // Scroll channel list to top
@@ -1083,12 +1111,12 @@ class _EPGScreenState extends State<EPGScreen>
     required String name,
     required bool isSelected,
     required VoidCallback onTap,
-    bool isFirst = false,
+    required int index,
   }) {
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     return Focus(
-      focusNode: isFirst ? _firstCategoryFocus : null,
+      focusNode: _categoryFocusNodeForIndex(index),
       canRequestFocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
@@ -1098,6 +1126,8 @@ class _EPGScreenState extends State<EPGScreen>
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            // Focus first channel when moving right from categories
+            // (categories and channels have different item counts, so we just focus first)
             _firstChannelFocus.requestFocus();
             return KeyEventResult.handled;
           }
@@ -1319,6 +1349,8 @@ class _EPGScreenState extends State<EPGScreen>
                 _showChannelContextMenu(context, channel),
             firstChannelFocusNode: _firstChannelFocus,
             onFocusCategories: () => _firstCategoryFocus.requestFocus(),
+            onFocusCategoryAtIndex: (index) =>
+                _categoryFocusNodeForIndex(index).requestFocus(),
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
             onFocusProgramForChannel: (channel) =>

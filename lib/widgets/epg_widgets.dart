@@ -20,6 +20,7 @@ class EPGChannelSidebar extends StatelessWidget {
   final ScrollController controller;
   final FocusNode? firstChannelFocusNode;
   final VoidCallback? onFocusCategories;
+  final void Function(int index)? onFocusCategoryAtIndex;
   final VoidCallback? onFocusRefresh;
   final VoidCallback? onFocusPrograms;
   final ValueChanged<Channel>? onFocusProgramForChannel;
@@ -36,6 +37,7 @@ class EPGChannelSidebar extends StatelessWidget {
     required this.controller,
     this.firstChannelFocusNode,
     this.onFocusCategories,
+    this.onFocusCategoryAtIndex,
     this.onFocusRefresh,
     this.onFocusPrograms,
     this.onFocusProgramForChannel,
@@ -83,7 +85,9 @@ class EPGChannelSidebar extends StatelessWidget {
             focusNode: channelFocusNodeForChannel != null
                 ? channelFocusNodeForChannel!.call(channels[index], index)
                 : (index == 0 ? firstChannelFocusNode : null),
-            onMoveLeft: onFocusCategories,
+            onMoveLeft: onFocusCategoryAtIndex != null
+                ? () => onFocusCategoryAtIndex!(index)
+                : onFocusCategories,
             onMoveUpFromFirst: index == 0 ? onFocusRefresh : null,
             onMoveRight: onFocusProgramForChannel == null
                 ? onFocusPrograms
