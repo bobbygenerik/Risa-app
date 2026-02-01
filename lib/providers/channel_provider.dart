@@ -652,6 +652,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         _channelCountDb = 0;
         _invalidateCategoryCaches();
         _cachedCategories = null;
+        if (_channelMaps.isNotEmpty) {
+          unawaited(_deferredDbInsert());
+          _updateEpgAllowedChannels();
+          _scheduleEpgRefresh(forceRefresh: true);
+        }
       } else {
         debugLog('ChannelProvider: Failed to recover DB, disabling for session');
         _dbDisabled = true;

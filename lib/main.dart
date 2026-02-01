@@ -38,6 +38,7 @@ import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/translation_models_screen.dart';
 import 'package:iptv_player/screens/whisper_models_screen.dart';
 import 'package:iptv_player/screens/epg_diagnostic_screen.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:iptv_player/screens/epg_manager_screen.dart';
 import 'package:iptv_player/screens/debug_screen.dart';
 import 'package:iptv_player/screens/exit_screen.dart';
@@ -438,9 +439,24 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    _enableJankLogging();
     _setupAndroidAutoListener();
     StartupProbe.mark('MyAppState initState');
     _initialize();
+  }
+
+  void _enableJankLogging() {
+    SchedulerBinding.instance.addTimingsCallback((timings) {
+      for (final timing in timings) {
+        final buildMs = timing.buildDuration.inMilliseconds;
+        final rasterMs = timing.rasterDuration.inMilliseconds;
+        final totalMs = buildMs + rasterMs;
+        if (totalMs >= 50) {
+          debugLog(
+              'JANK: frame total=${totalMs}ms build=${buildMs}ms raster=${rasterMs}ms vsync=${timing.vsyncOverhead.inMilliseconds}ms');
+        }
+      }
+    });
   }
 
   void _setupAndroidAutoListener() {

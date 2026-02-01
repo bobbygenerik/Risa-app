@@ -144,81 +144,32 @@ class CachedChannelLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (logoUrl == null || logoUrl!.isEmpty) {
-      if (channelName == null || channelName!.isEmpty) {
-        return _buildLogoPlaceholder(size, fallbackIcon);
-      }
-      return ChannelLogoWidget(
-        channelName: channelName!,
-        tvgId: tvgId,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        placeholder: _buildLogoPlaceholder(size, fallbackIcon),
-        errorWidget: _buildLogoPlaceholder(size, fallbackIcon),
-        borderRadius: BorderRadius.circular(8),
-      );
+    final resolvedName = channelName?.trim() ?? '';
+    if (resolvedName.isEmpty) {
+      return _buildTransparentPlaceholder(size, fallbackIcon);
     }
-    if (ImageFailureCache.shouldSkipLogo(logoUrl!)) {
-      if (channelName == null || channelName!.isEmpty) {
-        return _buildLogoPlaceholder(size, fallbackIcon);
-      }
-      return ChannelLogoWidget(
-        channelName: channelName!,
-        logoUrl: logoUrl,
-        tvgId: tvgId,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        placeholder: _buildLogoPlaceholder(size, fallbackIcon),
-        errorWidget: _buildLogoPlaceholder(size, fallbackIcon),
-        borderRadius: BorderRadius.circular(8),
-      );
-    }
-
-    ImageLoadProbe.recordAttempt(logoUrl!, 'channel_logo');
-    return CachedNetworkImage(
-      imageUrl: logoUrl!,
-      httpHeaders: HttpClientService().imageHeaders,
+    return ChannelLogoWidget(
+      channelName: resolvedName,
+      logoUrl: logoUrl,
+      tvgId: tvgId,
       width: size,
       height: size,
       fit: BoxFit.contain,
-      memCacheWidth: cacheWidth,
-      memCacheHeight: cacheHeight,
-      imageBuilder: (context, imageProvider) {
-        ImageFailureCache.recordSuccess(logoUrl!);
-        ImageLoadProbe.recordSuccess(logoUrl!, 'channel_logo');
-        return Image(
-          image: imageProvider,
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-          gaplessPlayback: true,
-        );
-      },
-      placeholder: (context, url) => _buildLogoPlaceholder(size, fallbackIcon),
-      errorWidget: (context, url, error) {
-        ImageFailureCache.recordFailure(url, error);
-        ImageLoadProbe.recordFailure(url, 'channel_logo', error);
-        return _buildLogoPlaceholder(size, fallbackIcon);
-      },
-      useOldImageOnUrlChange: true,
+      backgroundColor: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
     );
   }
 }
 
-Widget _buildLogoPlaceholder(double size, IconData fallbackIcon) {
+Widget _buildTransparentPlaceholder(double size, IconData fallbackIcon) {
   return SizedBox(
     width: size,
     height: size,
-    child: BrandFallbackBackground(
-      borderRadius: BorderRadius.circular(8),
-      child: Center(
-        child: Icon(
-          fallbackIcon,
-          size: size * 0.6,
-          color: Colors.white.withAlpha((0.75 * 255).round()),
-        ),
+    child: Center(
+      child: Icon(
+        fallbackIcon,
+        size: size * 0.6,
+        color: Colors.white.withAlpha((0.75 * 255).round()),
       ),
     ),
   );

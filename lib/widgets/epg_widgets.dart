@@ -363,19 +363,28 @@ class EPGProgramRow extends StatelessWidget {
       },
       child: Builder(builder: (context) {
         final isFocused = Focus.of(context).hasFocus;
-        return Container(
-          height: rowHeight,
-          width: 12 * 240.0, // totalWidth
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.only(left: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2a2a3e).withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: isFocused
-                ? Border.all(color: AppTheme.focusBorder, width: 2)
-                : Border.all(
-                    color: Colors.white.withValues(alpha: 0.1), width: 1),
-          ),
+          return Container(
+            height: rowHeight,
+            width: 12 * 240.0, // totalWidth
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2a2a3e).withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: isFocused
+                  ? Border.all(color: AppTheme.focusBorder, width: 3)
+                  : Border.all(
+                      color: Colors.white.withValues(alpha: 0.1), width: 1),
+              boxShadow: isFocused
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.focusBorder.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
           child: Text(
             label,
             style: TextStyle(
@@ -441,12 +450,15 @@ class EPGVirtualProgramRow extends StatelessWidget {
         final maxWidth = math.max(minWidth, totalWidth - leftOffset);
         final width = rawWidth.clamp(minWidth, maxWidth);
 
-        final focusNode =
-            isFirstRow && programIndex == 0 ? firstProgramFocusNode : null;
-        final resolvedFocusNode =
-            (focusProgramIndex != null && focusProgramIndex == programIndex)
-                ? currentProgramFocusNode
-                : focusNode;
+        // Assign focus node: first program gets firstProgramFocusNode,
+        // current playing program gets currentProgramFocusNode
+        FocusNode? resolvedFocusNode;
+        if (isFirstRow && programIndex == 0) {
+          resolvedFocusNode = firstProgramFocusNode;
+        } else if (focusProgramIndex != null && focusProgramIndex == programIndex) {
+          resolvedFocusNode = currentProgramFocusNode;
+        }
+        
         return Positioned(
           left: leftOffset,
           top: 0,
@@ -512,9 +524,18 @@ class EPGProgramCell extends StatelessWidget {
                       : const Color(0xFF2a2a3e).withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(8),
               border: isFocused
-                  ? Border.all(color: AppTheme.focusBorder, width: 2)
+                  ? Border.all(color: AppTheme.focusBorder, width: 3)
                   : Border.all(
                       color: Colors.white.withValues(alpha: 0.1), width: 1),
+              boxShadow: isFocused
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.focusBorder.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
             ),
             child: Material(
               color: Colors.transparent,

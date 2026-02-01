@@ -65,11 +65,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   int _epgFutureHours = 12;
   // Smaller initial window for faster startup while keeping timezone buffer.
   static const int _initialFutureHours = 12;
-  // Full window used for background extension.
-  static const int _fullFutureHours = 48;
+  // Full window: 30 hours covers global timezones (UTC-12 to UTC+14 = 26hr span + 4hr buffer)
+  static const int _fullFutureHours = 30;
   // Past/future windows tuned for timezone drift without heavy ingest.
   static const int _epgPastWindowHours = 12;
-  static const int _epgFutureWindowHours = 48;
+  static const int _epgFutureWindowHours = 30;
   bool _extendedWindowScheduled = false;
   bool _extendingWindow = false;
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
@@ -158,6 +158,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   static const int _maxRetries = 3;
   static const int _defaultCacheHours = 6;
   Duration _cacheDuration = const Duration(hours: _defaultCacheHours);
+  static const Duration _forceRefreshCooldown = Duration(minutes: 10);
+  DateTime? _lastForceRefreshRequested;
 
   bool get isLoading => _isLoading;
   bool get isDownloading => _isDownloading;
@@ -311,6 +313,20 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       debugLog('EPG: Progressive init skipped (already loading or in flight)');
       return;
     }
+    // CRITICAL: Don't re-initialize if we already have loaded programs OR if we're currently parsing
+    // Check both _hasParsed AND hasLoadedPrograms to catch all cases
+    if (!forceRefresh && (hasLoadedPrograms || _hasParsed || _isParsing)) {
+      debugLog('EPG: Progressive init skipped (hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, isParsing=$_isParsing, channels=${_programsByChannel.length})');
+      return;
+    }
+    if (forceRefresh && _lastForceRefreshRequested != null) {
+      final since = DateTime.now().difference(_lastForceRefreshRequested!);
+      if (since < _forceRefreshCooldown && hasLoadedPrograms) {
+        debugLog(
+            'EPG: Force refresh skipped (cooldown ${since.inMinutes}m, programs loaded)');
+        return;
+      }
+    }
 
     final now = DateTime.now();
     if (!forceRefresh &&
@@ -320,6 +336,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     _lastInitAttempt = now;
+    if (forceRefresh) {
+      _lastForceRefreshRequested = now;
+    }
     _initInFlight = true;
 
     try {
@@ -433,6 +452,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       // Small delay to let current day render first
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // CRITICAL: Check if we already have data loaded to avoid redundant work
+      // Also check if we're currently loading to prevent duplicate background loads
+      if ((hasLoadedPrograms && _programsByChannel.length > 100) || _isLoading || _isParsing) {
+        debugLog('EPG: Skipping background load - already have ${_programsByChannel.length} channels (isLoading=$_isLoading, isParsing=$_isParsing)');
+        return;
+      }
+
       final start = DateTime.now();
       await _loadChannelList(
         forceRefresh: false,
@@ -501,8 +527,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   void setAllowedChannelIds(Set<String> channelIds,
       {bool triggerRefresh = false}) {
     // Standardize IDs for filtering - helps with targeted EPG parsing
-    _allowedChannelIdsNormalized =
+    final normalized =
         channelIds.map((id) => normalizeForAllowedId(id)).toSet();
+    if (_allowedChannelIdsNormalized.length == normalized.length &&
+        _allowedChannelIdsNormalized.containsAll(normalized)) {
+      debugLog('EPG: Allowed channel set unchanged; skipping refresh.');
+      return;
+    }
+    _allowedChannelIdsNormalized = normalized;
     _allowedChannelCount = _allowedChannelIdsNormalized.length;
     debugLog(
         'EPG: Allowed channel set size: ${_allowedChannelIdsNormalized.length}');
@@ -1546,7 +1578,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           }
         }
 
-        debugLog('EPG: Starting background parsing...');
+        final cacheSizeBytes = await file.length();
+        debugLog(
+            'EPG: Starting background parsing (cacheSize=${(cacheSizeBytes / (1024 * 1024)).toStringAsFixed(2)}MB, allowedSet=${_allowedChannelIdsNormalized.length}, dayOnly=$currentDayOnly, futureHours=$_epgFutureWindowHours)');
         _isParsing = true;
         notifyListeners();
         _startParseProgressTimer();
@@ -1554,7 +1588,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         // Parse full EPG (no channel filtering). Matching is handled later.
         final Set<String> effectiveAllowedChannels = <String>{};
         debugLog('EPG: Parsing full EPG (no channel filter).');
-
         // Pass file path to isolate instead of content string to save memory
         Future<Map<String, dynamic>> parseEpg(
           Set<String> allowedChannels, {
@@ -1628,6 +1661,16 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         final channelHashes = (parseResult['channelHashes'] as Map?)
                 ?.map((k, v) => MapEntry(k.toString(), v.toString())) ??
             <String, String>{};
+        if (programFilePath != null && programFilePath.isNotEmpty) {
+          try {
+            final tempFile = File(programFilePath);
+            if (await tempFile.exists()) {
+              final tempSize = await tempFile.length();
+              debugLog(
+                  'EPG: Program temp file size ${(tempSize / (1024 * 1024)).toStringAsFixed(2)}MB (programs=$parsedProgramCount)');
+            }
+          } catch (_) {}
+        }
 
         if (programFilePath == null ||
             programFilePath.isEmpty ||
@@ -1710,11 +1753,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         // For foreground load, write directly to _programsByChannel so UI updates live.
         final ingestStart = DateTime.now();
         _setEpgProgress(0.7, label: 'Ingesting EPG');
+        final deferDbWrites = parsedProgramCount >= 50000;
+        if (deferDbWrites) {
+          debugLog(
+              'EPG: Deferring DB writes during ingest (programs=$parsedProgramCount)');
+        }
         await _ingestProgramsFromFile(
           programFilePath,
           target: fromBackgroundRefresh ? stagedPrograms : _programsByChannel,
           skipChannels: skipChannels,
           totalPrograms: parsedProgramCount,
+          skipDbWrites: deferDbWrites,
           onProgress: (processed, total) {
             if (total <= 0) return;
             final ratio = (processed / total).clamp(0.0, 1.0);
@@ -1771,35 +1820,37 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         }
 
         // PERSIST: Save parsed programs to DB for fast future loads
-        // CRITICAL: Check hasLoadedPrograms, not just isNotEmpty
+        // CRITICAL: Do this in background to avoid blocking UI
         if (!_dbDisabled && hasLoadedPrograms) {
-          try {
-            debugLog('EPG: Persisting programs to DB...');
-            final dbPayload = <String, List<Map<String, dynamic>>>{};
-            for (final entry in _programsByChannel.entries) {
-              dbPayload[entry.key] = entry.value
-                  .map((p) => {
-                        'startTs': p.startTime.millisecondsSinceEpoch,
-                        'endTs': p.endTime.millisecondsSinceEpoch,
-                        'title': p.title,
-                        'description': p.description,
-                        'imageUrl': p.imageUrl,
-                      })
-                  .toList();
-            }
-            _db.beginBulkWrite();
+          unawaited(() async {
             try {
-              await _db.clearPrograms();
-              await _db.insertAllPrograms(dbPayload);
-            } finally {
-              _db.endBulkWrite();
+              debugLog('EPG: Persisting programs to DB in background...');
+              final dbPayload = <String, List<Map<String, dynamic>>>{};
+              for (final entry in _programsByChannel.entries) {
+                dbPayload[entry.key] = entry.value
+                    .map((p) => {
+                          'startTs': p.startTime.millisecondsSinceEpoch,
+                          'endTs': p.endTime.millisecondsSinceEpoch,
+                          'title': p.title,
+                          'description': p.description,
+                          'imageUrl': p.imageUrl,
+                        })
+                    .toList();
+              }
+              _db.beginBulkWrite();
+              try {
+                await _db.clearPrograms();
+                await _db.insertAllPrograms(dbPayload);
+              } finally {
+                _db.endBulkWrite();
+              }
+              debugLog(
+                  'EPG: Persisted ${_programsByChannel.length} channels to DB.');
+            } catch (e) {
+              debugLog('EPG: Failed to persist programs to DB: $e');
+              // Non-fatal, continue
             }
-            debugLog(
-                'EPG: Persisted ${_programsByChannel.length} channels to DB.');
-          } catch (e) {
-            debugLog('EPG: Failed to persist programs to DB: $e');
-            // Non-fatal, continue
-          }
+          }());
         }
 
         if (deferRefresh && !fromBackgroundRefresh) {
@@ -1841,9 +1892,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _refreshFromNetwork() async {
     if (_refreshInFlight) return;
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
+    if (_lastDownloadTime != null) {
+      final since = DateTime.now().difference(_lastDownloadTime!);
+      if (since < _cacheDuration) {
+        debugLog(
+            'EPG: Refresh skipped (cache fresh ${since.inMinutes}m < ${_cacheDuration.inMinutes}m)');
+        return;
+      }
+    }
     _refreshInFlight = true;
     try {
-      await _downloadEpgIfNeeded(forceRefresh: true);
+      await _downloadEpgIfNeeded(forceRefresh: false);
       await _loadChannelList(
         forceRefresh: false,
         allowStaleCache: false,
@@ -3374,8 +3433,68 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
 
+  /// High-priority loading for visible channels - loads immediately without batching delay.
+  /// Call this for the first screen of channels to ensure they load ASAP.
+  Future<void> priorityLoadVisibleChannels(
+    List<String> channelIds, {
+    List<String?>? channelNames,
+  }) async {
+    if (channelIds.isEmpty) return;
+
+    final effectiveNames =
+        channelNames != null && channelNames.length == channelIds.length
+            ? channelNames
+            : null;
+
+    final List<String> epgIdsToLoad = [];
+    final Set<String> seen = {};
+
+    for (var i = 0; i < channelIds.length; i++) {
+      final channelId = channelIds[i];
+      final name = effectiveNames != null ? effectiveNames[i] : null;
+      final epgId =
+          _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, name);
+      if (epgId == null) continue;
+
+      _cacheResolvedMapping(channelId, epgId);
+
+      final existingPrograms = _programsByChannel[epgId];
+      final hasPrograms =
+          existingPrograms != null && existingPrograms.isNotEmpty;
+
+      if (hasPrograms) continue;
+      if (!seen.add(epgId)) continue;
+      _registerAvailableChannel(epgId);
+      epgIdsToLoad.add(epgId);
+    }
+
+    if (epgIdsToLoad.isEmpty) {
+      debugLog(
+          'EPG: priorityLoadVisibleChannels - all ${channelIds.length} channels already loaded');
+      return;
+    }
+
+    debugLog(
+        'EPG: priorityLoadVisibleChannels - loading ${epgIdsToLoad.length} channels immediately');
+
+    // Add to pending batch to trigger isBatchLoading getter
+    _pendingBatch.addAll(epgIdsToLoad);
+    notifyListeners();
+
+    try {
+      await _loadProgramsFromDbBatch(epgIdsToLoad);
+    } finally {
+      // Remove from pending batch
+      _pendingBatch.removeWhere((id) => epgIdsToLoad.contains(id));
+      notifyListeners();
+    }
+  }
+
   Future<void> ensureChannelLoaded(String channelId,
       {String? channelName}) async {
+    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
+      return;
+    }
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
     if (epgId == null) {
@@ -3416,6 +3535,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
+    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
+      return;
+    }
     debugLog(
         'EPG: ensureChannelsLoadedBatch called with ${channelIds.length} channels');
     final effectiveNames =
@@ -3590,6 +3712,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     Map<String, List<Program>>? target,
     Set<String>? skipChannels,
     int? totalPrograms,
+    bool skipDbWrites = false,
     void Function(int processed, int total)? onProgress,
   }) async {
     if (path == null || path.isEmpty) {
@@ -3603,7 +3726,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     const int batchSize = 500;
-    final Map<String, List<Map<String, dynamic>>> buffer = {};
+    final Map<String, List<Map<String, dynamic>>> buffer =
+        skipDbWrites ? {} : <String, List<Map<String, dynamic>>>{};
     final Map<String, bool> cleared = {};
     final ingestTimer = Stopwatch()..start();
     int totalLines = 0;
@@ -3677,26 +3801,28 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           list.add(program);
         }
 
-        final payload = buffer.putIfAbsent(epgId, () => []);
-        payload.add({
-          'startTs': startTs,
-          'endTs': endTs,
-          'title': title,
-          'description': data['description'],
-          'imageUrl': data['imageUrl'],
-        });
-        if (payload.length >= batchSize && !_dbDisabled) {
-          try {
-            final dbTimer = Stopwatch()..start();
-            await _db.insertPrograms(epgId, payload,
-                clearExisting: cleared[epgId] != false);
-            dbBatchMs += dbTimer.elapsedMilliseconds;
-            dbBatchCount++;
-          } catch (e) {
-            _handleDbError(e);
+        if (!skipDbWrites) {
+          final payload = buffer.putIfAbsent(epgId, () => []);
+          payload.add({
+            'startTs': startTs,
+            'endTs': endTs,
+            'title': title,
+            'description': data['description'],
+            'imageUrl': data['imageUrl'],
+          });
+          if (payload.length >= batchSize && !_dbDisabled) {
+            try {
+              final dbTimer = Stopwatch()..start();
+              await _db.insertPrograms(epgId, payload,
+                  clearExisting: cleared[epgId] != false);
+              dbBatchMs += dbTimer.elapsedMilliseconds;
+              dbBatchCount++;
+            } catch (e) {
+              _handleDbError(e);
+            }
+            payload.clear();
+            cleared[epgId] = false;
           }
-          payload.clear();
-          cleared[epgId] = false;
         }
 
         processed++;
@@ -3719,19 +3845,21 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
 
-      for (final entry in buffer.entries) {
-        if (entry.value.isEmpty) continue;
-        if (_dbDisabled) {
-          continue;
-        }
-        try {
-          final dbTimer = Stopwatch()..start();
-          await _db.insertPrograms(entry.key, entry.value,
-              clearExisting: cleared[entry.key] != false);
-          dbBatchMs += dbTimer.elapsedMilliseconds;
-          dbBatchCount++;
-        } catch (e) {
-          _handleDbError(e);
+      if (!skipDbWrites) {
+        for (final entry in buffer.entries) {
+          if (entry.value.isEmpty) continue;
+          if (_dbDisabled) {
+            continue;
+          }
+          try {
+            final dbTimer = Stopwatch()..start();
+            await _db.insertPrograms(entry.key, entry.value,
+                clearExisting: cleared[entry.key] != false);
+            dbBatchMs += dbTimer.elapsedMilliseconds;
+            dbBatchCount++;
+          } catch (e) {
+            _handleDbError(e);
+          }
         }
       }
       if (onProgress != null && totalPrograms != null && totalPrograms > 0) {
@@ -3742,7 +3870,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final linesPerSec =
           totalMs > 0 ? (totalLines / (totalMs / 1000)).round() : totalLines;
       debugLog(
-          'EPG: Ingest summary totalLines=$totalLines decoded=$decodedLines errors=$decodeErrors skippedEmpty=$skippedEmpty skippedMissingId=$skippedMissingId skippedChannels=$skippedChannels dbBatches=$dbBatchCount dbMs=$dbBatchMs totalMs=$totalMs linesPerSec=$linesPerSec');
+          'EPG: Ingest summary totalLines=$totalLines decoded=$decodedLines errors=$decodeErrors skippedEmpty=$skippedEmpty skippedMissingId=$skippedMissingId skippedChannels=$skippedChannels dbBatches=$dbBatchCount dbMs=$dbBatchMs totalMs=$totalMs linesPerSec=$linesPerSec skipDbWrites=$skipDbWrites');
     } catch (e) {
       debugLog('EPG: Failed to ingest programs from temp file: $e');
     } finally {

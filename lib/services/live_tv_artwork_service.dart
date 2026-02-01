@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:iptv_player/models/channel.dart';
@@ -75,7 +74,6 @@ class LiveTvArtworkService {
   final Set<String> _titleLogoRequests = {};
 
   // Hero image tracking
-  final Map<String, Size> _heroImageSizes = {};
 
   // Timers
   Timer? _artworkThrottle;
@@ -205,6 +203,120 @@ class LiveTvArtworkService {
   Channel? getChannelForProgram(String programId) =>
       _programChannelLookup[programId];
 
+  /// Check if a program has artwork ready (cached) for display.
+  /// Returns true if we have cached artwork for this program.
+  bool hasArtworkReady(Program program, Channel channel) {
+    // Check by program ID
+    final byId = _programArtwork[program.id];
+    if (byId != null && byId.isNotEmpty) return true;
+
+    // Check by title cache
+    if (_isTitleCacheEligible(program)) {
+      final byTitle = _programArtworkByTitle[_titleCacheKey(program, channel)];
+      if (byTitle != null && byTitle.isNotEmpty) return true;
+    }
+
+    // Check EPG-provided image URL
+    if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
+      // EPG provides an image - consider ready
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Prefetch artwork for visible programs and report readiness status.
+  /// Returns a map of channelId -> ready status.
+  /// Will wait up to [timeout] for artwork to become available.
+  Future<Map<String, bool>> prefetchVisibleArtwork(
+    List<Program> programs,
+    List<Channel> channels, {
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    if (programs.isEmpty || channels.isEmpty) {
+      return {};
+    }
+
+    final result = <String, bool>{};
+    final pending = <String, bool>{};
+
+    // Build lookup map
+    final channelMap = <String, Channel>{};
+    for (final channel in channels) {
+      channelMap[channel.epgLookupId] = channel;
+    }
+
+    // Check initial readiness and queue fetches for missing artwork
+    for (final program in programs) {
+      final channel = channelMap[program.channelId];
+      if (channel == null) continue;
+
+      final channelId = channel.epgLookupId;
+      if (hasArtworkReady(program, channel)) {
+        result[channelId] = true;
+      } else {
+        pending[channelId] = false;
+        // Queue high-priority fetch
+        ensureFreshProgramArtwork(program, channel, highPriority: true);
+      }
+    }
+
+    // If all are ready, return immediately
+    if (pending.isEmpty) {
+      return result;
+    }
+
+    // Wait for pending artwork with timeout
+    final startTime = DateTime.now();
+    while (pending.isNotEmpty &&
+        DateTime.now().difference(startTime) < timeout) {
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Check if any pending became ready
+      final nowReady = <String>[];
+      for (final channelId in pending.keys) {
+        final program = programs.firstWhere(
+          (p) => p.channelId == channelId,
+          orElse: () => programs.first,
+        );
+        final channel = channelMap[channelId];
+        if (channel != null && hasArtworkReady(program, channel)) {
+          nowReady.add(channelId);
+          result[channelId] = true;
+        }
+      }
+
+      for (final id in nowReady) {
+        pending.remove(id);
+      }
+    }
+
+    // Mark remaining as not ready
+    for (final channelId in pending.keys) {
+      result[channelId] = false;
+    }
+
+    debugLog(
+        'LiveTV artwork: prefetchVisibleArtwork completed - ${result.values.where((v) => v).length}/${result.length} ready');
+    return result;
+  }
+
+  /// Get count of ready artwork for a list of channels/programs
+  int countReadyArtwork(List<Program> programs, List<Channel> channels) {
+    int count = 0;
+    final channelMap = <String, Channel>{};
+    for (final channel in channels) {
+      channelMap[channel.epgLookupId] = channel;
+    }
+    for (final program in programs) {
+      final channel = channelMap[program.channelId];
+      if (channel != null && hasArtworkReady(program, channel)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // STATE CONTROL
   // ─────────────────────────────────────────────────────────────────────────
@@ -271,6 +383,8 @@ class LiveTvArtworkService {
   }
 
   void _scheduleArtworkDrain() {
+    debugLog(
+        'LiveTV artwork: _scheduleArtworkDrain called (paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle queueHigh=${_artworkQueueHigh.length} queueLow=${_artworkQueueLow.length})');
     if (_pauseArtworkFetching || _suspendArtworkCaches || _isIdle) {
       debugLog(
           'LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
@@ -278,6 +392,7 @@ class LiveTvArtworkService {
     }
     _artworkThrottle ??=
         Timer(const Duration(milliseconds: 700), _drainArtworkQueue);
+    debugLog('LiveTV artwork: Timer scheduled for drain in 700ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -335,6 +450,8 @@ class LiveTvArtworkService {
     Channel channel, {
     bool highPriority = false,
   }) {
+    debugLog(
+        'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=$_fanartEnabled sports=$_sportsDbEnabled tvdb=$_tvdbEnabled)');
     if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
@@ -915,15 +1032,10 @@ class LiveTvArtworkService {
         source: 'hero_epg',
       )) {
         final normalized = normalizeImageUrl(direct!);
-        if (!preferHighRes || _isHighResHeroImage(normalized)) {
-          _logArtworkDecision(
-            'LiveTV artwork: hero source=epg program="${program.title}" url=$normalized',
-          );
-          return normalized;
-        }
         _logArtworkDecision(
-          'LiveTV artwork: skip low-res epg program="${program.title}" url=$normalized',
+          'LiveTV artwork: hero source=epg program="${program.title}" url=$normalized',
         );
+        return normalized;
       }
     }
 
@@ -1587,6 +1699,10 @@ class LiveTvArtworkService {
     // Reject obvious poster or logo URLs
     if (_isLikelyPosterUrl(url) || _isLikelyChannelLogoUrl(url)) return false;
 
+    // If the image appears small, treat as non-landscape
+    if (_isLikelySmallImage(url)) return false;
+
+    // Explicitly landscape keywords - definitely accept
     if (lower.contains('backdrop') ||
         lower.contains('background') ||
         lower.contains('fanart') ||
@@ -1605,6 +1721,7 @@ class LiveTvArtworkService {
         final w = int.tryParse(match.group(1) ?? '');
         final h = int.tryParse(match.group(2) ?? '');
         if (w != null && h != null) {
+          // If we have dimensions, check ratio
           return w >= (h * 1.2);
         }
       }
@@ -1617,13 +1734,14 @@ class LiveTvArtworkService {
           lower.contains('/w1280/')) {
         return true;
       }
-      return false;
+      // TMDB poster sizes should have been caught by _isLikelyPosterUrl
+      // For other TMDB URLs, allow them
+      return true;
     }
 
-    // If the image appears small, treat as non-landscape
-    if (_isLikelySmallImage(url)) return false;
-
-    return false;
+    // Default: assume landscape unless proven otherwise
+    // The _LandscapeGuardedImage widget will verify actual dimensions at load time
+    return true;
   }
 
   bool _isTitleCacheEligible(Program program) {
@@ -1679,23 +1797,6 @@ class LiveTvArtworkService {
     } catch (_) {
       return url;
     }
-  }
-
-  bool _isHighResHeroImage(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('image.tmdb.org')) {
-      if (lower.contains('/original/') ||
-          lower.contains('/w1920/') ||
-          lower.contains('/w1280/')) {
-        return true;
-      }
-    }
-    final size = _heroImageSizes[url];
-    if (size != null) {
-      return size.width >= 1200 || size.height >= 720;
-    }
-    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

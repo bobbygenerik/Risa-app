@@ -1,7 +1,7 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/services/image_validation_service.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
@@ -317,13 +317,8 @@ class ChannelLogoService {
 
   /// Verify a URL returns a valid image
   static Future<bool> _verifyUrl(String url) async {
-    try {
-      final response =
-          await http.head(Uri.parse(url)).timeout(const Duration(seconds: 5));
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
+    // Use shared image validation to filter out unsupported/invalid formats.
+    return await ImageValidationService.isValid(url);
   }
 
   /// Enrich a channel with a logo if missing

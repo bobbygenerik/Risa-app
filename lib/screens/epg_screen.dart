@@ -402,7 +402,7 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   FocusNode _programFocusNodeForChannel(Channel channel) {
-    final key = channel.epgLookupId;
+    final key = _focusKeyForChannel(channel);
     final existing = _programFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGProgram:$key');
@@ -420,7 +420,7 @@ class _EPGScreenState extends State<EPGScreen>
     if (index == 0) {
       return _firstChannelFocus;
     }
-    final key = channel.epgLookupId;
+    final key = _focusKeyForChannel(channel);
     final existing = _channelFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGChannel:$key');
@@ -432,6 +432,14 @@ class _EPGScreenState extends State<EPGScreen>
       removedNode?.dispose();
     }
     return node;
+  }
+
+  String _focusKeyForChannel(Channel channel) {
+    final id = channel.id.trim();
+    if (id.isNotEmpty) return id;
+    final epgId = channel.epgLookupId.trim();
+    if (epgId.isNotEmpty) return epgId;
+    return channel.name.trim();
   }
 
   /// Scroll the EPG grid to show the current time
@@ -480,14 +488,14 @@ class _EPGScreenState extends State<EPGScreen>
 
   @override
   bool handleContentFocusRequest() {
-    _firstCategoryFocus.requestFocus();
+    _firstChannelFocus.requestFocus();
     return true;
   }
 
   void requestFirstContentFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _firstCategoryFocus.requestFocus();
+      _firstChannelFocus.requestFocus();
     });
   }
 

@@ -1,0 +1,303 @@
+adb logcat -v time | grep -E "EPG:|JANK:"
+02-01 08:47:41.457 I/flutter (10330): EPG: Quick start initialization
+02-01 08:47:41.988 I/flutter (10330): JANK: frame total=503ms build=0ms raster=503ms vsync=0ms
+02-01 08:47:42.312 I/flutter (10330): EPG: Loaded normalized mapping from file (10598 entries)
+02-01 08:47:42.312 I/flutter (10330): EPG: Starting progressive EPG initialization...
+02-01 08:47:42.312 I/flutter (10330): EPG: Using cache duration of 6 hours
+02-01 08:47:42.313 I/flutter (10330): EPG: Progressive initialization with URL: https://opop.pro/epNCvfgjsYe9JC
+02-01 08:47:42.319 I/flutter (10330): JANK: frame total=165ms build=8ms raster=157ms vsync=6ms
+02-01 08:47:42.319 I/flutter (10330): JANK: frame total=147ms build=14ms raster=133ms vsync=141ms
+02-01 08:47:42.766 I/flutter (10330): JANK: frame total=321ms build=31ms raster=290ms vsync=6ms
+02-01 08:47:42.766 I/flutter (10330): JANK: frame total=53ms build=10ms raster=43ms vsync=2ms
+02-01 08:47:42.766 I/flutter (10330): JANK: frame total=61ms build=37ms raster=24ms vsync=1ms
+02-01 08:47:42.988 I/flutter (10330): EPG: Loaded normalized mapping from file (10598 entries)
+02-01 08:47:42.989 I/flutter (10330): JANK: frame total=54ms build=14ms raster=40ms vsync=1ms
+02-01 08:47:43.001 I/flutter (10330): EPG: Loaded 118 mappings from DB
+02-01 08:47:43.130 I/flutter (10330): EPG: Restored cache from backup.
+02-01 08:47:43.132 I/flutter (10330): EPG: Allowing stale cache. Age: 0 minutes. Size: 28.30 MB
+02-01 08:47:43.132 I/flutter (10330): EPG: Using existing cached data for immediate load.
+02-01 08:47:43.132 I/flutter (10330): EPG: Download phase took 105ms
+02-01 08:47:43.145 I/flutter (10330): EPG: Starting background parsing (cacheSize=28.30MB, allowedSet=0, dayOnly=false, futureHours=48)
+02-01 08:47:43.145 I/flutter (10330): EPG: Parsing full EPG (no channel filter).
+02-01 08:47:43.146 I/flutter (10330): EPG: Parsing full programs from 2026-01-31 20:47:43.145 to 2026-02-03 08:47:43.145
+02-01 08:47:45.361 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "abcwlneprovidenceri.us" (channelId: "abcwlneprovidenceri.us", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "france2.fr" (channelId: "france2.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "france3nouvelleaquitaine.fr" (channelId: "france3nouvelleaquitaine.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "france3.fr" (channelId: "france3.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "france4.fr" (channelId: "france4.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "france5.fr" (channelId: "france5.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "m6.fr" (channelId: "m6.fr", total program channels: 65)
+02-01 08:47:45.453 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "6ter.fr" (channelId: "6ter.fr", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10adelaide.au" (channelId: "10adelaide.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10brisbane.au" (channelId: "10brisbane.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10melbourne.au" (channelId: "10melbourne.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10perth.au" (channelId: "10perth.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10sydney.au" (channelId: "10sydney.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10boldadelaide.au" (channelId: "10boldadelaide.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10boldbrisbane.au" (channelId: "10boldbrisbane.au", total program channels: 65)
+02-01 08:47:45.505 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10boldmelbourne.au" (channelId: "10boldmelbourne.au", total program channels: 65)
+02-01 08:47:45.506 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10boldperth.au" (channelId: "10boldperth.au", total program channels: 65)
+02-01 08:47:45.506 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10boldsydney.au" (channelId: "10boldsydney.au", total program channels: 65)
+02-01 08:47:45.506 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "nickelodeon.au" (channelId: "nickelodeon.au", total program channels: 65)
+02-01 08:47:45.506 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "10peachadelaide.au" (channelId: "10peachadelaide.au", total program channels: 65)
+02-01 08:47:46.382 I/flutter (10330): JANK: frame total=62ms build=12ms raster=50ms vsync=0ms
+02-01 08:47:46.653 I/flutter (10330): EPG: External DB busy enabled - suspending reads
+02-01 08:47:46.721 I/flutter (10330): EPG: Allowed channel set size: 6556
+02-01 08:47:49.009 I/flutter (10330): JANK: frame total=87ms build=6ms raster=81ms vsync=0ms
+02-01 08:47:51.031 I/flutter (10330): JANK: frame total=75ms build=6ms raster=69ms vsync=0ms
+02-01 08:47:52.241 I/flutter (10330): EPG: External DB busy cleared - suspending reads
+02-01 08:47:56.672 I/flutter (10330): JANK: frame total=55ms build=43ms raster=12ms vsync=2ms
+02-01 08:48:00.874 I/flutter (10330): JANK: frame total=52ms build=42ms raster=10ms vsync=0ms
+02-01 08:48:07.850 I/flutter (10330): JANK: frame total=55ms build=6ms raster=49ms vsync=0ms
+02-01 08:48:11.820 I/flutter (10330): JANK: frame total=72ms build=5ms raster=67ms vsync=0ms
+02-01 08:48:30.763 I/flutter (10330): JANK: frame total=110ms build=100ms raster=10ms vsync=1ms
+02-01 08:48:35.163 I/flutter (10330): JANK: frame total=60ms build=6ms raster=54ms vsync=0ms
+02-01 08:48:50.132 I/flutter (10330): JANK: frame total=70ms build=5ms raster=65ms vsync=1ms
+02-01 08:48:50.132 I/flutter (10330): JANK: frame total=52ms build=12ms raster=40ms vsync=0ms
+02-01 08:49:11.608 I/flutter (10330): EPG: Fast parse (utf8, no sanitize) took 88461ms; programs=305371 channels=4343
+02-01 08:49:11.645 I/flutter (10330): EPG: Parse compute took 88499ms
+02-01 08:49:11.645 I/flutter (10330): EPG: Initial parse result: 305371 programs, 4343 channels
+02-01 08:49:11.648 I/flutter (10330): EPG: Program temp file size 109.73MB (programs=305371)
+02-01 08:49:13.222 I/flutter (10330): EPG: Rebuilt fuzzy match index with 13972 candidates.
+02-01 08:49:13.226 I/flutter (10330): EPG: Total EPG channel IDs collected: 4343
+02-01 08:49:13.226 I/flutter (10330): EPG: Deferring DB writes during ingest (programs=305371)
+02-01 08:49:41.493 I/flutter (10330): EPG: Ingest summary totalLines=305371 decoded=305371 errors=0 skippedEmpty=0 skippedMissingId=0 skippedChannels=0 dbBatches=0 dbMs=0 totalMs=28262 linesPerSec=10805 skipDbWrites=true
+02-01 08:49:41.541 I/flutter (10330): EPG: Program ingest took 28314ms
+02-01 08:49:41.541 I/flutter (10330): EPG: Load (parse+ingest) total 118540ms
+02-01 08:49:42.249 I/flutter (10330): EPG: Saved normalized mapping (10598 entries) to /data/user/0/com.risa.app/app_flutter/epg_normalized_pl_f74e5558.json
+02-01 08:49:42.349 I/flutter (10330): EPG: Saved cache backup to /data/user/0/com.risa.app/files/epg_cache_backup.xml.gz
+02-01 08:49:42.350 I/flutter (10330): EPG: Successfully parsed 4089 channels and 4343 IDs with ~305371 programs
+02-01 08:49:42.350 I/flutter (10330): EPG: EPG channel ids count (parsed): 4343
+02-01 08:49:42.878 I/flutter (10330): EPG: Persisting programs to DB...
+02-01 08:49:47.039 I/flutter (10330): JANK: frame total=226ms build=219ms raster=7ms vsync=0ms
+02-01 08:49:52.311 I/flutter (10330): JANK: frame total=231ms build=225ms raster=6ms vsync=0ms
+02-01 08:49:54.706 I/flutter (10330): JANK: frame total=70ms build=4ms raster=66ms vsync=0ms
+02-01 08:49:55.112 I/flutter (10330): JANK: frame total=243ms build=237ms raster=6ms vsync=13ms
+02-01 08:49:57.412 I/flutter (10330): JANK: frame total=226ms build=219ms raster=7ms vsync=0ms
+02-01 08:49:58.229 I/flutter (10330): JANK: frame total=229ms build=223ms raster=6ms vsync=1ms
+02-01 08:49:59.519 I/flutter (10330): JANK: frame total=225ms build=219ms raster=6ms vsync=0ms
+02-01 08:50:00.602 I/flutter (10330): JANK: frame total=236ms build=230ms raster=6ms vsync=4ms
+02-01 08:50:03.071 I/flutter (10330): JANK: frame total=238ms build=225ms raster=13ms vsync=1ms
+02-01 08:50:04.440 I/flutter (10330): JANK: frame total=226ms build=220ms raster=6ms vsync=3ms
+02-01 08:50:06.359 I/flutter (10330): JANK: frame total=230ms build=224ms raster=6ms vsync=0ms
+02-01 08:50:07.661 I/flutter (10330): JANK: frame total=231ms build=225ms raster=6ms vsync=0ms
+02-01 08:50:09.947 I/flutter (10330): JANK: frame total=230ms build=223ms raster=7ms vsync=0ms
+02-01 08:50:12.298 I/flutter (10330): JANK: frame total=227ms build=220ms raster=7ms vsync=0ms
+02-01 08:50:13.117 I/flutter (10330): JANK: frame total=225ms build=218ms raster=7ms vsync=0ms
+02-01 08:50:15.477 I/flutter (10330): JANK: frame total=229ms build=223ms raster=6ms vsync=1ms
+02-01 08:50:17.846 I/flutter (10330): JANK: frame total=238ms build=231ms raster=7ms vsync=0ms
+02-01 08:50:20.572 I/flutter (10330): JANK: frame total=230ms build=224ms raster=6ms vsync=0ms
+02-01 08:50:21.596 I/flutter (10330): JANK: frame total=225ms build=218ms raster=7ms vsync=10ms
+02-01 08:50:23.969 I/flutter (10330): JANK: frame total=227ms build=221ms raster=6ms vsync=0ms
+02-01 08:50:27.128 I/flutter (10330): JANK: frame total=229ms build=222ms raster=7ms vsync=0ms
+02-01 08:50:31.201 I/flutter (10330): JANK: frame total=229ms build=223ms raster=6ms vsync=0ms
+02-01 08:50:37.182 I/flutter (10330): JANK: frame total=233ms build=226ms raster=7ms vsync=0ms
+02-01 08:50:39.383 I/flutter (10330): JANK: frame total=231ms build=224ms raster=7ms vsync=0ms
+02-01 08:50:40.308 I/flutter (10330): JANK: frame total=229ms build=222ms raster=7ms vsync=0ms
+02-01 08:50:49.317 I/flutter (10330): JANK: frame total=234ms build=227ms raster=7ms vsync=0ms
+02-01 08:50:55.540 I/flutter (10330): JANK: frame total=226ms build=220ms raster=6ms vsync=0ms
+02-01 08:50:58.370 I/flutter (10330): JANK: frame total=236ms build=228ms raster=8ms vsync=0ms
+02-01 08:51:03.088 I/flutter (10330): JANK: frame total=230ms build=224ms raster=6ms vsync=0ms
+02-01 08:51:06.042 I/flutter (10330): JANK: frame total=94ms build=10ms raster=84ms vsync=0ms
+02-01 08:51:06.042 I/flutter (10330): JANK: frame total=166ms build=7ms raster=159ms vsync=0ms
+02-01 08:51:08.562 I/flutter (10330): JANK: frame total=235ms build=229ms raster=6ms vsync=0ms
+02-01 08:51:09.696 I/flutter (10330): JANK: frame total=235ms build=227ms raster=8ms vsync=1ms
+02-01 08:51:10.907 I/flutter (10330): JANK: frame total=230ms build=223ms raster=7ms vsync=0ms
+02-01 08:51:19.998 I/flutter (10330): JANK: frame total=227ms build=220ms raster=7ms vsync=0ms
+02-01 08:51:21.005 I/flutter (10330): JANK: frame total=230ms build=224ms raster=6ms vsync=0ms
+02-01 08:51:22.432 I/flutter (10330): JANK: frame total=230ms build=223ms raster=7ms vsync=2ms
+02-01 08:51:27.233 I/flutter (10330): JANK: frame total=229ms build=222ms raster=7ms vsync=0ms
+02-01 08:51:28.374 I/flutter (10330): JANK: frame total=229ms build=222ms raster=7ms vsync=0ms
+02-01 08:51:29.691 I/flutter (10330): JANK: frame total=257ms build=251ms raster=6ms vsync=0ms
+02-01 08:51:30.869 I/flutter (10330): JANK: frame total=228ms build=221ms raster=7ms vsync=5ms
+02-01 08:51:31.793 I/flutter (10330): JANK: frame total=232ms build=226ms raster=6ms vsync=12ms
+02-01 08:51:36.515 I/flutter (10330): JANK: frame total=230ms build=223ms raster=7ms vsync=0ms
+02-01 08:51:36.843 I/flutter (10330): EPG: Persisted 4089 channels to DB.
+02-01 08:51:36.843 I/flutter (10330): EPG: Loading remaining EPG days in background...
+02-01 08:51:36.843 I/flutter (10330): EPG: Progressive init complete - URL: https://opop.pro/epNCvfgjsYe9JC, Available channels: 4343, Loaded channels: 4089
+02-01 08:51:36.843 I/flutter (10330): EPG: Starting progressive EPG initialization...
+02-01 08:51:36.843 I/flutter (10330): EPG: Using cache duration of 6 hours
+02-01 08:51:36.843 I/flutter (10330): EPG: Progressive initialization with URL: https://opop.pro/epNCvfgjsYe9JC
+02-01 08:51:36.853 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "NewEnglandPatriots.nfl" (name: "Nfl New England Patriots", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:51:36.854 I/flutter (10330): EPG: ensureChannelsLoadedBatch called with 2 channels
+02-01 08:51:36.854 I/flutter (10330): EPG: ensureChannelsLoadedBatch - queueing 1 channels for batch load
+02-01 08:51:36.916 I/flutter (10330): EPG: ensureChannelsLoadedBatch called with 1 channels
+02-01 08:51:36.916 I/flutter (10330): EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)
+02-01 08:51:37.094 I/flutter (10330): EPG: ensureChannelsLoadedBatch called with 2 channels
+02-01 08:51:37.095 I/flutter (10330): EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)
+02-01 08:51:37.356 I/flutter (10330): EPG: Parsing full programs from 2026-01-31 20:51:37.355 to 2026-02-03 08:51:37.355
+02-01 08:51:38.115 I/flutter (10330): EPG: ensureChannelsLoadedBatch called with 1 channels
+02-01 08:51:38.115 I/flutter (10330): EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)
+02-01 08:51:38.115 I/flutter (10330): EPG: Batch timer fired, loading 1 channels
+02-01 08:51:38.115 I/flutter (10330): EPG: _loadProgramsFromDbBatch called with 1 epgIds, dbReady=false, dbDisabled=false, suspendReads=false
+02-01 08:51:38.115 I/flutter (10330): EPG: _loadProgramsFromDbBatch returning early - dbReady=false, dbDisabled=false, suspendReads=false, emptyIds=false
+02-01 08:51:38.116 I/flutter (10330): EPG: Allowing stale cache. Age: 3 minutes. Size: 28.30 MB
+02-01 08:51:38.116 I/flutter (10330): EPG: Cache is valid. Age: 3 minutes. Size: 28.30 MB
+02-01 08:51:38.116 I/flutter (10330): EPG: Allowing stale cache. Age: 3 minutes. Size: 28.30 MB
+02-01 08:51:38.116 I/flutter (10330): EPG: Using existing cached data for immediate load.
+02-01 08:51:38.116 I/flutter (10330): EPG: Download phase took 2ms
+02-01 08:51:39.164 I/flutter (10330): EPG: Starting background parsing (cacheSize=28.30MB, allowedSet=6556, dayOnly=false, futureHours=48)
+02-01 08:51:39.164 I/flutter (10330): EPG: Parsing full EPG (no channel filter).
+02-01 08:51:39.164 I/flutter (10330): EPG: Loaded normalized mapping from file (10598 entries)
+02-01 08:51:39.164 I/flutter (10330): EPG: Load already in progress, skipping concurrent request.
+02-01 08:51:39.164 I/flutter (10330): EPG: Loading remaining EPG days in background...
+02-01 08:51:39.164 I/flutter (10330): EPG: Progressive init complete - URL: https://opop.pro/epNCvfgjsYe9JC, Available channels: 4343, Loaded channels: 4089
+02-01 08:51:39.165 I/flutter (10330): EPG: External DB busy enabled - suspending reads
+02-01 08:51:39.165 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:51:39.165 I/flutter (10330): EPG: Load already in progress, skipping concurrent request.
+02-01 08:51:41.200 I/flutter (10330): JANK: frame total=933ms build=108ms raster=825ms vsync=0ms
+02-01 08:51:41.200 I/flutter (10330): JANK: frame total=173ms build=65ms raster=108ms vsync=108ms
+02-01 08:51:41.200 I/flutter (10330): JANK: frame total=61ms build=44ms raster=17ms vsync=14ms
+02-01 08:51:42.202 I/flutter (10330): EPG: Load already in progress, skipping concurrent request.
+02-01 08:51:42.202 I/flutter (10330): EPG: Background EPG load took 0ms
+02-01 08:51:42.202 I/flutter (10330): EPG: ✓ Full EPG loaded in background
+02-01 08:51:42.202 I/flutter (10330): JANK: frame total=67ms build=51ms raster=16ms vsync=7ms
+02-01 08:51:42.202 I/flutter (10330): JANK: frame total=50ms build=33ms raster=17ms vsync=11ms
+02-01 08:51:45.209 I/flutter (10330): JANK: frame total=192ms build=61ms raster=131ms vsync=17ms
+02-01 08:51:45.209 I/flutter (10330): JANK: frame total=112ms build=74ms raster=38ms vsync=9ms
+02-01 08:51:46.211 I/flutter (10330): JANK: frame total=59ms build=4ms raster=55ms vsync=20ms
+02-01 08:51:46.211 I/flutter (10330): JANK: frame total=50ms build=0ms raster=50ms vsync=20ms
+02-01 08:51:46.211 I/flutter (10330): JANK: frame total=67ms build=51ms raster=16ms vsync=13ms
+02-01 08:51:48.221 I/flutter (10330): JANK: frame total=69ms build=50ms raster=19ms vsync=0ms
+02-01 08:51:48.221 I/flutter (10330): JANK: frame total=84ms build=65ms raster=19ms vsync=10ms
+02-01 08:51:49.223 I/flutter (10330): JANK: frame total=85ms build=64ms raster=21ms vsync=0ms
+02-01 08:51:50.225 I/flutter (10330): JANK: frame total=61ms build=45ms raster=16ms vsync=0ms
+02-01 08:51:51.288 I/flutter (10330): JANK: frame total=75ms build=57ms raster=18ms vsync=0ms
+02-01 08:51:54.293 I/flutter (10330): JANK: frame total=51ms build=36ms raster=15ms vsync=0ms
+02-01 08:51:54.293 I/flutter (10330): JANK: frame total=55ms build=41ms raster=14ms vsync=1ms
+02-01 08:51:55.301 I/flutter (10330): JANK: frame total=67ms build=47ms raster=20ms vsync=12ms
+02-01 08:51:56.312 I/flutter (10330): JANK: frame total=64ms build=36ms raster=28ms vsync=0ms
+02-01 08:51:58.594 I/flutter (10330): JANK: frame total=103ms build=57ms raster=46ms vsync=4ms
+02-01 08:51:58.594 I/flutter (10330): JANK: frame total=67ms build=47ms raster=20ms vsync=0ms
+02-01 08:51:59.597 I/flutter (10330): JANK: frame total=59ms build=34ms raster=25ms vsync=0ms
+02-01 08:52:00.599 I/flutter (10330): JANK: frame total=64ms build=48ms raster=16ms vsync=0ms
+02-01 08:52:01.601 I/flutter (10330): JANK: frame total=62ms build=40ms raster=22ms vsync=0ms
+02-01 08:52:02.623 I/flutter (10330): JANK: frame total=67ms build=50ms raster=17ms vsync=0ms
+02-01 08:52:03.625 I/flutter (10330): JANK: frame total=59ms build=37ms raster=22ms vsync=0ms
+02-01 08:52:04.861 I/flutter (10330): JANK: frame total=74ms build=10ms raster=64ms vsync=0ms
+02-01 08:52:04.861 I/flutter (10330): JANK: frame total=91ms build=5ms raster=86ms vsync=6ms
+02-01 08:52:04.861 I/flutter (10330): JANK: frame total=99ms build=52ms raster=47ms vsync=0ms
+02-01 08:52:04.861 I/flutter (10330): JANK: frame total=53ms build=1ms raster=52ms vsync=0ms
+02-01 08:52:05.866 I/flutter (10330): JANK: frame total=67ms build=38ms raster=29ms vsync=0ms
+02-01 08:52:07.873 I/flutter (10330): JANK: frame total=69ms build=38ms raster=31ms vsync=0ms
+02-01 08:52:07.873 I/flutter (10330): JANK: frame total=68ms build=39ms raster=29ms vsync=2ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=77ms build=55ms raster=22ms vsync=0ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=395ms build=309ms raster=86ms vsync=16ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=240ms build=227ms raster=13ms vsync=13ms
+02-01 08:52:08.876 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=108ms build=98ms raster=10ms vsync=0ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=145ms build=134ms raster=11ms vsync=0ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=100ms build=88ms raster=12ms vsync=0ms
+02-01 08:52:08.876 I/flutter (10330): JANK: frame total=74ms build=2ms raster=72ms vsync=0ms
+02-01 08:52:08.877 I/flutter (10330): JANK: frame total=60ms build=1ms raster=59ms vsync=4ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=130ms build=120ms raster=10ms vsync=0ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=83ms build=69ms raster=14ms vsync=196ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=72ms build=63ms raster=9ms vsync=1ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=80ms build=1ms raster=79ms vsync=6ms
+02-01 08:52:08.879 I/flutter (10330): EPG: External DB busy cleared - suspending reads
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=63ms build=2ms raster=61ms vsync=1ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=71ms build=2ms raster=69ms vsync=0ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=62ms build=3ms raster=59ms vsync=0ms
+02-01 08:52:08.879 I/flutter (10330): JANK: frame total=84ms build=73ms raster=11ms vsync=210ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=79ms build=72ms raster=7ms vsync=7ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=98ms build=87ms raster=11ms vsync=19ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=86ms build=3ms raster=83ms vsync=1ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=139ms build=136ms raster=3ms vsync=2ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=55ms build=10ms raster=45ms vsync=4ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=68ms build=3ms raster=65ms vsync=1ms
+02-01 08:52:09.881 I/flutter (10330): JANK: frame total=123ms build=115ms raster=8ms vsync=0ms
+02-01 08:52:12.616 I/flutter (10330): JANK: frame total=134ms build=128ms raster=6ms vsync=10ms
+02-01 08:52:15.533 I/flutter (10330): JANK: frame total=75ms build=71ms raster=4ms vsync=0ms
+02-01 08:52:16.022 I/flutter (10330): JANK: frame total=93ms build=43ms raster=50ms vsync=7ms
+02-01 08:52:16.023 I/flutter (10330): JANK: frame total=74ms build=13ms raster=61ms vsync=7ms
+02-01 08:52:16.171 I/flutter (10330): JANK: frame total=77ms build=23ms raster=54ms vsync=0ms
+02-01 08:52:16.296 I/flutter (10330): EPG: External DB busy enabled - suspending reads
+02-01 08:52:16.349 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:16.750 I/flutter (10330): JANK: frame total=77ms build=6ms raster=71ms vsync=0ms
+02-01 08:52:18.053 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:18.878 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "Rai1.it" (name: "Rai 1", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.878 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "Rai2.it" (name: "Rai 2", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.879 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "Rai3.it" (name: "Rai 3", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.879 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "Rai4.it" (name: "Rai 4", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.879 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "Rai5.it" (name: "Rai 5", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.880 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "La7.it" (name: "La7", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.880 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "La7D.it" (name: "La7d", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:18.882 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "etv2.ru" (channelId: "etv2.ru", total program channels: 4089)
+02-01 08:52:19.265 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:19.397 I/flutter (10330): JANK: frame total=90ms build=4ms raster=86ms vsync=0ms
+02-01 08:52:19.658 I/flutter (10330): JANK: frame total=63ms build=5ms raster=58ms vsync=0ms
+02-01 08:52:19.722 I/flutter (10330): JANK: frame total=59ms build=14ms raster=45ms vsync=84ms
+02-01 08:52:19.960 I/flutter (10330): JANK: frame total=103ms build=8ms raster=95ms vsync=0ms
+02-01 08:52:20.124 I/flutter (10330): JANK: frame total=61ms build=7ms raster=54ms vsync=0ms
+02-01 08:52:20.124 I/flutter (10330): JANK: frame total=61ms build=5ms raster=56ms vsync=0ms
+02-01 08:52:20.289 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "InformacionPeriodistica.ar" (name: "Info Periodística", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:20.320 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "vitaya.be" (channelId: "vitaya.be", total program channels: 4089)
+02-01 08:52:20.322 I/flutter (10330): JANK: frame total=61ms build=8ms raster=53ms vsync=1ms
+02-01 08:52:20.493 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_0855712b" (name: "Acanal+ Centre", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:20.493 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_2895a23b" (name: "Acanal+ Cinema Centre", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:20.494 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_1dc2bb78" (name: "Acanal+ Elles Centre", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:20.494 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_ca98803c" (name: "Acanal+ Elles Ouest", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:20.732 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:20.820 I/flutter (10330): JANK: frame total=81ms build=5ms raster=76ms vsync=0ms
+02-01 08:52:21.335 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "yesmezzolive.il" (channelId: "yesmezzolive.il", total program channels: 4089)
+02-01 08:52:21.335 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "yesdisneyjunior.il" (channelId: "yesdisneyjunior.il", total program channels: 4089)
+02-01 08:52:21.335 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "yesone.il" (channelId: "yesone.il", total program channels: 4089)
+02-01 08:52:21.336 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "yeshalatv.il" (channelId: "yeshalatv.il", total program channels: 4089)
+02-01 08:52:21.336 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "yeschannel14.il" (channelId: "yeschannel14.il", total program channels: 4089)
+02-01 08:52:21.841 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:22.182 I/flutter (10330): JANK: frame total=56ms build=7ms raster=49ms vsync=0ms
+02-01 08:52:23.797 I/flutter (10330): JANK: frame total=85ms build=6ms raster=79ms vsync=0ms
+02-01 08:52:23.960 I/flutter (10330): JANK: frame total=60ms build=36ms raster=24ms vsync=0ms
+02-01 08:52:24.263 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_73aebc6f" (name: "餘姚姚江文化", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.264 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_b145e323" (name: "高清电影", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.264 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_ef668aff" (name: "黃驊影視", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.264 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_b36aaedc" (name: "黃驊渤海新區", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.264 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_f4333610" (name: "黑莓电竞", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.265 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_6aca374d" (name: "龙岩公共", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:24.701 I/flutter (10330): JANK: frame total=58ms build=40ms raster=18ms vsync=0ms
+02-01 08:52:24.814 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:25.842 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "ch_a02a26ad" (name: "Japan Movie Channel", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:25.843 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "abc.jp" (channelId: "abc.jp", total program channels: 4089)
+02-01 08:52:26.326 I/flutter (10330): EPG: Allowed channel set unchanged; skipping refresh.
+02-01 08:52:26.843 I/flutter (10330): JANK: frame total=88ms build=5ms raster=83ms vsync=1ms
+02-01 08:52:26.995 I/flutter (10330): JANK: frame total=55ms build=19ms raster=36ms vsync=0ms
+02-01 08:52:27.670 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "SkySportsMainEventUHD.uk" (name: "Sky Sports Main Event U", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:27.684 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "idman.ru" (channelId: "idman.ru", total program channels: 4089)
+02-01 08:52:27.881 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "rtinternational.ru" (channelId: "rtinternational.ru", total program channels: 4089)
+02-01 08:52:27.881 I/flutter (10330): EPG: getCurrentProgram - No programs for epgId "animetv.ru" (channelId: "animetv.ru", total program channels: 4089)
+02-01 08:52:27.885 I/flutter (10330): EPG: getCurrentProgram - No EPG ID found for "racerinternational" (name: "International Food", available: 4343, normalized: 10598, programs: 4089)
+02-01 08:52:28.789 I/flutter (10330): JANK: frame total=52ms build=5ms raster=47ms vsync=15ms
+02-01 08:52:28.789 I/flutter (10330): JANK: frame total=65ms build=5ms raster=60ms vsync=0ms
+02-01 08:52:29.107 I/flutter (10330): JANK: frame total=62ms build=4ms raster=58ms vsync=84ms
+02-01 08:52:29.195 I/flutter (10330): EPG: External DB busy cleared - suspending reads
+02-01 08:52:29.731 I/flutter (10330): JANK: frame total=57ms build=6ms raster=51ms vsync=6ms
+02-01 08:52:29.731 I/flutter (10330): JANK: frame total=68ms build=7ms raster=61ms vsync=0ms
+02-01 08:52:30.271 I/flutter (10330): JANK: frame total=101ms build=4ms raster=97ms vsync=0ms
+02-01 08:52:31.075 I/flutter (10330): JANK: frame total=71ms build=8ms raster=63ms vsync=0ms
+02-01 08:52:32.548 I/flutter (10330): JANK: frame total=53ms build=5ms raster=48ms vsync=59ms
+02-01 08:52:33.464 I/flutter (10330): JANK: frame total=79ms build=6ms raster=73ms vsync=0ms
+02-01 08:52:33.950 I/flutter (10330): JANK: frame total=108ms build=5ms raster=103ms vsync=0ms
+02-01 08:52:34.404 I/flutter (10330): JANK: frame total=71ms build=49ms raster=22ms vsync=0ms
+02-01 08:52:34.718 I/flutter (10330): JANK: frame total=63ms build=5ms raster=58ms vsync=6ms
+02-01 08:52:35.084 I/flutter (10330): JANK: frame total=51ms build=5ms raster=46ms vsync=0ms
+02-01 08:52:35.223 I/flutter (10330): JANK: frame total=62ms build=6ms raster=56ms vsync=0ms
+02-01 08:52:36.988 I/flutter (10330): JANK: frame total=56ms build=6ms raster=50ms vsync=0ms
+02-01 08:52:38.206 I/flutter (10330): JANK: frame total=83ms build=7ms raster=76ms vsync=0ms
+02-01 08:52:38.406 I/flutter (10330): JANK: frame total=54ms build=14ms raster=40ms vsync=6ms
+02-01 08:52:39.147 I/flutter (10330): JANK: frame total=123ms build=5ms raster=118ms vsync=0ms
+02-01 08:52:39.300 I/flutter (10330): JANK: frame total=54ms build=5ms raster=49ms vsync=0ms
+02-01 08:52:40.772 I/flutter (10330): JANK: frame total=65ms build=6ms raster=59ms vsync=0ms
+02-01 08:52:40.963 I/flutter (10330): JANK: frame total=73ms build=5ms raster=68ms vsync=40ms
+02-01 08:52:42.032 I/flutter (10330): JANK: frame total=61ms build=15ms raster=46ms vsync=35ms
+02-01 08:52:42.033 I/flutter (10330): JANK: frame total=53ms build=5ms raster=48ms vsync=45ms
+02-01 08:52:42.198 I/flutter (10330): JANK: frame total=56ms build=6ms raster=50ms vsync=0ms
+02-01 08:52:42.474 I/flutter (10330): JANK: frame total=50ms build=4ms raster=46ms vsync=44ms
+02-01 08:52:42.474 I/flutter (10330): JANK: frame total=71ms build=5ms raster=66ms vsync=34ms
+02-01 08:52:42.665 I/flutter (10330): JANK: frame total=57ms build=9ms raster=48ms vsync=0ms
+02-01 08:52:42.666 I/flutter (10330): JANK: frame total=77ms build=8ms raster=69ms vsync=0ms
+02-01 08:52:43.742 I/flutter (10330): JANK: frame total=57ms build=6ms raster=51ms vsync=0ms
+02-01 08:52:45.798 I/flutter (10330): JANK: frame total=58ms build=4ms raster=54ms vsync=76ms
+02-01 08:52:46.307 I/flutter (10330): JANK: frame total=61ms build=14ms raster=47ms vsync=41ms
+02-01 08:52:46.307 I/flutter (10330): JANK: frame total=63ms build=14ms raster=49ms vsync=0ms
+02-01 08:52:46.307 I/flutter (10330): JANK: frame total=54ms build=6ms raster=48ms vsync=1ms
+^C
