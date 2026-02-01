@@ -30,6 +30,7 @@ import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/epg_widgets.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/state/epg_screen_state.dart';
 
 class EPGScreen extends StatefulWidget {
@@ -426,7 +427,8 @@ class _EPGScreenState extends State<EPGScreen>
     if (index == 0) {
       return _firstChannelFocus;
     }
-    final key = _focusKeyForChannel(channel);
+    // Append index to ensure uniqueness even if multiple channels share ID
+    final key = '${_focusKeyForChannel(channel)}_$index';
     final existing = _channelFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGChannel:$key');
@@ -439,6 +441,8 @@ class _EPGScreenState extends State<EPGScreen>
     }
     return node;
   }
+
+  // ... (skipped some lines)
 
   FocusNode _categoryFocusNodeForIndex(int index) {
     if (index == 0) {
@@ -835,7 +839,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
                                     child:
-                                        _buildChannelColumn(filteredChannels),
+                                        _buildChannelColumn(filteredChannels, categoryNames),
                                   ),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
@@ -997,36 +1001,48 @@ class _EPGScreenState extends State<EPGScreen>
               ),
               const SizedBox(width: 8),
               // Refresh button
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.darkBackgroundOpacity(0.3),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                ),
-                child: IconButton(
-                  focusNode: _refreshButtonFocus,
-                  onPressed: epgService.isLoading
-                      ? null
-                      : () {
-                          unawaited(_triggerEpgRefresh());
-                        },
-                  icon: AnimatedBuilder(
-                    animation: _refreshAnimationController,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: epgService.isLoading
-                            ? _refreshAnimationController.value * 2 * 3.14159
-                            : 0,
-                        child: Icon(
-                          AppIcons.refresh,
-                          size: 18,
-                          color: epgService.isLoading
-                              ? AppTheme.primaryBlue
-                              : Colors.white.withValues(alpha: 0.8),
-                        ),
-                      );
-                    },
+              Focus(
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                    _firstProgramFocus.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.darkBackgroundOpacity(0.3),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                   ),
-                  tooltip: 'Refresh EPG',
+                  child: IconButton(
+                    focusNode: _refreshButtonFocus,
+                    onPressed: epgService.isLoading
+                        ? null
+                        : () {
+                            // Clear image failure cache to retry blocked logos
+                            ImageFailureCache.clear(); 
+                            unawaited(_triggerEpgRefresh());
+                          },
+                    icon: AnimatedBuilder(
+                      animation: _refreshAnimationController,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: epgService.isLoading
+                              ? _refreshAnimationController.value * 2 * 3.14159
+                              : 0,
+                          child: Icon(
+                            AppIcons.refresh,
+                            size: 18,
+                            color: epgService.isLoading
+                                ? AppTheme.primaryBlue
+                                : Colors.white.withValues(alpha: 0.8),
+                          ),
+                        );
+                      },
+                    ),
+                    tooltip: 'Refresh EPG',
+                  ),
                 ),
               ),
             ],
@@ -1306,7 +1322,7 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildChannelColumn(List<Channel> channels) {
+  Widget _buildChannelColumn(List<Channel> channels, List<String> categories) {
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     return Column(
@@ -1351,14 +1367,22 @@ class _EPGScreenState extends State<EPGScreen>
             onChannelLongPress: (channel) =>
                 _showChannelContextMenu(context, channel),
             firstChannelFocusNode: _firstChannelFocus,
-            onFocusCategories: () => _firstCategoryFocus.requestFocus(),
-            onFocusCategoryAtIndex: (index) =>
-                _categoryFocusNodeForIndex(index).requestFocus(),
+            onFocusCategories: () {
+                // Return to selected category, or first if none/lost
+               final selected = _epgState.selectedCategory ?? 'All Channels';
+               final idx = categories.indexOf(selected);
+               if (idx >= 0) {
+                   _categoryFocusNodeForIndex(idx).requestFocus();
+               } else {
+                   _firstCategoryFocus.requestFocus();
+               }
+            },
+            onFocusCategoryAtIndex: null, // Disable direct index mapping
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
             onFocusProgramForChannel: (channel) =>
-                _programFocusNodeForChannel(channel).requestFocus(),
-            channelFocusNodeForChannel: _channelFocusNodeForChannel,
+                _programFocusNodeForChannel(channel).requestFocus(), // Removed index passing
+            channelFocusNodeForChannel: (channel, index) => _channelFocusNodeForChannel(channel, index),
             controller: _sidebarController,
           ),
         ),

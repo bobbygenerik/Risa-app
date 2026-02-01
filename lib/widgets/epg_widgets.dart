@@ -463,6 +463,8 @@ class EPGVirtualProgramRow extends StatelessWidget {
           resolvedFocusNode = currentProgramFocusNode;
         }
         
+        final isClippedLeft = program.startTime.isBefore(displayStart);
+
         return Positioned(
           left: leftOffset,
           top: 0,
@@ -473,6 +475,7 @@ class EPGVirtualProgramRow extends StatelessWidget {
             onTap: () => onProgramTap(program),
             focusNode: resolvedFocusNode,
             onMoveLeft: onMoveLeft,
+            isClippedLeft: isClippedLeft,
           ),
         );
       }).toList(),
@@ -485,6 +488,7 @@ class EPGProgramCell extends StatelessWidget {
   final VoidCallback onTap;
   final FocusNode? focusNode;
   final VoidCallback? onMoveLeft;
+  final bool isClippedLeft;
 
   const EPGProgramCell({
     super.key,
@@ -492,6 +496,7 @@ class EPGProgramCell extends StatelessWidget {
     required this.onTap,
     this.focusNode,
     this.onMoveLeft,
+    this.isClippedLeft = false, // Default to false
   });
 
   @override

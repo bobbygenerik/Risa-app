@@ -23,6 +23,13 @@ class ImageFailureCache {
     _aggressiveMode = enabled;
   }
 
+  static void clear() {
+    _failures.clear();
+    _lastFailureAt.clear();
+    // Do not clear permanent blocklist - only transient failures
+    // _permanent.clear(); 
+  }
+
   static bool shouldSkip(String url) {
     if (url.isEmpty) return true;
     final disableUntil = _globalDisableUntil;
