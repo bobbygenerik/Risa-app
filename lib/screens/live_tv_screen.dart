@@ -5030,14 +5030,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     debugLog('Group: ${channel.groupTitle ?? "none"}');
     logToSystem('TAP: ${channel.name} -> $streamUrl', name: 'RisaTap');
 
-    // Aggressive memory cleanup before player
-    _releaseArtworkCachesForPlayback();
-    MemoryManager.checkMemoryPressure();
-    MemoryManager.clearCaches();
-    MemoryManager.forceGarbageCollection();
-
-    // Clear hero image cache to free memory
-
     if (!mounted) return;
     try {
       debugLog('Navigating to player screen...');
@@ -5054,22 +5046,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _artworkService.resumeFetching();
         _artworkService.resumeCaches();
         _suspendHeroBackground = false;
-        // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
-        unawaited(_prefetchInitialRows(force: true));
       }
     }
   }
 
-  void _releaseArtworkCachesForPlayback() {
-    _artworkService.pauseFetching();
-    _artworkService.suspendCaches();
 
-    // Clear local caches that are not in service
-    MemoryManager.checkMemoryPressure();
-    MemoryManager.clearCaches();
-    MemoryManager.forceGarbageCollection();
-    _categoryChannelCache.clear();
-  }
 
   Widget _buildHeroContent(
     Channel featuredChannel,

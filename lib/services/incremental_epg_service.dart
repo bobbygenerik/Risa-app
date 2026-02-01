@@ -3933,22 +3933,25 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _loadProgramsFromDbBatch(List<String> epgIds) async {
     try {
+      // Ensure DB is ready before querying
+      if (!_db.isReady) {
+        debugLog('EPG: _loadProgramsFromDbBatch - DB not ready, initializing...');
+        await _db.init();
+      }
+
       debugLog(
-          'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads');
-      // If suspended due to parsing, let it retry. Only cancel timer on permanent failures.
-      if (_dbDisabled || epgIds.isEmpty || !_db.isReady) {
-        debugLog(
-            'EPG: _loadProgramsFromDbBatch returning early - dbReady=${_db.isReady}, dbDisabled=$_dbDisabled, suspendReads=$_suspendDbReads, emptyIds=${epgIds.isEmpty}');
+          'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, suspendReads=$_suspendDbReads');
+      
+      // If DB is genuinely disabled (e.g. fatal error), stop
+      if (_dbDisabled) {
+        debugLog('EPG: _loadProgramsFromDbBatch returning early - DB disabled');
         _batchTimer?.cancel();
         _batchTimer = null;
         return;
       }
-      // If suspended for parsing, just return - timer will retry automatically
-      if (_suspendDbReads) {
-        debugLog(
-            'EPG: _loadProgramsFromDbBatch suspended (parsing in progress), timer will retry');
-        return;
-      }
+      
+      // Don't suspend for parsing anymore (WAL mode)
+      // if (_suspendDbReads) ...
 
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final endMs = nowMs + (_epgFutureWindowHours * 3600000);

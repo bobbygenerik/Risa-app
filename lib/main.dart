@@ -488,7 +488,7 @@ class _MyAppState extends State<MyApp> {
 
             if (mounted) {
               // ignore: use_build_context_synchronously
-              GoRouter.of(context).go('/player', extra: channel);
+              await GoRouter.of(context).push('/player', extra: channel);
             }
           }
         }
