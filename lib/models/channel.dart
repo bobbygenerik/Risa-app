@@ -130,4 +130,10 @@ extension ChannelEpgLookup on Channel {
     final trimmed = name.trim();
     return trimmed.isNotEmpty ? trimmed : null;
   }
+
+  /// Fallback to channel name even when tvg-id exists (useful if tvg-id is wrong).
+  String? get epgLookupNameFallback {
+    final trimmed = name.trim();
+    return trimmed.isNotEmpty ? trimmed : null;
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class BrandBackgroundPainter extends CustomPainter {
   const BrandBackgroundPainter();
 
@@ -56,11 +57,11 @@ class BrandBackgroundPainter extends CustomPainter {
   }
 }
 
-class ChannelCardFallbackBackground extends StatelessWidget {
+class BrandFallbackBackground extends StatelessWidget {
   final BorderRadius? borderRadius;
   final Widget? child;
 
-  const ChannelCardFallbackBackground({
+  const BrandFallbackBackground({
     super.key,
     this.borderRadius,
     this.child,

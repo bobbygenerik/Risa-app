@@ -15,7 +15,7 @@ import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
-import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/brand_fallback_background.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
 /// Uses EPG data to get the current program, then fetches artwork from TMDB.
@@ -114,7 +114,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     // Get current program from EPG (resolver-aware)
     final currentProgram = epgService.getProgramForChannel(
       widget.channel.epgLookupId,
-      channelName: widget.channel.epgLookupName,
+      channelName: widget.channel.epgLookupNameFallback,
     );
 
     // Determine the search title
@@ -305,7 +305,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     return SizedBox(
       width: width,
       height: height,
-      child: ChannelCardFallbackBackground(
+    child: BrandFallbackBackground(
         child: Center(
           child: Icon(
             Icons.tv,

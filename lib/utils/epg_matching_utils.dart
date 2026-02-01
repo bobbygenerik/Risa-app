@@ -60,6 +60,7 @@ class EPGMatchingUtils {
   static final RegExp _yearParenRe =
       RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$');
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
+  static final RegExp _digitRe = RegExp(r'\d'); // Cached for tokenization
 
   static const Map<String, String> _numberWordMap = {
     'one': '1',
@@ -140,7 +141,7 @@ class EPGMatchingUtils {
         .split(_fuzzyTokenSplitRe)
         .where((t) =>
             t.isNotEmpty &&
-            (t.length >= _minTokenLength || RegExp(r'\d').hasMatch(t)))
+            (t.length >= _minTokenLength || _digitRe.hasMatch(t)))
         .toSet();
   }
 
@@ -161,9 +162,21 @@ class EPGMatchingUtils {
     final plTokens = playlistTokens ?? tokenize(playlistName);
     if (plTokens.isEmpty || candidate.tokens.isEmpty) return 0.0;
 
-    final intersection = plTokens.intersection(candidate.tokens).length;
-    final union = plTokens.union(candidate.tokens).length;
-    final jaccard = (intersection / union) * 100.0;
+    // Manual intersection calculation to avoid creating new Set objects
+    // Iterate over the smaller set for efficiency
+    final smaller =
+        plTokens.length < candidate.tokens.length ? plTokens : candidate.tokens;
+    final larger =
+        plTokens.length < candidate.tokens.length ? candidate.tokens : plTokens;
+    int intersectionCount = 0;
+    for (final token in smaller) {
+      if (larger.contains(token)) intersectionCount++;
+    }
+
+    // Calculate union using inclusion-exclusion: |A ∪ B| = |A| + |B| - |A ∩ B|
+    final unionCount =
+        plTokens.length + candidate.tokens.length - intersectionCount;
+    final jaccard = (intersectionCount / unionCount) * 100.0;
 
     // Boost score if significant subset
     // e.g. "BBC One FHD" (tokens: bbc, one) vs "BBC One" (tokens: bbc, one)
@@ -174,11 +187,12 @@ class EPGMatchingUtils {
     // Asymmetric Overlap Score (Subset match)
     // How much of the EPG candidate is covered by the Playlist name?
     // If Playlist is "BBC One London" and EPG is "BBC One", coverage is 100%.
-    final candidateCoverage = (intersection / candidate.tokens.length) * 100.0;
+    final candidateCoverage =
+        (intersectionCount / candidate.tokens.length) * 100.0;
 
     // How much of Playlist is covered by EPG?
     // If Playlist is "BBC One" and EPG is "BBC One London", playlist coverage is 100%.
-    final playlistCoverage = (intersection / plTokens.length) * 100.0;
+    final playlistCoverage = (intersectionCount / plTokens.length) * 100.0;
 
     final bestOverlap = (candidateCoverage > playlistCoverage)
         ? candidateCoverage
@@ -214,27 +228,48 @@ class EPGMatchingUtils {
 
   // --- Utility Functions ---
 
-  /// Compute Levenshtein edit distance
+  /// Compute Levenshtein edit distance using optimized 2-row algorithm
   static int levenshteinDistance(String s, String t) {
     if (s == t) return 0;
     if (s.isEmpty) return t.length;
     if (t.isEmpty) return s.length;
 
-    List<int> v0 = List<int>.generate(t.length + 1, (i) => i);
-    List<int> v1 = List<int>.filled(t.length + 1, 0);
-
-    for (int i = 0; i < s.length; i++) {
-      v1[0] = i + 1;
-      for (int j = 0; j < t.length; j++) {
-        int cost = (s.codeUnitAt(i) == t.codeUnitAt(j)) ? 0 : 1;
-        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost]
-            .reduce((min, e) => e < min ? e : min);
-      }
-      for (int j = 0; j <= t.length; j++) {
-        v0[j] = v1[j];
-      }
+    // Ensure t is the shorter string to minimize memory usage
+    if (t.length > s.length) {
+      final temp = s;
+      s = t;
+      t = temp;
     }
-    return v1[t.length];
+
+    final tLen = t.length;
+    final sLen = s.length;
+
+    // Use two rows with swap instead of full copy
+    List<int> prev = List<int>.generate(tLen + 1, (i) => i);
+    List<int> curr = List<int>.filled(tLen + 1, 0);
+
+    for (int i = 0; i < sLen; i++) {
+      curr[0] = i + 1;
+      final sChar = s.codeUnitAt(i);
+
+      for (int j = 0; j < tLen; j++) {
+        final cost = (sChar == t.codeUnitAt(j)) ? 0 : 1;
+        // Inline min calculation to avoid list allocation
+        final deletion = curr[j] + 1;
+        final insertion = prev[j + 1] + 1;
+        final substitution = prev[j] + cost;
+        curr[j + 1] = deletion < insertion
+            ? (deletion < substitution ? deletion : substitution)
+            : (insertion < substitution ? insertion : substitution);
+      }
+
+      // Swap rows instead of copying
+      final temp = prev;
+      prev = curr;
+      curr = temp;
+    }
+
+    return prev[tLen];
   }
 
   // --- Legacy helpers retained for artwork/programs ---

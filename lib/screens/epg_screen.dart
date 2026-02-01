@@ -293,7 +293,7 @@ class _EPGScreenState extends State<EPGScreen>
     final channelId = channel.epgLookupId;
     final programs = epgService.getProgramsForChannel(
       channelId,
-      channelName: channel.epgLookupName,
+      channelName: channel.epgLookupNameFallback,
       groupTitle: channel.groupTitle,
     );
     if (programs.isEmpty) return const [];
@@ -1169,7 +1169,7 @@ class _EPGScreenState extends State<EPGScreen>
       for (var i = 0; i < preloadCount; i++) {
         final channel = channels[i];
         channelIds.add(channel.epgLookupId);
-        channelNames.add(channel.epgLookupName);
+        channelNames.add(channel.epgLookupNameFallback);
       }
       unawaited(epgService.ensureChannelsLoadedBatch(
         channelIds,

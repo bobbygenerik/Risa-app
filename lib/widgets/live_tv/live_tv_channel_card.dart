@@ -136,7 +136,7 @@ class LiveTvChannelCard extends StatelessWidget {
             final channelId = channel.epgLookupId;
             final program = epgService.getCurrentProgram(
               channelId,
-              channelName: channel.epgLookupName,
+              channelName: channel.epgLookupNameFallback,
               groupTitle: channel.groupTitle,
             );
             return EpgCardData(
@@ -453,12 +453,8 @@ class ChannelLogoWidget extends StatelessWidget {
         url.toLowerCase().contains('.svg?');
 
     if (isSvg) {
-      return Container(
+      return Padding(
         padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(4),
-        ),
         child: SvgPicture.network(
           url,
           width: width - 6,
@@ -475,12 +471,8 @@ class ChannelLogoWidget extends StatelessWidget {
       headers: HttpClientService().imageHeaders,
     );
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(4),
-      ),
       child: Image(
         image: provider,
         fit: BoxFit.contain,

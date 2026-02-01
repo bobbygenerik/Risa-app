@@ -6,7 +6,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
-import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/brand_fallback_background.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
@@ -366,7 +366,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   Widget _buildChannelPlaceholder(String name) {
     return Container(
       alignment: Alignment.center,
-      child: ChannelCardFallbackBackground(
+      child: BrandFallbackBackground(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

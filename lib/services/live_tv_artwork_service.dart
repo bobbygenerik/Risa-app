@@ -47,6 +47,7 @@ class LiveTvArtworkService {
   // Artwork caches
   final Map<String, String?> _programArtwork = {};
   final Map<String, String> _programArtworkByTitle = {};
+  final Map<String, DateTime> _programArtworkByTitleTimestamps = {};
   final Map<String, DateTime> _programArtworkNegativeByTitle = {};
   final Map<String, String?> _programTitleLogos = {};
 
@@ -94,13 +95,14 @@ class LiveTvArtworkService {
   static const int _maxProgramArtworkTitleEntries = 100;
   static const int _maxProgramArtworkNegativeEntries = 100;
   static const int _maxProgramTitleLogoEntries = 50;
+  static const Duration _programArtworkTitleTtl = Duration(hours: 12);
   static const Duration _artworkNegativeTtl = Duration(hours: 6);
 
   // Cache keys
   static const String _programArtworkTitleCacheKey =
-      'live_tv_program_artwork_title_cache_v2';
+      'live_tv_program_artwork_title_cache_v3';
   static const String _programArtworkNegativeCacheKey =
-      'live_tv_program_artwork_negative_cache_v2';
+      'live_tv_program_artwork_negative_cache_v3';
 
   // Logging
   static const bool _logArtworkMatches = true;
@@ -128,6 +130,32 @@ class LiveTvArtworkService {
     _pendingArtworkByTitle.clear();
   }
 
+  /// Clear all artwork caches to remove old/bad data.
+  Future<void> clearAllCaches() async {
+    _programArtwork.clear();
+    _programArtworkByTitle.clear();
+    _programArtworkByTitleTimestamps.clear();
+    _programArtworkNegativeByTitle.clear();
+    _programTitleLogos.clear();
+    _programArtworkOrder.clear();
+    _programArtworkTitleOrder.clear();
+    _programArtworkNegativeTitleOrder.clear();
+    _programTitleLogoOrder.clear();
+    _artworkRetryAfter.clear();
+    _artworkFailureCounts.clear();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_programArtworkTitleCacheKey);
+      await prefs.remove(_programArtworkNegativeCacheKey);
+      debugLog('LiveTV artwork: All caches cleared successfully');
+    } catch (e) {
+      debugLog('LiveTV artwork: Error clearing caches: $e');
+    }
+
+    onArtworkUpdate();
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // PUBLIC GETTERS
   // ─────────────────────────────────────────────────────────────────────────
@@ -142,7 +170,24 @@ class LiveTvArtworkService {
 
   /// Get cached artwork by title lookup.
   String? getArtworkByTitle(Program program, [Channel? channel]) {
-    return _programArtworkByTitle[_titleCacheKey(program, channel)];
+    if (!_isTitleCacheEligible(program)) return null;
+    final key = _titleCacheKey(program, channel);
+    final url = _programArtworkByTitle[key];
+    if (url == null || url.isEmpty) return null;
+    final timestamp = _programArtworkByTitleTimestamps[key];
+    if (timestamp == null ||
+        DateTime.now().difference(timestamp) > _programArtworkTitleTtl) {
+      _programArtworkByTitle.remove(key);
+      _programArtworkByTitleTimestamps.remove(key);
+      _programArtworkTitleOrder.remove(key);
+      _scheduleProgramArtworkTitleSave();
+      debugLog(
+        'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
+        'reason=title_cache_expired',
+      );
+      return null;
+    }
+    return url;
   }
 
   /// Get cached title logo for a program.
@@ -890,6 +935,17 @@ class LiveTvArtworkService {
   // ─────────────────────────────────────────────────────────────────────────
 
   void _setProgramArtwork(String key, String value) {
+    if (value.isEmpty) return;
+    if (_isLikelyPosterUrl(value)) {
+      debugLog(
+          'LiveTV artwork: rejecting poster URL for program cache: $value');
+      return;
+    }
+    if (!_isLikelyLandscapeUrl(value)) {
+      debugLog(
+          'LiveTV artwork: rejecting non-landscape URL for program cache: $value');
+      return;
+    }
     _registerProgramArtworkEntry(key, value);
     _scheduleArtworkUiRefresh();
   }
@@ -911,17 +967,29 @@ class LiveTvArtworkService {
     Channel? channel,
   ]) {
     if (value.isEmpty) return;
+    if (!_isTitleCacheEligible(program)) return;
     if (ImageValidationService.isKnownInvalid(value)) return;
+    if (_isLikelyPosterUrl(value)) {
+      debugLog('LiveTV artwork: rejecting poster URL for title cache: $value');
+      return;
+    }
+    if (!_isLikelyLandscapeUrl(value)) {
+      debugLog(
+          'LiveTV artwork: rejecting non-landscape URL for title cache: $value');
+      return;
+    }
     _registerProgramArtworkTitle(_titleCacheKey(program, channel), value);
   }
 
   void _registerProgramArtworkTitle(String key, String value) {
     _programArtworkByTitle[key] = value;
+    _programArtworkByTitleTimestamps[key] = DateTime.now();
     _programArtworkTitleOrder.remove(key);
     _programArtworkTitleOrder.addLast(key);
     while (_programArtworkTitleOrder.length > _programArtworkTitleLimit()) {
       final removed = _programArtworkTitleOrder.removeFirst();
       _programArtworkByTitle.remove(removed);
+      _programArtworkByTitleTimestamps.remove(removed);
     }
     _scheduleProgramArtworkTitleSave();
   }
@@ -930,6 +998,7 @@ class LiveTvArtworkService {
     if (key.isEmpty) return;
     final removed = _programArtworkByTitle.remove(key);
     if (removed == null) return;
+    _programArtworkByTitleTimestamps.remove(key);
     _programArtworkTitleOrder.remove(key);
     _scheduleProgramArtworkTitleSave();
   }
@@ -995,6 +1064,13 @@ class LiveTvArtworkService {
   // ─────────────────────────────────────────────────────────────────────────
 
   bool _shouldAttemptArtworkByTitle(Program program, [Channel? channel]) {
+    if (!_isTitleCacheEligible(program)) {
+      debugLog(
+        'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
+        'reason=title_cache_ineligible',
+      );
+      return false;
+    }
     final key = _titleCacheKey(program, channel);
     final until = _programArtworkNegativeByTitle[key];
     if (until == null) return true;
@@ -1056,9 +1132,37 @@ class LiveTvArtworkService {
       if (decoded is! Map<String, dynamic>) return;
       _programArtworkByTitle.clear();
       _programArtworkTitleOrder.clear();
+      _programArtworkByTitleTimestamps.clear();
+      final now = DateTime.now();
       decoded.forEach((key, value) {
-        if (value is String && value.isNotEmpty) {
-          _programArtworkByTitle[key] = value;
+        String? url;
+        DateTime? timestamp;
+        if (value is String) {
+          url = value;
+          timestamp = now;
+        } else if (value is Map) {
+          final rawUrl = value['url'];
+          if (rawUrl is String && rawUrl.isNotEmpty) {
+            url = rawUrl;
+          }
+          final rawTs = value['ts'];
+          if (rawTs is int) {
+            timestamp = DateTime.fromMillisecondsSinceEpoch(rawTs);
+          }
+        }
+        if (url != null && url.isNotEmpty) {
+          // Skip poster URLs that may have been cached before stricter validation
+          if (_isLikelyPosterUrl(url)) {
+            debugLog(
+                'LiveTV artwork: skipping poster URL from disk cache: $url');
+            return;
+          }
+          if (timestamp == null ||
+              now.difference(timestamp) > _programArtworkTitleTtl) {
+            return;
+          }
+          _programArtworkByTitle[key] = url;
+          _programArtworkByTitleTimestamps[key] = timestamp;
           _programArtworkTitleOrder.addLast(key);
         }
       });
@@ -1107,11 +1211,15 @@ class LiveTvArtworkService {
   Future<void> _saveProgramArtworkTitleCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final ordered = <String, String>{};
+      final ordered = <String, Map<String, dynamic>>{};
       for (final key in _programArtworkTitleOrder) {
         final value = _programArtworkByTitle[key];
         if (value != null && value.isNotEmpty) {
-          ordered[key] = value;
+          ordered[key] = {
+            'url': value,
+            'ts': (_programArtworkByTitleTimestamps[key] ?? DateTime.now())
+                .millisecondsSinceEpoch,
+          };
         }
       }
       await prefs.setString(
@@ -1380,6 +1488,9 @@ class LiveTvArtworkService {
       );
       return false;
     }
+    if (preferLandscape && !_isLikelyLandscapeUrl(url)) {
+      return false;
+    }
     if (preferLandscape && _isLikelyPosterUrl(url)) {
       return false;
     }
@@ -1389,22 +1500,43 @@ class LiveTvArtworkService {
   bool _isLikelyPosterUrl(String url) {
     if (url.isEmpty) return false;
     final lower = url.toLowerCase();
+
+    // Explicit keywords in path or query
     if (lower.contains('/poster') ||
         lower.contains('_poster') ||
-        lower.contains('-poster')) {
+        lower.contains('-poster') ||
+        lower.contains('/portrait') ||
+        lower.contains('/cover') ||
+        lower.contains('type=poster') ||
+        lower.contains('format=portrait')) {
       return true;
     }
-    if (lower.contains('image.tmdb.org')) {
-      final segments = lower.split('/');
-      for (final segment in segments) {
-        if (segment.startsWith('w') && segment.length <= 5) {
-          final width = int.tryParse(segment.substring(1));
-          if (width != null && width < 500) {
-            return true;
-          }
-        }
-      }
+
+    // TMDB poster/logo sizes (w92 through w780 are typically poster sizes)
+    if (lower.contains('image.tmdb.org') &&
+        (lower.contains('/w92/') ||
+            lower.contains('/w154/') ||
+            lower.contains('/w185/') ||
+            lower.contains('/w342/') ||
+            lower.contains('/w500/') ||
+            lower.contains('/w780/'))) {
+      return true;
     }
+
+    // TVDB poster paths
+    if (lower.contains('artworks.thetvdb.com') &&
+        lower.contains('/banners/posters/')) {
+      return true;
+    }
+
+    // Common file naming patterns
+    if (lower.endsWith('_poster.jpg') ||
+        lower.endsWith('_poster.png') ||
+        lower.endsWith('_cover.jpg') ||
+        lower.endsWith('_cover.png')) {
+      return true;
+    }
+
     return false;
   }
 
@@ -1446,6 +1578,81 @@ class LiveTvArtworkService {
       }
     }
     return false;
+  }
+
+  bool _isLikelyLandscapeUrl(String url) {
+    if (url.isEmpty) return false;
+    final lower = url.toLowerCase();
+
+    // Reject obvious poster or logo URLs
+    if (_isLikelyPosterUrl(url) || _isLikelyChannelLogoUrl(url)) return false;
+
+    if (lower.contains('backdrop') ||
+        lower.contains('background') ||
+        lower.contains('fanart') ||
+        lower.contains('landscape') ||
+        lower.contains('banner')) {
+      return true;
+    }
+
+    // If file name contains explicit dimensions like 1920x1080, prefer landscape when width >= height
+    final extMatch = RegExp(r'\.(png|jpg|jpeg|webp)$').firstMatch(lower);
+    if (extMatch != null) {
+      final beforeExt = lower.substring(0, extMatch.start);
+      final sizeRegex = RegExp(r'(\d+)x(\d+)');
+      final match = sizeRegex.firstMatch(beforeExt);
+      if (match != null) {
+        final w = int.tryParse(match.group(1) ?? '');
+        final h = int.tryParse(match.group(2) ?? '');
+        if (w != null && h != null) {
+          return w >= (h * 1.2);
+        }
+      }
+    }
+
+    // TMDB-specific heuristics: large widths indicate landscape/backdrop
+    if (lower.contains('image.tmdb.org')) {
+      if (lower.contains('/original/') ||
+          lower.contains('/w1920/') ||
+          lower.contains('/w1280/')) {
+        return true;
+      }
+      return false;
+    }
+
+    // If the image appears small, treat as non-landscape
+    if (_isLikelySmallImage(url)) return false;
+
+    return false;
+  }
+
+  bool _isTitleCacheEligible(Program program) {
+    final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
+    if (normalized.isEmpty) return false;
+    if (normalized.length < 5) return false;
+    if (RegExp(r'^\d+$').hasMatch(normalized)) return false;
+    const stopWords = <String>{
+      'news',
+      'live',
+      'movie',
+      'movies',
+      'sports',
+      'sport',
+      'tv',
+      'show',
+      'channel',
+      'music',
+      'kids',
+      'family',
+      'documentary',
+      'documentaries',
+      'series',
+    };
+    if (stopWords.contains(normalized)) return false;
+    final tokens = normalized.split(RegExp(r'\s+'));
+    final nonStop = tokens.where((token) => !stopWords.contains(token));
+    if (nonStop.isEmpty) return false;
+    return true;
   }
 
   bool _matchesChannelLogo(String url, Channel channel) {

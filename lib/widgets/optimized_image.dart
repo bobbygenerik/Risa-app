@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
-import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/brand_fallback_background.dart';
 
 /// Optimized image widget with progressive loading and memory management
 class OptimizedImage extends StatelessWidget {
@@ -37,7 +37,7 @@ class OptimizedImage extends StatelessWidget {
           SizedBox(
             width: width,
             height: height,
-            child: ChannelCardFallbackBackground(
+            child: BrandFallbackBackground(
               borderRadius: BorderRadius.circular(4),
               child: const Center(
                 child: Icon(
@@ -102,7 +102,7 @@ class OptimizedImage extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: ChannelCardFallbackBackground(
+      child: BrandFallbackBackground(
         borderRadius: BorderRadius.circular(4),
         child: const Center(
           child: Icon(
@@ -119,7 +119,7 @@ class OptimizedImage extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: ChannelCardFallbackBackground(
+      child: BrandFallbackBackground(
         borderRadius: BorderRadius.circular(4),
         child: const Center(
           child: Icon(
@@ -159,7 +159,7 @@ class OptimizedThumbnail extends StatelessWidget {
       placeholder: SizedBox(
         width: size,
         height: size,
-        child: ChannelCardFallbackBackground(
+        child: BrandFallbackBackground(
           borderRadius: BorderRadius.circular(4),
           child: Center(
             child: Icon(
@@ -223,7 +223,7 @@ class _ProgressiveImageState extends State<ProgressiveImage> {
           errorWidget: SizedBox(
             width: widget.width,
             height: widget.height,
-            child: ChannelCardFallbackBackground(
+            child: BrandFallbackBackground(
               child: const Center(
                 child: Icon(
                   Icons.broken_image,

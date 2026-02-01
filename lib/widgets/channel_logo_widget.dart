@@ -5,7 +5,6 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
-import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
 
 /// A widget that displays a channel logo with fallback support
 /// It will try to enrich the logo from known databases if the original is missing
@@ -143,13 +142,11 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     return SizedBox(
       width: width,
       height: height,
-      child: ChannelCardFallbackBackground(
-        child: Center(
-          child: Icon(
-            Icons.tv,
-            size: context.tvIconSize(32),
-            color: Colors.white70,
-          ),
+      child: Center(
+        child: Icon(
+          Icons.tv,
+          size: context.tvIconSize(32),
+          color: Colors.white70,
         ),
       ),
     );

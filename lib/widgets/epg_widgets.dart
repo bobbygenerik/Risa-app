@@ -287,7 +287,7 @@ class EPGProgramRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final channelKey = channel.epgLookupId;
     epgService.ensureChannelLoaded(channelKey,
-        channelName: channel.epgLookupName);
+        channelName: channel.epgLookupNameFallback);
 
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
@@ -296,7 +296,7 @@ class EPGProgramRow extends StatelessWidget {
 
     final programs = epgService.getProgramsForChannel(
       channelKey,
-      channelName: channel.epgLookupName,
+      channelName: channel.epgLookupNameFallback,
       groupTitle: channel.groupTitle,
     );
 

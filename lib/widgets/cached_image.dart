@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/services/http_client_service.dart';
-import 'package:iptv_player/widgets/channel_card_fallback_background.dart';
+import 'package:iptv_player/widgets/brand_fallback_background.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 /// Optimized cached image widget that replaces Image.network calls
@@ -110,7 +110,7 @@ Widget _buildGradientFallback(double? width, double? height, IconData icon) {
   return SizedBox(
     width: width,
     height: height,
-    child: ChannelCardFallbackBackground(
+    child: BrandFallbackBackground(
       child: Center(
         child: Icon(
           icon,
@@ -211,7 +211,7 @@ Widget _buildLogoPlaceholder(double size, IconData fallbackIcon) {
   return SizedBox(
     width: size,
     height: size,
-    child: ChannelCardFallbackBackground(
+    child: BrandFallbackBackground(
       borderRadius: BorderRadius.circular(8),
       child: Center(
         child: Icon(
