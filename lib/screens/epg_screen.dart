@@ -136,6 +136,9 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
+      
+      // Ensure we have focus
+      _firstChannelFocus.requestFocus();
     });
   }
 

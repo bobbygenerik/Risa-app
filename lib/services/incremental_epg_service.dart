@@ -118,6 +118,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, int> _channelFailureCounts = {};
   final Set<String> _loggedMissingEpgIds = {};
   final Set<String> _loggedMissingProgramChannels = {};
+  final Set<String> _attemptedLoads = {}; // Track IDs we've already tried to load from DB
   final LocalDbService _db = LocalDbService.instance;
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
@@ -603,6 +604,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _lastDownloadTime =
         null; // Reset download timestamp to allow fresh download
     _availableChannels.clear();
+    _attemptedLoads.clear();
     _resetEpgIdIndex();
     _internalToEpgIdMapping.clear();
     _normalizedAvailableChannels = null;
@@ -3462,10 +3464,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final hasPrograms =
           existingPrograms != null && existingPrograms.isNotEmpty;
 
-      if (hasPrograms) continue;
+      if (hasPrograms || _pendingBatch.contains(epgId) || _attemptedLoads.contains(epgId)) {
+        continue;
+      }
       if (!seen.add(epgId)) continue;
       _registerAvailableChannel(epgId);
       epgIdsToLoad.add(epgId);
+      _attemptedLoads.add(epgId);
     }
 
     if (epgIdsToLoad.isEmpty) {
@@ -3479,7 +3484,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     // Add to pending batch to trigger isBatchLoading getter
     _pendingBatch.addAll(epgIdsToLoad);
-    notifyListeners();
+    // notifyListeners(); // REMOVED to prevent rebuild loop before load
 
     try {
       await _loadProgramsFromDbBatch(epgIdsToLoad);
@@ -3561,12 +3566,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final hasPrograms =
           existingPrograms != null && existingPrograms.isNotEmpty;
 
-      if (hasPrograms || _pendingBatch.contains(epgId)) {
+      if (hasPrograms || _pendingBatch.contains(epgId) || _attemptedLoads.contains(epgId)) {
         continue;
       }
       if (!seen.add(epgId)) continue;
       _registerAvailableChannel(epgId);
       epgIdsToLoad.add(epgId);
+      _attemptedLoads.add(epgId);
     }
 
     if (epgIdsToLoad.isEmpty) {
