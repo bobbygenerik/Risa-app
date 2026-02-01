@@ -243,6 +243,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _stopParseProgressTimer();
     _epgProgress = 0.0;
     _epgProgressLabel = '';
+    _attemptedLoads.clear(); // Allow retry of loads after parsing finishes
   }
 
   void _setEpgProgress(double value, {String? label}) {
@@ -3484,7 +3485,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     // Add to pending batch to trigger isBatchLoading getter
     _pendingBatch.addAll(epgIdsToLoad);
-    // notifyListeners(); // REMOVED to prevent rebuild loop before load
+    notifyListeners();
 
     try {
       await _loadProgramsFromDbBatch(epgIdsToLoad);
