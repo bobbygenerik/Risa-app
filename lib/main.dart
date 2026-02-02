@@ -61,6 +61,7 @@ import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/services/clock_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 const bool _enablePrewarm = false;
@@ -78,17 +79,17 @@ Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
     if (Platform.isAndroid) {
       final info = await Process.run('getprop', ['ro.build.version.sdk']);
       final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
-      
+
       // Check if it's a Shield device
       final model = await Process.run('getprop', ['ro.product.model']);
       final modelName = model.stdout.toString().toLowerCase();
       final isShield = modelName.contains('shield');
-      
+
       // Shield devices need more conservative memory management
       if (isShield) {
         return _DeviceMemoryInfo(isLowMemory: true);
       }
-      
+
       return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
     }
 
@@ -169,13 +170,13 @@ void main() {
       // Force immediate garbage collection and memory cleanup for Shield
       final tmp = List<int>.generate(1024, (index) => index);
       tmp.clear();
-      
+
       // Additional cleanup for Shield devices
       if (memoryInfo.isLowMemory) {
         // Clear any existing image cache
         PaintingBinding.instance.imageCache.clear();
         PaintingBinding.instance.imageCache.clearLiveImages();
-        
+
         // Force multiple GC cycles for Shield
         for (int i = 0; i < 3; i++) {
           final waste = List<int>.generate(512, (index) => index);
@@ -498,6 +499,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initialize() async {
     try {
+      // Start the clock service for centralized time management
+      ClockService().start();
+
       StartupProbe.mark('MyApp initialization: FastStartup init start');
       await FastStartupService.instance.initialize();
       StartupProbe.mark('MyApp initialization: FastStartup init finished');
@@ -825,6 +829,8 @@ class _MyAppState extends State<MyApp> {
     BackgroundTaskManager.stop();
     // Cancel any pending deferred operations
     _pendingDeferredOperations.clear();
+    // Stop clock service
+    ClockService().stop();
     super.dispose();
   }
 

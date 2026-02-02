@@ -58,17 +58,19 @@ class FanartService {
         final list = data[key] as List?;
         if (list == null || list.isEmpty) continue;
 
-        // Sort by likes desc
-        final sorted = List<Map<String, dynamic>>.from(
-          list.map((e) => e as Map<String, dynamic>),
-        );
-        sorted.sort((a, b) {
-          final aLikes = int.tryParse(a['likes']?.toString() ?? '0') ?? 0;
-          final bLikes = int.tryParse(b['likes']?.toString() ?? '0') ?? 0;
-          return bLikes.compareTo(aLikes);
-        });
+        // O(n) max-finding instead of full sort
+        Map<String, dynamic>? best;
+        int bestLikes = -1;
+        for (final e in list) {
+          final m = e as Map<String, dynamic>;
+          final likes = int.tryParse(m['likes']?.toString() ?? '0') ?? 0;
+          if (likes > bestLikes) {
+            bestLikes = likes;
+            best = m;
+          }
+        }
+        if (best == null) continue;
 
-        final best = sorted.first;
         final urlValue = best['url'] as String?;
         if (urlValue != null && urlValue.isNotEmpty) {
           debugLog('Fanart.tv: Found image type "$key" for $tmdbId');
@@ -104,16 +106,19 @@ class FanartService {
         final list = data[key] as List?;
         if (list == null || list.isEmpty) continue;
 
-        final sorted = List<Map<String, dynamic>>.from(
-          list.map((e) => e as Map<String, dynamic>),
-        );
-        sorted.sort((a, b) {
-          final aLikes = int.tryParse(a['likes']?.toString() ?? '0') ?? 0;
-          final bLikes = int.tryParse(b['likes']?.toString() ?? '0') ?? 0;
-          return bLikes.compareTo(aLikes);
-        });
+        // O(n) max-finding instead of full sort
+        Map<String, dynamic>? best;
+        int bestLikes = -1;
+        for (final e in list) {
+          final m = e as Map<String, dynamic>;
+          final likes = int.tryParse(m['likes']?.toString() ?? '0') ?? 0;
+          if (likes > bestLikes) {
+            bestLikes = likes;
+            best = m;
+          }
+        }
+        if (best == null) continue;
 
-        final best = sorted.first;
         final urlValue = best['url'] as String?;
         if (urlValue != null && urlValue.isNotEmpty) {
           debugLog('Fanart.tv: Found title logo type "$key" for $tmdbId');

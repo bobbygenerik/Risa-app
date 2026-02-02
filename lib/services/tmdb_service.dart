@@ -7,8 +7,11 @@ import 'dart:isolate';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
+import 'package:iptv_player/services/api_request_manager.dart';
 import 'package:iptv_player/services/fanart_service.dart';
 import 'package:path_provider/path_provider.dart';
+
+final _apiRequestManager = ApiRequestManager();
 
 class _CacheItem {
   final Map<String, dynamic> data;
@@ -78,12 +81,10 @@ class TMDBService {
   static final RegExp _yearParensRe =
       RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$');
   static final RegExp _yearSuffixRe = RegExp(r'[\s\-_:]+(19|20)\d{2}$');
-  static final RegExp _qualityRe = RegExp(
-      r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
-      caseSensitive: false);
-  static final RegExp _seasonEpisodeRe = RegExp(
-      r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b',
-      caseSensitive: false);
+  static final RegExp _qualityRe =
+      RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b', caseSensitive: false);
+  static final RegExp _seasonEpisodeRe =
+      RegExp(r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b', caseSensitive: false);
   static final RegExp _episodePartRe = RegExp(
       r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
       caseSensitive: false);
@@ -214,7 +215,10 @@ class TMDBService {
         searchUrl += '&year=$year';
       }
 
-      final response = await http.get(Uri.parse(searchUrl));
+      final cacheKey = _apiRequestManager.createCacheKey('tmdb',
+          {'method': 'getMovieRating', 'title': normalizedTitle, 'year': year});
+      final response = await _apiRequestManager.execute(
+          cacheKey, () => http.get(Uri.parse(searchUrl)));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -251,7 +255,13 @@ class TMDBService {
         searchUrl += '&first_air_date_year=$year';
       }
 
-      final response = await http.get(Uri.parse(searchUrl));
+      final cacheKey = _apiRequestManager.createCacheKey('tmdb', {
+        'method': 'getTVShowRating',
+        'title': normalizedTitle,
+        'year': year
+      });
+      final response = await _apiRequestManager.execute(
+          cacheKey, () => http.get(Uri.parse(searchUrl)));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -285,7 +295,13 @@ class TMDBService {
       final searchUrl =
           '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&year=$year' : ''}';
 
-      final response = await http.get(Uri.parse(searchUrl));
+      final requestCacheKey = _apiRequestManager.createCacheKey('tmdb', {
+        'method': 'getMovieDetails',
+        'title': normalizedTitle,
+        'year': year
+      });
+      final response = await _apiRequestManager.execute(
+          requestCacheKey, () => http.get(Uri.parse(searchUrl)));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -297,7 +313,9 @@ class TMDBService {
           double bestScore = -1.0;
 
           for (final candidate in results.take(5)) {
-            final candTitle = (candidate['title'] ?? candidate['original_title'] ?? '').toString();
+            final candTitle =
+                (candidate['title'] ?? candidate['original_title'] ?? '')
+                    .toString();
             final score = _titleSimilarity(candTitle, normalizedTitle);
             if (score > bestScore) {
               bestScore = score;
@@ -344,7 +362,6 @@ class TMDBService {
     return null;
   }
 
-
   static Future<Map<String, dynamic>?> getTVDetails(
     String title, {
     int? year,
@@ -362,7 +379,10 @@ class TMDBService {
         searchUrl += '&first_air_date_year=$year';
       }
 
-      final response = await http.get(Uri.parse(searchUrl));
+      final requestCacheKey = _apiRequestManager.createCacheKey('tmdb',
+          {'method': 'getTVDetails', 'title': normalizedTitle, 'year': year});
+      final response = await _apiRequestManager.execute(
+          requestCacheKey, () => http.get(Uri.parse(searchUrl)));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -374,7 +394,9 @@ class TMDBService {
           double bestScore = -1.0;
 
           for (final candidate in results.take(5)) {
-            final candTitle = (candidate['name'] ?? candidate['original_name'] ?? '').toString();
+            final candTitle =
+                (candidate['name'] ?? candidate['original_name'] ?? '')
+                    .toString();
             final score = _titleSimilarity(candTitle, normalizedTitle);
             if (score > bestScore) {
               bestScore = score;
@@ -556,7 +578,6 @@ class TMDBService {
     return details;
   }
 
-
   static bool _hasArtwork(Map<String, dynamic>? details) {
     if (details == null) return false;
     final backdrop = (details['backdrop'] as String?)?.trim();
@@ -572,7 +593,7 @@ class TMDBService {
       isBackdrop: true,
     );
     if (backdrop != null && backdrop.isNotEmpty) return backdrop;
-    
+
     // Only return poster if it's explicitly allowed or high-quality.
     // We append a hint so the UI knows it's a poster.
     final poster = _resizeTmdbImageUrl(
@@ -580,9 +601,9 @@ class TMDBService {
       isBackdrop: false,
     );
     if (poster != null && poster.isNotEmpty) {
-       // If it contains "poster" or common poster patterns, keep it but 
-       // the UI will handle it via _isLikelyPosterUrl.
-       return poster;
+      // If it contains "poster" or common poster patterns, keep it but
+      // the UI will handle it via _isLikelyPosterUrl.
+      return poster;
     }
     return null;
   }
@@ -665,8 +686,7 @@ class TMDBService {
       final best = filtered.first;
       final filePath = (best['file_path'] as String?)?.trim();
       if (filePath != null && filePath.isNotEmpty) {
-        return _resizeTmdbImageUrl('$_imageBaseUrl$filePath',
-            isBackdrop: true);
+        return _resizeTmdbImageUrl('$_imageBaseUrl$filePath', isBackdrop: true);
       }
     } catch (e, st) {
       debugLog('TMDB image lookup failed for $mediaType/$tmdbId: $e\n$st');

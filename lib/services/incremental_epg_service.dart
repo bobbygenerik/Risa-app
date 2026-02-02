@@ -123,7 +123,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, int> _channelFailureCounts = {};
   final Set<String> _loggedMissingEpgIds = {};
   final Set<String> _loggedMissingProgramChannels = {};
-  final Set<String> _attemptedLoads = {}; // Track IDs we've already tried to load from DB
+  final Set<String> _attemptedLoads =
+      {}; // Track IDs we've already tried to load from DB
   final LocalDbService _db = LocalDbService.instance;
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
@@ -303,10 +304,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> quickStart() async {
     // CRITICAL: Early return if we already have data - prevents re-parsing on navigation
     if (_hasParsed || hasLoadedPrograms) {
-      debugLog('EPG: quickStart skipped (already have data: hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, channels=${_programsByChannel.length})');
+      debugLog(
+          'EPG: quickStart skipped (already have data: hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, channels=${_programsByChannel.length})');
       return;
     }
-    
+
     if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
       debugLog('EPG: quickStart skipped (already loading)');
       return; // Already initializing
@@ -342,7 +344,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     // CRITICAL: Don't re-initialize if we already have loaded programs OR if we're currently parsing
     // Check both _hasParsed AND hasLoadedPrograms to catch all cases
     if (!forceRefresh && (hasLoadedPrograms || _hasParsed || _isParsing)) {
-      debugLog('EPG: Progressive init skipped (hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, isParsing=$_isParsing, channels=${_programsByChannel.length})');
+      debugLog(
+          'EPG: Progressive init skipped (hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, isParsing=$_isParsing, channels=${_programsByChannel.length})');
       return;
     }
     if (forceRefresh && _lastForceRefreshRequested != null) {
@@ -480,8 +483,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
       // CRITICAL: Check if we already have data loaded to avoid redundant work
       // Also check if we're currently loading to prevent duplicate background loads
-      if ((hasLoadedPrograms && _programsByChannel.length > 100) || _isLoading || _isParsing) {
-        debugLog('EPG: Skipping background load - already have ${_programsByChannel.length} channels (isLoading=$_isLoading, isParsing=$_isParsing)');
+      if ((hasLoadedPrograms && _programsByChannel.length > 100) ||
+          _isLoading ||
+          _isParsing) {
+        debugLog(
+            'EPG: Skipping background load - already have ${_programsByChannel.length} channels (isLoading=$_isLoading, isParsing=$_isParsing)');
         return;
       }
 
@@ -3436,8 +3442,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final List<String> _pendingBatch = [];
   Timer? _batchTimer;
 
-
-
   /// High-priority loading for visible channels - loads immediately without batching delay.
   /// Call this for the first screen of channels to ensure they load ASAP.
   Future<void> priorityLoadVisibleChannels(
@@ -3472,7 +3476,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final hasPrograms =
           existingPrograms != null && existingPrograms.isNotEmpty;
 
-      if (hasPrograms || _pendingBatch.contains(epgId) || _attemptedLoads.contains(epgId)) {
+      if (hasPrograms ||
+          _pendingBatch.contains(epgId) ||
+          _attemptedLoads.contains(epgId)) {
         continue;
       }
       if (!seen.add(epgId)) continue;
@@ -3492,7 +3498,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
     // Add to pending batch to trigger isBatchLoading getter (if needed by UI)
     _pendingBatch.addAll(epgIdsToLoad);
-    
+
     // REMOVED: notifyListeners() here caused excessive rebuilding/flickering.
     // relying on _loadProgramsFromDbBatch to notify if data is found.
 
@@ -3501,7 +3507,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     } finally {
       // Remove from pending batch
       _pendingBatch.removeWhere((id) => epgIdsToLoad.contains(id));
-      // REMOVED: notifyListeners() here too. 
+      // REMOVED: notifyListeners() here too.
       // We only want to notify if we actually UPDATED data.
     }
   }
@@ -3578,7 +3584,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final hasPrograms =
           existingPrograms != null && existingPrograms.isNotEmpty;
 
-      if (hasPrograms || _pendingBatch.contains(epgId) || _attemptedLoads.contains(epgId)) {
+      if (hasPrograms ||
+          _pendingBatch.contains(epgId) ||
+          _attemptedLoads.contains(epgId)) {
         continue;
       }
       if (!seen.add(epgId)) continue;
@@ -3592,28 +3600,26 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           'EPG: ensureChannelsLoadedBatch - no new channels to load (all already loaded or pending)');
       return;
     }
-    debugLog(
-        'EPG: queueing ${epgIdsToLoad.length} channels for batch load');
-    
+    debugLog('EPG: queueing ${epgIdsToLoad.length} channels for batch load');
+
     // Add to pending batch but DO NOT notify listeners yet (wait for timer)
     _pendingBatch.addAll(epgIdsToLoad);
-    
+
     _batchTimer?.cancel();
     _batchTimer = Timer(const Duration(milliseconds: 300), () async {
       final batch = List<String>.from(_pendingBatch);
       if (batch.isEmpty) return;
-      
+
       debugLog('EPG: Batch timer fired, loading ${batch.length} channels');
       // This will handle the notification internally when data arrives
       await _loadProgramsFromDbBatch(batch);
-      
+
       // Cleanup
       _pendingBatch.clear();
       // Remove from attempted loads if we failed?
       // For now, keep them as attempted so we don't retry endlessly in this session
     });
   }
-
 
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
     final batches = <List<String>>[];
@@ -3864,21 +3870,35 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
 
-      if (!skipDbWrites) {
-        for (final entry in buffer.entries) {
-          if (entry.value.isEmpty) continue;
-          if (_dbDisabled) {
-            continue;
+      if (!skipDbWrites && buffer.isNotEmpty && !_dbDisabled) {
+        try {
+          final dbTimer = Stopwatch()..start();
+          // Check if any entries need clearing
+          final keysToClear =
+              buffer.keys.where((k) => cleared[k] != false).toList();
+          if (keysToClear.isEmpty) {
+            // Fast path: no clearing needed, batch insert all at once
+            await _db.insertAllPrograms(buffer);
+          } else {
+            // Some entries need clearing - handle them individually, batch the rest
+            final filteredBuffer =
+                Map<String, List<Map<String, dynamic>>>.fromEntries(
+              buffer.entries.where((e) => !keysToClear.contains(e.key)),
+            );
+            // Clear and insert for channels that need it
+            for (final epgId in keysToClear) {
+              await _db.insertPrograms(epgId, buffer[epgId]!,
+                  clearExisting: true);
+            }
+            // Batch insert the rest
+            if (filteredBuffer.isNotEmpty) {
+              await _db.insertAllPrograms(filteredBuffer);
+            }
           }
-          try {
-            final dbTimer = Stopwatch()..start();
-            await _db.insertPrograms(entry.key, entry.value,
-                clearExisting: cleared[entry.key] != false);
-            dbBatchMs += dbTimer.elapsedMilliseconds;
-            dbBatchCount++;
-          } catch (e) {
-            _handleDbError(e);
-          }
+          dbBatchMs += dbTimer.elapsedMilliseconds;
+          dbBatchCount++;
+        } catch (e) {
+          _handleDbError(e);
         }
       }
       if (onProgress != null && totalPrograms != null && totalPrograms > 0) {
@@ -3954,13 +3974,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     try {
       // Ensure DB is ready before querying
       if (!_db.isReady) {
-        debugLog('EPG: _loadProgramsFromDbBatch - DB not ready, initializing...');
+        debugLog(
+            'EPG: _loadProgramsFromDbBatch - DB not ready, initializing...');
         await _db.init();
       }
 
       debugLog(
           'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, suspendReads=$_suspendDbReads');
-      
+
       // If DB is genuinely disabled (e.g. fatal error), stop
       if (_dbDisabled) {
         debugLog('EPG: _loadProgramsFromDbBatch returning early - DB disabled');
@@ -3968,7 +3989,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _batchTimer = null;
         return;
       }
-      
+
       // Don't suspend for parsing anymore (WAL mode)
       // if (_suspendDbReads) ...
 

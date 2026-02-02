@@ -96,7 +96,8 @@ extension AppSpacingExtension on BuildContext {
   double gridSpacing() => tvSpacing(AppSpacing.gridSpacing);
   double cardSpacing() => tvSpacing(AppSpacing.cardSpacing);
   double rowSpacing() => tvSpacing(AppSpacing.rowSpacing);
-  double cardGap() => tvSpacing(10.0); // Tighter horizontal spacing, cards grow on focus
+  double cardGap() =>
+      tvSpacing(10.0); // Tighter horizontal spacing, cards grow on focus
 
   // Responsive card dimensions - sized to show 5-6 cards per row like Netflix/Disney+
   double cardWidth() {

@@ -70,6 +70,50 @@ class _HeroCandidate {
   });
 }
 
+/// Centralized timer management to prevent memory leaks and simplify lifecycle handling
+class _TimerManager {
+  final Map<String, Timer> _timers = {};
+
+  /// Starts a new timer, cancelling any existing timer with the same key
+  void start(String key, Duration duration, void Function() callback) {
+    _timers[key]?.cancel();
+    _timers[key] = Timer(duration, callback);
+  }
+
+  /// Starts a periodic timer, cancelling any existing timer with the same key
+  void startPeriodic(String key, Duration duration, void Function() callback) {
+    _timers[key]?.cancel();
+    _timers[key] = Timer.periodic(duration, (_) => callback());
+  }
+
+  /// Cancels a specific timer by key
+  void cancel(String key) {
+    _timers[key]?.cancel();
+    _timers.remove(key);
+  }
+
+  /// Cancels all timers
+  void cancelAll() {
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    _timers.clear();
+  }
+
+  /// Debounces a callback, cancelling any pending timer with the same key
+  void debounce(String key, Duration duration, void Function() callback) {
+    _timers[key]?.cancel();
+    _timers[key] = Timer(duration, () {
+      _timers.remove(key);
+      callback();
+    });
+  }
+
+  /// Checks if a timer is active
+  bool isActive(String key) =>
+      _timers.containsKey(key) && _timers[key]!.isActive;
+}
+
 class _LandscapeGuardedImage extends StatefulWidget {
   const _LandscapeGuardedImage({
     required this.url,
@@ -366,17 +410,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const Duration _liveTvSnapshotTtl = Duration(hours: 6);
   static const int _liveTvSnapshotCategoryLimit = 6;
   static const int _liveTvSnapshotRowLimit = 12;
-  Timer? _snapshotSaveDebounce;
+  final _TimerManager _timerManager = _TimerManager();
 
   int _visibleCategoryCount = 10; // Restored but conservative
   static const int _categoryChunkSize = 6;
   static const double _categoryPrefetchExtent =
       600; // Restored but conservative
-  static const double _heroMatteRevealWidthFactor = 0.5;
+  // Reduced by 10% - hero scrim now narrower, showing more artwork
+  static const double _heroMatteRevealWidthFactor = 0.45; // Was 0.5
   static const double _heroMatteEdgeCurveFactor = 0.08;
   // Cover the curved reveal so the image doesn't end with a straight edge.
   static const double _heroImageWidthFactor =
-      _heroMatteRevealWidthFactor + _heroMatteEdgeCurveFactor;
+      _heroMatteRevealWidthFactor + _heroMatteEdgeCurveFactor; // Now 0.53
   final Queue<String> _categoryLoadQueue = Queue<String>();
   int _activeCategoryLoads = 0;
   static const int _maxCategoryLoads = 2; // Restored
@@ -405,7 +450,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const bool _logArtworkMatches = true;
 
   // Featured content rotation
-  Timer? _featuredRotationTimer;
   static const Duration _featuredRotationInterval = Duration(minutes: 5);
   bool _heroIndexInitialized = false;
   String? _featuredChannelId;
@@ -686,10 +730,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _scheduleLiveTvSnapshotSave() {
-    _snapshotSaveDebounce?.cancel();
-    _snapshotSaveDebounce = Timer(const Duration(seconds: 10), () {
-      if (mounted) _saveLiveTvSnapshot();
-    });
+    _timerManager.debounce(
+      'snapshotSave',
+      const Duration(seconds: 10),
+      () {
+        if (mounted) _saveLiveTvSnapshot();
+      },
+    );
   }
 
   Future<void> _saveLiveTvSnapshot() async {
@@ -934,8 +981,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _startFeaturedRotation() {
-    _featuredRotationTimer?.cancel();
-    _featuredRotationTimer = Timer.periodic(_featuredRotationInterval, (_) {
+    _timerManager.startPeriodic('featured_rotation', _featuredRotationInterval, () {
       if (mounted) {
         _nextHero();
       }
@@ -1079,7 +1125,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _artworkRetryWindowTimer?.cancel();
     _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
-    _featuredRotationTimer?.cancel();
+    _timerManager.cancel('featured_rotation');
 
     _scrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
@@ -2733,8 +2779,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ],
     );
-    final logoSlotHeight =
-        context.tvSpacing(64); // Increased from 30 for higher resolution
+    final logoSlotHeight = context.tvSpacing(
+        48); // Balanced size for visibility without pushing out description
 
     // Safe max height: more generous space for content
     final heroHeight = context.heroHeight();
@@ -2764,7 +2810,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   errorWidget: const SizedBox.shrink(),
                 ),
               ),
-              SizedBox(height: context.tvSpacing(12)),
+              SizedBox(height: context.tvSpacing(8)),
             ],
             if (titleLogoUrl == null && title.isNotEmpty) ...[
               Text(
@@ -2780,11 +2826,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: Text(
                   description,
                   style: descriptionStyle,
-                  maxLines: 3, // Reduced to make room for title
+                  maxLines: titleLogoUrl != null
+                      ? 1
+                      : 2, // Reduced to prevent overflow
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(height: context.tvSpacing(12)),
+              SizedBox(height: context.tvSpacing(6)), // Reduced spacing
             ],
             // Progress Bar
             SizedBox(
@@ -3596,13 +3644,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const infoGapBelowTitle = 2.0;
     const titleFontSize = 11.0;
     const timeFontSize = 10.0;
-    const lineHeight = 1.1;
+    // Text height calculation with proper ascent/descent allowance
+    // Line height multiplier + small buffer for font metrics
+    const lineHeight = 1.2; // Increased from 1.1 to prevent overflow
     final infoHeight = infoGapAboveTitle +
         (titleFontSize * lineHeight) +
         infoGapBelowTitle +
         (timeFontSize * lineHeight);
-    // Tight row height - no extra padding
-    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    // Add buffer to prevent overflow - account for FULL focus scale (5% not 2.5%)
+    // AnimatedScale uses 1.05 scale, so we need full focusExtra, not half
+    // Extra 16px buffer for font rendering variations across different program titles and platforms
+    final rowHeight = cardHeight +
+        infoHeight +
+        focusExtra +
+        16.0; // +16px safety buffer to eliminate all overflows
     final rowInset = context.spacingSm() + _sidebarInset();
 
     final sectionKey = title;
@@ -3842,7 +3897,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const infoGapBelowTitle = 2.0;
     const titleFontSize = 11.0;
     const timeFontSize = 10.0;
-    const lineHeight = 1.1;
+    // Increased line height to prevent overflow
+    const lineHeight = 1.2;
     final infoHeight = infoGapAboveTitle +
         (titleFontSize * lineHeight) +
         infoGapBelowTitle +
@@ -3856,7 +3912,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowBottomSpacing = context.spacingXs() * 0.5;
 
     // Total calculated height of one full row block in the list
-    final cardRowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    // Account for FULL focus scale (5%) not half - AnimatedScale uses 1.05
+    final cardRowHeight =
+        cardHeight + infoHeight + focusExtra + 8.0; // +8px safety buffer
     final totalHeight =
         cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
     // Safety minimum to prevent zero-height rows if measurements fail
@@ -4220,6 +4278,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             borderRadius: BorderRadius.circular(12),
             child: Stack(
               children: [
+                // Always show consistent fallback background as base layer
+                Positioned.fill(child: fallback),
+                // Overlay image on top if available
                 if (normalizedImageUrl != null)
                   Positioned.fill(
                     child: _buildAdaptiveImage(
@@ -4228,11 +4289,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       BoxFit.cover,
                       cacheWidth,
                       cacheHeight,
-                      fallback,
+                      const SizedBox
+                          .shrink(), // Empty fallback since we have base layer
                     ),
-                  )
-                else
-                  Positioned.fill(child: fallback),
+                  ),
                 if (!hideCornerLogo)
                   Positioned(
                     top: 6,
@@ -4432,7 +4492,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
   Widget _buildMissingArtworkFallback([String? channelName]) {
     return BrandFallbackBackground(
       child: Center(
@@ -4551,7 +4610,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool showLogo = true,
   }) {
     final logoUrl = channel.logoUrl;
-    final normalizedLogoUrl = logoUrl == null ? null : normalizeImageUrl(logoUrl);
+    final normalizedLogoUrl =
+        logoUrl == null ? null : normalizeImageUrl(logoUrl);
 
     return BrandFallbackBackground(
       child: Stack(
@@ -4574,8 +4634,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         final dpr = MediaQuery.of(context).devicePixelRatio;
                         final maxLogoWidth = constraints.maxWidth * 0.65;
                         final maxLogoHeight = constraints.maxHeight * 0.34;
-                        final logoCacheWidth = math.min(480, (maxLogoWidth * dpr).round());
-                        final logoCacheHeight = math.min(480, (maxLogoHeight * dpr).round());
+                        final logoCacheWidth =
+                            math.min(480, (maxLogoWidth * dpr).round());
+                        final logoCacheHeight =
+                            math.min(480, (maxLogoHeight * dpr).round());
 
                         final fallbackIcon = Icon(
                           icon,
@@ -4601,14 +4663,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               ),
                               Center(
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 28, vertical: 18),
                                   decoration: BoxDecoration(
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.36), width: 1.5),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.36),
+                                        width: 1.5),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.4),
+                                        color:
+                                            Colors.black.withValues(alpha: 0.4),
                                         blurRadius: 28,
                                         offset: const Offset(0, 14),
                                       ),
@@ -4629,7 +4696,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               alignment: Alignment.center,
                               child: FittedBox(
                                 fit: BoxFit.contain,
-                                child: Transform.translate(offset: const Offset(0, -4), child: child),
+                                child: Transform.translate(
+                                    offset: const Offset(0, -4), child: child),
                               ),
                             ),
                           );
@@ -4647,7 +4715,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 child: Text(
                                   resolvedLabel,
                                   maxLines: 1,
-                                  style: AppTypography.heroTitle(context).copyWith(
+                                  style:
+                                      AppTypography.heroTitle(context).copyWith(
                                     fontSize: baseFontSize,
                                     letterSpacing: 6,
                                     color: Colors.white70,
@@ -4677,7 +4746,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           );
                         }
 
-                        if (!showLogo || normalizedLogoUrl == null || normalizedLogoUrl.isEmpty || ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
+                        if (!showLogo ||
+                            normalizedLogoUrl == null ||
+                            normalizedLogoUrl.isEmpty ||
+                            ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
                           return buildFallbackContent();
                         }
 
@@ -4718,7 +4790,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           placeholder: (_, __) => buildFallbackContent(),
                           errorWidget: (_, url, error) {
                             ImageFailureCache.recordFailure(url, error);
-                            logHandshakeIfNeeded(url, error, context: 'LiveTV hero logo');
+                            logHandshakeIfNeeded(url, error,
+                                context: 'LiveTV hero logo');
                             return buildFallbackContent();
                           },
                           useOldImageOnUrlChange: true,
@@ -4956,150 +5029,140 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
             if (isChannelLogoFallback) {
               // Special handling for channel logo fallback with blurred background
-              return ClipPath(
-                clipper: const _HeroRevealClipper(
-                  revealWidthFactor: _heroMatteRevealWidthFactor,
-                  edgeCurveFactor: _heroMatteEdgeCurveFactor,
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Blurred background
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FractionallySizedBox(
-                        widthFactor: heroImageWidthFactor,
-                        heightFactor: 1.0,
-                        child: CachedNetworkImage(
-                          imageUrl: normalizedHeroUrl,
-                          httpHeaders: HttpClientService().imageHeaders,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          filterQuality: FilterQuality.low,
-                          memCacheWidth: cacheWidth ~/ 2,
-                          memCacheHeight: cacheHeight ~/ 2,
-                          imageBuilder: (context, imageProvider) {
-                            ImageLoadProbe.recordSuccess(
-                                normalizedHeroUrl, 'hero_logo_bg');
-                            return ImageFiltered(
-                              imageFilter:
-                                  ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  image: DecorationImage(
-                                    image: imageProvider,
-                                    fit: BoxFit.cover,
-                                    alignment: Alignment.center,
-                                  ),
-                                ),
-                                child: Container(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                ),
-                              ),
-                            );
-                          },
-                          placeholder: (_, __) => _buildGradientPlaceholder(),
-                          errorWidget: (_, url, error) {
-                            ImageFailureCache.recordFailure(url, error);
-                            ImageLoadProbe.recordFailure(
-                                url, 'hero_logo_bg', error);
-                            return _buildGradientPlaceholder();
-                          },
-                          useOldImageOnUrlChange: true,
-                        ),
-                      ),
-                    ),
-                    // Right-aligned logo
-                    Align(
-                      alignment: Alignment.centerRight,
+              // Note: No ClipPath here - the matte painter in _buildFullScreenHero
+              // handles clipping with blend modes for soft edge effect
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Blurred background
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: heroImageWidthFactor,
+                      heightFactor: 1.0,
                       child: CachedNetworkImage(
                         imageUrl: normalizedHeroUrl,
                         httpHeaders: HttpClientService().imageHeaders,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         alignment: Alignment.center,
-                        filterQuality: FilterQuality.high,
-                        width: constraints.maxWidth * 0.3,
-                        height: constraints.maxHeight * 0.25,
-                        memCacheWidth:
-                            (constraints.maxWidth * 0.3 * dpr).round(),
-                        memCacheHeight:
-                            (constraints.maxHeight * 0.25 * dpr).round(),
+                        filterQuality: FilterQuality.low,
+                        memCacheWidth: cacheWidth ~/ 2,
+                        memCacheHeight: cacheHeight ~/ 2,
                         imageBuilder: (context, imageProvider) {
-                          ImageFailureCache.recordSuccess(normalizedHeroUrl);
                           ImageLoadProbe.recordSuccess(
-                              normalizedHeroUrl, 'hero_logo');
-                          return Image(
-                            image: imageProvider,
-                            fit: BoxFit.contain,
-                            alignment: Alignment.center,
-                            filterQuality: FilterQuality.high,
-                            gaplessPlayback: true,
+                              normalizedHeroUrl, 'hero_logo_bg');
+                          return ImageFiltered(
+                            imageFilter:
+                                ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.center,
+                                ),
+                              ),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.4),
+                              ),
+                            ),
                           );
                         },
-                        placeholder: (_, __) => const SizedBox.shrink(),
+                        placeholder: (_, __) => _buildGradientPlaceholder(),
                         errorWidget: (_, url, error) {
                           ImageFailureCache.recordFailure(url, error);
-                          ImageLoadProbe.recordFailure(url, 'hero_logo', error);
-                          logHandshakeIfNeeded(url, error,
-                              context: 'LiveTV hero logo');
-                          return heroFallback;
+                          ImageLoadProbe.recordFailure(
+                              url, 'hero_logo_bg', error);
+                          return _buildGradientPlaceholder();
                         },
                         useOldImageOnUrlChange: true,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  // Right-aligned logo
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: CachedNetworkImage(
+                      imageUrl: normalizedHeroUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.high,
+                      width: constraints.maxWidth * 0.3,
+                      height: constraints.maxHeight * 0.25,
+                      memCacheWidth: (constraints.maxWidth * 0.3 * dpr).round(),
+                      memCacheHeight:
+                          (constraints.maxHeight * 0.25 * dpr).round(),
+                      imageBuilder: (context, imageProvider) {
+                        ImageFailureCache.recordSuccess(normalizedHeroUrl);
+                        ImageLoadProbe.recordSuccess(
+                            normalizedHeroUrl, 'hero_logo');
+                        return Image(
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
+                        );
+                      },
+                      placeholder: (_, __) => const SizedBox.shrink(),
+                      errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
+                        ImageLoadProbe.recordFailure(url, 'hero_logo', error);
+                        logHandshakeIfNeeded(url, error,
+                            context: 'LiveTV hero logo');
+                        return heroFallback;
+                      },
+                      useOldImageOnUrlChange: true,
+                    ),
+                  ),
+                ],
               );
             }
 
             // Render only landscape artwork. Portrait gets rejected by the
             // image guard and falls back to the category/hero fallback.
-            return ClipPath(
-              clipper: const _HeroRevealClipper(
-                revealWidthFactor: _heroMatteRevealWidthFactor,
-                edgeCurveFactor: _heroMatteEdgeCurveFactor,
-              ),
-              child: SizedBox.expand(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FractionallySizedBox(
-                    widthFactor: _heroImageWidthFactor,
-                    heightFactor: 1.0,
-                    child: CachedNetworkImage(
-                      imageUrl: normalizedHeroUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      filterQuality: FilterQuality.high,
-                      memCacheWidth: cacheWidth,
-                      memCacheHeight: cacheHeight,
-                      imageBuilder: (context, imageProvider) {
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _LandscapeGuardedImage(
-                              url: normalizedHeroUrl,
-                              imageProvider: imageProvider,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              fallback: heroFallback,
-                              probeTag: 'hero_backdrop',
-                            ),
-                          ],
-                        );
-                      },
-                      placeholder: (_, __) => _buildGradientPlaceholder(),
-                      errorWidget: (_, url, error) {
-                        ImageFailureCache.recordFailure(url, error);
-                        ImageLoadProbe.recordFailure(
-                            url, 'hero_backdrop', error);
-                        logHandshakeIfNeeded(url, error,
-                            context: 'LiveTV hero backdrop');
-                        return heroFallback;
-                      },
-                      fadeInDuration: const Duration(milliseconds: 300),
-                      useOldImageOnUrlChange: true,
-                    ),
+            // Note: No ClipPath here - the matte painter in _buildFullScreenHero
+            // handles clipping with blend modes for soft edge effect
+            return SizedBox.expand(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: _heroImageWidthFactor,
+                  heightFactor: 1.0,
+                  child: CachedNetworkImage(
+                    imageUrl: normalizedHeroUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    filterQuality: FilterQuality.high,
+                    memCacheWidth: cacheWidth,
+                    memCacheHeight: cacheHeight,
+                    imageBuilder: (context, imageProvider) {
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _LandscapeGuardedImage(
+                            url: normalizedHeroUrl,
+                            imageProvider: imageProvider,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            fallback: heroFallback,
+                            probeTag: 'hero_backdrop',
+                          ),
+                        ],
+                      );
+                    },
+                    placeholder: (_, __) => _buildGradientPlaceholder(),
+                    errorWidget: (_, url, error) {
+                      ImageFailureCache.recordFailure(url, error);
+                      ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
+                      logHandshakeIfNeeded(url, error,
+                          context: 'LiveTV hero backdrop');
+                      return heroFallback;
+                    },
+                    fadeInDuration: const Duration(milliseconds: 300),
+                    useOldImageOnUrlChange: true,
                   ),
                 ),
               ),

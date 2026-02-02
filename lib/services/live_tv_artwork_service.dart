@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:iptv_player/models/channel.dart';
@@ -20,6 +21,114 @@ import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
+
+// ─────────────────────────────────────────────────────────────────────────
+// ISOLATE HELPERS FOR CACHE PERSISTENCE
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Data class for title cache entries to pass to/from isolate.
+class _TitleCacheEntry {
+  final String key;
+  final String url;
+  final int timestamp;
+
+  _TitleCacheEntry({
+    required this.key,
+    required this.url,
+    required this.timestamp,
+  });
+}
+
+/// Data class for negative cache entries to pass to/from isolate.
+class _NegativeCacheEntry {
+  final String key;
+  final int until;
+
+  _NegativeCacheEntry({
+    required this.key,
+    required this.until,
+  });
+}
+
+/// Parses title cache JSON in an isolate.
+List<_TitleCacheEntry> _parseTitleCacheJsonIsolate(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return [];
+    final now = DateTime.now();
+    final entries = <_TitleCacheEntry>[];
+    decoded.forEach((key, value) {
+      String? url;
+      int? timestamp;
+      if (value is String) {
+        url = value;
+        timestamp = now.millisecondsSinceEpoch;
+      } else if (value is Map) {
+        final rawUrl = value['url'];
+        if (rawUrl is String && rawUrl.isNotEmpty) {
+          url = rawUrl;
+        }
+        final rawTs = value['ts'];
+        if (rawTs is int) {
+          timestamp = rawTs;
+        }
+      }
+      if (url != null && url.isNotEmpty && timestamp != null) {
+        entries.add(_TitleCacheEntry(key: key, url: url, timestamp: timestamp));
+      }
+    });
+    return entries;
+  } catch (e) {
+    return [];
+  }
+}
+
+/// Parses negative cache JSON in an isolate.
+List<_NegativeCacheEntry> _parseNegativeCacheJsonIsolate(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return [];
+    final entries = <_NegativeCacheEntry>[];
+    final now = DateTime.now().millisecondsSinceEpoch;
+    decoded.forEach((key, value) {
+      if (value is int && value > now) {
+        entries.add(_NegativeCacheEntry(key: key, until: value));
+      }
+    });
+    return entries;
+  } catch (e) {
+    return [];
+  }
+}
+
+/// Encodes title cache data to JSON in an isolate.
+String? _encodeTitleCacheJsonIsolate(List<_TitleCacheEntry> entries) {
+  try {
+    final map = <String, Map<String, dynamic>>{};
+    for (final entry in entries) {
+      map[entry.key] = {
+        'url': entry.url,
+        'ts': entry.timestamp,
+      };
+    }
+    return jsonEncode(map);
+  } catch (e) {
+    return null;
+  }
+}
+
+/// Encodes negative cache data to JSON in an isolate.
+String? _encodeNegativeCacheJsonIsolate(List<_NegativeCacheEntry> entries) {
+  try {
+    final map = <String, int>{};
+    for (final entry in entries) {
+      map[entry.key] = entry.until;
+    }
+    return jsonEncode(map);
+  } catch (e) {
+    return null;
+  }
+}
 
 /// Callback signature for when artwork is updated.
 typedef ArtworkUpdateCallback = void Function();
@@ -268,8 +377,8 @@ class LiveTvArtworkService {
 
     // Wait for pending artwork with timeout
     final startTime = DateTime.now();
-    while (pending.isNotEmpty &&
-        DateTime.now().difference(startTime) < timeout) {
+    while (
+        pending.isNotEmpty && DateTime.now().difference(startTime) < timeout) {
       await Future.delayed(const Duration(milliseconds: 200));
 
       // Check if any pending became ready
@@ -466,6 +575,9 @@ class LiveTvArtworkService {
       );
       return;
     }
+    // Register channel lookup FIRST before any checks that depend on it
+    _programChannelLookup[program.id] = channel;
+
     if (!_shouldAttemptArtworkByTitle(program, channel)) return;
     final existing = _programArtwork[program.id];
     if (existing != null &&
@@ -479,7 +591,7 @@ class LiveTvArtworkService {
       return;
     }
 
-    _programChannelLookup[program.id] = channel;
+    // Channel already registered above; just need to check again after potential modifications
     if (!_shouldAttemptArtworkByTitle(program, channel)) return;
     final current = _programArtwork[program.id];
     if (current != null &&
@@ -630,11 +742,23 @@ class LiveTvArtworkService {
     final title = program.title;
     final queryTitles = _buildArtworkQueryTitles(program, channel);
 
-    // Try SportRadar first
+    // Try SportRadar, TheSportsDB, and TVDB in parallel for each query title
     for (final queryTitle in queryTitles) {
       try {
-        final sportRadarImage =
-            await SportradarService.getHeroImage(queryTitle).timeout(timeout);
+        final results = await Future.wait([
+          SportradarService.getHeroImage(queryTitle).timeout(timeout),
+          TheSportsDbService.getHeroImage(queryTitle).timeout(timeout),
+          if (_tvdbEnabled)
+            TvdbService.getBestImage(queryTitle).timeout(timeout)
+          else
+            Future<String?>.value(null),
+        ]);
+
+        final sportRadarImage = results[0];
+        final sportsDbImage = results[1];
+        final tvdbImage = _tvdbEnabled ? results[2] : null;
+
+        // Check SportRadar result
         if (_acceptArtworkUrl(
               sportRadarImage,
               preferLandscape: preferLandscape,
@@ -647,16 +771,8 @@ class LiveTvArtworkService {
           );
           return sportRadarImage;
         }
-      } catch (e) {
-        debugLog('SportRadar failed: $e');
-      }
-    }
 
-    // Fallback to TheSportsDB
-    for (final queryTitle in queryTitles) {
-      try {
-        final sportsDbImage =
-            await TheSportsDbService.getHeroImage(queryTitle).timeout(timeout);
+        // Check TheSportsDB result
         if (_acceptArtworkUrl(
               sportsDbImage,
               preferLandscape: preferLandscape,
@@ -669,32 +785,23 @@ class LiveTvArtworkService {
           );
           return sportsDbImage;
         }
-      } catch (e) {
-        debugLog('TheSportsDB failed: $e');
-      }
-    }
 
-    // Fallback to TVDB for broader sports coverage
-    if (_tvdbEnabled) {
-      for (final queryTitle in queryTitles) {
-        try {
-          final tvdbImage =
-              await TvdbService.getBestImage(queryTitle).timeout(timeout);
-          if (_acceptArtworkUrl(
-                tvdbImage,
-                preferLandscape: preferLandscape,
-                programTitle: title,
-                source: 'tvdb_sports',
-              ) &&
-              await ImageValidationService.isValid(tvdbImage)) {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tvdb_sports program="$title" query="$queryTitle" url=$tvdbImage',
-            );
-            return tvdbImage;
-          }
-        } catch (e) {
-          debugLog('TVDB (sports) failed: $e');
+        // Check TVDB result (if enabled)
+        if (_tvdbEnabled &&
+            _acceptArtworkUrl(
+              tvdbImage,
+              preferLandscape: preferLandscape,
+              programTitle: title,
+              source: 'tvdb_sports',
+            ) &&
+            await ImageValidationService.isValid(tvdbImage)) {
+          _logArtworkDecision(
+            'LiveTV artwork: source=tvdb_sports program="$title" query="$queryTitle" url=$tvdbImage',
+          );
+          return tvdbImage;
         }
+      } catch (e) {
+        debugLog('Sports image search failed for "$queryTitle": $e');
       }
     }
 
@@ -1240,44 +1347,34 @@ class LiveTvArtworkService {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_programArtworkTitleCacheKey);
       if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) return;
+
+      // Parse JSON off the main thread using compute()
+      final entries = await compute(_parseTitleCacheJsonIsolate, raw);
+      if (entries.isEmpty) return;
+
       _programArtworkByTitle.clear();
       _programArtworkTitleOrder.clear();
       _programArtworkByTitleTimestamps.clear();
       final now = DateTime.now();
-      decoded.forEach((key, value) {
-        String? url;
-        DateTime? timestamp;
-        if (value is String) {
-          url = value;
-          timestamp = now;
-        } else if (value is Map) {
-          final rawUrl = value['url'];
-          if (rawUrl is String && rawUrl.isNotEmpty) {
-            url = rawUrl;
-          }
-          final rawTs = value['ts'];
-          if (rawTs is int) {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(rawTs);
-          }
+
+      for (final entry in entries) {
+        final url = entry.url;
+        final timestamp = DateTime.fromMillisecondsSinceEpoch(entry.timestamp);
+
+        // Skip poster URLs that may have been cached before stricter validation
+        if (_isLikelyPosterUrl(url)) {
+          debugLog('LiveTV artwork: skipping poster URL from disk cache: $url');
+          continue;
         }
-        if (url != null && url.isNotEmpty) {
-          // Skip poster URLs that may have been cached before stricter validation
-          if (_isLikelyPosterUrl(url)) {
-            debugLog(
-                'LiveTV artwork: skipping poster URL from disk cache: $url');
-            return;
-          }
-          if (timestamp == null ||
-              now.difference(timestamp) > _programArtworkTitleTtl) {
-            return;
-          }
-          _programArtworkByTitle[key] = url;
-          _programArtworkByTitleTimestamps[key] = timestamp;
-          _programArtworkTitleOrder.addLast(key);
+        if (now.difference(timestamp) > _programArtworkTitleTtl) {
+          continue;
         }
-      });
+
+        _programArtworkByTitle[entry.key] = url;
+        _programArtworkByTitleTimestamps[entry.key] = timestamp;
+        _programArtworkTitleOrder.addLast(entry.key);
+      }
+
       onArtworkUpdate();
     } catch (_) {
       // Ignore cache load errors to avoid impacting startup.
@@ -1747,7 +1844,8 @@ class LiveTvArtworkService {
   bool _isTitleCacheEligible(Program program) {
     final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
     if (normalized.isEmpty) return false;
-    if (normalized.length < 5) return false;
+    // Allow shorter titles (3+ chars) to support more TV programs
+    if (normalized.length < 3) return false;
     if (RegExp(r'^\d+$').hasMatch(normalized)) return false;
     const stopWords = <String>{
       'news',
@@ -1766,10 +1864,14 @@ class LiveTvArtworkService {
       'documentaries',
       'series',
     };
+    // Only reject if the ENTIRE title is a single stop word
+    // Titles like "Live with Kelly" or "Sports Center" are valid
     if (stopWords.contains(normalized)) return false;
     final tokens = normalized.split(RegExp(r'\s+'));
+    // Require at least one non-stop-word token OR at least 2 tokens total
+    // This allows "Sports Tonight" (2 tokens) even if both are stop words
     final nonStop = tokens.where((token) => !stopWords.contains(token));
-    if (nonStop.isEmpty) return false;
+    if (nonStop.isEmpty && tokens.length < 2) return false;
     return true;
   }
 

@@ -46,9 +46,27 @@ class ProgramArtworkWidget extends StatefulWidget {
 class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   String? _artworkUrl;
 
-  // Static cache shared across all instances
+  // Static cache shared across all instances with LRU eviction
   static final Map<String, String?> _artworkCache = {};
   static final Set<String> _pendingRequests = {};
+  static final List<String> _artworkCacheOrder = []; // LRU tracking
+  static const int _maxCacheSize =
+      100; // Limit cache to prevent unbounded growth
+
+  void _addToCache(String key, String? value) {
+    // Remove if already exists to update LRU order
+    _artworkCacheOrder.remove(key);
+
+    // Add to cache
+    _artworkCache[key] = value;
+    _artworkCacheOrder.add(key);
+
+    // Evict oldest entries if over limit
+    while (_artworkCacheOrder.length > _maxCacheSize) {
+      final oldest = _artworkCacheOrder.removeAt(0);
+      _artworkCache.remove(oldest);
+    }
+  }
 
   @override
   void initState() {
@@ -162,7 +180,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (currentProgram?.imageUrl != null &&
           currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
-        _artworkCache[cacheKey] = url;
+        _addToCache(cacheKey, url);
         if (mounted) {
           setState(() {
             _artworkUrl = url;
@@ -175,10 +193,9 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       // Priority order for general: TVDB -> TMDB -> Fanart
       if (isSports) {
         debugLog('ProgramArtwork: Attempting Sportradar for "$searchTitle"');
-        final sportradarUrl =
-            await SportradarService.getHeroImage(searchTitle);
+        final sportradarUrl = await SportradarService.getHeroImage(searchTitle);
         if (sportradarUrl != null) {
-          _artworkCache[cacheKey] = sportradarUrl;
+          _addToCache(cacheKey, sportradarUrl);
           if (mounted) {
             setState(() {
               _artworkUrl = sportradarUrl;
@@ -189,10 +206,9 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
 
         debugLog(
             'ProgramArtwork: Sportradar miss, falling back to TheSportsDB for "$searchTitle"');
-        final sportsDbUrl =
-            await TheSportsDbService.getHeroImage(searchTitle);
+        final sportsDbUrl = await TheSportsDbService.getHeroImage(searchTitle);
         if (sportsDbUrl != null) {
-          _artworkCache[cacheKey] = sportsDbUrl;
+          _addToCache(cacheKey, sportsDbUrl);
           if (mounted) {
             setState(() {
               _artworkUrl = sportsDbUrl;
@@ -203,7 +219,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
 
         debugLog(
             'ProgramArtwork: No sports hero available for "$searchTitle"; skipping TMDB');
-        _artworkCache[cacheKey] = null;
+        _addToCache(cacheKey, null);
         if (mounted) {
           setState(() {
             _artworkUrl = null;
@@ -216,7 +232,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
 
-      _artworkCache[cacheKey] = url;
+      _addToCache(cacheKey, url);
 
       if (mounted) {
         if (url != null) {
@@ -230,7 +246,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
     } catch (e) {
       debugLog('ProgramArtwork: Error fetching art for "$searchTitle": $e');
-      _artworkCache[cacheKey] = null;
+      _addToCache(cacheKey, null);
       if (mounted) {
         setState(() {
           _artworkUrl = null;
@@ -248,12 +264,10 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     final tvHeight =
         widget.height != null ? context.tvSpacing(widget.height!) : null;
     final dpr = MediaQuery.of(context).devicePixelRatio;
-    final cacheWidth = tvWidth == null
-        ? null
-        : math.min(600, (tvWidth * dpr).round());
-    final cacheHeight = tvHeight == null
-        ? null
-        : math.min(600, (tvHeight * dpr).round());
+    final cacheWidth =
+        tvWidth == null ? null : math.min(600, (tvWidth * dpr).round());
+    final cacheHeight =
+        tvHeight == null ? null : math.min(600, (tvHeight * dpr).round());
     Widget content;
     if (_artworkUrl != null &&
         _artworkUrl!.isNotEmpty &&
@@ -275,7 +289,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           );
         },
         placeholder: (context, url) =>
-            widget.placeholder ?? _buildGradientFallback(context, tvWidth, tvHeight),
+            widget.placeholder ??
+            _buildGradientFallback(context, tvWidth, tvHeight),
         errorWidget: (context, url, error) {
           ImageFailureCache.recordFailure(url, error);
           ImageLoadProbe.recordFailure(url, 'program_artwork', error);
@@ -285,8 +300,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         useOldImageOnUrlChange: true,
       );
     } else {
-      content =
-          widget.placeholder ?? _buildGradientFallback(context, tvWidth, tvHeight);
+      content = widget.placeholder ??
+          _buildGradientFallback(context, tvWidth, tvHeight);
     }
 
     return ClipRRect(
@@ -305,7 +320,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     return SizedBox(
       width: width,
       height: height,
-    child: BrandFallbackBackground(
+      child: BrandFallbackBackground(
         child: Center(
           child: Icon(
             Icons.tv,

@@ -51,12 +51,13 @@ List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
 
 /// Isolate function to rebuild channel caches (expensive work off main thread)
 /// Returns a map with 'indexById', 'indicesByGroup', 'lowerNames', 'lowerGroups'
-Map<String, dynamic> _rebuildChannelCachesInIsolate(List<Map<String, dynamic>> channelMaps) {
+Map<String, dynamic> _rebuildChannelCachesInIsolate(
+    List<Map<String, dynamic>> channelMaps) {
   final Map<String, int> indexById = {};
   final Map<String, List<int>> indicesByGroup = {};
   final List<String> lowerNames = List<String>.filled(channelMaps.length, '');
   final List<String> lowerGroups = List<String>.filled(channelMaps.length, '');
-  
+
   for (int i = 0; i < channelMaps.length; i++) {
     final map = channelMaps[i];
     final id = (map['id'] ?? '').toString();
@@ -72,7 +73,7 @@ Map<String, dynamic> _rebuildChannelCachesInIsolate(List<Map<String, dynamic>> c
     final groupKey = group.isNotEmpty ? group : 'uncategorized';
     (indicesByGroup[groupKey] ??= []).add(i);
   }
-  
+
   return {
     'indexById': indexById,
     'indicesByGroup': indicesByGroup,
@@ -209,26 +210,29 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       _rebuildChannelCachesSync();
       return;
     }
-    
+
     final start = DateTime.now();
     try {
-      final result = await compute(_rebuildChannelCachesInIsolate, _channelMaps);
+      final result =
+          await compute(_rebuildChannelCachesInIsolate, _channelMaps);
       _channelIndexById = Map<String, int>.from(result['indexById'] as Map);
       _channelIndicesByGroup = (result['indicesByGroup'] as Map).map(
         (k, v) => MapEntry(k as String, List<int>.from(v as List)),
       );
       _channelLowerNames = List<String>.from(result['lowerNames'] as List);
       _channelLowerGroups = List<String>.from(result['lowerGroups'] as List);
-      debugLog('ChannelProvider: Async cache rebuild took ${DateTime.now().difference(start).inMilliseconds}ms');
+      debugLog(
+          'ChannelProvider: Async cache rebuild took ${DateTime.now().difference(start).inMilliseconds}ms');
     } catch (e) {
-      debugLog('ChannelProvider: Async cache rebuild failed, falling back to sync: $e');
+      debugLog(
+          'ChannelProvider: Async cache rebuild failed, falling back to sync: $e');
       _rebuildChannelCachesSync();
     }
   }
 
-  /// Compatibility wrapper - calls sync version (use _rebuildChannelCachesAsync for large playlists)
+  /// Compatibility wrapper - calls async version (non-blocking for large playlists)
   void _rebuildChannelCaches() {
-    _rebuildChannelCachesSync();
+    unawaited(_rebuildChannelCachesAsync());
   }
 
   void _refreshSmartChannelCache({bool allowConversion = true}) {
@@ -237,8 +241,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       try {
         final smartCache = SmartCacheService.instance;
         if (allowConversion && _channelMaps.length <= 5000) {
-          final channels =
-              _channelMaps.map((m) => Channel.fromMap(m)).toList();
+          final channels = _channelMaps.map((m) => Channel.fromMap(m)).toList();
           await smartCache.cacheChannelData(channels, overwriteDb: false);
         } else {
           final signature = _signatureFromChannelMaps(_channelMaps);
@@ -291,8 +294,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   // bool get isLoading => _isLoading;
   // bool get isBackgroundSyncing => _isBackgroundSyncing;
   // bool _isLoading = false;
-  // bool _isBackgroundSyncing = false; 
-  
+  // bool _isBackgroundSyncing = false;
+
   // I'll replace it with just the fields and ONE set of getters if needed.
   // PROBABLY just the fields for now.
   bool _isLoading = false;
@@ -366,7 +369,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
     if (_channelMaps.isEmpty || limit <= 0) return const [];
     final total = _channelMaps.length;
-    final count = limit.clamp(1, total); // Ensure count >= 1 to prevent division by zero
+    final count =
+        limit.clamp(1, total); // Ensure count >= 1 to prevent division by zero
     if (count <= 0) return const []; // Extra safety check
     final step = (total / count).ceil().clamp(1, total);
     final sampled = <Map<String, dynamic>>[];
@@ -592,9 +596,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   @override
   void notifyListeners() {
     if (_disposed) return;
-    
+
     final now = DateTime.now();
-    if (_lastNotifyTime != null && 
+    if (_lastNotifyTime != null &&
         now.difference(_lastNotifyTime!) < _notifyThrottleInterval) {
       // Schedule a delayed notification if not already pending
       if (!_notifyPending) {
@@ -609,7 +613,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
       return;
     }
-    
+
     _lastNotifyTime = now;
     super.notifyListeners();
   }
@@ -658,7 +662,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           _scheduleEpgRefresh(forceRefresh: true);
         }
       } else {
-        debugLog('ChannelProvider: Failed to recover DB, disabling for session');
+        debugLog(
+            'ChannelProvider: Failed to recover DB, disabling for session');
         _dbDisabled = true;
         _dbReady = false;
       }
@@ -709,8 +714,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     }
 
     // Capture maps for thread safety
-    final mapsSubset = _channelMaps.length > 50000 
-        ? _channelMaps.sublist(0, 50000) 
+    final mapsSubset = _channelMaps.length > 50000
+        ? _channelMaps.sublist(0, 50000)
         : List<Map<String, dynamic>>.from(_channelMaps);
 
     // Offload heavy string normalization to isolate
@@ -1017,7 +1022,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         if (preview.isNotEmpty) {
           _channelMaps = preview;
           _channelCache.clear();
-          _rebuildChannelCaches();
+          await _rebuildChannelCachesAsync();
           _channelCountDb = _channelMaps.length;
           _cachedCategories = null;
           _updateEpgAllowedChannels();
@@ -1171,7 +1176,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                   final streamed = await client
                       .send(req)
                       .timeout(const Duration(seconds: 15));
-
 
                   if (streamed.statusCode == 200) {
                     final preview = <int>[];
@@ -1572,7 +1576,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     return _channelMaps.length;
   }
 
-
   /// Quick check if there are any channels (no conversion needed)
   bool get hasChannels => _dbReady
       ? (_channelCountDb > 0 || _channelMaps.isNotEmpty)
@@ -1753,7 +1756,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         if (indices.isEmpty) return const [];
         return indices.map(_getChannelAt).toList();
       } catch (e) {
-        debugLog('ChannelProvider: compute(_filterChannelIndicesInIsolate) failed: $e');
+        debugLog(
+            'ChannelProvider: compute(_filterChannelIndicesInIsolate) failed: $e');
         return const [];
       }
     }
@@ -1909,11 +1913,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         final savedJson = prefs.getString('saved_playlists');
         if (savedJson != null && savedJson.trim().isNotEmpty) {
           try {
-            final List<dynamic> decoded = await compute(jsonDecode, savedJson) as List<dynamic>;
+            final List<dynamic> decoded =
+                await compute(jsonDecode, savedJson) as List<dynamic>;
             final saved = decoded
-              .map(
-                (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
-              .toList();
+                .map(
+                    (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+                .toList();
             if (saved.isNotEmpty) {
               final activeId = prefs.getString('active_playlist_id');
               final chosen = saved.firstWhere((p) => p.id == activeId,
@@ -1941,9 +1946,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               } else {
                 await prefs.remove('secondary_epg_url');
               }
-              final playlistKey = chosen.type == 'xtream'
-                  ? (chosen.server ?? '')
-                  : chosen.url;
+              final playlistKey =
+                  chosen.type == 'xtream' ? (chosen.server ?? '') : chosen.url;
               unawaited(
                 _ensureStablePlaylistIdentity(
                   prefs,
@@ -1967,7 +1971,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         if (_channelMaps.isNotEmpty) {
           _channelMaps = [];
           _channelCache.clear();
-          _rebuildChannelCaches();
+          await _rebuildChannelCachesAsync();
           _cachedCategories = null;
           notifyListeners();
         }
@@ -2034,25 +2038,29 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           notifyListeners();
         }
         if (!skipDbLoad && count > 0) {
-          logToSystem('Found $count channels in DB, loading first chunk...', name: 'ChannelProvider');
+          logToSystem('Found $count channels in DB, loading first chunk...',
+              name: 'ChannelProvider');
           final initialLimit = 1000;
           List<Map<String, dynamic>> channels = const [];
           try {
             channels = await _db
                 .getChannelsPage(offset: 0, limit: initialLimit)
                 .timeout(const Duration(seconds: 6));
-            logToSystem('DB returned ${channels.length} channels', name: 'ChannelProvider');
+            logToSystem('DB returned ${channels.length} channels',
+                name: 'ChannelProvider');
           } catch (e) {
-            logToSystem('DB initial page load timeout/failure: $e', name: 'ChannelProvider');
+            logToSystem('DB initial page load timeout/failure: $e',
+                name: 'ChannelProvider');
             channels = const [];
             skipDbLoad = true;
           }
-          
+
           if (channels.isNotEmpty) {
-            logToSystem('DB load successful, setting up channels...', name: 'ChannelProvider');
+            logToSystem('DB load successful, setting up channels...',
+                name: 'ChannelProvider');
             _channelMaps = channels;
             _channelCountDb = count;
-            _rebuildChannelCaches();
+            await _rebuildChannelCachesAsync();
 
             await _setCurrentEpgMapSignature(
               prefs: prefs,
@@ -2069,13 +2077,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               if (_cachedCategories == null || _cachedCategories!.isEmpty) {
                 logToSystem('Computing categories...', name: 'ChannelProvider');
                 await _computeCategoriesAsync();
-                logToSystem('Categories: ${_cachedCategories?.length ?? 0}', name: 'ChannelProvider');
+                logToSystem('Categories: ${_cachedCategories?.length ?? 0}',
+                    name: 'ChannelProvider');
               }
             } catch (e) {
               logToSystem('Category error: $e', name: 'ChannelProvider');
               _cachedCategories = [];
             }
-            
+
             // If we have channels, show them and sync in background
             _isLoading = false;
             _hasLoadedPlaylist = true;
@@ -2083,52 +2092,55 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             notifyListeners();
 
             _updateEpgAllowedChannels();
-            _scheduleEpgRefresh(forceRefresh: false); // Refresh EPG based on existing data
-            
+            _scheduleEpgRefresh(
+                forceRefresh: false); // Refresh EPG based on existing data
+
             unawaited(SmartCacheService.instance
                 .markChannelCacheFresh(channelCount: count));
-            StartupProbe.mark('ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
+            StartupProbe.mark(
+                'ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB');
 
             unawaited(() async {
               await _computeCategoriesAsync();
               notifyListeners();
             }());
-            
+
             // Finish loading the rest of the DB if needed
             if (count > initialLimit) {
-               // ... existing pagination loading ...
-               unawaited(() async {
-                 // ...
-                 await Future.delayed(const Duration(milliseconds: 500));
-                  final more = await _db.getChannelsPage(
-                    offset: initialLimit, 
-                    limit: count - initialLimit
-                  );
-                  _channelMaps.addAll(more);
-                  _rebuildChannelCaches();
-                  _invalidateCategoryCaches();
-                  unawaited(_computeCategoriesAsync());
-                  _updateEpgAllowedChannels();
-                  _refreshSmartChannelCache();
-                  notifyListeners();
-               }());
+              // ... existing pagination loading ...
+              unawaited(() async {
+                // ...
+                await Future.delayed(const Duration(milliseconds: 500));
+                final more = await _db.getChannelsPage(
+                    offset: initialLimit, limit: count - initialLimit);
+                _channelMaps.addAll(more);
+                await _rebuildChannelCachesAsync();
+                _invalidateCategoryCaches();
+                unawaited(_computeCategoriesAsync());
+                _updateEpgAllowedChannels();
+                _refreshSmartChannelCache();
+                notifyListeners();
+              }());
             }
-            
+
             // TRIGGER BACKGROUND SYNC to check for updates
             // pass full playlist details if available
             unawaited(_backgroundSync(prefs: prefs, url: cachedPlaylistUrl));
-            
+
             return;
           } else {
             // DB query returned empty, strictly fall through
-            logToSystem('DB query returned empty, falling through to M3U cache', name: 'ChannelProvider');
+            logToSystem('DB query returned empty, falling through to M3U cache',
+                name: 'ChannelProvider');
           }
         } else {
-           // SkipDbLoad was true (shouldn't happen with our fix) or count was 0
-           logToSystem('Skipping DB load (skipDbLoad=$skipDbLoad, count=$count)', name: 'ChannelProvider');
+          // SkipDbLoad was true (shouldn't happen with our fix) or count was 0
+          logToSystem('Skipping DB load (skipDbLoad=$skipDbLoad, count=$count)',
+              name: 'ChannelProvider');
         }
       } else {
-        logToSystem('DB not ready, falling through to M3U cache', name: 'ChannelProvider');
+        logToSystem('DB not ready, falling through to M3U cache',
+            name: 'ChannelProvider');
       }
 
       // Fallback: Try file-based M3U cache if present and fresh - use streaming parser
@@ -2181,7 +2193,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             final mapStart = DateTime.now();
             _channelMaps = allChannels;
             _channelCache.clear();
-            _rebuildChannelCaches();
+            await _rebuildChannelCachesAsync();
             _channelCountDb = _channelMaps.length;
             _updateEpgAllowedChannels();
             await _setCurrentEpgMapSignature(
@@ -2225,7 +2237,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             StartupProbe.mark(
                 'ChannelProvider.autoLoadPlaylist: file cache load finished');
             _scheduleEpgRefresh(forceRefresh: false);
-            
+
             // Trigger background sync anyway to ensure freshness
             unawaited(_backgroundSync(prefs: prefs, url: cachedPlaylistUrl));
             return;
@@ -2241,10 +2253,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
       debugLog('ChannelProvider: Playlist type: $playlistType');
       _noPlaylistConfigured = false;
-      
+
       // If we are here, we have no DB data and no File cache. This is a true Cold Start.
       // We must block until we have something to show.
-      
+
       // String? playlistUrl; // Unused
       // if (playlistType == 'm3u') {
       //   playlistUrl = prefs.getString('m3u_url');
@@ -2252,12 +2264,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       //   playlistUrl = prefs.getString('xtream_server');
       //   // ... (URL construction logic moved to helper or kept inline if simple)
       // }
-      
-      // Re-use logic to resolve Xtream URL... for brevity, assuming we can extract the URL resolution 
+
+      // Re-use logic to resolve Xtream URL... for brevity, assuming we can extract the URL resolution
       // or just keep the existing block but conceptually this is now "performInitialSync"
       // For minimal code change, we will let the existing logic flow but ensure isLoading stays true
       // until we have data.
-
 
       try {
         String? playlistUrl;
@@ -2354,9 +2365,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
       _autoLoadInProgress = false;
       // Ensure loading state is cleared if we exited abnormally without setting it
-      if (_isLoading && !_hasLoadedPlaylist) { 
-         _isLoading = false;
-         notifyListeners();
+      if (_isLoading && !_hasLoadedPlaylist) {
+        _isLoading = false;
+        notifyListeners();
       }
     }
   }
@@ -2390,7 +2401,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   /// Implementation of loadPlaylistFromUrl using standard http.Client
-  Future<void> _loadPlaylistFromUrlImpl(String url, {bool isBackground = false}) async {
+  Future<void> _loadPlaylistFromUrlImpl(String url,
+      {bool isBackground = false}) async {
     PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
 
     if (!isBackground) {
@@ -2403,9 +2415,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       _lastM3UContent = null; // Clear old content
       notifyListeners();
     } else {
-       _isBackgroundSyncing = true;
-       notifyListeners(); // Notify so UI can show the indicator
-       debugLog('ChannelProvider: Running background playlist update...');
+      _isBackgroundSyncing = true;
+      notifyListeners(); // Notify so UI can show the indicator
+      debugLog('ChannelProvider: Running background playlist update...');
     }
 
     try {
@@ -2416,13 +2428,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       _playlistLoader.cancelCurrent();
       _playlistLoader = PlaylistLoader();
 
-      final List<Map<String, dynamic>> loadingTarget = isBackground ? [] : _channelMaps;
-      
+      final List<Map<String, dynamic>> loadingTarget =
+          isBackground ? [] : _channelMaps;
+
       if (!isBackground) {
         _loadingStatus = 'Starting download...';
         _loadingProgress = 0.0;
         notifyListeners();
-        
+
         _channelMaps.clear();
         _channelCache.clear();
         _invalidateCategoryCaches();
@@ -2430,7 +2443,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
 
       DateTime lastUiUpdate = DateTime.now();
-      
+
       final parsed =
           await _playlistLoader.loadFromUrl(url, onProgress: (count) {
         if (!isBackground) {
@@ -2439,14 +2452,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           // Progress updates also throttle
           final now = DateTime.now();
           if (now.difference(lastUiUpdate).inMilliseconds > 500) {
-             lastUiUpdate = now;
-             notifyListeners();
+            lastUiUpdate = now;
+            notifyListeners();
           }
         }
       }, onChannelsChunk: (chunk) {
         // Use a new list to avoid concurrent modification issues if UI is reading _channelMaps
         loadingTarget.addAll(chunk);
-        
+
         // Critical: Update UI immediately if this is the first "page" of content
         // But do NOT set _isLoading=false yet, or the UI might think we are fully done!
         // We only start showing content, but keep the loading spinner/progress bar active if desired.
@@ -2456,21 +2469,23 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         // Timer-based throttling for subsequent updates to prevent UI freezing
         // Updates at most twice per second
         final now = DateTime.now();
-        final bool shouldUpdate = now.difference(lastUiUpdate).inMilliseconds > 500;
-        
-        if (loadingTarget.length >= 200 && (shouldUpdate || loadingTarget.length % 2000 == 0)) {
-           // Invalidating caches ensures getAllCategoryNames() sees new groups from this chunk
-           if (!isBackground) {
-              _channelCountDb = loadingTarget.length;
-              _invalidateCategoryCaches();
-              lastUiUpdate = now;
-              notifyListeners();
-           } else {
-             // For background, we don't update UI progressively to avoid jank/flash
-             // We swill swap at the end.
-           }
+        final bool shouldUpdate =
+            now.difference(lastUiUpdate).inMilliseconds > 500;
+
+        if (loadingTarget.length >= 200 &&
+            (shouldUpdate || loadingTarget.length % 2000 == 0)) {
+          // Invalidating caches ensures getAllCategoryNames() sees new groups from this chunk
+          if (!isBackground) {
+            _channelCountDb = loadingTarget.length;
+            _invalidateCategoryCaches();
+            lastUiUpdate = now;
+            notifyListeners();
+          } else {
+            // For background, we don't update UI progressively to avoid jank/flash
+            // We swill swap at the end.
+          }
         }
-        
+
         // NOTE: DB writes are now DEFERRED to after UI is shown for faster startup
         // See _deferredDbInsert() call after playlist load completes
       });
@@ -2540,7 +2555,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           await prefs.setString('flutter.cached_playlist', playlistJson);
         } catch (_) {}
       } else {
-        debugLog('ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
+        debugLog(
+            'ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
       }
 
       _cachedCategories = null;
@@ -2583,16 +2599,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       } else {
         _isBackgroundSyncing = false;
       }
-      
+
       notifyListeners();
-      
+
       // DEFERRED: Write all channels to DB in background AFTER UI is shown
       // This dramatically improves perceived startup time
       unawaited(_deferredDbInsert());
-      
+
       // Update EPG allowed channels only now that _channelMaps is fully settled (swapped/populated)
       _updateEpgAllowedChannels();
-      
+
       _refreshSmartChannelCache();
 
       PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
@@ -2666,18 +2682,19 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   /// Background Sync: Updates channel list without blocking UI
-  Future<void> _backgroundSync({required SharedPreferences prefs, required String? url}) async {
+  Future<void> _backgroundSync(
+      {required SharedPreferences prefs, required String? url}) async {
     if (url == null || url.isEmpty) return;
     debugLog('ChannelProvider: Starting background sync for $url');
-    
+
     // Use a separate lock/flag to avoid conflicting with initial load?
     // reuse loadPlaylistFromUrl but we need to be careful about not resetting UI state
     // if _isLoading is false (which it is, since we showed DB data).
-    
+
     // Ideally we want a "silent" load.
     // For now, let's call loadPlaylistFromUrl but modify it to handle "silent" updates?
     // Or just copy the logic.
-    
+
     // A better approach for this strict architecture:
     // 1. Download to temp file
     // 2. Parse isolate
@@ -2685,10 +2702,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     // 4. Update DB
     // 5. Notify "Channels updated" (Toast/Snackbar) instead of full UI refresh?
     // For TiviMate style, we just refresh the list view.
-    
+
     // Re-use _loadPlaylistFromUrlImpl but set a flag?
     // Let's create `_reloadPlaylistBackground(String url)`
-    
+
     await _reloadPlaylistBackground(url);
   }
 
@@ -2698,18 +2715,17 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     try {
       // Use existing loader but don't set _isLoading = true if we already have content
       // We will rely on _hasLoadedPlaylist to keep UI showing content.
-      
+
       // ... logic similar to _loadPlaylistFromUrlImpl but carefully ...
-      
-      // For now, to keep it safe, let's just do a standard load but suppress the loading overlay 
-      // if we already have data. 
-      // The current UI shows Skeleton if isLoading is true. 
+
+      // For now, to keep it safe, let's just do a standard load but suppress the loading overlay
+      // if we already have data.
+      // The current UI shows Skeleton if isLoading is true.
       // We need to NOT set _isLoading = true if _hasLoadedPlaylist is true.
-      
+
       await _loadPlaylistFromUrlImpl(url, isBackground: true);
-      
     } catch (e) {
-       debugLog('ChannelProvider: Background sync failed: $e');
+      debugLog('ChannelProvider: Background sync failed: $e');
     }
   }
 
@@ -2788,7 +2804,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       // Store raw maps - don't convert to Channel objects on main thread!
       _channelMaps = allChannels;
       _channelCache.clear();
-      _rebuildChannelCaches();
+      await _rebuildChannelCachesAsync();
       _channelCountDb = _channelMaps.length;
       _updateEpgAllowedChannels();
       unawaited(_primeXtreamLiveMetadata(url));
@@ -2900,7 +2916,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           .map((channel) => Map<String, dynamic>.from(channel as Map))
           .toList();
       _channelCache.clear();
-      _rebuildChannelCaches();
+      await _rebuildChannelCachesAsync();
       _channelCountDb = _channelMaps.length;
       await _applyXtreamEpgMapFromCache();
       _updateEpgAllowedChannels();
@@ -3012,7 +3028,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
       return const [];
     } catch (e) {
-      debugLog('ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: $e');
+      debugLog(
+          'ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: $e');
       if (_channelMaps.isNotEmpty) {
         return _scanCategoryFallback(
           category,
@@ -3062,31 +3079,35 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   Future<void> _deferredDbInsert() async {
     // Retry DB init if it failed earlier (persistence is critical!)
     if (!_dbReady) {
-      debugLog('ChannelProvider: _deferredDbInsert found DB not ready, retrying init...');
+      debugLog(
+          'ChannelProvider: _deferredDbInsert found DB not ready, retrying init...');
       await _ensureDb();
     }
-    
+
     if (!_dbReady || _channelMaps.isEmpty) {
-      debugLog('ChannelProvider: _deferredDbInsert skipped. Ready: $_dbReady, Channels: ${_channelMaps.length}');
+      debugLog(
+          'ChannelProvider: _deferredDbInsert skipped. Ready: $_dbReady, Channels: ${_channelMaps.length}');
       return;
     }
-    
+
     final start = DateTime.now();
-    debugLog('ChannelProvider: Starting deferred DB insert for ${_channelMaps.length} channels');
+    debugLog(
+        'ChannelProvider: Starting deferred DB insert for ${_channelMaps.length} channels');
     final epgService = _epgService;
     epgService?.setExternalDbBusy(true);
     _db.beginBulkWrite();
-    
+
     try {
       // Clear existing channels first
       await _db.clearChannels();
-      
+
       // Insert all channels in one batch - happens entirely in background
       // The DB service uses a write queue so this won't block
       await _db.insertChannels(_channelMaps);
-      
+
       final duration = DateTime.now().difference(start);
-      debugLog('ChannelProvider: Deferred DB insert completed in ${duration.inMilliseconds}ms');
+      debugLog(
+          'ChannelProvider: Deferred DB insert completed in ${duration.inMilliseconds}ms');
     } catch (e) {
       debugLog('ChannelProvider: Deferred DB insert failed: $e');
       _handleDbError(e);
@@ -3173,11 +3194,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         server: server,
         username: username,
       );
-      final existingId =
-          existingIndex >= 0 ? list[existingIndex].id : null;
-      final id = (existingId != null && existingId.isNotEmpty)
-          ? existingId
-          : stableId;
+      final existingId = existingIndex >= 0 ? list[existingIndex].id : null;
+      final id =
+          (existingId != null && existingId.isNotEmpty) ? existingId : stableId;
 
       final normalized = SavedPlaylist(
         id: id,
@@ -3249,7 +3268,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           debugLog(
               'ChannelProvider: Category DB load took ${DateTime.now().difference(dbStart).inMilliseconds}ms');
         } catch (e) {
-          debugLog('ChannelProvider: DB category load failed: $e, falling back to memory');
+          debugLog(
+              'ChannelProvider: DB category load failed: $e, falling back to memory');
           _dbReady = false;
         }
         if ((_cachedCategories?.isEmpty ?? true) && _channelMaps.isNotEmpty) {
@@ -3596,7 +3616,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final channelNameForLookup = name.trim();
 
       if (channelId.isNotEmpty &&
-          epgService.hasEpgMatch(channelId, channelName: channelNameForLookup)) {
+          epgService.hasEpgMatch(channelId,
+              channelName: channelNameForLookup)) {
         matched++;
       }
 
@@ -3608,5 +3629,4 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
     return {'matched': matched, 'scanned': cappedTotal, 'total': total};
   }
-
 }

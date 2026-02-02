@@ -343,7 +343,7 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
   }
 }
 
-class EpgAnalyticsDialog extends StatelessWidget {
+class EpgAnalyticsDialog extends StatefulWidget {
   final List<dynamic> mappingEntries; // List of ChannelMappingEntry
   final IncrementalEpgService epgService;
 
@@ -352,6 +352,21 @@ class EpgAnalyticsDialog extends StatelessWidget {
     required this.mappingEntries,
     required this.epgService,
   });
+
+  @override
+  State<EpgAnalyticsDialog> createState() => _EpgAnalyticsDialogState();
+}
+
+class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
+  List<MapEntry<String, dynamic>>? _cachedSortedGroups;
+
+  List<MapEntry<String, dynamic>> _getSortedGroups(
+      Map<String, dynamic> groupStats) {
+    if (_cachedSortedGroups != null) return _cachedSortedGroups!;
+    _cachedSortedGroups = groupStats.entries.toList()
+      ..sort((a, b) => b.value['matchRate'].compareTo(a.value['matchRate']));
+    return _cachedSortedGroups!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -589,8 +604,7 @@ class EpgAnalyticsDialog extends StatelessWidget {
   }
 
   Widget _buildGroupsList(Map<String, dynamic> groupStats) {
-    final sortedGroups = groupStats.entries.toList()
-      ..sort((a, b) => b.value['matchRate'].compareTo(a.value['matchRate']));
+    final sortedGroups = _getSortedGroups(groupStats);
 
     return ListView.separated(
       itemCount: sortedGroups.length,
@@ -657,29 +671,31 @@ class EpgAnalyticsDialog extends StatelessWidget {
   }
 
   Map<String, dynamic> _calculateAnalytics() {
-    final total = mappingEntries.length;
-    final matched = mappingEntries
+    final total = widget.mappingEntries.length;
+    final matched = widget.mappingEntries
         .where((e) => e.hasEpgData || e.currentMapping != null)
         .length;
     final unmatched = total - matched;
     final matchRate = total > 0 ? (matched / total) * 100 : 0.0;
 
-    final avgConfidence = mappingEntries.isNotEmpty
-        ? mappingEntries.map((e) => e.confidence).reduce((a, b) => a + b) /
-            mappingEntries.length
+    final avgConfidence = widget.mappingEntries.isNotEmpty
+        ? widget.mappingEntries
+                .map((e) => e.confidence)
+                .reduce((a, b) => a + b) /
+            widget.mappingEntries.length
         : 0.0;
 
     final highConfidence =
-        mappingEntries.where((e) => e.confidence >= 0.8).length;
-    final mediumConfidence = mappingEntries
+        widget.mappingEntries.where((e) => e.confidence >= 0.8).length;
+    final mediumConfidence = widget.mappingEntries
         .where((e) => e.confidence >= 0.6 && e.confidence < 0.8)
         .length;
     final lowConfidence =
-        mappingEntries.where((e) => e.confidence < 0.6).length;
+        widget.mappingEntries.where((e) => e.confidence < 0.6).length;
 
     // Group statistics
     final groupStats = <String, dynamic>{};
-    for (final entry in mappingEntries) {
+    for (final entry in widget.mappingEntries) {
       final group = entry.channel.groupTitle ?? 'Unknown';
       if (!groupStats.containsKey(group)) {
         groupStats[group] = {'matched': 0, 'total': 0};

@@ -26,6 +26,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   late final IncrementalEpgService _epgService;
 
   final List<ChannelMappingEntry> _mappingEntries = [];
+  List<ChannelMappingEntry>? _sortedMappingEntries;
   List<ChannelMappingEntry> _filteredEntries = [];
   final Set<String> _selectedChannelIds = {};
   String _searchQuery = '';
@@ -58,6 +59,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
   void _buildMappingEntries() {
     _mappingEntries.clear();
+    _sortedMappingEntries = null;
 
     for (final channel in widget.channels) {
       final tvgId = channel.epgLookupId;
@@ -79,9 +81,11 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
         suggestedMatches: suggestedMatches,
       ));
     }
+  }
 
-    // Sort by confidence (lowest first) to prioritize unmapped channels
-    _mappingEntries.sort((a, b) => a.confidence.compareTo(b.confidence));
+  List<ChannelMappingEntry> get _getSortedMappingEntries {
+    return _sortedMappingEntries ??= List.from(_mappingEntries)
+      ..sort((a, b) => a.confidence.compareTo(b.confidence));
   }
 
   double _calculateChannelMatchConfidence(
@@ -109,7 +113,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _applyFilters() {
-    _filteredEntries = _mappingEntries.where((entry) {
+    _filteredEntries = _getSortedMappingEntries.where((entry) {
       // Apply search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -150,10 +154,10 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final matchedCount = _mappingEntries
+    final matchedCount = _getSortedMappingEntries
         .where((e) => e.hasEpgData || e.currentMapping != null)
         .length;
-    final totalCount = _mappingEntries.length;
+    final totalCount = _getSortedMappingEntries.length;
 
     return AppBar(
       backgroundColor: AppTheme.darkBackground,
@@ -530,7 +534,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _bulkAutoMap() async {
-    final entries = _mappingEntries
+    final entries = _getSortedMappingEntries
         .where((e) =>
             _selectedChannelIds.contains(e.channel.epgLookupId))
         .where((e) => e.confidence > 0.7)
@@ -596,7 +600,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     showDialog(
       context: context,
       builder: (context) => EpgAnalyticsDialog(
-        mappingEntries: _mappingEntries,
+        mappingEntries: _getSortedMappingEntries,
         epgService: _epgService,
       ),
     );
