@@ -395,7 +395,11 @@ class _MainShellState extends State<MainShell> {
 
     if (location.startsWith('/settings') || location.startsWith('/player')) {
       PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
+      try {
+        PaintingBinding.instance.imageCache.clearLiveImages();
+      } catch (_) {
+        // Ignore file deletion errors
+      }
     }
   }
 

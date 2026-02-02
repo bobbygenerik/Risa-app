@@ -53,7 +53,11 @@ class MemoryManager {
     try {
       // Clear image cache
       PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
+      try {
+        PaintingBinding.instance.imageCache.clearLiveImages();
+      } catch (e) {
+        // Ignore file deletion errors (race condition)
+      }
       
       // Set conservative cache limits
       PaintingBinding.instance.imageCache.maximumSize = 50;

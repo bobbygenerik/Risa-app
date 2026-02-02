@@ -175,7 +175,11 @@ void main() {
       if (memoryInfo.isLowMemory) {
         // Clear any existing image cache
         PaintingBinding.instance.imageCache.clear();
-        PaintingBinding.instance.imageCache.clearLiveImages();
+        try {
+          PaintingBinding.instance.imageCache.clearLiveImages();
+        } catch (_) {
+          // Ignore file deletion errors
+        }
 
         // Force multiple GC cycles for Shield
         for (int i = 0; i < 3; i++) {
