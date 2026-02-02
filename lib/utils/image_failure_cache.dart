@@ -12,9 +12,9 @@ class ImageFailureCache {
   static DateTime? _globalCooldownUntil;
   static DateTime? _globalDisableUntil;
 
-  static const int _globalFailureThreshold = 15;
-  static const Duration _globalWindow = Duration(seconds: 10);
-  static const Duration _globalCooldown = Duration(seconds: 10);
+  static const int _globalFailureThreshold = 100; // Increased from 50 - more tolerant
+  static const Duration _globalWindow = Duration(seconds: 5);
+  static const Duration _globalCooldown = Duration(seconds: 2); // Reduced from 5s
   static const int _globalFailureThresholdAggressive = 3;
   static const Duration _globalCooldownAggressive = Duration(minutes: 2);
   static const Duration _globalDisableAggressive = Duration(minutes: 10);

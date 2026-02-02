@@ -84,11 +84,16 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool _notifyPending = false;
   static const Duration _notifyThrottleInterval = Duration(milliseconds: 100);
 
+  // Playback mode: suspend all notifications during video to prevent jitter
+  bool _playbackActive = false;
+
   /// Override notifyListeners to prevent "setState after dispose" crashes
   /// and throttle notifications for performance
   @override
   void notifyListeners() {
     if (_disposed) return;
+    // Skip all notifications during video playback to prevent UI jitter
+    if (_playbackActive) return;
 
     final now = DateTime.now();
     if (_lastNotifyTime != null &&
@@ -170,6 +175,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _externalDbBusy = busy;
     debugLog(
         'EPG: External DB busy ${busy ? "enabled" : "cleared"} - suspending reads');
+  }
+
+  /// Set playback mode to suspend all notifyListeners during video playback.
+  /// This prevents LiveTV screen rebuilds that cause video jitter (70-328ms per frame).
+  void setPlaybackActive(bool active) {
+    if (_playbackActive == active) return;
+    _playbackActive = active;
+    debugLog('EPG: Playback mode ${active ? "enabled" : "disabled"}');
+    // When exiting playback, notify listeners to refresh the UI
+    if (!active && !_disposed) {
+      super.notifyListeners();
+    }
   }
 
   String? get error => _error;
@@ -284,7 +301,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Quick startup initialization that prioritizes cached data
   Future<void> quickStart() async {
+    // CRITICAL: Early return if we already have data - prevents re-parsing on navigation
+    if (_hasParsed || hasLoadedPrograms) {
+      debugLog('EPG: quickStart skipped (already have data: hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, channels=${_programsByChannel.length})');
+      return;
+    }
+    
     if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
+      debugLog('EPG: quickStart skipped (already loading)');
       return; // Already initializing
     }
 
@@ -3412,29 +3436,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final List<String> _pendingBatch = [];
   Timer? _batchTimer;
 
-  void _scheduleBatchRetry() {
-    _batchTimer?.cancel();
-    _batchTimer = Timer(const Duration(milliseconds: 500), () async {
-      if (_pendingBatch.isEmpty) {
-        _batchTimer?.cancel();
-        _batchTimer = null;
-        return;
-      }
-      final retryBatch = List<String>.from(_pendingBatch);
-      debugLog(
-          'EPG: Batch timer retry after suspend, loading ${retryBatch.length} channels');
-      await _loadProgramsFromDbBatch(retryBatch);
-      if (!_suspendDbReads) {
-        _pendingBatch.removeWhere((id) => retryBatch.contains(id));
-        if (_pendingBatch.isEmpty) {
-          _batchTimer?.cancel();
-          _batchTimer = null;
-        }
-      } else {
-        _scheduleBatchRetry();
-      }
-    });
-  }
+
 
   /// High-priority loading for visible channels - loads immediately without batching delay.
   /// Call this for the first screen of channels to ensure they load ASAP.
@@ -3443,6 +3445,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
+    // FIX: Don't try to load if we are currently parsing or doing a full refresh.
+    // This prevents marking channels as "attempted" (empty) while data is still being ingested.
+    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
+      return;
+    }
 
     final effectiveNames =
         channelNames != null && channelNames.length == channelIds.length
@@ -3483,16 +3490,19 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     debugLog(
         'EPG: priorityLoadVisibleChannels - loading ${epgIdsToLoad.length} channels immediately');
 
-    // Add to pending batch to trigger isBatchLoading getter
+    // Add to pending batch to trigger isBatchLoading getter (if needed by UI)
     _pendingBatch.addAll(epgIdsToLoad);
-    notifyListeners();
+    
+    // REMOVED: notifyListeners() here caused excessive rebuilding/flickering.
+    // relying on _loadProgramsFromDbBatch to notify if data is found.
 
     try {
       await _loadProgramsFromDbBatch(epgIdsToLoad);
     } finally {
       // Remove from pending batch
       _pendingBatch.removeWhere((id) => epgIdsToLoad.contains(id));
-      notifyListeners();
+      // REMOVED: notifyListeners() here too. 
+      // We only want to notify if we actually UPDATED data.
     }
   }
 
@@ -3541,6 +3551,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
+    // FIX: Don't load during major state changes to prevent thrashing
     if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
       return;
     }
@@ -3582,26 +3593,27 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     debugLog(
-        'EPG: ensureChannelsLoadedBatch - queueing ${epgIdsToLoad.length} channels for batch load');
+        'EPG: queueing ${epgIdsToLoad.length} channels for batch load');
+    
+    // Add to pending batch but DO NOT notify listeners yet (wait for timer)
     _pendingBatch.addAll(epgIdsToLoad);
+    
     _batchTimer?.cancel();
     _batchTimer = Timer(const Duration(milliseconds: 300), () async {
       final batch = List<String>.from(_pendingBatch);
+      if (batch.isEmpty) return;
+      
       debugLog('EPG: Batch timer fired, loading ${batch.length} channels');
+      // This will handle the notification internally when data arrives
       await _loadProgramsFromDbBatch(batch);
-      // Only clear if load succeeded (not suspended)
-      if (!_suspendDbReads) {
-        _pendingBatch.removeWhere((id) => batch.contains(id));
-        if (_pendingBatch.isEmpty) {
-          _batchTimer?.cancel();
-          _batchTimer = null;
-        }
-      } else {
-        // Reschedule for later until parsing completes.
-        _scheduleBatchRetry();
-      }
+      
+      // Cleanup
+      _pendingBatch.clear();
+      // Remove from attempted loads if we failed?
+      // For now, keep them as attempted so we don't retry endlessly in this session
     });
   }
+
 
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
     final batches = <List<String>>[];

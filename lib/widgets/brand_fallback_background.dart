@@ -6,6 +6,8 @@ class BrandBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    
+    // Base gradient
     final basePaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
@@ -14,39 +16,25 @@ class BrandBackgroundPainter extends CustomPainter {
       ).createShader(rect);
     canvas.drawRect(rect, basePaint);
 
+    // Single magenta triangle - bottom right corner
     final magentaPaint = Paint()
-      ..color = const Color(0xFFA23464).withValues(alpha: 0.08);
+      ..color = const Color(0xFFA23464).withValues(alpha: 0.12);
     final magentaPath = Path()
       ..moveTo(size.width, size.height)
-      ..lineTo(size.width, size.height * 0.4)
-      ..lineTo(size.width * 0.55, size.height)
+      ..lineTo(size.width, size.height * 0.5)
+      ..lineTo(size.width * 0.5, size.height)
       ..close();
     canvas.drawPath(magentaPath, magentaPaint);
 
+    // Single blue triangle - top left corner
     final bluePaint = Paint()
       ..color = const Color(0xFF2E6DB3).withValues(alpha: 0.15);
     final bluePath = Path()
       ..moveTo(0, 0)
-      ..lineTo(size.width * 0.7, 0)
-      ..lineTo(0, size.height * 0.55)
+      ..lineTo(size.width * 0.5, 0)
+      ..lineTo(0, size.height * 0.5)
       ..close();
     canvas.drawPath(bluePath, bluePaint);
-
-    final lightPath = Path()
-      ..moveTo(size.width * 0.05, size.height * 0.9)
-      ..lineTo(size.width * 0.95, size.height * 0.5)
-      ..lineTo(size.width * 0.15, size.height * 0.2)
-      ..close();
-    final lightPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Colors.white.withValues(alpha: 0.08),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    canvas.drawPath(lightPath, lightPaint);
   }
 
   @override

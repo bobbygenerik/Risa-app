@@ -1085,6 +1085,12 @@ class _EPGScreenState extends State<EPGScreen>
                         _epgState.setSelectedCategory(category);
                         // Scroll channel list to top
                         _scrollChannelListToTop();
+                        // Restore focus to first channel after list rebuilds
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _firstChannelFocus.requestFocus();
+                          }
+                        });
                       },
                     );
                   },
@@ -1145,10 +1151,8 @@ class _EPGScreenState extends State<EPGScreen>
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            // Focus first channel when moving right from categories
-            // (categories and channels have different item counts, so we just focus first)
-            _firstChannelFocus.requestFocus();
-            return KeyEventResult.handled;
+            // Let focus traversal find the nearest channel to the right
+            return KeyEventResult.ignored;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
             requestNavigationFocus();

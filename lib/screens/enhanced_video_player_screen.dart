@@ -198,7 +198,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             if (event.logicalKey == LogicalKeyboardKey.select ||
                 event.logicalKey == LogicalKeyboardKey.enter ||
                 event.logicalKey == LogicalKeyboardKey.space) {
-              _showControlsAndAutoHide();
+              _toggleControls();
               return KeyEventResult.handled;
             }
           }
@@ -220,6 +220,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           fit: StackFit.expand,
                           children: [
                             ChewiePlayerWidget(
+                              key: ValueKey(widget.videoUrl ??
+                                  widget.streamUrl ??
+                                  widget.channel?.url ??
+                                  'player_key'),
                               url: widget.videoUrl ??
                                   widget.streamUrl ??
                                   widget.channel?.url ??

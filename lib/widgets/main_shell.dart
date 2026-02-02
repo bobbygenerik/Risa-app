@@ -49,6 +49,7 @@ class _MainShellState extends State<MainShell> {
   String? _lastLocation;
   bool _isSidebarExpanded = false;
   DateTime? _lastBackPress;
+  DateTime? _lastNavTime; // Track navigation timing to prevent PopScope conflict
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -316,6 +317,14 @@ class _MainShellState extends State<MainShell> {
     }
     _lastBackPress = now;
     
+    // FIX: Skip if another PopScope just triggered navigation (within 200ms)
+    // This prevents double-firing where a screen's PopScope goes to /home,
+    // then MainShell sees /home and immediately goes to /exit
+    if (_lastNavTime != null && now.difference(_lastNavTime!).inMilliseconds < 200) {
+      debugLog('MainShell back nav: skipped (screen PopScope just navigated)');
+      return;
+    }
+    
     debugLog('MainShell back nav: location=$location, last=$lastLocation');
 
     if (location == '/settings' ||
@@ -373,6 +382,7 @@ class _MainShellState extends State<MainShell> {
     final location = _routeInfoProvider?.value.uri.toString();
     if (location == null || location == _lastLocation) return;
     _lastLocation = location;
+    _lastNavTime = DateTime.now(); // Track when navigation occurred
     _sidebarKey.currentState?.collapse();
 
     // Restore focus to content when route changes (e.g. returning from player)

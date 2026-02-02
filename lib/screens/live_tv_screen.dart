@@ -173,8 +173,7 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-// Soft edge fade width factor - increased for smoother wave transition
-const double _heroMatteSoftEdgeWidthFactor = 0.045;
+const double _heroMatteSoftEdgeWidthFactor = 0.03;
 
 class _HeroMattePainter extends CustomPainter {
   final double revealWidthFactor;
@@ -211,7 +210,7 @@ class _HeroMattePainter extends CustomPainter {
         ..blendMode = BlendMode.dstOut
         ..style = PaintingStyle.stroke
         ..strokeWidth = softWidth
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, softWidth * 0.6)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, softWidth * 0.4)
         ..color = const Color(0xFF000000);
       canvas.drawPath(revealPath, softPaint);
     }
@@ -261,38 +260,18 @@ class _HeroBottomScrimClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     final revealWidth = size.width * revealWidthFactor;
     final revealLeft = size.width - revealWidth;
-    final waveAmplitude = size.width * edgeCurveFactor * 0.6;
-    
-    final path = Path();
-    path.moveTo(0, 0);
-    path.lineTo(revealLeft, 0);
-    
-    // Wave parameters (matching _buildHeroRevealPath)
-    const int waveCount = 2;
-    final double waveHeight = size.height / waveCount;
-    
-    for (int i = 0; i < waveCount; i++) {
-      final double startY = i * waveHeight;
-      final double midY = startY + waveHeight / 2;
-      final double endY = startY + waveHeight;
-      
-      path.quadraticBezierTo(
-        revealLeft - waveAmplitude,
-        midY - waveHeight / 4,
-        revealLeft - waveAmplitude * 0.5,
-        midY,
-      );
-      path.quadraticBezierTo(
+    final curveDepth = size.width * edgeCurveFactor;
+    return Path()
+      ..moveTo(0, 0)
+      ..lineTo(revealLeft, 0)
+      ..quadraticBezierTo(
+        revealLeft - curveDepth,
+        size.height * 0.5,
         revealLeft,
-        midY + waveHeight / 4,
-        revealLeft,
-        endY,
-      );
-    }
-    
-    path.lineTo(0, size.height);
-    path.close();
-    return path;
+        size.height,
+      )
+      ..lineTo(0, size.height)
+      ..close();
   }
 
   @override
@@ -309,42 +288,18 @@ Path _buildHeroRevealPath(
 ) {
   final double revealWidth = size.width * revealWidthFactor;
   final double revealLeft = size.width - revealWidth;
-  final double waveAmplitude = size.width * edgeCurveFactor * 0.6;
-  
-  // Create a subtle sine wave pattern along the edge
-  final path = Path();
-  path.moveTo(revealLeft, 0);
-  
-  // Wave parameters
-  const int waveCount = 2; // Number of wave cycles
-  final double waveHeight = size.height / waveCount;
-  
-  for (int i = 0; i < waveCount; i++) {
-    final double startY = i * waveHeight;
-    final double midY = startY + waveHeight / 2;
-    final double endY = startY + waveHeight;
-    
-    // First half of wave (curves left/inward)
-    path.quadraticBezierTo(
-      revealLeft - waveAmplitude,
-      midY - waveHeight / 4,
-      revealLeft - waveAmplitude * 0.5,
-      midY,
-    );
-    // Second half of wave (curves right/outward)
-    path.quadraticBezierTo(
+  final double curveDepth = size.width * edgeCurveFactor;
+  return Path()
+    ..moveTo(revealLeft, 0)
+    ..quadraticBezierTo(
+      revealLeft - curveDepth,
+      size.height * 0.5,
       revealLeft,
-      midY + waveHeight / 4,
-      revealLeft,
-      endY,
-    );
-  }
-  
-  path.lineTo(size.width, size.height);
-  path.lineTo(size.width, 0);
-  path.close();
-  
-  return path;
+      size.height,
+    )
+    ..lineTo(size.width, size.height)
+    ..lineTo(size.width, 0)
+    ..close();
 }
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
@@ -489,15 +444,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final bool _fanartEnabled = true;
   final bool _sportsDbEnabled = true;
   final List<String> _categoryCacheOrder = [];
-
-  // Ready-first display: Wait for content to be fully ready before showing
-  bool _initialContentReady = false;
-  bool _readinessCheckInProgress = false;
-  Timer? _readinessTimeout;
-  static const Duration _readinessGracePeriod = Duration(seconds: 8);
-  static const int _minReadyChannelsForDisplay = 6;
-  String _readinessStatus = 'Initializing...';
-  double _readinessProgress = 0.0;
 
   @override
   void initState() {
@@ -970,109 +916,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  /// Check if content is ready to display (EPG + artwork available for visible items)
-  Future<void> _checkContentReadiness(
-    List<Channel> channels,
-    IncrementalEpgService epgService,
-  ) async {
-    // Skip if already ready or check in progress
-    if (_initialContentReady || _readinessCheckInProgress) return;
-    if (channels.isEmpty) return;
-
-    _readinessCheckInProgress = true;
-
-    try {
-      // Start the timeout timer on first check
-      _startReadinessTimeout();
-
-      // Get current programs for visible channels
-      final programs = <Program>[];
-      final channelsWithPrograms = <Channel>[];
-      final visibleCount = math.min(channels.length, 12);
-
-      for (int i = 0; i < visibleCount; i++) {
-        final channel = channels[i];
-        final program = epgService.getCurrentProgram(
-          channel.epgLookupId,
-          channelName: channel.epgLookupNameFallback,
-          groupTitle: channel.groupTitle,
-        );
-        if (program != null) {
-          programs.add(program);
-          channelsWithPrograms.add(channel);
-        }
-      }
-
-      // Update progress
-      final epgReady = programs.length;
-      _readinessProgress = (epgReady / visibleCount).clamp(0.0, 0.5);
-
-      if (programs.isEmpty) {
-        _readinessStatus = 'Loading program data...';
-        _readinessCheckInProgress = false;
-        if (mounted) setState(() {});
-        return;
-      }
-
-      _readinessStatus = 'Loading artwork...';
-      if (mounted) setState(() {});
-
-      // Check artwork readiness
-      final artworkReady =
-          _artworkService.countReadyArtwork(programs, channelsWithPrograms);
-      _readinessProgress =
-          0.5 + (artworkReady / programs.length * 0.5).clamp(0.0, 0.5);
-
-      debugLog(
-          'LiveTV readiness: EPG=$epgReady/$visibleCount, artwork=$artworkReady/${programs.length}');
-
-      // Consider ready if we have minimum channels ready
-      if (artworkReady >= _minReadyChannelsForDisplay ||
-          artworkReady >= programs.length * 0.6) {
-        _markContentReady();
-        return;
-      }
-
-      // Trigger prefetch and wait briefly for more artwork
-      if (programs.isNotEmpty) {
-        // Queue high-priority artwork fetch for visible programs
-        for (int i = 0; i < math.min(programs.length, 8); i++) {
-          _artworkService.ensureFreshProgramArtwork(
-            programs[i],
-            channelsWithPrograms[i],
-            highPriority: true,
-          );
-        }
-      }
-
-      if (mounted) setState(() {});
-    } finally {
-      _readinessCheckInProgress = false;
-    }
-  }
-
-  void _startReadinessTimeout() {
-    if (_readinessTimeout != null) return;
-    _readinessTimeout = Timer(_readinessGracePeriod, () {
-      if (!_initialContentReady && mounted) {
-        debugLog(
-            'LiveTV: Readiness timeout reached, showing content regardless');
-        _markContentReady();
-      }
-    });
-  }
-
-  void _markContentReady() {
-    if (_initialContentReady) return;
-    _initialContentReady = true;
-    _readinessTimeout?.cancel();
-    _readinessTimeout = null;
-    _readinessProgress = 1.0;
-    _readinessStatus = 'Ready';
-    debugLog('LiveTV: Content marked as ready, displaying UI');
-    if (mounted) setState(() {});
-  }
-
   void _refreshOnResume() {
     if (!mounted) return;
     final channelProvider =
@@ -1134,25 +977,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     if (missingIds.isNotEmpty) {
-      // Priority load first 12 channels (visible on initial screen)
-      // These load immediately without batching delay
-      const visibleCount = 12;
-      if (missingIds.length <= visibleCount) {
-        unawaited(epgService.priorityLoadVisibleChannels(
-          missingIds,
-          channelNames: missingNames,
-        ));
-      } else {
-        // Split: priority for visible, batch for rest
-        unawaited(epgService.priorityLoadVisibleChannels(
-          missingIds.sublist(0, visibleCount),
-          channelNames: missingNames.sublist(0, visibleCount),
-        ));
-        unawaited(epgService.ensureChannelsLoadedBatch(
-          missingIds.sublist(visibleCount),
-          channelNames: missingNames.sublist(visibleCount),
-        ));
-      }
+      unawaited(epgService.ensureChannelsLoadedBatch(
+        missingIds,
+        channelNames: missingNames,
+      ));
     }
   }
 
@@ -1249,7 +1077,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _stopIdleTimer();
     _stopSkeletonWatchdog();
     _artworkRetryWindowTimer?.cancel();
-    _readinessTimeout?.cancel();
     _focusChangeNotifier.dispose();
     _timerService.unregister('live_tv_carousel');
     _featuredRotationTimer?.cancel();
@@ -2126,26 +1953,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
                     _markSkeletonVisibility(false);
 
-                    // READY-FIRST DISPLAY: Check if content is ready before showing
-                    // This ensures EPG data AND artwork are available for visible items
-                    if (!_initialContentReady && !_hasShownContent) {
-                      // Trigger readiness check
-                      unawaited(
-                          _checkContentReadiness(displayChannels, epgService));
-
-                      // Show skeleton with readiness progress while waiting
-                      return _buildSkeletonLoaderTracked(
-                        showColdStartOverlay: false,
-                        titleText: 'Preparing content',
-                        statusText: _readinessStatus,
-                        secondaryStatusText: null,
-                        progress: _readinessProgress,
-                      );
-                    }
-
-                    // Mark that we've shown content to prevent skeleton flicker
-                    _hasShownContent = true;
-
                     // displayChannels already defined above
 
                     // Handle Stable ID vs Index
@@ -2171,21 +1978,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           channelName: featuredChannel.epgLookupNameFallback));
                     }
 
-                    // Use AnimatedOpacity for smooth fade-in when content first appears
-                    return AnimatedOpacity(
-                      opacity: _initialContentReady ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                      child: Stack(
-                        children: [
-                          _buildFullScreenHero(
-                            context,
-                            featuredChannel,
-                            displayChannels,
-                          ),
-                          _buildBackgroundUpdateIndicator(context),
-                        ],
-                      ),
+                    return Stack(
+                      children: [
+                        _buildFullScreenHero(
+                          context,
+                          featuredChannel,
+                          displayChannels,
+                        ),
+                        _buildBackgroundUpdateIndicator(context),
+                      ],
                     );
                   },
                 ));
@@ -5030,6 +4831,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     debugLog('Group: ${channel.groupTitle ?? "none"}');
     logToSystem('TAP: ${channel.name} -> $streamUrl', name: 'RisaTap');
 
+    // Aggressive memory cleanup before player
+    _releaseArtworkCachesForPlayback();
+    MemoryManager.checkMemoryPressure();
+    MemoryManager.clearCaches();
+    MemoryManager.forceGarbageCollection();
+
+    // Clear hero image cache to free memory
+
     if (!mounted) return;
     try {
       debugLog('Navigating to player screen...');
@@ -5046,11 +4855,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _artworkService.resumeFetching();
         _artworkService.resumeCaches();
         _suspendHeroBackground = false;
+        // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
+        unawaited(_prefetchInitialRows(force: true));
       }
     }
   }
 
+  void _releaseArtworkCachesForPlayback() {
+    _artworkService.pauseFetching();
+    _artworkService.suspendCaches();
 
+    // Clear local caches that are not in service
+    MemoryManager.checkMemoryPressure();
+    MemoryManager.clearCaches();
+    MemoryManager.forceGarbageCollection();
+    _categoryChannelCache.clear();
+  }
 
   Widget _buildHeroContent(
     Channel featuredChannel,
