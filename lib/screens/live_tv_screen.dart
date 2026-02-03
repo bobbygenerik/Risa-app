@@ -416,12 +416,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _categoryChunkSize = 6;
   static const double _categoryPrefetchExtent =
       600; // Restored but conservative
-  // Reduced by 10% - hero scrim now narrower, showing more artwork
-  static const double _heroMatteRevealWidthFactor = 0.45; // Was 0.5
+  // Scrim reduced to 35% to show more artwork
+  static const double _heroMatteRevealWidthFactor = 0.65; // Was 0.45
   static const double _heroMatteEdgeCurveFactor = 0.08;
   // Cover the curved reveal so the image doesn't end with a straight edge.
   static const double _heroImageWidthFactor =
-      _heroMatteRevealWidthFactor + _heroMatteEdgeCurveFactor; // Now 0.53
+      _heroMatteRevealWidthFactor + _heroMatteEdgeCurveFactor; // Now 0.73
   final Queue<String> _categoryLoadQueue = Queue<String>();
   int _activeCategoryLoads = 0;
   static const int _maxCategoryLoads = 2; // Restored
