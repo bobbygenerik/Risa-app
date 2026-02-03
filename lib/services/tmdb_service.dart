@@ -30,6 +30,7 @@ class TMDBService {
   static const Duration _defaultTtl = Duration(hours: 24);
   static const int _maxCacheEntries = 500; // Increased cache size
   static Future<void>? _cacheLoadFuture;
+  static Timer? _persistTimer;
 
   // Batch request queue
   static final Map<String, List<Function(String?)>> _pendingRequests = {};
@@ -143,8 +144,13 @@ class TMDBService {
 
     // Add new entry (most recently used)
     _cache[key] = _CacheItem(data, DateTime.now().add(ttl ?? _defaultTtl));
-    // persist asynchronously
-    _persistCacheToDisk();
+    // persist asynchronously (debounced)
+    _schedulePersist();
+  }
+
+  static void _schedulePersist() {
+    _persistTimer?.cancel();
+    _persistTimer = Timer(const Duration(seconds: 2), _persistCacheToDisk);
   }
 
   static bool _cacheLoaded = false;
@@ -185,15 +191,22 @@ class TMDBService {
   static Future<void> _persistCacheToDisk() async {
     try {
       final dir = await getApplicationSupportDirectory();
-      final file = File('${dir.path}/$_cacheFileName');
-      final Map<String, dynamic> out = {};
+      final path = '${dir.path}/$_cacheFileName';
+
+      // Create snapshot for isolate
+      final Map<String, Map<String, dynamic>> snapshot = {};
       _cache.forEach((key, item) {
-        out[key] = {
+        snapshot[key] = {
           'data': item.data,
           'expiry': item.expiry.millisecondsSinceEpoch,
         };
       });
-      await file.writeAsString(json.encode(out));
+
+      // Run encoding and writing in background
+      await Isolate.run(() async {
+        final file = File(path);
+        await file.writeAsString(json.encode(snapshot));
+      });
     } catch (e) {
       // ignore disk write errors
     }
