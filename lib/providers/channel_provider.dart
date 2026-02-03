@@ -231,10 +231,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   /// Compatibility wrapper - calls async version (non-blocking for large playlists)
-  void _rebuildChannelCaches() {
-    unawaited(_rebuildChannelCachesAsync());
-  }
-
   void _refreshSmartChannelCache({bool allowConversion = true}) {
     if (_channelMaps.isEmpty) return;
     unawaited(() async {

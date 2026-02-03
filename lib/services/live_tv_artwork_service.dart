@@ -40,16 +40,7 @@ class _TitleCacheEntry {
 }
 
 /// Data class for negative cache entries to pass to/from isolate.
-class _NegativeCacheEntry {
-  final String key;
-  final int until;
-
-  _NegativeCacheEntry({
-    required this.key,
-    required this.until,
-  });
-}
-
+// Removed unused _NegativeCacheEntry class
 /// Parses title cache JSON in an isolate.
 List<_TitleCacheEntry> _parseTitleCacheJsonIsolate(String raw) {
   try {
@@ -84,51 +75,8 @@ List<_TitleCacheEntry> _parseTitleCacheJsonIsolate(String raw) {
 }
 
 /// Parses negative cache JSON in an isolate.
-List<_NegativeCacheEntry> _parseNegativeCacheJsonIsolate(String raw) {
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is! Map<String, dynamic>) return [];
-    final entries = <_NegativeCacheEntry>[];
-    final now = DateTime.now().millisecondsSinceEpoch;
-    decoded.forEach((key, value) {
-      if (value is int && value > now) {
-        entries.add(_NegativeCacheEntry(key: key, until: value));
-      }
-    });
-    return entries;
-  } catch (e) {
-    return [];
-  }
-}
-
-/// Encodes title cache data to JSON in an isolate.
-String? _encodeTitleCacheJsonIsolate(List<_TitleCacheEntry> entries) {
-  try {
-    final map = <String, Map<String, dynamic>>{};
-    for (final entry in entries) {
-      map[entry.key] = {
-        'url': entry.url,
-        'ts': entry.timestamp,
-      };
-    }
-    return jsonEncode(map);
-  } catch (e) {
-    return null;
-  }
-}
-
-/// Encodes negative cache data to JSON in an isolate.
-String? _encodeNegativeCacheJsonIsolate(List<_NegativeCacheEntry> entries) {
-  try {
-    final map = <String, int>{};
-    for (final entry in entries) {
-      map[entry.key] = entry.until;
-    }
-    return jsonEncode(map);
-  } catch (e) {
-    return null;
-  }
-}
+// Removed unused isolate functions: _parseNegativeCacheJsonIsolate, _encodeTitleCacheJsonIsolate, _encodeNegativeCacheJsonIsolate
+// These were for future optimization but not currently used
 
 /// Callback signature for when artwork is updated.
 typedef ArtworkUpdateCallback = void Function();
