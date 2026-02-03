@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,6 +42,12 @@ class OptimizedEpgService extends ChangeNotifier {
 
   // Regex constants for parsing
   static final RegExp _timeParseRe = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp _programmeStartRe = RegExp(r'<(?:\w+:)?programme\b', caseSensitive: false);
+  static final RegExp _programmeEndRe = RegExp(r'</(?:\w+:)?programme\s*>', caseSensitive: false);
+  static final RegExp _channelStartRe = RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
+  static final RegExp _channelEndRe = RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
+  static final RegExp _invalidXmlCharRe = RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
+  static final RegExp _unbrokenEntityRe = RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
 
   /// Load EPG data with fast startup optimizations
   Future<void> loadEpgData(String epgUrl, List<Channel> criticalChannels, {bool force = false}) async {
@@ -60,7 +67,7 @@ class OptimizedEpgService extends ChangeNotifier {
     await _ensureMappingsLoaded();
 
     try {
-      debugLog('OptimizedEpgService: Starting EPG load (force=$force) for ${criticalChannels.length} critical channels');
+      debugLog('OptimizedEpgService: Starting fast EPG load for ${criticalChannels.length} critical channels');
       
       // Initialize DB
       final db = LocalDbService.instance;
@@ -229,6 +236,10 @@ class OptimizedEpgService extends ChangeNotifier {
 
   String? _resolveEpgId(Channel channel) {
     if (channel.tvgId != null && channel.tvgId!.isNotEmpty) {
+      if (_normalizedEpgIds.containsValue(channel.tvgId)) {
+        debugLog('EPG Match: ${channel.name} -> ${channel.tvgId} (direct tvgId)');
+        return channel.tvgId;
+      }
       final normalizedTvg = _normalize(channel.tvgId!);
       if (_normalizedEpgIds.containsKey(normalizedTvg)) {
         final matched = _normalizedEpgIds[normalizedTvg]!;
