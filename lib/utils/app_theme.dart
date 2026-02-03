@@ -14,7 +14,7 @@ class AppTheme {
   static const Color dialogBackground =
       Color(0xFF1E1E2E); // Solid dark for dialogs/popups
   static const Color sidebarBackground =
-      Color(0xFF15171C); // Slightly lighter charcoal for sidebar contrast
+      Color(0xFF111316); // Match scrim for seamless appearance
   static const Color textPrimary =
       Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
