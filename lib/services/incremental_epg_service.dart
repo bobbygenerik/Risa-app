@@ -63,13 +63,13 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Set<String> _allowedChannelIdsNormalized = {};
   int _allowedChannelCount = 0;
   int _epgFutureHours = 12;
-  // Smaller initial window for faster startup while keeping timezone buffer.
-  static const int _initialFutureHours = 12;
-  // Full window: 30 hours covers global timezones (UTC-12 to UTC+14 = 26hr span + 4hr buffer)
-  static const int _fullFutureHours = 30;
-  // Past/future windows tuned for timezone drift without heavy ingest.
-  static const int _epgPastWindowHours = 12;
-  static const int _epgFutureWindowHours = 30;
+  // Reduced window for faster cold starts while keeping timezone buffer.
+  static const int _initialFutureHours = 6;
+  // 8-hour window covers global timezones (UTC-12 to UTC+14) for 6-hour viewing window
+  static const int _fullFutureHours = 8;
+  // Reduced past/future windows for faster parsing
+  static const int _epgPastWindowHours = 2;
+  static const int _epgFutureWindowHours = 8;
   bool _extendedWindowScheduled = false;
   bool _extendingWindow = false;
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
