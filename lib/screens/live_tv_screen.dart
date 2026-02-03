@@ -3515,14 +3515,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     EdgeInsets padding,
     bool isFirstRow,
   ) {
-    if (!_isIndexVisibleInRow(
+    final isVisible = _isIndexVisibleInRow(
       context,
       controller,
       index,
       cardWidth,
       cardGap,
       padding,
-    )) {
+    );
+    if (!isVisible) {
       return false;
     }
     final window = MemoryManager.isLowMemory
@@ -3530,9 +3531,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : (isFirstRow ? _heroPrefetchWindow : _rowPrefetchWindow);
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
-      return index < window;
+      final shouldPrefetch = index < window;
+      if (index < 3) debugLog('Prefetch index $index: $shouldPrefetch (no focus, window=$window)');
+      return shouldPrefetch;
     }
-    return (index - focusedIndex).abs() <= window;
+    final shouldPrefetch = (index - focusedIndex).abs() <= window;
+    if (index < 3) debugLog('Prefetch index $index: $shouldPrefetch (focused=$focusedIndex, window=$window)');
+    return shouldPrefetch;
   }
 
   bool _isIndexVisibleInRow(
