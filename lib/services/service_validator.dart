@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:iptv_player/config/oauth_config.dart';
 import 'package:iptv_player/config/fanart_config.dart';
-import 'package:iptv_player/config/sportradar_config.dart';
 import 'package:iptv_player/config/thesportsdb_config.dart';
 import 'package:iptv_player/config/tvdb_config.dart';
 
@@ -29,11 +28,6 @@ class ServiceValidator {
     return FanartConfig.apiKey.isNotEmpty;
   }
 
-  /// Check Sportradar availability
-  static bool get isSportradarAvailable {
-    return SportradarConfig.apiKey.isNotEmpty;
-  }
-
   /// Check TheSportsDB availability
   static bool get isSportsDbAvailable {
     return TheSportsDbConfig.apiKey.isNotEmpty;
@@ -45,7 +39,6 @@ class ServiceValidator {
       'tmdb': isTmdbAvailable,
       'tvdb': isTvdbAvailable,
       'fanart': isFanartAvailable,
-      'sportradar': isSportradarAvailable,
       'thesportsdb': isSportsDbAvailable,
       'whisper': isWhisperAvailable,
     };

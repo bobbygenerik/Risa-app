@@ -1,0 +1,62 @@
+=== 22:22:48===
+=== 22:22:48===
+=== 22:22:48===
+            Graphics:   235744                         235744
+           TOTAL PSS:   438347            TOTAL RSS:   553548       TOTAL SWAP PSS:      114
+Janky frames: 1 (33.33%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   240456                         240456
+           TOTAL PSS:   491498            TOTAL RSS:   617108       TOTAL SWAP PSS:       64
+Janky frames: 1 (25.00%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   240456                         240456
+           TOTAL PSS:   513851            TOTAL RSS:   639576       TOTAL SWAP PSS:       64
+Janky frames: 1 (25.00%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   217380                         217380
+           TOTAL PSS:   535495            TOTAL RSS:   661624       TOTAL SWAP PSS:       64
+Janky frames: 1 (25.00%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   233476                         233476
+           TOTAL PSS:   541293            TOTAL RSS:   667544       TOTAL SWAP PSS:       64
+Janky frames: 1 (25.00%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   228096                         228096
+           TOTAL PSS:   485388            TOTAL RSS:   612964       TOTAL SWAP PSS:       64
+Janky frames: 2 (11.76%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   227856                         227856
+           TOTAL PSS:   495465            TOTAL RSS:   623044       TOTAL SWAP PSS:       64
+Janky frames: 2 (11.76%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   227832                         227832
+           TOTAL PSS:   488209            TOTAL RSS:   615808       TOTAL SWAP PSS:       64
+Janky frames: 2 (11.76%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   142072                         142072
+           TOTAL PSS:   422753            TOTAL RSS:   550356       TOTAL SWAP PSS:       64
+Janky frames: 2 (11.76%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   140856                         140856
+           TOTAL PSS:   407611            TOTAL RSS:   535216       TOTAL SWAP PSS:       64
+Janky frames: 2 (11.76%)
+90th percentile: 20ms
+=== 22:22:48===
+            Graphics:   230644                         230644
+           TOTAL PSS:   523112            TOTAL RSS:   650812       TOTAL SWAP PSS:       64
+Janky frames: 2 (7.14%)
+90th percentile: 14ms
+=== 22:22:48===
+            Graphics:    89720                          89720
+           TOTAL PSS:   430072            TOTAL RSS:   558156       TOTAL SWAP PSS:       64
+Janky frames: 2 (7.14%)
+90th percentile: 14ms

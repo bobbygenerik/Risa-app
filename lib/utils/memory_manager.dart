@@ -59,9 +59,9 @@ class MemoryManager {
         // Ignore file deletion errors (race condition)
       }
       
-      // Set conservative cache limits
-      PaintingBinding.instance.imageCache.maximumSize = 50;
-      PaintingBinding.instance.imageCache.maximumSizeBytes = 8 * 1024 * 1024; // 8MB max
+      // Set balanced cache limits
+      PaintingBinding.instance.imageCache.maximumSize = 100;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 150 * 1024 * 1024; // 150MB max
       
       LogoImageCache.clear();
       

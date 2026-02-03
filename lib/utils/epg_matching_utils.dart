@@ -84,6 +84,32 @@ class EPGMatchingUtils {
     'us': 'usa', 'uk': 'united kingdom', 'de': 'germany', 'fr': 'france'
   };
 
+  static const Map<String, String> _commonTranslationMap = {
+    'noticias': 'news',
+    'newses': 'news',
+    'cine': 'movies',
+    'peliculas': 'movies',
+    'filmes': 'movies',
+    'canal': 'channel',
+    'canale': 'channel',
+    'sport': 'sports',
+    'deportes': 'sports',
+    'futbol': 'football',
+    'fútbol': 'football',
+    'musica': 'music',
+    'musik': 'music',
+    'kids': 'kids',
+    'ninos': 'kids',
+    'infantil': 'kids',
+  };
+
+  static final RegExp _commonAbbrevRe =
+      RegExp(r'\b(' + _commonAbbrevMap.keys.join('|') + r')\b');
+  static final RegExp _numberWordRe =
+      RegExp(r'\b(' + _numberWordMap.keys.join('|') + r')\b');
+  static final RegExp _commonTranslationRe =
+      RegExp(r'\b(' + _commonTranslationMap.keys.join('|') + r')\b');
+
   /// Cleans the channel name but preserves word structure (for tokenization).
   static String cleanChannelName(String input) {
     if (input.isEmpty) return '';
@@ -110,15 +136,17 @@ class EPGMatchingUtils {
     // 7. Standardize connectors
     s = s.replaceAll(_commonConnectorsRe, ' and ');
 
-    // 8. Expand abbreviations (NEW)
-    _commonAbbrevMap.forEach((abbr, full) {
-      s = s.replaceAll(RegExp(r'\b' + abbr + r'\b'), full);
-    });
+    // 8. Expand abbreviations (Optimized)
+    s = s.replaceAllMapped(_commonAbbrevRe,
+        (match) => _commonAbbrevMap[match.group(0)!] ?? match.group(0)!);
 
-    // 9. Convert number words
-    _numberWordMap.forEach((word, digit) {
-      s = s.replaceAll(RegExp(r'\b' + word + r'\b'), digit);
-    });
+    // 9. Convert number words (Optimized)
+    s = s.replaceAllMapped(_numberWordRe,
+        (match) => _numberWordMap[match.group(0)!] ?? match.group(0)!);
+
+    // 10. Translate common words (Added from PR #9)
+    s = s.replaceAllMapped(_commonTranslationRe,
+        (match) => _commonTranslationMap[match.group(0)!] ?? match.group(0)!);
 
     return s.trim();
   }

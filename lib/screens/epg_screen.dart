@@ -391,12 +391,8 @@ class _EPGScreenState extends State<EPGScreen>
       final channelProvider =
           Provider.of<ChannelProvider>(context, listen: false);
       var categories = await channelProvider.getAllCategoryNamesAsync();
-      if (categories.isEmpty &&
-          channelProvider.hasChannels &&
-          channelProvider.hasComputedCategories &&
-          !channelProvider.isGroupingChannels) {
-        categories = await channelProvider.forceRecomputeCategories();
-      }
+      // DON'T force recompute - it's too expensive and causes infinite loops
+      // Just use what we have
       if (!mounted) return;
       if (categories.isNotEmpty) {
         setState(() {
@@ -722,22 +718,15 @@ class _EPGScreenState extends State<EPGScreen>
             }
 
             // Get category names (lightweight - no channel grouping)
-            // Wait for categories to be computed if they're not ready yet
+            // Use cached categories if available, don't trigger expensive recomputation
             final rawCategories = channelProvider.getAllCategoryNames();
-            if (rawCategories.isEmpty &&
-                channelProvider.hasChannels &&
-                !channelProvider.isGroupingChannels &&
-                !channelProvider.hasComputedCategories) {
-              // Categories not computed yet but we have channels - trigger computation.
-              unawaited(channelProvider.getAllCategoryNamesAsync());
-              unawaited(_primeCategories(force: true));
-            }
             if (rawCategories.isNotEmpty) {
               _lastCategoryNames = List<String>.from(rawCategories);
             }
 
             final effectiveCategories =
                 rawCategories.isNotEmpty ? rawCategories : _lastCategoryNames;
+            // Don't show loading spinner if we have cached categories
             final isCategoryLoading = effectiveCategories.isEmpty &&
                 channelProvider.hasChannels &&
                 channelProvider.isGroupingChannels;

@@ -187,7 +187,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (_tabs.isEmpty) return false;
     final index = _activeTabIndex.clamp(0, _tabs.length - 1);
     final node = _tabFocusNodes[index];
-    if (force || !node.hasFocus) {
+    // Only focus if forced or if nothing currently has focus
+    if (force || (!node.hasFocus && FocusManager.instance.primaryFocus == null)) {
       node.requestFocus();
     }
     return true;

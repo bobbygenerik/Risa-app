@@ -751,6 +751,12 @@ class _SettingsScreenState extends State<SettingsScreen>
               onTap: _handleClearEpg,
             ),
             SettingsActionTile(
+              title: 'Clear Artwork Cache',
+              subtitle: 'Reset artwork negative cache and retry failed fetches',
+              icon: Icons.image_not_supported,
+              onTap: _handleClearArtworkCache,
+            ),
+            SettingsActionTile(
               title: AppLocalizations.of(context)!.autoRefreshInterval,
               subtitle: AppLocalizations.of(context)!.refreshEveryHours(_epgCacheDuration),
               icon: Icons.timer,
@@ -1221,6 +1227,18 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() {});
     _showMessage('EPG cleared.');
+  }
+
+  Future<void> _handleClearArtworkCache() async {
+    // Access artwork service from LiveTV screen's state
+    // For now, just clear SharedPreferences keys
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('live_tv_program_artwork_title_cache_v1');
+    await prefs.remove('live_tv_program_artwork_negative_cache_v1');
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    if (!mounted) return;
+    _showMessage('Artwork cache cleared. Restart app to refetch.');
   }
 
   void _browseStorage() async {

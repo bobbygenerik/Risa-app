@@ -114,7 +114,7 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
         autoInitialize: false, 
         allowFullScreen: true,
         allowedScreenSleep: false,
-        showControls: true,
+        showControls: false,
         errorBuilder: (context, errorMessage) {
           return Center(
             child: Column(

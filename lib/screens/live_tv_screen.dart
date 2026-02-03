@@ -217,7 +217,6 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-const double _heroMatteSoftEdgeWidthFactor = 0.03;
 
 class _HeroMattePainter extends CustomPainter {
   final double revealWidthFactor;
@@ -248,16 +247,18 @@ class _HeroMattePainter extends CustomPainter {
       Paint()..blendMode = BlendMode.clear,
     );
 
-    final double softWidth = size.width * _heroMatteSoftEdgeWidthFactor;
+    // Soft edge fade along the curved path
+    final double softWidth = size.width * 0.08;
     if (softWidth > 0) {
       final Paint softPaint = Paint()
         ..blendMode = BlendMode.dstOut
         ..style = PaintingStyle.stroke
         ..strokeWidth = softWidth
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, softWidth * 0.4)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, softWidth * 0.5)
         ..color = const Color(0xFF000000);
       canvas.drawPath(revealPath, softPaint);
     }
+    
     canvas.restore();
   }
 
@@ -1515,14 +1516,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _resetRowScrollOffsets();
         _initialFocusRequested = false;
         _requestInitialFocus();
-        // Force category refresh if we have channels but incomplete categories
-        if (provider.hasChannels && !_loadingCategories) {
-          final providerCats = provider.getAllCategoryNames();
-          if (_categoryNames.isEmpty ||
-              providerCats.length > _categoryNames.length) {
-            _categoryPrefetchRequested = false;
-            _requestCategoryPrefetch();
-          }
+        // DON'T force category refresh on navigation back - data is already loaded
+        // Only refresh if we truly have no categories at all
+        if (provider.hasChannels && !_loadingCategories && _categoryNames.isEmpty) {
+          _categoryPrefetchRequested = false;
+          _requestCategoryPrefetch();
         }
       });
     }
@@ -1655,7 +1653,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   _replaceCategories(latestCategories);
-                  setState(() {});
                   unawaited(_prefetchInitialCategoryRows());
                 });
               } else if (_visibleCategoryCount < _categoryNames.length) {
@@ -1663,7 +1660,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   _visibleCategoryCount = _categoryNames.length;
-                  setState(() {});
                 });
               }
             }
@@ -2782,16 +2778,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final logoSlotHeight = context.tvSpacing(
         48); // Balanced size for visibility without pushing out description
 
-    // Safe max height: more generous space for content
-    final heroHeight = context.heroHeight();
-    final cardPeek = 80.0;
-    final contentTop = _contentTopForLayout(context, heroHeight, cardPeek);
-    final safeMaxHeight = contentTop - 20; // More generous buffer
+    // Allow info box to grow upwards for lengthy descriptions
+    // Remove maxHeight constraint - let it grow upwards naturally
 
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
-        maxHeight: safeMaxHeight,
+        // No maxHeight - allow growth upwards
       ),
       child: Container(
         padding: EdgeInsets.zero,
@@ -2826,13 +2819,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: Text(
                   description,
                   style: descriptionStyle,
-                  maxLines: titleLogoUrl != null
-                      ? 1
-                      : 2, // Reduced to prevent overflow
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 5, // Allow up to 5 lines for lengthy descriptions
+                  overflow: TextOverflow.fade,
+                  softWrap: true,
                 ),
               ),
-              SizedBox(height: context.tvSpacing(6)), // Reduced spacing
+              SizedBox(height: context.tvSpacing(6)),
             ],
             // Progress Bar
             SizedBox(
@@ -2879,7 +2871,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               width: context.cardWidth() * 0.6,
               child: BrandPrimaryButton(
                 onPressed: () => _openChannelPlayer(channel),
-                label: 'Watch Now',
+                label: 'Watch',
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 fontSize: 14,
@@ -3012,7 +3004,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           highPriority: highPriority);
     }
 
-    // 4. Skip EPG-provided art for cards (too many poster/portrait assets).
+    // 4. Return null for now - card will rebuild when artwork arrives via onArtworkUpdate callback
     return null;
   }
 
@@ -3649,20 +3641,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const infoGapBelowTitle = 2.0;
     const titleFontSize = 11.0;
     const timeFontSize = 10.0;
-    // Text height calculation with proper ascent/descent allowance
-    // Line height multiplier + small buffer for font metrics
-    const lineHeight = 1.2; // Increased from 1.1 to prevent overflow
+    const lineHeight = 1.1;
     final infoHeight = infoGapAboveTitle +
         (titleFontSize * lineHeight) +
         infoGapBelowTitle +
         (timeFontSize * lineHeight);
-    // Add buffer to prevent overflow - account for FULL focus scale (5% not 2.5%)
-    // AnimatedScale uses 1.05 scale, so we need full focusExtra, not half
-    // Extra 16px buffer for font rendering variations across different program titles and platforms
-    final rowHeight = cardHeight +
-        infoHeight +
-        focusExtra +
-        16.0; // +16px safety buffer to eliminate all overflows
+    // Tight row height - no extra padding
+    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
     final rowInset = context.spacingSm() + _sidebarInset();
 
     final sectionKey = title;
@@ -4141,29 +4126,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 isLoading: epgService.isParsing || epgService.isDownloading,
               );
             },
-            shouldRebuild: (previous, next) {
-              // Only rebuild if program actually changed (not just state changes)
-              // Compare program by ID and title to detect real changes
-              final prevId = previous.program?.id;
-              final nextId = next.program?.id;
-              final prevTitle = previous.program?.title;
-              final nextTitle = next.program?.title;
-
-              // If both are null, don't rebuild
-              // unless transitioning from loading to loaded
-              if (prevId == null && nextId == null) {
-                // Only rebuild if we went from loading to not loading (but still no data)
-                return previous.isLoading && !next.isLoading;
-              }
-
-              // Rebuild if program ID changed
-              if (prevId != nextId) return true;
-
-              // Rebuild if program title changes (same program ID, different show... unlikely but safe)
-              if (prevTitle != nextTitle) return true;
-
-              return false;
-            },
             builder: (context, epgData, _) {
               final isFocused = Focus.of(context).hasFocus;
               final epgService =
@@ -4497,6 +4459,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+
   Widget _buildMissingArtworkFallback([String? channelName]) {
     return BrandFallbackBackground(
       child: Center(
@@ -4636,19 +4599,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   child: Center(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final dpr = MediaQuery.of(context).devicePixelRatio;
-                        final maxLogoWidth = constraints.maxWidth * 0.65;
-                        final maxLogoHeight = constraints.maxHeight * 0.34;
-                        final logoCacheWidth =
-                            math.min(480, (maxLogoWidth * dpr).round());
-                        final logoCacheHeight =
-                            math.min(480, (maxLogoHeight * dpr).round());
+                    final dpr = MediaQuery.of(context).devicePixelRatio;
+                    final maxLogoWidth = constraints.maxWidth * 0.65;
+                    final maxLogoHeight = constraints.maxHeight * 0.34;
+                    final logoCacheWidth =
+                        math.min(480, (maxLogoWidth * dpr).round());
+                    final logoCacheHeight =
+                        math.min(480, (maxLogoHeight * dpr).round());
 
-                        final fallbackIcon = Icon(
-                          icon,
-                          color: Colors.white70,
-                          size: 64,
-                        );
+                    final fallbackIcon = Icon(
+                      icon,
+                      color: Colors.white70,
+                      size: 64,
+                    );
 
                         Widget buildCenteredLogo(Widget child) {
                           return Stack(
@@ -5140,39 +5103,54 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: FractionallySizedBox(
                   widthFactor: _heroImageWidthFactor,
                   heightFactor: 1.0,
-                  child: CachedNetworkImage(
-                    imageUrl: normalizedHeroUrl,
-                    httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    filterQuality: FilterQuality.high,
-                    memCacheWidth: cacheWidth,
-                    memCacheHeight: cacheHeight,
-                    imageBuilder: (context, imageProvider) {
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          _LandscapeGuardedImage(
-                            url: normalizedHeroUrl,
-                            imageProvider: imageProvider,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                            fallback: heroFallback,
-                            probeTag: 'hero_backdrop',
-                          ),
+                  child: ShaderMask(
+                    shaderCallback: (bounds) {
+                      return LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.transparent,
+                          Colors.white,
+                          Colors.white,
                         ],
-                      );
+                        stops: const [0.0, 0.15, 1.0],
+                      ).createShader(bounds);
                     },
-                    placeholder: (_, __) => _buildGradientPlaceholder(),
-                    errorWidget: (_, url, error) {
-                      ImageFailureCache.recordFailure(url, error);
-                      ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
-                      logHandshakeIfNeeded(url, error,
-                          context: 'LiveTV hero backdrop');
-                      return heroFallback;
-                    },
-                    fadeInDuration: const Duration(milliseconds: 300),
-                    useOldImageOnUrlChange: true,
+                    blendMode: BlendMode.dstIn,
+                    child: CachedNetworkImage(
+                      imageUrl: normalizedHeroUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerRight,
+                      filterQuality: FilterQuality.high,
+                      memCacheWidth: cacheWidth,
+                      memCacheHeight: cacheHeight,
+                      imageBuilder: (context, imageProvider) {
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            _LandscapeGuardedImage(
+                              url: normalizedHeroUrl,
+                              imageProvider: imageProvider,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerRight,
+                              fallback: heroFallback,
+                              probeTag: 'hero_backdrop',
+                            ),
+                          ],
+                        );
+                      },
+                      placeholder: (_, __) => _buildGradientPlaceholder(),
+                      errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
+                        ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
+                        logHandshakeIfNeeded(url, error,
+                            context: 'LiveTV hero backdrop');
+                        return heroFallback;
+                      },
+                      fadeInDuration: const Duration(milliseconds: 300),
+                      useOldImageOnUrlChange: true,
+                    ),
                   ),
                 ),
               ),

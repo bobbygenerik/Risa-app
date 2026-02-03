@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/http_client_service.dart';
-import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -189,23 +188,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         return;
       }
 
-      // Priority order for sports: Sportradar -> TheSportsDB -> TVDB
-      // Priority order for general: TVDB -> TMDB -> Fanart
       if (isSports) {
-        debugLog('ProgramArtwork: Attempting Sportradar for "$searchTitle"');
-        final sportradarUrl = await SportradarService.getHeroImage(searchTitle);
-        if (sportradarUrl != null) {
-          _addToCache(cacheKey, sportradarUrl);
-          if (mounted) {
-            setState(() {
-              _artworkUrl = sportradarUrl;
-            });
-          }
-          return;
-        }
-
-        debugLog(
-            'ProgramArtwork: Sportradar miss, falling back to TheSportsDB for "$searchTitle"');
+        debugLog('ProgramArtwork: Attempting TheSportsDB for "$searchTitle"');
         final sportsDbUrl = await TheSportsDbService.getHeroImage(searchTitle);
         if (sportsDbUrl != null) {
           _addToCache(cacheKey, sportsDbUrl);

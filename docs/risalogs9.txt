@@ -1,0 +1,1034 @@
+[2J[H=== MEMORY ===
+  Native Heap        8        0        0   329127     1068    83660    43377    35841
+  Dalvik Heap       12        0        0    16592     1304    18311    10119     8192
+ Dalvik Other     6184      152        0     2616    12748                           
+    GL mtrack   181544   181544        0        0   181544                           
+        TOTAL   822456   240072     1052   572062   363720   101971    53496    44033
+         Native Heap:        0                           1068
+            Graphics:   181544                         181544
+           TOTAL PSS:   822456            TOTAL RSS:   363720       TOTAL SWAP PSS:   572062
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 2 (66.67%)
+Janky frames (legacy): 2 (66.67%)
+90th percentile: 28ms
+95th percentile: 28ms
+99th percentile: 28ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+[1m15824 u0_a1315     20   0  24G 206M 161M R 87.5   1.8   4:07.58 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap     6548     4084     2456   322587     7608    83660    43385    35833
+  Dalvik Heap     7124     2292     4572     6744     8808    18307    10115     8192
+ Dalvik Other    10171     3136      536      216    17204                           
+    GL mtrack   181544   181544        0        0   181544                           
+        TOTAL   828028   264708    21488   531702   410836   101967    53500    44025
+         Native Heap:     4084                           7608
+            Graphics:   181544                         181544
+           TOTAL PSS:   828028            TOTAL RSS:   410836       TOTAL SWAP PSS:   531702
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 2 (66.67%)
+Janky frames (legacy): 2 (66.67%)
+90th percentile: 28ms
+95th percentile: 28ms
+99th percentile: 28ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+[1m15824 u0_a1315     20   0  24G 221M 161M R  103   1.9   4:09.24 com.risa.app[m
+[2J[H=== MEMORY ===
+
+=== JANK (last 120 frames) ===
+
+=== CPU ===
+[2J[H=== MEMORY ===
+  Native Heap    40836    40804       24       27    41904    32308    20313     7261
+  Dalvik Heap    63401    63384        4      278    64692    34695    10119    24576
+ Dalvik Other     9544     3120        4        2    16464                           
+   EGL mtrack    60432    60432        0        0    60432                           
+    GL mtrack    67940    67940        0        0    67940                           
+        TOTAL   362425   322932    29056      356   465848    67003    30432    31837
+         Native Heap:    40804                          41904
+            Graphics:   128372                         128372
+           TOTAL PSS:   362425            TOTAL RSS:   465848       TOTAL SWAP PSS:      356
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 1 (50.00%)
+Janky frames (legacy): 0 (0.00%)
+90th percentile: 16ms
+95th percentile: 16ms
+99th percentile: 16ms
+90th gpu percentile: 1ms
+95th gpu percentile: 1ms
+99th gpu percentile: 1ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  23G 282M 120M S 24.1   2.5   0:02.51 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55244    55232        4       19    56304    46272    31258    10648
+  Dalvik Heap    27232    22476     4496       12    28916    34735    10159    24576
+ Dalvik Other     9833     3164       36        0    17000                           
+   EGL mtrack    60432    60432        0        0    60432                           
+    GL mtrack   141512   141512        0        0   141512                           
+        TOTAL   448502   401540    35540       65   562388    81007    41417    35224
+         Native Heap:    55232                          56304
+            Graphics:   201944                         201944
+           TOTAL PSS:   448502            TOTAL RSS:   562388       TOTAL SWAP PSS:       65
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 2 (66.67%)
+Janky frames (legacy): 1 (33.33%)
+90th percentile: 24ms
+95th percentile: 24ms
+99th percentile: 24ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 334M 139M R  126   3.0   0:05.94 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    55508    55496        4       19    56568    47808    29884    13211
+  Dalvik Heap    24690    19948     4472       12    26388    34760    10184    24576
+ Dalvik Other     9535     2836       36        0    16732                           
+   EGL mtrack    60432    60432        0        0    60432                           
+    GL mtrack   148768   148768        0        0   148768                           
+        TOTAL   454294   407580    34992       65   568496    82568    40068    37787
+         Native Heap:    55496                          56568
+            Graphics:   209200                         209200
+           TOTAL PSS:   454294            TOTAL RSS:   568496       TOTAL SWAP PSS:       65
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 2 (66.67%)
+Janky frames (legacy): 1 (33.33%)
+90th percentile: 24ms
+95th percentile: 24ms
+99th percentile: 24ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 329M 140M R  117   2.9   0:09.13 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    39248    39236        4       19    40308    49996    31246    14158
+  Dalvik Heap    27862    23120     4472       12    29560    34804    10228    24576
+ Dalvik Other     9783     2828       36        0    17236                           
+   EGL mtrack    60432    60432        0        0    60432                           
+    GL mtrack   157132   157132        0        0   157132                           
+        TOTAL   440836   394136    34788       65   555592    84800    41474    38734
+         Native Heap:    39236                          40308
+            Graphics:   217564                         217564
+           TOTAL PSS:   440836            TOTAL RSS:   555592       TOTAL SWAP PSS:       65
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 2 (66.67%)
+Janky frames (legacy): 1 (33.33%)
+90th percentile: 24ms
+95th percentile: 24ms
+99th percentile: 24ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 320M 135M S  230   2.8   0:12.41 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    44968    44924       32       19    46056    64068    40378    19103
+  Dalvik Heap    24362    19664     4432       12    26036    59387    19796    39591
+ Dalvik Other    13179     3920       36        0    22884                           
+   EGL mtrack    63576    63576        0        0    63576                           
+    GL mtrack   141892   141892        0        0   141892                           
+        TOTAL   460587   407504    37556       64   584536   123455    60174    58694
+         Native Heap:    44924                          46056
+            Graphics:   205468                         205468
+           TOTAL PSS:   460587            TOTAL RSS:   584536       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 376M 149M S  114   3.3   0:17.64 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    49640    49596       32       19    50728    72004    43462    24017
+  Dalvik Heap    55246    50552     4428       12    56920    71568    23856    47712
+ Dalvik Other    13233     3936       36        0    22976                           
+   EGL mtrack    79296    79296        0        0    79296                           
+    GL mtrack   141828   141828        0        0   141828                           
+        TOTAL   488465   435264    37596       64   612500   143572    67318    71729
+         Native Heap:    49596                          50728
+            Graphics:   221124                         221124
+           TOTAL PSS:   488465            TOTAL RSS:   612500       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 364M 149M S  142   3.2   0:21.82 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    50316    50272       32       19    51404    73028    44157    24404
+  Dalvik Heap    46246    41552     4428       12    47920    71410    23803    47607
+ Dalvik Other    13239     3892       36        0    23032                           
+   EGL mtrack    79296    79296        0        0    79296                           
+    GL mtrack   142220   142220        0        0   142220                           
+        TOTAL   476447   422988    37676       64   600400   144438    67960    72011
+         Native Heap:    50272                          51404
+            Graphics:   221516                         221516
+           TOTAL PSS:   476447            TOTAL RSS:   600400       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 347M 149M S 46.8   3.1   0:24.59 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    50648    50604       32       19    51736    74820    46181    24330
+  Dalvik Heap    27846    23152     4428       12    29520    71074    23692    47382
+ Dalvik Other    13239     3880       36        0    23044                           
+   EGL mtrack    79296    79296        0        0    79296                           
+    GL mtrack    90768    90768        0        0    90768                           
+        TOTAL   416312   362780    37684       64   540332   145894    69873    71712
+         Native Heap:    50604                          51736
+            Graphics:   170064                         170064
+           TOTAL PSS:   416312            TOTAL RSS:   540332       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 358M 149M S 51.5   3.2   0:26.85 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    52028    51984       32       19    53116    76356    45439    26409
+  Dalvik Heap    27226    22532     4428       12    28900    71134    23712    47422
+ Dalvik Other    13251     3872       36        0    23076                           
+   EGL mtrack    79296    79296        0        0    79296                           
+    GL mtrack    90768    90768        0        0    90768                           
+        TOTAL   413642   360008    37724       64   537720   147490    69151    73831
+         Native Heap:    51984                          53116
+            Graphics:   170064                         170064
+           TOTAL PSS:   413642            TOTAL RSS:   537720       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 357M 149M S 52.7   3.2   0:29.05 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    59668    59624       32       19    60756    70884    33465    32919
+  Dalvik Heap    30942    26248     4428       12    32616    36851    12275    24576
+ Dalvik Other    13411     3920       36        0    23348                           
+   EGL mtrack    60432    60432        0        0    60432                           
+    GL mtrack    90736    90736        0        0    90736                           
+        TOTAL   424864   371456    37656       64   548840   107735    45740    57495
+         Native Heap:    59624                          60756
+            Graphics:   151168                         151168
+           TOTAL PSS:   424864            TOTAL RSS:   548840       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 3 (75.00%)
+Janky frames (legacy): 2 (50.00%)
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 2ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 360M 156M S  153   3.2   0:31.91 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    61488    61444       32       19    62576    74724    39615    30779
+  Dalvik Heap    36090    31396     4428       12    37764    35899    11323    24576
+ Dalvik Other    13711     3956       36        0    23912                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161108   161108        0        0   161108                           
+        TOTAL   493484   439216    38016       64   620624   110623    50938    55355
+         Native Heap:    61444                          62576
+            Graphics:   231612                         231612
+           TOTAL PSS:   493484            TOTAL RSS:   620624       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 359M 154M S 72.4   3.2   0:34.92 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    56064    56020       32       19    57152    74980    39573    31077
+  Dalvik Heap    15482    10788     4428       12    17156    35803    11227    24576
+ Dalvik Other    13699     3944       36        0    23900                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161028   161028        0        0   161028                           
+        TOTAL   472711   418444    38012       64   599856   110783    50800    55653
+         Native Heap:    56020                          57152
+            Graphics:   231532                         231532
+           TOTAL PSS:   472711            TOTAL RSS:   599856       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 356M 154M S 48.3   3.2   0:36.90 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55360    55316       32       19    56448    74980    40360    30290
+  Dalvik Heap    14738    10044     4428       12    16412    35803    11227    24576
+ Dalvik Other    13683     3928       36        0    23884                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161028   161028        0        0   161028                           
+        TOTAL   475088   420704    38076       64   602148   110783    51587    54866
+         Native Heap:    55316                          56448
+            Graphics:   231532                         231532
+           TOTAL PSS:   475088            TOTAL RSS:   602148       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 346M 154M S 70.0   3.1   0:38.89 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55324    55280       32       19    56412    74980    38650    32000
+  Dalvik Heap    14738    10044     4428       12    16412    35803    11227    24576
+ Dalvik Other    13683     3928       36        0    23884                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161044   161044        0        0   161044                           
+        TOTAL   476013   421628    38068       64   603104   110783    49877    56576
+         Native Heap:    55280                          56412
+            Graphics:   231548                         231548
+           TOTAL PSS:   476013            TOTAL RSS:   603104       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 348M 155M S 48.3   3.1   0:40.87 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55328    55284       32       19    56416    75236    39118    31788
+  Dalvik Heap    14750    10056     4428       12    16424    35807    11231    24576
+ Dalvik Other    13683     3928       36        0    23884                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161044   161044        0        0   161044                           
+        TOTAL   463661   409276    38068       64   590752   111043    50349    56364
+         Native Heap:    55284                          56416
+            Graphics:   231548                         231548
+           TOTAL PSS:   463661            TOTAL RSS:   590752       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 350M 155M R 48.3   3.1   0:42.89 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    54944    54900       32       19    56032    75236    38889    32030
+  Dalvik Heap    14742    10048     4428       12    16416    35803    11227    24576
+ Dalvik Other    13571     3816       36        0    23772                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   161044   161044        0        0   161044                           
+        TOTAL   463849   409460    38076       64   590956   111039    50116    56606
+         Native Heap:    54900                          56032
+            Graphics:   231548                         231548
+           TOTAL PSS:   463849            TOTAL RSS:   590956       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 349M 155M S 63.3   3.1   0:44.91 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55660    55616       32       19    56748    75236    38805    32192
+  Dalvik Heap    14738    10044     4428       12    16412    35803    11227    24576
+ Dalvik Other    13571     3816       36        0    23772                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    68756    68756        0        0    68756                           
+        TOTAL   382606   328220    38068       64   509716   111039    50032    56768
+         Native Heap:    55616                          56748
+            Graphics:   139260                         139260
+           TOTAL PSS:   382606            TOTAL RSS:   509716       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 346M 154M S 77.4   3.1   0:46.94 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    55708    55664       32       19    56796    75236    38092    32919
+  Dalvik Heap    14738    10044     4428       12    16412    35803    11227    24576
+ Dalvik Other    13571     3816       36        0    23772                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    68756    68756        0        0    68756                           
+        TOTAL   371714   317328    38068       64   498824   111039    49319    57495
+         Native Heap:    55664                          56796
+            Graphics:   139260                         139260
+           TOTAL PSS:   371714            TOTAL RSS:   498824       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 350M 154M R 53.3   3.1   0:49.05 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    60556    60512       32       19    61644    75748    39482    32109
+  Dalvik Heap    16598    11904     4428       12    18272    36439    11863    24576
+ Dalvik Other    13635     3876       36        0    23840                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    70088    70088        0        0    70088                           
+        TOTAL   384827   330472    38036       64   511936   112187    51345    56685
+         Native Heap:    60512                          61644
+            Graphics:   140592                         140592
+           TOTAL PSS:   384827            TOTAL RSS:   511936       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 361M 155M R  170   3.2   0:52.68 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    59268    59224       32       19    60356    76772    41627    31023
+  Dalvik Heap    25610    20916     4428       12    27284    35835    11259    24576
+ Dalvik Other    13591     3828       36        0    23800                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    69792    69792        0        0    69792                           
+        TOTAL   395350   340988    38044       64   522460   112607    52886    55599
+         Native Heap:    59224                          60356
+            Graphics:   140296                         140296
+           TOTAL PSS:   395350            TOTAL RSS:   522460       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 359M 155M S 83.3   3.2   0:55.00 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    57300    57256       32       19    58388    76772    38979    33671
+  Dalvik Heap    15074    10380     4428       12    16748    35815    11239    24576
+ Dalvik Other    13591     3828       36        0    23800                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    69792    69792        0        0    69792                           
+        TOTAL   372921   318528    38076       64   500032   112587    50218    58247
+         Native Heap:    57256                          58388
+            Graphics:   140296                         140296
+           TOTAL PSS:   372921            TOTAL RSS:   500032       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 350M 155M S  106   3.1   0:57.05 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    64648    64604       32       19    65736    78564    41075    33502
+  Dalvik Heap    33918    29224     4428       12    35592    35875    11299    24576
+ Dalvik Other    13599     3836       36        0    23808                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    53792    53792        0        0    53792                           
+        TOTAL   405338   350968    38052       64   532448   114439    52374    58078
+         Native Heap:    64604                          65736
+            Graphics:   124296                         124296
+           TOTAL PSS:   405338            TOTAL RSS:   532448       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 385M 156M S  182   3.4   1:03.07 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    60912    60868       32       19    62000    78564    39992    34585
+  Dalvik Heap    14974    10280     4428       12    16648    35831    11255    24576
+ Dalvik Other    13599     3836       36        0    23808                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   438944   384544    38080       64   566056   114395    51247    59161
+         Native Heap:    60868                          62000
+            Graphics:   119840                         119840
+           TOTAL PSS:   438944            TOTAL RSS:   566056       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 399M 156M S  203   3.5   1:08.09 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    60056    60012       32       19    61144    78564    39847    34730
+  Dalvik Heap    16894    12200     4428       12    18568    35827    11284    24543
+ Dalvik Other    13583     3820       36        0    23792                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   439199   384692    38188       64   566308   114391    51131    59273
+         Native Heap:    60012                          61144
+            Graphics:   119840                         119840
+           TOTAL PSS:   439199            TOTAL RSS:   566308       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 414M 156M R  203   3.7   1:13.53 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    60796    60752       32       19    61884    78820    38701    36100
+  Dalvik Heap    29218    24524     4428       12    30892    35919    11343    24576
+ Dalvik Other    13595     3832       36        0    23804                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   441641   387176    38140       64   568760   114739    50044    60676
+         Native Heap:    60752                          61884
+            Graphics:   119840                         119840
+           TOTAL PSS:   441641            TOTAL RSS:   568760       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 432M 156M S 62.0   3.9   1:18.73 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    60736    60692       32       19    61824    78820    40296    34505
+  Dalvik Heap    17746    13052     4428       12    19420    35799    11223    24576
+ Dalvik Other    13587     3824       36        0    23796                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   439129   384664    38140       64   566248   114619    51519    59081
+         Native Heap:    60692                          61824
+            Graphics:   119840                         119840
+           TOTAL PSS:   439129            TOTAL RSS:   566248       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 425M 156M R  132   3.8   1:23.11 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    60892    60848       32       19    61980    79076    38555    36299
+  Dalvik Heap    15446    10752     4428       12    17120    35799    11223    24576
+ Dalvik Other    13587     3820       36        0    23800                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   588457   533960    38168       64   715580   114875    49778    60875
+         Native Heap:    60848                          61980
+            Graphics:   119840                         119840
+           TOTAL PSS:   588457            TOTAL RSS:   715580       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 434M 156M S  141   3.9   1:26.94 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    59324    59280       32       19    60412    79076    38006    36899
+  Dalvik Heap    33322    28628     4428       12    34996    35807    11231    24576
+ Dalvik Other    13603     3836       36        0    23816                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack    49336    49336        0        0    49336                           
+        TOTAL   431129   376616    38188       64   558244   114883    49237    61475
+         Native Heap:    59280                          60412
+            Graphics:   119840                         119840
+           TOTAL PSS:   431129            TOTAL RSS:   558244       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 4 (23.53%)
+Janky frames (legacy): 3 (17.65%)
+90th percentile: 27ms
+95th percentile: 57ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 5ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 403M 156M S  129   3.6   1:31.98 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    56812    56768       32       19    57900    79076    37572    37339
+  Dalvik Heap    23598    18904     4428       12    25272    36051    11475    24576
+ Dalvik Other    13731     3888       36        0    24020                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   113060   113060        0        0   113060                           
+        TOTAL   608294   553692    38164       64   736252   115127    49047    61915
+         Native Heap:    56768                          57900
+            Graphics:   183564                         183564
+           TOTAL PSS:   608294            TOTAL RSS:   736252       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 373M 157M R  163   3.3   1:38.06 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    56708    56664       32       19    57796    79076    36598    38339
+  Dalvik Heap    37942    33248     4428       12    39616    36399    11823    24576
+ Dalvik Other    13687     3844       36        0    23976                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   104676   104676        0        0   104676                           
+        TOTAL  1090502  1035904    38156       64  1218464   115475    48421    62915
+         Native Heap:    56664                          57796
+            Graphics:   175180                         175180
+           TOTAL PSS:  1090502            TOTAL RSS:  1218464       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 419M 157M R  213   3.7   1:43.30 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    73628    73584       32       19    74716    79332    39177    36029
+  Dalvik Heap    29090    24396     4428       12    30764    36200    11624    24576
+ Dalvik Other    13771     3928       36        0    24060                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   131600   131600        0        0   131600                           
+        TOTAL   593372   538772    38160       64   721332   115532    50801    60605
+         Native Heap:    73584                          74716
+            Graphics:   202104                         202104
+           TOTAL PSS:   593372            TOTAL RSS:   721332       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 486M 157M R  239   4.3   1:49.07 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    95852    95808       32       19    96940    80356    43332    32953
+  Dalvik Heap    29138    24444     4428       12    30812    35895    11319    24576
+ Dalvik Other    13727     3880       36        0    24020                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   238172   238172        0        0   238172                           
+        TOTAL   783118   728468    38208       64   911084   116251    54651    57529
+         Native Heap:    95808                          96940
+            Graphics:   308676                         308676
+           TOTAL PSS:   783118            TOTAL RSS:   911084       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 571M 184M R  179   5.1   1:54.04 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap   142132   142088       32       19   143220    82636    46815    31835
+  Dalvik Heap    27122    22428     4428       12    28796    36063    11487    24576
+ Dalvik Other    13723     3876       36        0    24016                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   254196   254196        0        0   254196                           
+        TOTAL   833385   776712    40228       64   961348   118699    58302    56411
+         Native Heap:   142088                         143220
+            Graphics:   324700                         324700
+           TOTAL PSS:   833385            TOTAL RSS:   961348       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 606M 162M S  182   5.4   1:59.68 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap   272684   272640       32       19   273772    83660    48872    30590
+  Dalvik Heap    24258    19564     4428       12    25932    36591    12015    24576
+ Dalvik Other    13727     3876       36        0    24024                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   415348   415348        0        0   415348                           
+        TOTAL  1141364  1085068    39992       64  1269144   120251    60887    55166
+         Native Heap:   272640                         273772
+            Graphics:   485852                         485852
+           TOTAL PSS:  1141364            TOTAL RSS:  1269144       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  25G 682M 163M R  189   6.1   2:05.43 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap   119092   119048       32       19   120180    83660    49175    30418
+  Dalvik Heap    32146    27452     4428       12    33820    36016    11440    24576
+ Dalvik Other    13735     3884       36        0    24032                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   232120   232120        0        0   232120                           
+        TOTAL   827287   770776    40208       64   955068   119676    60615    54994
+         Native Heap:   119048                         120180
+            Graphics:   302624                         302624
+           TOTAL PSS:   827287            TOTAL RSS:   955068       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 622M 172M R  127   5.6   2:10.33 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    70008    69964       32       19    71096    84428    47049    33471
+  Dalvik Heap    25290    20596     4428       12    26964    35904    11328    24576
+ Dalvik Other    13783     3912       36        0    24100                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   168384   168384        0        0   168384                           
+        TOTAL   698826   630664    51836       64   826644   120332    58377    58047
+         Native Heap:    69964                          71096
+            Graphics:   238888                         238888
+           TOTAL PSS:   698826            TOTAL RSS:   826644       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 552M 158M R  113   4.9   2:13.53 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    63704    63660       32       19    64792    84684    46963    33659
+  Dalvik Heap    28258    23564     4428       12    29932    35900    11324    24576
+ Dalvik Other    13779     3904       36        0    24100                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   168352   168352        0        0   168352                           
+        TOTAL   665995   609364    40308       64   793796   120584    58287    58235
+         Native Heap:    63660                          64792
+            Graphics:   238856                         238856
+           TOTAL PSS:   665995            TOTAL RSS:   793796       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 529M 158M R  109   4.7   2:16.65 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap    63796    63752       32       19    64884    84684    47137    33651
+  Dalvik Heap    26274    21580     4428       12    27948    35900    11324    24576
+ Dalvik Other    13779     3904       36        0    24100                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   143276   143276        0        0   143276                           
+        TOTAL   649483   592860    40292       64   777292   120584    58461    58227
+         Native Heap:    63752                          64884
+            Graphics:   213780                         213780
+           TOTAL PSS:   649483            TOTAL RSS:   777292       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     10 -10  24G 528M 158M S  109   4.7   2:19.67 com.risa.app
+[2J[H=== MEMORY ===
+  Native Heap    63436    63392       32       19    64524    84940    46457    34403
+  Dalvik Heap    23722    19028     4428       12    25396    35900    11325    24575
+ Dalvik Other    13771     3896       36        0    24092                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   142604   142604        0        0   142604                           
+        TOTAL   638434   581812    40300       64   766236   120840    57782    58978
+         Native Heap:    63392                          64524
+            Graphics:   213108                         213108
+           TOTAL PSS:   638434            TOTAL RSS:   766236       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 532M 158M R  127   4.7   2:22.62 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap   105108   105064       32       19   106196    85708    45955    35502
+  Dalvik Heap    24938    20244     4428       12    26612    35940    11364    24576
+ Dalvik Other    13775     3900       36        0    24096                           
+   EGL mtrack    70504    70504        0        0    70504                           
+    GL mtrack   228012   228012        0        0   228012                           
+        TOTAL   960450   903828    40292       64  1088260   121648    57319    60078
+         Native Heap:   105064                         106196
+            Graphics:   298516                         298516
+           TOTAL PSS:   960450            TOTAL RSS:  1088260       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+[1m28276 u0_a1315     10 -10  24G 597M 193M R  130   5.3   2:26.22 com.risa.app[m
+[2J[H=== MEMORY ===
+  Native Heap   103324   103280       32       19   104412    85708    42763    38787
+  Dalvik Heap    24550    19856     4428       12    26224    35895    11319    24576
+ Dalvik Other    14051     3888       36        0    24660                           
+    GL mtrack   134972   134972        0        0   134972                           
+        TOTAL   642746   585812    40316       64   770900   121603    54082    63363
+         Native Heap:   103280                         104412
+            Graphics:   134972                         134972
+           TOTAL PSS:   642746            TOTAL RSS:   770900       TOTAL SWAP PSS:       64
+ Native Allocations
+
+=== JANK (last 120 frames) ===
+Janky frames: 6 (23.08%)
+Janky frames (legacy): 5 (19.23%)
+90th percentile: 24ms
+95th percentile: 27ms
+99th percentile: 57ms
+90th gpu percentile: 2ms
+95th gpu percentile: 2ms
+99th gpu percentile: 5ms
+
+=== CPU ===
+28276 u0_a1315     20   0  24G 607M 193M S  100   5.4   2:29.19 com.risa.app

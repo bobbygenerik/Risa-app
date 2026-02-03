@@ -11,7 +11,6 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/fanart_service.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
-import 'package:iptv_player/services/sportradar_service.dart';
 import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/tvdb_service.dart';
@@ -694,7 +693,6 @@ class LiveTvArtworkService {
     for (final queryTitle in queryTitles) {
       try {
         final results = await Future.wait([
-          SportradarService.getHeroImage(queryTitle).timeout(timeout),
           TheSportsDbService.getHeroImage(queryTitle).timeout(timeout),
           if (_tvdbEnabled)
             TvdbService.getBestImage(queryTitle).timeout(timeout)
@@ -702,23 +700,8 @@ class LiveTvArtworkService {
             Future<String?>.value(null),
         ]);
 
-        final sportRadarImage = results[0];
-        final sportsDbImage = results[1];
-        final tvdbImage = _tvdbEnabled ? results[2] : null;
-
-        // Check SportRadar result
-        if (_acceptArtworkUrl(
-              sportRadarImage,
-              preferLandscape: preferLandscape,
-              programTitle: title,
-              source: 'sportradar',
-            ) &&
-            await ImageValidationService.isValid(sportRadarImage)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=sportradar program="$title" query="$queryTitle" url=$sportRadarImage',
-          );
-          return sportRadarImage;
-        }
+        final sportsDbImage = results[0];
+        final tvdbImage = _tvdbEnabled ? results[1] : null;
 
         // Check TheSportsDB result
         if (_acceptArtworkUrl(
@@ -941,18 +924,7 @@ class LiveTvArtworkService {
     const timeout = Duration(seconds: 5);
     final title = program.title;
 
-    // Try SportRadar first
-    try {
-      final sportRadarLogo =
-          await SportradarService.getHeroImage(title).timeout(timeout);
-      if (sportRadarLogo != null && sportRadarLogo.isNotEmpty) {
-        return sportRadarLogo;
-      }
-    } catch (e) {
-      debugLog('SportRadar logo failed: $e');
-    }
-
-    // Fallback to TheSportsDB
+    // Try TheSportsDB
     try {
       final sportsDbLogo =
           await TheSportsDbService.getHeroImage(title).timeout(timeout);

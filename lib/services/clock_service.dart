@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 /// to avoid excessive DateTime.now() calls in build methods.
 ///
 /// Usage:
+/// ```dart
 ///   final clockService = ClockService();
 ///   ValueListenableBuilder<DateTime>(
 ///     valueListenable: clockService.currentTime,
@@ -12,6 +13,7 @@ import 'package:flutter/material.dart';
 ///       // Use now instead of DateTime.now()
 ///     },
 ///   )
+/// ```
 class ClockService {
   static final ClockService _instance = ClockService._internal();
   factory ClockService() => _instance;

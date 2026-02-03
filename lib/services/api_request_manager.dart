@@ -39,7 +39,7 @@ class ApiRequestManager {
         return result;
       } catch (e) {
         // If the existing request failed, remove it and retry
-        _inFlightRequests.remove(cacheKey);
+        await _inFlightRequests.remove(cacheKey);
         _requestStartTimes.remove(cacheKey);
       }
     }
@@ -69,15 +69,16 @@ class ApiRequestManager {
       // Store completed result briefly for rapid-fire dedup
       _completedResults[cacheKey] = result;
 
-      // Schedule cleanup
-      Timer(const Duration(seconds: 5), () {
+      // Schedule cleanup (fire-and-forget)
+      // ignore: unawaited_futures
+      Future.delayed(const Duration(seconds: 5), () {
         _completedResults.remove(cacheKey);
       });
 
       return result;
     } finally {
       // Always clean up in-flight tracking
-      _inFlightRequests.remove(cacheKey);
+      await _inFlightRequests.remove(cacheKey);
       _requestStartTimes.remove(cacheKey);
     }
   }

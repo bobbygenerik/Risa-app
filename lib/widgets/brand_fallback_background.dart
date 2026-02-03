@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+// Consistent radial gradient fallback for all cards
+
 class BrandBackgroundPainter extends CustomPainter {
   const BrandBackgroundPainter();
 

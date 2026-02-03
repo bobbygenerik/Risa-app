@@ -154,17 +154,14 @@ void main() {
       final memoryInfo = await _getDeviceMemoryInfo();
       ImageFailureCache.setAggressiveMode(memoryInfo.isLowMemory);
       if (memoryInfo.isLowMemory) {
-        // Very conservative cache sizes for Shield/low-memory devices
-        PaintingBinding.instance.imageCache.maximumSize = 15; // Reduced from 20
-        PaintingBinding.instance.imageCache.maximumSizeBytes =
-            2 << 20; // 2MB max (reduced from 4MB)
+        // Balanced cache for Shield/low-memory devices
+        PaintingBinding.instance.imageCache.maximumSize = 80;
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
         StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
       } else {
-        PaintingBinding.instance.imageCache.maximumSize =
-            40; // Reduced from 50 for better performance
-        PaintingBinding.instance.imageCache.maximumSizeBytes =
-            6 << 20; // 6MB max (reduced from 8MB)
-        StartupProbe.mark('Image cache limits configured (CONSERVATIVE)');
+        PaintingBinding.instance.imageCache.maximumSize = 150;
+        PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20; // 200MB
+        StartupProbe.mark('Image cache limits configured (NORMAL)');
       }
 
       // Force immediate garbage collection and memory cleanup for Shield
@@ -1019,7 +1016,7 @@ final _router = GoRouter(
           streamUrl ??= videoUrl;
         }
 
-        return _fadeSlidePage(
+        return NoTransitionPage(
           key: state.pageKey,
           child: SafePopScope(
             child: VideoPlayerRouter(

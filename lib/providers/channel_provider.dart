@@ -2328,7 +2328,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         }
 
         if (playlistUrl != null && playlistUrl.isNotEmpty) {
-          if (!_isColdStartLoad) {
+          if (!_isColdStartLoad && _channelMaps.isEmpty) {
             _isColdStartLoad = true;
             notifyListeners();
           }
@@ -2403,7 +2403,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
     if (!isBackground) {
       _isLoading = true;
-      _isColdStartLoad = true;
+      _isColdStartLoad = _channelMaps.isEmpty;
       _errorMessage = null;
       _lastM3UContent = null; // Clear old content
       notifyListeners();
@@ -2728,7 +2728,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   /// Load playlist using direct HttpClient with SSL bypass (fallback for handshake errors)
   Future<void> _loadPlaylistWithDirectClient(String url) async {
     _isLoading = true;
-    _isColdStartLoad = true;
+    _isColdStartLoad = _channelMaps.isEmpty;
     _errorMessage = null;
     _noPlaylistConfigured = false;
     notifyListeners();
@@ -2896,7 +2896,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   /// Load channels from M3U content string without blocking the UI isolate
   Future<void> loadPlaylistFromString(String content) async {
     _isLoading = true;
-    _isColdStartLoad = true;
+    _isColdStartLoad = _channelMaps.isEmpty;
     _errorMessage = null;
     _noPlaylistConfigured = false;
     notifyListeners();
