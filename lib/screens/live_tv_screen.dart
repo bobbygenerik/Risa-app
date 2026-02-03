@@ -4896,6 +4896,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _openChannelPlayer(Channel channel) async {
     if (_isOpeningPlayer) return;
     _isOpeningPlayer = true;
+    
+    // Pause all UI updates
+    _timerManager.cancelAll();
     _artworkService.pauseFetching();
     _artworkService.suspendCaches();
     _suspendHeroBackground = true;
@@ -4933,6 +4936,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _artworkService.resumeFetching();
         _artworkService.resumeCaches();
         _suspendHeroBackground = false;
+        // Restart hero rotation
+        _startFeaturedRotation();
         // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
         unawaited(_prefetchInitialRows(force: true));
       }
