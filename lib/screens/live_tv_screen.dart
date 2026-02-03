@@ -4669,7 +4669,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               Center(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 28, vertical: 18),
+                                      horizontal: 28, vertical: 10),
                                   decoration: BoxDecoration(
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(18),
