@@ -148,7 +148,7 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
           _handleScrollNotification(notification);
           return false;
         },
-        child: ListView.builder(
+        child: ListView.separated(
           controller: widget.controller,
           key: ValueKey('row_${widget.sectionKey}'),
           scrollDirection: Axis.horizontal,
@@ -158,6 +158,7 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
           padding: widget.padding,
           clipBehavior: Clip.none,
           itemCount: count,
+          separatorBuilder: (context, index) => SizedBox(width: widget.cardGap),
           // addRepaintBoundaries is true by default, which helps with scroll perf
           addAutomaticKeepAlives:
               true, // Keep cards alive to avoid image flicker
