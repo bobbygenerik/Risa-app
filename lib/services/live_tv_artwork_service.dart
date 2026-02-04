@@ -1552,6 +1552,48 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
+    if (!preferLandscape) return true;
+    return _isLikelyLandscapeUrl(url);
+  }
+
+  bool _isLikelyLandscapeUrl(String url) {
+    if (url.isEmpty) return false;
+    final lower = url.toLowerCase();
+
+    // Strong signals for poster/portrait or logo-like assets.
+    if (_isLikelyPosterUrl(url) ||
+        lower.contains('/logo') ||
+        lower.contains('_logo') ||
+        lower.contains('-logo') ||
+        lower.contains('logo.')) {
+      return false;
+    }
+
+    // Strong signals for landscape/backdrop.
+    if (lower.contains('backdrop') ||
+        lower.contains('background') ||
+        lower.contains('fanart') ||
+        lower.contains('landscape') ||
+        lower.contains('banner')) {
+      return true;
+    }
+
+    // If dimensions are in the filename, prefer wider aspect ratios.
+    final extMatch = RegExp(r'\.(png|jpg|jpeg|webp)$').firstMatch(lower);
+    if (extMatch != null) {
+      final beforeExt = lower.substring(0, extMatch.start);
+      final sizeRegex = RegExp(r'(\d+)x(\d+)');
+      final match = sizeRegex.firstMatch(beforeExt);
+      if (match != null) {
+        final w = int.tryParse(match.group(1) ?? '');
+        final h = int.tryParse(match.group(2) ?? '');
+        if (w != null && h != null) {
+          return w >= (h * 1.15);
+        }
+      }
+    }
+
+    // If it's not clearly portrait or logo, treat as acceptable landscape.
     return true;
   }
 
