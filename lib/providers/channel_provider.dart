@@ -1870,7 +1870,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   /// Auto-load saved playlist on startup
   Future<void> autoLoadPlaylist() async {
     logToSystem('=== autoLoadPlaylist START ===', name: 'ChannelProvider');
-    if (_hasLoadedPlaylist) return; // Already loaded
+    // Skip if already loaded AND have channels in memory
+    if (_hasLoadedPlaylist && _channelMaps.isNotEmpty) {
+      debugLog('ChannelProvider: Playlist already loaded (${_channelMaps.length} channels), skipping');
+      return;
+    }
     if (_autoLoadInProgress || _isLoading) {
       debugLog('ChannelProvider: Auto-load already in progress, skipping');
       return;

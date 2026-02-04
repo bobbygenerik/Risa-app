@@ -303,7 +303,18 @@ class LocalDbService {
         _dbPath = path;
       }
       try {
+        // Delete DB file and WAL/SHM files
         await deleteDatabase(path);
+        final walPath = '$path-wal';
+        final shmPath = '$path-shm';
+        try {
+          final walFile = File(walPath);
+          if (await walFile.exists()) await walFile.delete();
+        } catch (_) {}
+        try {
+          final shmFile = File(shmPath);
+          if (await shmFile.exists()) await shmFile.delete();
+        } catch (_) {}
       } catch (_) {}
       await init();
     } finally {

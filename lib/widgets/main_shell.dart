@@ -49,7 +49,10 @@ class _MainShellState extends State<MainShell> {
   String? _lastLocation;
   bool _isSidebarExpanded = false;
   DateTime? _lastBackPress;
-  DateTime? _lastNavTime; // Track navigation timing to prevent PopScope conflict
+  DateTime?
+      _lastNavTime; // Track navigation timing to prevent PopScope conflict
+  DateTime?
+      _lastBackPressFromHome; // Track back press on home for exit confirmation
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -201,7 +204,9 @@ class _MainShellState extends State<MainShell> {
                                 left: 0,
                                 top: 0,
                                 bottom: 0,
-                                width: showSidebarScrim ? sidebarScrimWidth * 0.75 : 0,
+                                width: showSidebarScrim
+                                    ? sidebarScrimWidth * 0.75
+                                    : 0,
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(
                                     sigmaX: showSidebarScrim ? 6.0 : 0.0,
@@ -212,10 +217,14 @@ class _MainShellState extends State<MainShell> {
                               ),
                               // Medium blur in middle
                               Positioned(
-                                left: showSidebarScrim ? sidebarScrimWidth * 0.45 : 0,
+                                left: showSidebarScrim
+                                    ? sidebarScrimWidth * 0.45
+                                    : 0,
                                 top: 0,
                                 bottom: 0,
-                                width: showSidebarScrim ? sidebarScrimWidth * 0.35 : 0,
+                                width: showSidebarScrim
+                                    ? sidebarScrimWidth * 0.35
+                                    : 0,
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(
                                     sigmaX: showSidebarScrim ? 3.0 : 0.0,
@@ -308,69 +317,101 @@ class _MainShellState extends State<MainShell> {
   void _handleBackNavigation() {
     final location = GoRouterState.of(context).uri.path;
     final lastLocation = _lastLocation;
-    
+
     // Prevent rapid back button presses
     final now = DateTime.now();
-    if (_lastBackPress != null && now.difference(_lastBackPress!).inMilliseconds < 500) {
+    if (_lastBackPress != null &&
+        now.difference(_lastBackPress!).inMilliseconds < 500) {
       debugLog('Back navigation debounced (location: $location)');
       return;
     }
     _lastBackPress = now;
-    
+
     // FIX: Skip if another PopScope just triggered navigation (within 200ms)
     // This prevents double-firing where a screen's PopScope goes to /home,
     // then MainShell sees /home and immediately goes to /exit
-    if (_lastNavTime != null && now.difference(_lastNavTime!).inMilliseconds < 200) {
+    if (_lastNavTime != null &&
+        now.difference(_lastNavTime!).inMilliseconds < 200) {
       debugLog('MainShell back nav: skipped (screen PopScope just navigated)');
       return;
     }
-    
+
     debugLog('MainShell back nav: location=$location, last=$lastLocation');
 
+    // Settings screen: go back to home
     if (location == '/settings' ||
         (lastLocation != null && lastLocation.startsWith('/settings'))) {
       debugLog('MainShell back nav: handling settings -> home');
       context.go('/home');
       return;
     }
-    if (location != '/home') {
-      debugLog('MainShell back nav: handling $location -> home');
-      context.go('/home');
+
+    // Player screen: go back to home (or let PopScope handle)
+    if (location == '/player') {
+      debugLog('MainShell back nav: player screen - letting PopScope handle');
+      // Don't navigate here, let the PopScope in EnhancedVideoPlayerScreen handle it
       return;
     }
 
-    final channelProvider = context.read<ChannelProvider>();
-    if (channelProvider.isLoading) {
-      showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Playlist still saving'),
-            content: const Text(
-                'Saving is still in progress. Leaving now may interrupt it.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Stay'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Exit'),
-              ),
-            ],
-          );
-        },
-      ).then((leave) {
-        if (leave == true && mounted) {
+    // On home screen: require double-back to exit
+    if (location == '/home') {
+      if (_lastBackPressFromHome == null) {
+        _lastBackPressFromHome = now;
+        debugLog('MainShell back nav: first back on home - showing toast');
+        _showExitHint();
+      } else if (now.difference(_lastBackPressFromHome!).inMilliseconds <
+          2000) {
+        debugLog('MainShell back nav: double-back confirmed - going to /exit');
+        final channelProvider = context.read<ChannelProvider>();
+        if (channelProvider.isLoading) {
+          showDialog<bool>(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Playlist still saving'),
+                content: const Text(
+                    'Saving is still in progress. Leaving now may interrupt it.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Stay'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Exit'),
+                  ),
+                ],
+              );
+            },
+          ).then((leave) {
+            if (leave == true && mounted) {
+              context.go('/exit');
+            }
+          });
+        } else {
           context.go('/exit');
         }
-      });
+      } else {
+        // Too much time between back presses, reset
+        _lastBackPressFromHome = now;
+        _showExitHint();
+      }
       return;
     }
-    
-    // Go to exit screen
-    debugLog('MainShell back nav: going to /exit');
-    context.go('/exit');
+
+    // Any other screen: go to home
+    debugLog('MainShell back nav: handling $location -> home');
+    context.go('/home');
+  }
+
+  void _showExitHint() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Press back again to exit'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Colors.black87,
+      ),
+    );
   }
 
   void _showSearchDialog() {

@@ -60,6 +60,12 @@ class CachedImage extends StatelessWidget {
     finalMemCacheWidth ??= screenWidthPx;
     finalMemCacheHeight ??= screenHeightPx;
 
+    // Validate URL before attempting to load
+    if (!_isValidImageUrl(imageUrl)) {
+      ImageFailureCache.recordFailure(imageUrl, 'Invalid URL format');
+      return errorWidget ?? _buildGradientFallback(width, height, Icons.broken_image);
+    }
+
     // Re-enable image loading with conservative caching and downscaling
     ImageLoadProbe.recordAttempt(imageUrl, 'cached_image');
     Widget image = CachedNetworkImage(
@@ -173,4 +179,23 @@ Widget _buildTransparentPlaceholder(double size, IconData fallbackIcon) {
       ),
     ),
   );
+}
+
+bool _isValidImageUrl(String url) {
+  if (url.isEmpty) return false;
+  try {
+    final uri = Uri.parse(url);
+    if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return false;
+    }
+    final path = uri.path.toLowerCase();
+    if (!path.endsWith('.jpg') && !path.endsWith('.jpeg') && 
+        !path.endsWith('.png') && !path.endsWith('.webp') && 
+        !path.endsWith('.gif') && !path.contains('/image/')) {
+      return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
 }

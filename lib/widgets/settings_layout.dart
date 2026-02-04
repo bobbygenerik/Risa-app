@@ -103,12 +103,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
       final primaryFocus = FocusManager.instance.primaryFocus;
       if (primaryFocus != null) {
         final focusContext = primaryFocus.context;
-        if (focusContext != null &&
-            focusContext.findAncestorWidgetOfExactType<SettingsLayout>() ==
-                null) {
+        // If something has focus, don't steal it
+        if (focusContext != null) {
           return;
         }
       }
+      // Only request focus if nothing has focus
       final node = widget.selectedIndex < _menuFocusNodes.length
           ? _menuFocusNodes[widget.selectedIndex]
           : null;

@@ -20,50 +20,111 @@ class ChewiePlayerWidget extends StatefulWidget {
 class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
+  bool _isInitializing = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    // Defer initialization to next frame to avoid blocking UI
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializePlayer();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_chewieController == null) {
-      return const Center(child: CircularProgressIndicator());
+    if (_errorMessage != null) {
+      return _buildErrorWidget(_errorMessage!);
+    }
+
+    if (_chewieController == null || _isInitializing) {
+      return _buildLoadingWidget();
     }
 
     return Focus(
       autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter ||
-              event.logicalKey == LogicalKeyboardKey.space) {
-            if (_chewieController!.isPlaying) {
-              _chewieController!.pause();
-            } else {
-              _chewieController!.play();
-            }
-            // Toggle controls visibility
-            if (_chewieController!.isFullScreen) {
-               // Chewie doesn't expose toggleControls explicitly easily without custom controls, 
-               // but pausing usually shows them.
-            }
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
-              event.logicalKey == LogicalKeyboardKey.arrowDown) {
-             // Show controls on up/down
-             // _chewieController!.showControls(); // Not public API, but triggering state change helps
-             setState(() {}); 
-             return KeyEventResult.ignored; // Let Chewie handle volume/scrubbing if it wants
-          }
-        }
-        return KeyEventResult.ignored;
-      },
+      onKeyEvent: _handleKeyEvent,
       child: Chewie(controller: _chewieController!),
     );
+  }
+
+  Widget _buildLoadingWidget() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading stream...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          const Text(
+            'Playback Error',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _errorMessage = null;
+                _isInitializing = true;
+              });
+              _initializePlayer();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.select ||
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      if (_chewieController != null) {
+        if (_chewieController!.isPlaying) {
+          _chewieController!.pause();
+        } else {
+          _chewieController!.play();
+        }
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -71,6 +132,8 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
     super.didUpdateWidget(oldWidget);
     if (widget.url != oldWidget.url) {
       _disposeControllers();
+      _isInitializing = true;
+      _errorMessage = null;
       _initializePlayer();
     }
   }
@@ -89,59 +152,94 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   }
 
   Future<void> _initializePlayer() async {
-    final uri = Uri.parse(widget.url);
-    _videoController = VideoPlayerController.networkUrl(
-      uri,
-      // Fix Jitter: HLS hint
-      formatHint: uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
-      // Revert to SurfaceView for better performance on Android TV
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false), 
-      httpHeaders: {
-        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
-        'Connection': 'keep-alive',
-        'Accept': '*/*',
-      },
-    );
-    
+    if (!mounted) return;
+
     try {
-      await _videoController!.initialize();
-      
+      final uri = Uri.parse(widget.url);
+
+      // Create controller with optimized settings for live TV
+      _videoController = VideoPlayerController.networkUrl(
+        uri,
+        formatHint: uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: false,
+        ),
+        httpHeaders: {
+          'User-Agent': 'RisaTV/1.0',
+          'Connection': 'keep-alive',
+          'Accept': '*/*',
+        },
+      );
+
+      // Add listener before initialization to catch errors early
+      _videoController!.addListener(_onVideoPlayerUpdate);
+
+      // Initialize with timeout to prevent hanging
+      await _videoController!.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Video initialization timed out');
+        },
+      );
+
+      if (!mounted) return;
+
+      // Create Chewie controller with optimized settings
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
         autoPlay: true,
         looping: false,
         aspectRatio: _videoController!.value.aspectRatio,
-        autoInitialize: false, 
+        autoInitialize: true,
         allowFullScreen: true,
         allowedScreenSleep: false,
         showControls: false,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: Colors.white,
+          handleColor: Colors.white,
+          backgroundColor: Colors.white24,
+          bufferedColor: Colors.white38,
+        ),
         errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error, color: Colors.red, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  'Playback Error',
-                  style: const TextStyle(color: Colors.white, fontSize: 18),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
+          return _buildErrorWidget(errorMessage);
         },
+        // Buffering settings for smoother playback
+        startAt: Duration.zero,
       );
-      
-      if (mounted) setState(() {});
+
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     } catch (e) {
       debugPrint('Video player initialization error: $e');
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
+
+  void _onVideoPlayerUpdate() {
+    // Handle any video player errors
+    if (_videoController != null &&
+        _videoController!.value.hasError &&
+        _errorMessage == null) {
+      setState(() {
+        _errorMessage =
+            _videoController!.value.errorDescription ?? 'Unknown error';
+      });
+    }
+  }
+}
+
+class TimeoutException implements Exception {
+  final String message;
+  TimeoutException(this.message);
+
+  @override
+  String toString() => message;
 }

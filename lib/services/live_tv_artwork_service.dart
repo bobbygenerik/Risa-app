@@ -287,7 +287,7 @@ class LiveTvArtworkService {
   Future<Map<String, bool>> prefetchVisibleArtwork(
     List<Program> programs,
     List<Channel> channels, {
-    Duration timeout = const Duration(seconds: 5),
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     if (programs.isEmpty || channels.isEmpty) {
       return {};
@@ -685,7 +685,7 @@ class LiveTvArtworkService {
     Channel? channel, {
     required bool preferLandscape,
   }) async {
-    const timeout = Duration(seconds: 5);
+    const timeout = Duration(seconds: 10);
     final title = program.title;
     final queryTitles = _buildArtworkQueryTitles(program, channel);
 
@@ -764,7 +764,7 @@ class LiveTvArtworkService {
     Program program, {
     required bool preferLandscape,
   }) async {
-    const timeout = Duration(seconds: 5);
+    const timeout = Duration(seconds: 10);
     final channel = _programChannelLookup[program.id];
     final isNews = channel != null && _isNewsProgram(program, channel);
 
@@ -921,7 +921,7 @@ class LiveTvArtworkService {
     if (!_isSportsProgram(program)) {
       return _fetchRegularLogo(program);
     }
-    const timeout = Duration(seconds: 5);
+    const timeout = Duration(seconds: 10);
     final title = program.title;
 
     // Try TheSportsDB
