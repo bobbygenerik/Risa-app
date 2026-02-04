@@ -818,12 +818,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
 
-      // If we are NOT in cold start, and something already has valid focus, respect it.
+      // If we are NOT in cold start and focus is already within this screen,
+      // respect it. Otherwise, claim focus for the watch button.
       if (!channelProvider.isColdStartLoad &&
           currentFocus != null &&
           currentFocus.context != null) {
-        // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
-        return;
+        final isFocusWithinScreen =
+            currentFocus.context!.findAncestorStateOfType<_LiveTVScreenState>() ==
+                this;
+        if (isFocusWithinScreen) {
+          // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
+          return;
+        }
       }
 
       // Start with Watch Now button for better UX - user sees hero first
@@ -4614,46 +4620,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     );
 
                         Widget buildCenteredLogo(Widget child) {
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: RadialGradient(
-                                    center: Alignment.center,
-                                    radius: 0.85,
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.06),
-                                      Colors.transparent,
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 28, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.36),
-                                        width: 1.5),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            Colors.black.withValues(alpha: 0.4),
-                                        blurRadius: 28,
-                                        offset: const Offset(0, 14),
-                                      ),
-                                    ],
-                                  ),
-                                  child: child,
-                                ),
-                              ),
-                            ],
-                          );
+                          return Center(child: child);
                         }
 
                         Widget buildLogoBlock(Widget child) {
@@ -4671,47 +4638,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           );
                         }
 
-                        Widget buildLabelBlock(String labelText) {
-                          final resolvedLabel = labelText.toUpperCase();
-                          final baseFontSize = maxLogoHeight * 0.6;
-                          return SizedBox(
-                            width: maxLogoWidth,
-                            height: maxLogoHeight,
-                            child: Center(
-                              child: FittedBox(
-                                fit: BoxFit.contain,
-                                child: Text(
-                                  resolvedLabel,
-                                  maxLines: 1,
-                                  style:
-                                      AppTypography.heroTitle(context).copyWith(
-                                    fontSize: baseFontSize,
-                                    letterSpacing: 6,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
                         Widget buildFallbackContent() {
-                          final labelText = label;
-                          if (labelText == null || labelText.isEmpty) {
+                          if (!showLogo) {
                             return buildCenteredLogo(fallbackIcon);
                           }
-                          return buildCenteredLogo(
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (showLogo) ...[
-                                  buildLogoBlock(fallbackIcon),
-                                  const SizedBox(height: 12),
-                                ],
-                                buildLabelBlock(labelText),
-                              ],
-                            ),
-                          );
+                          return buildCenteredLogo(buildLogoBlock(fallbackIcon));
                         }
 
                         if (!showLogo ||
@@ -4738,22 +4669,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               height: maxLogoHeight,
                               gaplessPlayback: true,
                             );
-                            final labelText = label;
-                            if (labelText == null || labelText.isEmpty) {
-                              return buildCenteredLogo(logo);
+                            if (!showLogo) {
+                              return buildCenteredLogo(fallbackIcon);
                             }
-                            return buildCenteredLogo(
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (showLogo) ...[
-                                    buildLogoBlock(logo),
-                                    const SizedBox(height: 12),
-                                  ],
-                                  buildLabelBlock(labelText),
-                                ],
-                              ),
-                            );
+                            return buildCenteredLogo(buildLogoBlock(logo));
                           },
                           placeholder: (_, __) => buildFallbackContent(),
                           errorWidget: (_, url, error) {

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/utils/app_theme.dart';
-
-// Modern gradient fallback for all cards with subtle brand accent
 
 class BrandBackgroundPainter extends CustomPainter {
   const BrandBackgroundPainter();
@@ -9,50 +6,47 @@ class BrandBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-
-    // Modern dark gradient base using brand colors
     final basePaint = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          AppTheme.darkBackground.withValues(alpha: 0.9),
-          AppTheme.darkBackground.withValues(alpha: 0.95),
-          AppTheme.cardBackground,
-        ],
-        stops: const [0.0, 0.5, 1.0],
+        colors: [Color(0xFF0A1929), Color(0xFF1A2332)],
       ).createShader(rect);
     canvas.drawRect(rect, basePaint);
 
-    // Subtle brand accent - bottom right corner with primary blue
-    final accentPaint = Paint()
+    final magentaPaint = Paint()
+      ..color = const Color(0xFFA23464).withValues(alpha: 0.08);
+    final magentaPath = Path()
+      ..moveTo(size.width, size.height)
+      ..lineTo(size.width, size.height * 0.4)
+      ..lineTo(size.width * 0.55, size.height)
+      ..close();
+    canvas.drawPath(magentaPath, magentaPaint);
+
+    final bluePaint = Paint()
+      ..color = const Color(0xFF2E6DB3).withValues(alpha: 0.15);
+    final bluePath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width * 0.7, 0)
+      ..lineTo(0, size.height * 0.55)
+      ..close();
+    canvas.drawPath(bluePath, bluePaint);
+
+    final lightPath = Path()
+      ..moveTo(size.width * 0.05, size.height * 0.9)
+      ..lineTo(size.width * 0.95, size.height * 0.5)
+      ..lineTo(size.width * 0.15, size.height * 0.2)
+      ..close();
+    final lightPaint = Paint()
       ..shader = LinearGradient(
-        begin: Alignment.bottomRight,
-        end: Alignment.topLeft,
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
         colors: [
-          AppTheme.primaryBlue.withValues(alpha: 0.08),
-          AppTheme.primaryBlue.withValues(alpha: 0.02),
+          Colors.white.withValues(alpha: 0.08),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.5, 1.0],
       ).createShader(rect);
-
-    final accentPath = Path()
-      ..moveTo(size.width, size.height)
-      ..lineTo(size.width, size.height * 0.3)
-      ..lineTo(size.width * 0.7, size.height)
-      ..close();
-    canvas.drawPath(accentPath, accentPaint);
-
-    // Subtle diagonal line accent
-    final linePaint = Paint()
-      ..color = AppTheme.primaryBlue.withValues(alpha: 0.05)
-      ..strokeWidth = 1.5;
-    canvas.drawLine(
-      Offset(size.width * 0.1, size.height * 0.9),
-      Offset(size.width * 0.9, size.height * 0.1),
-      linePaint,
-    );
+    canvas.drawPath(lightPath, lightPaint);
   }
 
   @override

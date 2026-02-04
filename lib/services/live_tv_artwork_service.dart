@@ -766,12 +766,6 @@ class LiveTvArtworkService {
   }) async {
     const timeout = Duration(seconds: 10);
     final channel = _programChannelLookup[program.id];
-    final isNews = channel != null && _isNewsProgram(program, channel);
-
-    // Skip image fetching for news - will show channel logo + "News" text instead
-    if (isNews) {
-      return null;
-    }
 
     final title = program.title;
     final queryTitles = _buildArtworkQueryTitles(program, channel);
@@ -1075,16 +1069,6 @@ class LiveTvArtworkService {
 
   void _setProgramArtwork(String key, String value) {
     if (value.isEmpty) return;
-    if (_isLikelyPosterUrl(value)) {
-      debugLog(
-          'LiveTV artwork: rejecting poster URL for program cache: $value');
-      return;
-    }
-    if (!_isLikelyLandscapeUrl(value)) {
-      debugLog(
-          'LiveTV artwork: rejecting non-landscape URL for program cache: $value');
-      return;
-    }
     _registerProgramArtworkEntry(key, value);
     _scheduleArtworkUiRefresh();
   }
@@ -1107,16 +1091,6 @@ class LiveTvArtworkService {
   ]) {
     if (value.isEmpty) return;
     if (!_isTitleCacheEligible(program)) return;
-    if (ImageValidationService.isKnownInvalid(value)) return;
-    if (_isLikelyPosterUrl(value)) {
-      debugLog('LiveTV artwork: rejecting poster URL for title cache: $value');
-      return;
-    }
-    if (!_isLikelyLandscapeUrl(value)) {
-      debugLog(
-          'LiveTV artwork: rejecting non-landscape URL for title cache: $value');
-      return;
-    }
     _registerProgramArtworkTitle(_titleCacheKey(program, channel), value);
   }
 
@@ -1563,38 +1537,11 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
-    if (ImageValidationService.isKnownInvalid(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_known_invalid',
-      );
-      return false;
-    }
-    if (_isLikelyChannelLogoUrl(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_channel_logo',
-      );
-      return false;
-    }
-    if (_matchesChannelLogo(url, channel)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_matches_channel_logo',
-      );
-      return false;
-    }
-    if (_isLikelySmallImage(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_small_image',
-      );
-      return false;
-    }
     return true;
   }
 
   bool _isValidTitleLogo(String? url, Channel channel) {
     if (url == null || url.isEmpty) return false;
-    if (ImageValidationService.isKnownInvalid(url)) return false;
-    if (_matchesChannelLogo(url, channel)) return false;
-    if (_isLikelyChannelLogoUrl(url)) return false;
     return true;
   }
 
@@ -1605,24 +1552,6 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
-    if (ImageValidationService.isKnownInvalid(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_known_invalid',
-      );
-      return false;
-    }
-    if (_isLikelySmallImage(url)) {
-      _logArtworkDecision(
-        'LiveTV artwork: source=$source program="$programTitle" url=$url result=reject_small',
-      );
-      return false;
-    }
-    if (preferLandscape && !_isLikelyLandscapeUrl(url)) {
-      return false;
-    }
-    if (preferLandscape && _isLikelyPosterUrl(url)) {
-      return false;
-    }
     return true;
   }
 
@@ -1667,98 +1596,6 @@ class LiveTvArtworkService {
     }
 
     return false;
-  }
-
-  bool _isLikelyChannelLogoUrl(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('/logo') ||
-        lower.contains('_logo') ||
-        lower.contains('-logo') ||
-        lower.contains('logo.')) {
-      return true;
-    }
-    return false;
-  }
-
-  bool _isLikelySmallImage(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('image.tmdb.org')) {
-      final sizeMatch = RegExp(r'/w(\d+)/').firstMatch(lower);
-      if (sizeMatch != null) {
-        final width = int.tryParse(sizeMatch.group(1) ?? '');
-        if (width != null && width < 300) {
-          return true;
-        }
-      }
-    }
-    final extMatch = RegExp(r'\.(png|jpg|jpeg|webp)$').firstMatch(lower);
-    if (extMatch != null) {
-      final beforeExt = lower.substring(0, extMatch.start);
-      final sizeRegex = RegExp(r'(\d+)x(\d+)');
-      final match = sizeRegex.firstMatch(beforeExt);
-      if (match != null) {
-        final w = int.tryParse(match.group(1) ?? '');
-        final h = int.tryParse(match.group(2) ?? '');
-        if ((w != null && w < 200) || (h != null && h < 200)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  bool _isLikelyLandscapeUrl(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-
-    // Reject obvious poster or logo URLs
-    if (_isLikelyPosterUrl(url) || _isLikelyChannelLogoUrl(url)) return false;
-
-    // If the image appears small, treat as non-landscape
-    if (_isLikelySmallImage(url)) return false;
-
-    // Explicitly landscape keywords - definitely accept
-    if (lower.contains('backdrop') ||
-        lower.contains('background') ||
-        lower.contains('fanart') ||
-        lower.contains('landscape') ||
-        lower.contains('banner')) {
-      return true;
-    }
-
-    // If file name contains explicit dimensions like 1920x1080, prefer landscape when width >= height
-    final extMatch = RegExp(r'\.(png|jpg|jpeg|webp)$').firstMatch(lower);
-    if (extMatch != null) {
-      final beforeExt = lower.substring(0, extMatch.start);
-      final sizeRegex = RegExp(r'(\d+)x(\d+)');
-      final match = sizeRegex.firstMatch(beforeExt);
-      if (match != null) {
-        final w = int.tryParse(match.group(1) ?? '');
-        final h = int.tryParse(match.group(2) ?? '');
-        if (w != null && h != null) {
-          // If we have dimensions, check ratio
-          return w >= (h * 1.2);
-        }
-      }
-    }
-
-    // TMDB-specific heuristics: large widths indicate landscape/backdrop
-    if (lower.contains('image.tmdb.org')) {
-      if (lower.contains('/original/') ||
-          lower.contains('/w1920/') ||
-          lower.contains('/w1280/')) {
-        return true;
-      }
-      // TMDB poster sizes should have been caught by _isLikelyPosterUrl
-      // For other TMDB URLs, allow them
-      return true;
-    }
-
-    // Default: assume landscape unless proven otherwise
-    // The _LandscapeGuardedImage widget will verify actual dimensions at load time
-    return true;
   }
 
   bool _isTitleCacheEligible(Program program) {
