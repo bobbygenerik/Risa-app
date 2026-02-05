@@ -61,6 +61,7 @@ import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/utils/image_cache_config.dart';
 import 'package:iptv_player/services/clock_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -149,6 +150,10 @@ void main() {
         }
         return true;
       };
+
+      // Initialize centralized image cache configuration
+      ImageCacheConfig.initialize();
+      StartupProbe.mark('Image cache config initialized');
 
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
@@ -816,7 +821,27 @@ class _MyAppState extends State<MyApp> {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
                 // No scaling - use native screen size
-                return MediaQuery(data: media, child: resolvedChild);
+                return MediaQuery(
+                  data: media,
+                  child: Stack(
+                    children: [
+                      resolvedChild,
+                      // Performance overlay for debug builds
+                      if (kDebugMode)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          child: SizedBox(
+                            width: 200,
+                            height: 60,
+                            child: PerformanceOverlay(
+                              optionsMask: 0x0F, // Show all stats
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
               },
             );
           },

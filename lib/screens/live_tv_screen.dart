@@ -2057,12 +2057,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Use stabilized channels if already initialized and fallback haven't changed much
     if (_featuredChannelsInitialized && _stableFeaturedChannels.isNotEmpty) {
-      return _buildChannelSection(
-        context,
-        'Featured',
-        _stableFeaturedChannels,
-        isFirstRow: true,
-        allowCategoryPaging: false,
+      return RepaintBoundary(
+        child: _buildChannelSection(
+          context,
+          'Featured',
+          _stableFeaturedChannels,
+          isFirstRow: true,
+          allowCategoryPaging: false,
+        ),
       );
     }
 
@@ -2552,15 +2554,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           return const SizedBox.shrink();
                         }
                         final categoryName = _categoryNames[index];
-                        return KeyedSubtree(
-                          key: ValueKey<String>('live_tv_row_$categoryName'),
-                          child: _buildCategoryRowWidget(
-                            context,
-                            categoryName,
-                            index,
-                            // Category rows don't filter by EPG, but first one gets special focus
-                            isFirstRow: false,
-                            isFirstCategoryRow: index == 0,
+                        return RepaintBoundary(
+                          child: KeyedSubtree(
+                            key: ValueKey<String>('live_tv_row_$categoryName'),
+                            child: _buildCategoryRowWidget(
+                              context,
+                              categoryName,
+                              index,
+                              // Category rows don't filter by EPG, but first one gets special focus
+                              isFirstRow: false,
+                              isFirstCategoryRow: index == 0,
+                            ),
                           ),
                         );
                       },

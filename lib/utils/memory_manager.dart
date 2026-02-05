@@ -6,7 +6,8 @@ import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
 class MemoryManager {
-  static const int _maxMemoryThresholdMB = 200; // Conservative threshold
+  // Increased threshold for modern devices, but kept conservative for older Android TV
+  static const int _maxMemoryThresholdMB = 250; // Slightly higher threshold
   static bool _isLowMemory = false;
   static bool _cleanupScheduled = false;
   
@@ -59,13 +60,14 @@ class MemoryManager {
         // Ignore file deletion errors (race condition)
       }
       
-      // Set balanced cache limits
-      PaintingBinding.instance.imageCache.maximumSize = 100;
-      PaintingBinding.instance.imageCache.maximumSizeBytes = 150 * 1024 * 1024; // 150MB max
+      // Set more aggressive cache limits for better memory management
+      // Reduced from 150MB to 100MB to prevent OOM on large playlists
+      PaintingBinding.instance.imageCache.maximumSize = 80;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100MB max
       
       LogoImageCache.clear();
       
-      debugLog('Cleared image caches and set conservative limits');
+      debugLog('Cleared image caches and set conservative limits (100MB)');
     } catch (e) {
       debugLog('Failed to clear caches: $e');
     }

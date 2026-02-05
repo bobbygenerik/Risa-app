@@ -578,10 +578,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     }
   }
 
-  // Throttle notifyListeners for performance - max once per 100ms
+  // Throttle notifyListeners for performance - max once per 250ms
+  // Increased from 100ms to reduce UI jank on large playlists
   DateTime? _lastNotifyTime;
   bool _notifyPending = false;
-  static const Duration _notifyThrottleInterval = Duration(milliseconds: 100);
+  static const Duration _notifyThrottleInterval = Duration(milliseconds: 250);
 
   @override
   void dispose() {

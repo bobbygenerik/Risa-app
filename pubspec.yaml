@@ -50,6 +50,13 @@ dependencies:
   record: ^6.1.2  # Audio recording for transcription
   linked_scroll_controller: ^0.2.0
 
+  # State management - BLoC pattern for complex business logic
+  flutter_bloc: ^9.0.0
+  equatable: ^2.0.7
+
+  # High-performance local storage for large datasets (alternative to SharedPreferences)
+  hive_flutter: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

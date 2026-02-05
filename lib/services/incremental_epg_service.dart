@@ -40,7 +40,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Map<String, List<String>> _epgDisplayNamesById = {};
 
   final bool _enableMatchingDiagnostics = kDebugMode;
-  final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
   bool _isDownloading = false;
   bool _isParsing = false;
@@ -79,10 +78,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   String? _xtreamPassword;
   bool _disposed = false; // Track if provider is disposed
 
-  // Throttle notifyListeners for performance - max once per 100ms
+  // Throttle notifyListeners for performance - max once per 250ms
+  // Increased from 100ms to reduce UI jank during EPG parsing
   DateTime? _lastNotifyTime;
   bool _notifyPending = false;
-  static const Duration _notifyThrottleInterval = Duration(milliseconds: 100);
+  static const Duration _notifyThrottleInterval = Duration(milliseconds: 250);
 
   // Playback mode: suspend all notifications during video to prevent jitter
   bool _playbackActive = false;
@@ -218,8 +218,35 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   String? get epgProgressLabel =>
       _epgProgressLabel.isNotEmpty ? _epgProgressLabel : null;
 
+  // LRU cache for normalized strings to prevent unbounded growth
+  static final Map<String, String> _normalizeCache = {};
+  static final List<String> _normalizeCacheOrder = [];
+  static const int _maxNormalizeCacheSize = 5000; // Further reduced from 10000
+  
   static String normalizeForFilter(String input) {
-    return EPGMatchingUtils.normalizeChannelName(input);
+    // Check cache first
+    final cached = _normalizeCache[input];
+    if (cached != null) {
+      // Move to end (most recently used)
+      _normalizeCacheOrder.remove(input);
+      _normalizeCacheOrder.add(input);
+      return cached;
+    }
+    
+    // LRU eviction: remove oldest entries if cache is full
+    while (_normalizeCache.length >= _maxNormalizeCacheSize) {
+      if (_normalizeCacheOrder.isNotEmpty) {
+        final oldest = _normalizeCacheOrder.removeAt(0);
+        _normalizeCache.remove(oldest);
+      } else {
+        break;
+      }
+    }
+    
+    final result = EPGMatchingUtils.normalizeChannelName(input);
+    _normalizeCache[input] = result;
+    _normalizeCacheOrder.add(input);
+    return result;
   }
 
   /// Allowed-set normalization: trim + lowercase only.
