@@ -7,6 +7,7 @@ import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
+import 'package:iptv_player/widgets/brand_fallback_background.dart';
 
 /// A widget that displays a channel logo with optional enrichment support.
 class ChannelLogoWidget extends StatefulWidget {
@@ -202,14 +203,16 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
 
   Widget _buildGradientFallback(
       BuildContext context, double width, double height) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Center(
-        child: Icon(
-          Icons.tv,
-          size: context.tvIconSize(32),
-          color: Colors.white70,
+    return BrandFallbackBackground(
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Center(
+          child: Icon(
+            Icons.tv,
+            size: context.tvIconSize(32),
+            color: Colors.white70,
+          ),
         ),
       ),
     );
