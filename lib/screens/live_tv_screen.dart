@@ -2574,7 +2574,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_news'),
-                      child: _buildProgramTypeRow(context, 'News Now', allChannels,
+                      child: _buildProgramTypeRow(context, 'News', allChannels,
                         ProgramClassifier.isNewsProgram),
                     ),
                   ),
