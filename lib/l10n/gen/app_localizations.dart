@@ -157,13 +157,13 @@ abstract class AppLocalizations {
   /// No description provided for @inputMethodM3u.
   ///
   /// In en, this message translates to:
-  /// **'Input Method: M3U URL'**
+  /// **'m3u'**
   String get inputMethodM3u;
 
   /// No description provided for @inputMethodXtream.
   ///
   /// In en, this message translates to:
-  /// **'Input Method: Xtream Codes'**
+  /// **'Xtream Codes'**
   String get inputMethodXtream;
 
   /// No description provided for @m3uPlaylistUrl.

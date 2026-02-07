@@ -28,6 +28,7 @@ import androidx.media3.common.util.UnstableApi
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -71,7 +72,7 @@ class MainActivity : FlutterActivity() {
 
         // Video configuration channel for SurfaceView/TextureView control
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.risa.app/video_config")
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                 when (call.method) {
                     "forceSurfaceView" -> {
                         val success = VideoPlayerConfig.configureSurfaceView(this@MainActivity)
@@ -83,7 +84,7 @@ class MainActivity : FlutterActivity() {
 
         // Native capabilities channel for checking ExoPlayer availability
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NATIVE_CAPABILITIES_CHANNEL)
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                 when (call.method) {
                     "supportsNativeExoPlayer" -> {
                         // ExoPlayer is always available since we registered it above
@@ -96,7 +97,7 @@ class MainActivity : FlutterActivity() {
             // Debug IO channel (disabled): writing files from Dart is suppressed to avoid
             // filling device storage. Method still exists but returns `false` and logs.
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.streamhub.iptv/debug_io")
-                .setMethodCallHandler { call, result ->
+                .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                     when (call.method) {
                         "writeFile" -> {
                             val name = call.argument<String>("name") ?: "debug.txt"
@@ -122,7 +123,7 @@ class MainActivity : FlutterActivity() {
             })
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PIP_CHANNEL)
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                 when (call.method) {
                     "enterPipMode" -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -160,7 +161,7 @@ class MainActivity : FlutterActivity() {
             }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AUDIO_CHANNEL)
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                 when (call.method) {
                     "switchAudioTrack" -> {
                         val trackIndex = (call.argument<Any>("trackIndex") as? Number)?.toInt() ?: -1
@@ -184,7 +185,7 @@ class MainActivity : FlutterActivity() {
             }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TRANSCRIPTION_CHANNEL)
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
                 when (call.method) {
                     "startAudioCapture" -> {
                         val sampleRate = (call.argument<Any>("sampleRate") as? Number)?.toInt() ?: 16000

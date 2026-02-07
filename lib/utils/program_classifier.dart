@@ -135,6 +135,99 @@ class ProgramClassifier {
     return _matchesProgramOrChannel(program, channel, keywords);
   }
 
+  /// Check if a program is sci-fi/fantasy-related.
+  static bool isSciFiProgram(Program? program, Channel channel) {
+    const keywords = [
+      'sci-fi',
+      'scifi',
+      'science fiction',
+      'space',
+      'alien',
+      'robot',
+      'future',
+      'galaxy',
+      'star trek',
+      'star wars',
+      'fantasy',
+      'supernatural',
+      'dystopia',
+    ];
+    return _matchesProgramOrChannel(program, channel, keywords);
+  }
+
+  /// Check if a program is comedy-related.
+  static bool isComedyProgram(Program? program, Channel channel) {
+    const keywords = [
+      'comedy',
+      'sitcom',
+      'funny',
+      'stand-up',
+      'standup',
+      'humor',
+      'humour',
+      'comic',
+      'laugh',
+      'parody',
+      'satire',
+    ];
+    return _matchesProgramOrChannel(program, channel, keywords);
+  }
+
+  /// Check if a program is drama-related.
+  static bool isDramaProgram(Program? program, Channel channel) {
+    const keywords = [
+      'drama',
+      'thriller',
+      'crime',
+      'mystery',
+      'suspense',
+      'detective',
+      'legal',
+      'medical drama',
+      'soap',
+      'telenovela',
+    ];
+    return _matchesProgramOrChannel(program, channel, keywords);
+  }
+
+  /// Check if a program is cooking/food-related.
+  static bool isCookingProgram(Program? program, Channel channel) {
+    const keywords = [
+      'cooking',
+      'cook',
+      'chef',
+      'kitchen',
+      'food',
+      'recipe',
+      'bake',
+      'baking',
+      'culinary',
+      'masterchef',
+      'restaurant',
+      'gourmet',
+    ];
+    return _matchesProgramOrChannel(program, channel, keywords);
+  }
+
+  /// Check if a program is a talk show.
+  static bool isTalkShowProgram(Program? program, Channel channel) {
+    const keywords = [
+      'talk show',
+      'talkshow',
+      'talk-show',
+      'interview',
+      'late night',
+      'late-night',
+      'tonight show',
+      'morning show',
+      'chat show',
+      'host',
+      'celebrity',
+      'guests',
+    ];
+    return _matchesProgramOrChannel(program, channel, keywords);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // HELPERS
   // ─────────────────────────────────────────────────────────────────────────

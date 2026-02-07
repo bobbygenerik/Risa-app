@@ -23,8 +23,8 @@
     }
   },
   "playlists": "Playlists",
-  "inputMethodM3u": "Input Method: M3U URL",
-  "inputMethodXtream": "Input Method: Xtream Codes",
+  "inputMethodM3u": "m3u",
+  "inputMethodXtream": "Xtream Codes",
   "m3uPlaylistUrl": "M3U Playlist URL",
   "loadPlaylist": "Load Playlist",
   "loading": "Loading...",

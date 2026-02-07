@@ -8,12 +8,12 @@ import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
 
-/// A widget that displays a channel logo with fallback support
-/// It will try to enrich the logo from known databases if the original is missing
+/// A widget that displays a channel logo with optional enrichment support.
 class ChannelLogoWidget extends StatefulWidget {
   final String channelName;
   final String? logoUrl;
   final String? tvgId;
+  final bool allowEnrichment;
   final double width;
   final double height;
   final BoxFit fit;
@@ -27,6 +27,7 @@ class ChannelLogoWidget extends StatefulWidget {
     required this.channelName,
     this.logoUrl,
     this.tvgId,
+    this.allowEnrichment = false,
     this.width = 48,
     this.height = 48,
     this.fit = BoxFit.contain,
@@ -52,7 +53,9 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     super.initState();
     _effectiveLogoUrl = widget.logoUrl;
     if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
-      _enrichLogo();
+      if (widget.allowEnrichment) {
+        _enrichLogo();
+      }
     } else {
       _validateLogoIfNeeded();
     }
@@ -70,7 +73,9 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         _triedEnrichment = false;
         _validatedUrl = null;
         if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
-          _enrichLogo();
+          if (widget.allowEnrichment) {
+            _enrichLogo();
+          }
         } else {
           _validateLogoIfNeeded();
         }
@@ -112,7 +117,9 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
           _effectiveLogoUrl = null;
           _validatedUrl = url;
         });
-        unawaited(_enrichLogo());
+        if (widget.allowEnrichment) {
+          unawaited(_enrichLogo());
+        }
       }
       return;
     }
@@ -133,7 +140,9 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
           _effectiveLogoUrl = null;
           _validatedUrl = url;
         });
-        unawaited(_enrichLogo());
+        if (widget.allowEnrichment) {
+          unawaited(_enrichLogo());
+        }
       } else {
         _validatedUrl = url;
         setState(() {});

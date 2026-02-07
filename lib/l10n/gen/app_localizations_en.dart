@@ -45,10 +45,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playlists => 'Playlists';
 
   @override
-  String get inputMethodM3u => 'Input Method: M3U URL';
+  String get inputMethodM3u => 'm3u';
 
   @override
-  String get inputMethodXtream => 'Input Method: Xtream Codes';
+  String get inputMethodXtream => 'Xtream Codes';
 
   @override
   String get m3uPlaylistUrl => 'M3U Playlist URL';

@@ -1447,12 +1447,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  ValueNotifier<int> _categoryRowNotifierFor(String category) {
-    return _categoryRowNotifiers.putIfAbsent(
-      category,
-      () => ValueNotifier<int>(0),
-    );
-  }
+
 
   void _replaceCategories(List<String> categories) {
     final next = List<String>.from(categories);
@@ -2215,6 +2210,64 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  /// Build a "Continue Watching" row from recently watched channels
+  Widget _buildContinueWatchingRow(
+      BuildContext context, List<Channel> allChannels) {
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final recentChannels = channelProvider.mostWatchedChannels.take(8).toList();
+    
+    if (recentChannels.isEmpty) return const SizedBox.shrink();
+
+    return _buildChannelSection(
+      context,
+      'Continue Watching',
+      recentChannels,
+      allowCategoryPaging: false,
+    );
+  }
+
+  /// Build a row of channels currently showing a specific program type
+  Widget _buildProgramTypeRow(
+    BuildContext context,
+    String title,
+    List<Channel> allChannels,
+    bool Function(Program?, Channel) classifier,
+  ) {
+    final epgService = context.read<IncrementalEpgService>();
+    
+    final matchingChannels = <Channel>[];
+    final seenIds = <String>{};
+    
+    for (final channel in allChannels) {
+      if (matchingChannels.length >= 12) break; // Limit to 12 per row
+      
+      final channelId = channel.epgLookupId;
+      if (seenIds.contains(channelId)) continue;
+      
+      final currentProgram = epgService.getCurrentProgram(
+        channelId,
+        channelName: channel.epgLookupNameFallback,
+        groupTitle: channel.groupTitle,
+      );
+      
+      // Check if current program matches the classifier
+      if (classifier(currentProgram, channel)) {
+        matchingChannels.add(channel);
+        seenIds.add(channelId);
+      }
+    }
+    
+    if (matchingChannels.isEmpty) return const SizedBox.shrink();
+
+    return _buildChannelSection(
+      context,
+      title,
+      matchingChannels,
+      allowCategoryPaging: false,
+    );
+  }
+
   Widget _buildFullScreenHero(
     BuildContext context,
     Channel featuredChannel,
@@ -2266,11 +2319,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : selectionPool[_featuredIndex % _lastHeroCandidateCount];
     final activeChannel = selectedHero?.channel ?? featuredChannel;
     final currentProgram = selectedHero?.program;
-    final hasRowData = _categoryNames.any((name) {
-      final cached = _categoryChannelCache[name];
-      return cached != null && cached.isNotEmpty;
-    });
-    final showFailsafeRow = !hasRowData;
+
     final heroImage = _resolveHeroImage(
           currentProgram,
           activeChannel,
@@ -2316,32 +2365,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 child: _buildFeaturedRow(context, allChannels),
               ),
             ),
-            SliverPadding(
-              padding: EdgeInsets.only(
-                left: 0,
-                right: rightInset,
-                bottom: context.spacingXl(),
-              ),
-              sliver: SliverFixedExtentList(
-                itemExtent: _estimateRowHeight(context),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index < 0 || index >= _categoryNames.length) {
-                      return const SizedBox.shrink();
-                    }
-                    final categoryName = _categoryNames[index];
-                    return _buildCategoryRowWidget(
-                      context,
-                      categoryName,
-                      index,
-                      isFirstRow: false,
-                      isFirstCategoryRow: index == 0,
-                    );
-                  },
-                  childCount:
-                      math.min(_visibleCategoryCount, _categoryNames.length),
-                ),
-              ),
+            // Category rows removed - users access full channel list via Guide tab
+            SliverToBoxAdapter(
+              child: SizedBox(height: context.spacingXl()),
             ),
           ],
         ),
@@ -2522,57 +2548,128 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                   ),
                 ),
-                if (showFailsafeRow)
-                  SliverPadding(
-                    padding: EdgeInsets.only(
-                      left: 0,
-                      right: rightInset,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: KeyedSubtree(
-                        key: const ValueKey<String>('live_tv_failsafe_row'),
-                        child: _buildChannelSection(
-                          context,
-                          'All Channels',
-                          allChannels,
-                          allowCategoryPaging: false,
-                        ),
-                      ),
-                    ),
-                  ),
+                // Continue Watching row
                 SliverPadding(
-                  padding: EdgeInsets.only(
-                    left: 0,
-                    right: rightInset,
-                    bottom: context.spacingXl(),
-                  ),
-                  sliver: SliverFixedExtentList(
-                    itemExtent: _estimateRowHeight(context),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index < 0 || index >= _categoryNames.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final categoryName = _categoryNames[index];
-                        return RepaintBoundary(
-                          child: KeyedSubtree(
-                            key: ValueKey<String>('live_tv_row_$categoryName'),
-                            child: _buildCategoryRowWidget(
-                              context,
-                              categoryName,
-                              index,
-                              // Category rows don't filter by EPG, but first one gets special focus
-                              isFirstRow: false,
-                              isFirstCategoryRow: index == 0,
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: math.min(
-                          _visibleCategoryCount, _categoryNames.length),
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_continue_watching'),
+                      child: _buildContinueWatchingRow(context, allChannels),
                     ),
                   ),
                 ),
+                // Program type rows - only show if matching content is airing
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_sports'),
+                      child: _buildProgramTypeRow(context, 'Live Sports', allChannels, 
+                        (p, c) => p != null && ProgramClassifier.isSportsProgram(p, c)),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_news'),
+                      child: _buildProgramTypeRow(context, 'News Now', allChannels,
+                        ProgramClassifier.isNewsProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_movies'),
+                      child: _buildProgramTypeRow(context, 'Movies', allChannels,
+                        ProgramClassifier.isMovieProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_kids'),
+                      child: _buildProgramTypeRow(context, 'Kids & Family', allChannels,
+                        ProgramClassifier.isKidsProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_scifi'),
+                      child: _buildProgramTypeRow(context, 'Sci-Fi & Fantasy', allChannels,
+                        ProgramClassifier.isSciFiProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_comedy'),
+                      child: _buildProgramTypeRow(context, 'Comedy', allChannels,
+                        ProgramClassifier.isComedyProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_drama'),
+                      child: _buildProgramTypeRow(context, 'Drama & Thriller', allChannels,
+                        ProgramClassifier.isDramaProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_cooking'),
+                      child: _buildProgramTypeRow(context, 'Cooking & Food', allChannels,
+                        ProgramClassifier.isCookingProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_talkshows'),
+                      child: _buildProgramTypeRow(context, 'Talk Shows', allChannels,
+                        ProgramClassifier.isTalkShowProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_docs'),
+                      child: _buildProgramTypeRow(context, 'Documentaries', allChannels,
+                        ProgramClassifier.isDocumentaryProgram),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(left: 0, right: rightInset),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: const ValueKey<String>('live_tv_music'),
+                      child: _buildProgramTypeRow(context, 'Music', allChannels,
+                        ProgramClassifier.isMusicProgram),
+                    ),
+                  ),
+                ),
+                // Bottom spacing
                 SliverToBoxAdapter(
                   child: SizedBox(height: context.spacing(12)),
                 ),
@@ -2949,7 +3046,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
     if (channel.logoUrl == null || channel.logoUrl!.isEmpty) {
-      // Try enrichment for channels missing playlist logos.
+      // No enrichment: show placeholder when playlist/EPG logo is missing.
       return ChannelLogoWidget(
         channelName: channel.name,
         tvgId: channel.tvgId,
@@ -3760,127 +3857,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildCategoryRowWidget(
-    BuildContext context,
-    String category,
-    int index, {
-    bool isFirstRow = false,
-    bool isFirstCategoryRow = false,
-  }) {
-    final notifier = _categoryRowNotifierFor(category);
-    return ValueListenableBuilder<int>(
-      valueListenable: notifier,
-      builder: (context, _, __) {
-        final channels = _categoryChannelCache[category];
-        if (channels == null) {
-          // Still loading - show placeholder
-          _enqueueCategoryLoad(category);
-          return _buildCategoryRowLoading(context, category);
-        }
-        // FALLBACK: If cache is empty, try sync load from ChannelProvider in-memory list
-        var effectiveChannels = channels;
-        if (effectiveChannels.isEmpty) {
-          final channelProvider =
-              Provider.of<ChannelProvider>(context, listen: false);
-          final syncChannels = channelProvider.getFilteredChannels(
-              category: category, limit: 20);
-          if (syncChannels.isNotEmpty) {
-            _categoryChannelCache[category] = syncChannels;
-            effectiveChannels = syncChannels;
-          }
-        }
-        if (effectiveChannels.isEmpty) {
-          // Treat empty as transient unless the provider confirms no channels.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            final channelProvider =
-                Provider.of<ChannelProvider>(context, listen: false);
-            final channelCount =
-                channelProvider.getChannelCountForCategory(category);
-            if (channelCount == 0) {
-              _removeCategoryRow(category);
-              setState(() {});
-            } else {
-              _categoryChannelCache.remove(category);
-              _enqueueCategoryLoad(category);
-            }
-          });
-          return _buildCategoryRowLoading(context, category);
-        }
-        _prefetchEpgForRow(category, effectiveChannels);
-        return _buildChannelSection(
-          context,
-          category,
-          effectiveChannels,
-          isFirstRow: isFirstRow,
-          isFirstCategoryRow: isFirstCategoryRow,
-        );
-      },
-    );
-  }
+  // Category row methods removed - users access full channel list via Guide tab
 
-  /// Build a skeleton placeholder row while channel data loads
-  Widget _buildCategoryRowLoading(BuildContext context, String category) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final maxCardWidth =
-        screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
-    final cardWidth = math.min(context.cardWidth(), maxCardWidth);
-    final cardHeight = cardWidth * 0.6;
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: context.spacingSm() + _sidebarInset(),
-        bottom: context.spacingSm(),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Category header
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              category,
-              style: AppTypography.caption(context).copyWith(
-                color: Colors.white.withAlpha((0.9 * 255).round()),
-              ),
-            ),
-          ),
-          // Skeleton cards row
-          SizedBox(
-            height: cardHeight + 40, // Card + info area
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              separatorBuilder: (_, __) => SizedBox(width: context.spacingSm()),
-              itemBuilder: (context, index) {
-                return Container(
-                  width: cardWidth,
-                  height: cardHeight,
-                  decoration: BoxDecoration(
-                    color:
-                        AppTheme.cardBackground.withAlpha((0.5 * 255).round()),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white24,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   double _estimateRowHeight(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
