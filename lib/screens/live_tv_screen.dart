@@ -217,136 +217,6 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-
-class _HeroMattePainter extends CustomPainter {
-  final double revealWidthFactor;
-  final double edgeCurveFactor;
-
-  const _HeroMattePainter({
-    required this.revealWidthFactor,
-    required this.edgeCurveFactor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Rect bounds = Offset.zero & size;
-    canvas.saveLayer(bounds, Paint());
-    canvas.drawRect(
-      bounds,
-      Paint()..color = AppTheme.darkBackground,
-    );
-
-    final Path revealPath = _buildHeroRevealPath(
-      size,
-      revealWidthFactor,
-      edgeCurveFactor,
-    );
-
-    canvas.drawPath(
-      revealPath,
-      Paint()..blendMode = BlendMode.clear,
-    );
-
-    // Soft edge fade along the curved path
-    final double softWidth = size.width * 0.08;
-    if (softWidth > 0) {
-      final Paint softPaint = Paint()
-        ..blendMode = BlendMode.dstOut
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = softWidth
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, softWidth * 0.5)
-        ..color = const Color(0xFF000000);
-      canvas.drawPath(revealPath, softPaint);
-    }
-    
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeroMattePainter oldDelegate) {
-    return oldDelegate.revealWidthFactor != revealWidthFactor ||
-        oldDelegate.edgeCurveFactor != edgeCurveFactor;
-  }
-}
-
-class _HeroRevealClipper extends CustomClipper<Path> {
-  final double revealWidthFactor;
-  final double edgeCurveFactor;
-
-  const _HeroRevealClipper({
-    required this.revealWidthFactor,
-    required this.edgeCurveFactor,
-  });
-
-  @override
-  Path getClip(Size size) {
-    return _buildHeroRevealPath(size, revealWidthFactor, edgeCurveFactor);
-  }
-
-  @override
-  bool shouldReclip(covariant _HeroRevealClipper oldClipper) {
-    return oldClipper.revealWidthFactor != revealWidthFactor ||
-        oldClipper.edgeCurveFactor != edgeCurveFactor;
-  }
-}
-
-// _HeroMatteClipper removed because it was unused.
-
-class _HeroBottomScrimClipper extends CustomClipper<Path> {
-  final double revealWidthFactor;
-  final double edgeCurveFactor;
-
-  const _HeroBottomScrimClipper({
-    required this.revealWidthFactor,
-    required this.edgeCurveFactor,
-  });
-
-  @override
-  Path getClip(Size size) {
-    final revealWidth = size.width * revealWidthFactor;
-    final revealLeft = size.width - revealWidth;
-    final curveDepth = size.width * edgeCurveFactor;
-    return Path()
-      ..moveTo(0, 0)
-      ..lineTo(revealLeft, 0)
-      ..quadraticBezierTo(
-        revealLeft - curveDepth,
-        size.height * 0.5,
-        revealLeft,
-        size.height,
-      )
-      ..lineTo(0, size.height)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant _HeroBottomScrimClipper oldClipper) {
-    return oldClipper.revealWidthFactor != revealWidthFactor ||
-        oldClipper.edgeCurveFactor != edgeCurveFactor;
-  }
-}
-
-Path _buildHeroRevealPath(
-  Size size,
-  double revealWidthFactor,
-  double edgeCurveFactor,
-) {
-  final double revealWidth = size.width * revealWidthFactor;
-  final double revealLeft = size.width - revealWidth;
-  final double curveDepth = size.width * edgeCurveFactor;
-  return Path()
-    ..moveTo(revealLeft, 0)
-    ..quadraticBezierTo(
-      revealLeft - curveDepth,
-      size.height * 0.5,
-      revealLeft,
-      size.height,
-    )
-    ..lineTo(size.width, size.height)
-    ..lineTo(size.width, 0)
-    ..close();
-}
-
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
 /// Helper class to hold EPG data for channel cards to prevent unnecessary rebuilds
@@ -417,12 +287,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _categoryChunkSize = 6;
   static const double _categoryPrefetchExtent =
       600; // Restored but conservative
-  // Scrim reduced to 35% to show more artwork
-  static const double _heroMatteRevealWidthFactor = 0.65; // Was 0.45
-  static const double _heroMatteEdgeCurveFactor = 0.08;
-  // Cover the curved reveal so the image doesn't end with a straight edge.
-  static const double _heroImageWidthFactor =
-      _heroMatteRevealWidthFactor + _heroMatteEdgeCurveFactor; // Now 0.73
   final Queue<String> _categoryLoadQueue = Queue<String>();
   int _activeCategoryLoads = 0;
   static const int _maxCategoryLoads = 2; // Restored
@@ -823,9 +687,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (!channelProvider.isColdStartLoad &&
           currentFocus != null &&
           currentFocus.context != null) {
-        final isFocusWithinScreen =
-            currentFocus.context!.findAncestorStateOfType<_LiveTVScreenState>() ==
-                this;
+        final isFocusWithinScreen = currentFocus.context!
+                .findAncestorStateOfType<_LiveTVScreenState>() ==
+            this;
         if (isFocusWithinScreen) {
           // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
           return;
@@ -988,7 +852,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _startFeaturedRotation() {
-    _timerManager.startPeriodic('featured_rotation', _featuredRotationInterval, () {
+    _timerManager.startPeriodic('featured_rotation', _featuredRotationInterval,
+        () {
       if (mounted) {
         _nextHero();
       }
@@ -1447,8 +1312,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-
-
   void _replaceCategories(List<String> categories) {
     final next = List<String>.from(categories);
     final nextSet = next.toSet();
@@ -1519,7 +1382,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _requestInitialFocus();
         // DON'T force category refresh on navigation back - data is already loaded
         // Only refresh if we truly have no categories at all
-        if (provider.hasChannels && !_loadingCategories && _categoryNames.isEmpty) {
+        if (provider.hasChannels &&
+            !_loadingCategories &&
+            _categoryNames.isEmpty) {
           _categoryPrefetchRequested = false;
           _requestCategoryPrefetch();
         }
@@ -2216,7 +2081,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
     final recentChannels = channelProvider.mostWatchedChannels.take(8).toList();
-    
+
     if (recentChannels.isEmpty) return const SizedBox.shrink();
 
     return _buildChannelSection(
@@ -2235,29 +2100,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool Function(Program?, Channel) classifier,
   ) {
     final epgService = context.read<IncrementalEpgService>();
-    
+
     final matchingChannels = <Channel>[];
     final seenIds = <String>{};
-    
+
     for (final channel in allChannels) {
       if (matchingChannels.length >= 12) break; // Limit to 12 per row
-      
+
       final channelId = channel.epgLookupId;
       if (seenIds.contains(channelId)) continue;
-      
+
       final currentProgram = epgService.getCurrentProgram(
         channelId,
         channelName: channel.epgLookupNameFallback,
         groupTitle: channel.groupTitle,
       );
-      
+
       // Check if current program matches the classifier
       if (classifier(currentProgram, channel)) {
         matchingChannels.add(channel);
         seenIds.add(channelId);
       }
     }
-    
+
     if (matchingChannels.isEmpty) return const SizedBox.shrink();
 
     return _buildChannelSection(
@@ -2400,48 +2265,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         heroImage,
                         0.0,
                       ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: const _HeroMattePainter(
-                              revealWidthFactor: _heroMatteRevealWidthFactor,
-                              edgeCurveFactor: _heroMatteEdgeCurveFactor,
+                      // Left Gradient Mask (Fades image into background)
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                AppTheme.darkBackground,
+                                AppTheme.darkBackground,
+                                AppTheme.darkBackground.withValues(alpha: 0.0),
+                              ],
+                              stops: const [0.0, 0.2, 0.8],
                             ),
                           ),
                         ),
                       ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: const SizedBox.shrink(),
-                        ),
-                      ),
-                      // Matte handled by _HeroMattePainter above.
-                      // Bottom gradient for row blend.
+                      // Bottom Gradient (Fades into content rows)
                       Positioned(
-                        top: contentTop +
-                            _rowTitleBlockHeight(context) +
-                            context.spacingXs(),
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        child: ClipPath(
-                          clipper: const _HeroBottomScrimClipper(
-                            revealWidthFactor: _heroMatteRevealWidthFactor,
-                            edgeCurveFactor: _heroMatteEdgeCurveFactor,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  AppTheme.darkBackground.withAlpha(0),
-                                  AppTheme.darkBackground
-                                      .withAlpha((0.7 * 255).round()),
-                                  AppTheme.darkBackground,
-                                ],
-                                stops: const [0.0, 0.5, 1.0],
-                              ),
+                        height: 200,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                AppTheme.darkBackground,
+                                AppTheme.darkBackground.withValues(alpha: 0.0),
+                              ],
                             ),
                           ),
                         ),
@@ -2564,8 +2423,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_sports'),
-                      child: _buildProgramTypeRow(context, 'Live Sports', allChannels, 
-                        (p, c) => p != null && ProgramClassifier.isSportsProgram(p, c)),
+                      child: _buildProgramTypeRow(
+                          context,
+                          'Live Sports',
+                          allChannels,
+                          (p, c) =>
+                              p != null &&
+                              ProgramClassifier.isSportsProgram(p, c)),
                     ),
                   ),
                 ),
@@ -2575,7 +2439,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_news'),
                       child: _buildProgramTypeRow(context, 'News', allChannels,
-                        ProgramClassifier.isNewsProgram),
+                          ProgramClassifier.isNewsProgram),
                     ),
                   ),
                 ),
@@ -2584,8 +2448,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_movies'),
-                      child: _buildProgramTypeRow(context, 'Movies', allChannels,
-                        ProgramClassifier.isMovieProgram),
+                      child: _buildProgramTypeRow(context, 'Movies',
+                          allChannels, ProgramClassifier.isMovieProgram),
                     ),
                   ),
                 ),
@@ -2594,8 +2458,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_kids'),
-                      child: _buildProgramTypeRow(context, 'Kids & Family', allChannels,
-                        ProgramClassifier.isKidsProgram),
+                      child: _buildProgramTypeRow(context, 'Kids & Family',
+                          allChannels, ProgramClassifier.isKidsProgram),
                     ),
                   ),
                 ),
@@ -2604,8 +2468,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_scifi'),
-                      child: _buildProgramTypeRow(context, 'Sci-Fi & Fantasy', allChannels,
-                        ProgramClassifier.isSciFiProgram),
+                      child: _buildProgramTypeRow(context, 'Sci-Fi & Fantasy',
+                          allChannels, ProgramClassifier.isSciFiProgram),
                     ),
                   ),
                 ),
@@ -2614,8 +2478,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_comedy'),
-                      child: _buildProgramTypeRow(context, 'Comedy', allChannels,
-                        ProgramClassifier.isComedyProgram),
+                      child: _buildProgramTypeRow(context, 'Comedy',
+                          allChannels, ProgramClassifier.isComedyProgram),
                     ),
                   ),
                 ),
@@ -2624,8 +2488,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_drama'),
-                      child: _buildProgramTypeRow(context, 'Drama & Thriller', allChannels,
-                        ProgramClassifier.isDramaProgram),
+                      child: _buildProgramTypeRow(context, 'Drama & Thriller',
+                          allChannels, ProgramClassifier.isDramaProgram),
                     ),
                   ),
                 ),
@@ -2634,8 +2498,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_cooking'),
-                      child: _buildProgramTypeRow(context, 'Cooking & Food', allChannels,
-                        ProgramClassifier.isCookingProgram),
+                      child: _buildProgramTypeRow(context, 'Cooking & Food',
+                          allChannels, ProgramClassifier.isCookingProgram),
                     ),
                   ),
                 ),
@@ -2644,8 +2508,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_talkshows'),
-                      child: _buildProgramTypeRow(context, 'Talk Shows', allChannels,
-                        ProgramClassifier.isTalkShowProgram),
+                      child: _buildProgramTypeRow(context, 'Talk Shows',
+                          allChannels, ProgramClassifier.isTalkShowProgram),
                     ),
                   ),
                 ),
@@ -2654,8 +2518,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   sliver: SliverToBoxAdapter(
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_docs'),
-                      child: _buildProgramTypeRow(context, 'Documentaries', allChannels,
-                        ProgramClassifier.isDocumentaryProgram),
+                      child: _buildProgramTypeRow(context, 'Documentaries',
+                          allChannels, ProgramClassifier.isDocumentaryProgram),
                     ),
                   ),
                 ),
@@ -2665,7 +2529,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     child: KeyedSubtree(
                       key: const ValueKey<String>('live_tv_music'),
                       child: _buildProgramTypeRow(context, 'Music', allChannels,
-                        ProgramClassifier.isMusicProgram),
+                          ProgramClassifier.isMusicProgram),
                     ),
                   ),
                 ),
@@ -3050,6 +2914,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return ChannelLogoWidget(
         channelName: channel.name,
         tvgId: channel.tvgId,
+        allowEnrichment: true,
         width: 72,
         height: 48,
         fit: BoxFit.contain,
@@ -3061,6 +2926,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       channelName: channel.name,
       logoUrl: channel.logoUrl,
       tvgId: channel.tvgId,
+      allowEnrichment: true,
       width: 72,
       height: 48,
       fit: BoxFit.contain,
@@ -3128,14 +2994,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return true;
     }
 
-    // TMDB poster/logo sizes
+    // TMDB poster-specific sizes (w92 through w500)
+    // Note: w780 and w1280 are used for BOTH posters and backdrops
     if (lower.contains('tmdb.org') &&
         (lower.contains('/w92/') ||
             lower.contains('/w154/') ||
             lower.contains('/w185/') ||
             lower.contains('/w342/') ||
-            lower.contains('/w500/') ||
-            lower.contains('/w780/'))) {
+            lower.contains('/w500/'))) {
       return true;
     }
 
@@ -3631,11 +3497,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
       final shouldPrefetch = index < window;
-      if (index < 3) debugLog('Prefetch index $index: $shouldPrefetch (no focus, window=$window)');
+      if (index < 3) {
+        debugLog(
+            'Prefetch index $index: $shouldPrefetch (no focus, window=$window)');
+      }
       return shouldPrefetch;
     }
     final shouldPrefetch = (index - focusedIndex).abs() <= window;
-    if (index < 3) debugLog('Prefetch index $index: $shouldPrefetch (focused=$focusedIndex, window=$window)');
+    if (index < 3) {
+      debugLog(
+          'Prefetch index $index: $shouldPrefetch (focused=$focusedIndex, window=$window)');
+    }
     return shouldPrefetch;
   }
 
@@ -3858,7 +3730,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   // Category row methods removed - users access full channel list via Guide tab
-
 
   double _estimateRowHeight(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -4181,6 +4052,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _matchesChannelLogo(normalizedImageUrl, channel);
     final hasChannelLogo =
         channel.logoUrl != null && channel.logoUrl!.isNotEmpty;
+    if (channel.name == "CWWLVI" ||
+        channel.name == "PBSWGBH" ||
+        channel.name.contains("NBCSportsBoston")) {
+      debugLog(
+          'LiveTvScreen: _buildCardContent for ${channel.name}: hasChannelLogo=$hasChannelLogo, logoUrl=${channel.logoUrl}, imageUrl=$imageUrl');
+    }
     final hideCornerLogo =
         isLogoBackdrop || (normalizedImageUrl == null && hasChannelLogo);
     final dpr = MediaQuery.of(context).devicePixelRatio;
@@ -4400,7 +4277,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return _buildLogoAsFallback(logoUrl, channel.name);
     }
-    return _buildMissingArtworkFallback(channel.name);
+    return BrandFallbackBackground(
+      child: _buildMissingArtworkFallback(channel.name),
+    );
   }
 
   Widget _buildLogoAsFallback(String logoUrl, String channelName) {
@@ -4437,6 +4316,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       placeholder: (_, __) =>
                           _buildMissingArtworkFallback(channelName),
                       errorWidget: (_, url, error) {
+                        final host = Uri.tryParse(url)?.host ?? 'unknown';
+                        debugLog(
+                            'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error');
                         ImageFailureCache.recordFailure(url, error);
                         return _buildMissingArtworkFallback(channelName);
                       },
@@ -4447,45 +4329,44 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
   Widget _buildMissingArtworkFallback([String? channelName]) {
-    return BrandFallbackBackground(
-      child: Center(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth;
-            final maxHeight = constraints.maxHeight;
-            final logoWidth = (maxWidth * 0.6).clamp(40.0, maxWidth);
-            final logoHeight = (maxHeight * 0.35).clamp(24.0, maxHeight);
-            if (channelName == null || channelName.isEmpty) {
-              return Icon(
-                Icons.tv,
-                color: Colors.white.withValues(alpha: 0.55),
-                size: math.min(maxWidth, maxHeight) * 0.3,
-              );
-            }
-            return ChannelLogoWidget(
-              channelName: channelName,
-              logoUrl: null,
-              tvgId: null,
-              width: logoWidth,
-              height: logoHeight,
-              fit: BoxFit.contain,
-              backgroundColor: Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              placeholder: Icon(
-                Icons.tv,
-                color: Colors.white.withValues(alpha: 0.55),
-                size: math.min(logoWidth, logoHeight) * 0.8,
-              ),
-              errorWidget: Icon(
-                Icons.tv,
-                color: Colors.white.withValues(alpha: 0.55),
-                size: math.min(logoWidth, logoHeight) * 0.8,
-              ),
+    // Return transparent background (just the underlying card color)
+    return Center(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth;
+          final maxHeight = constraints.maxHeight;
+          final logoWidth = (maxWidth * 0.6).clamp(40.0, maxWidth);
+          final logoHeight = (maxHeight * 0.35).clamp(24.0, maxHeight);
+          if (channelName == null || channelName.isEmpty) {
+            return Icon(
+              Icons.tv,
+              color: Colors.white.withValues(alpha: 0.55),
+              size: math.min(maxWidth, maxHeight) * 0.3,
             );
-          },
-        ),
+          }
+          return ChannelLogoWidget(
+            channelName: channelName,
+            logoUrl: null,
+            tvgId: null,
+            allowEnrichment: true,
+            width: logoWidth,
+            height: logoHeight,
+            fit: BoxFit.contain,
+            backgroundColor: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            placeholder: Icon(
+              Icons.tv,
+              color: Colors.white.withValues(alpha: 0.55),
+              size: math.min(logoWidth, logoHeight) * 0.8,
+            ),
+            errorWidget: Icon(
+              Icons.tv,
+              color: Colors.white.withValues(alpha: 0.55),
+              size: math.min(logoWidth, logoHeight) * 0.8,
+            ),
+          );
+        },
       ),
     );
   }
@@ -4504,6 +4385,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       channelName: channel.name,
       logoUrl: channel.logoUrl,
       tvgId: channel.tvgId,
+      allowEnrichment: true,
       width: 40,
       height: 24,
       fit: BoxFit.contain,
@@ -4573,101 +4455,91 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ClipPath(
-            clipper: const _HeroRevealClipper(
-              revealWidthFactor: _heroMatteRevealWidthFactor,
-              edgeCurveFactor: _heroMatteEdgeCurveFactor,
-            ),
-            child: SizedBox.expand(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: FractionallySizedBox(
-                  widthFactor: _heroMatteRevealWidthFactor,
-                  heightFactor: 1.0,
-                  child: Center(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
+          // Content aligned to the right (75% width)
+          Align(
+            alignment: Alignment.centerRight,
+            child: FractionallySizedBox(
+              widthFactor: 0.75,
+              heightFactor: 1.0,
+              child: Center(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
                     final dpr = MediaQuery.of(context).devicePixelRatio;
                     final maxLogoWidth = constraints.maxWidth * 0.65;
                     final maxLogoHeight = constraints.maxHeight * 0.34;
                     final logoCacheWidth =
                         math.min(480, (maxLogoWidth * dpr).round());
                     final logoCacheHeight =
-                        math.min(480, (maxLogoHeight * dpr).round());
+                        math.min(270, (maxLogoHeight * dpr).round());
 
-                    final fallbackIcon = Icon(
-                      icon,
-                      color: Colors.white70,
-                      size: 64,
-                    );
+                    // We don't want to show the category icon (whistle, cloud, etc) anymore
+                    // just the background if no logo is available.
+                    final fallbackContent = const SizedBox.shrink();
 
-                        Widget buildCenteredLogo(Widget child) {
-                          return Center(child: child);
-                        }
+                    Widget buildCenteredLogo(Widget child) {
+                      return Center(child: child);
+                    }
 
-                        Widget buildLogoBlock(Widget child) {
-                          return SizedBox(
-                            width: maxLogoWidth,
-                            height: maxLogoHeight,
-                            child: Align(
-                              alignment: Alignment.center,
-                              child: FittedBox(
-                                fit: BoxFit.contain,
-                                child: Transform.translate(
-                                    offset: const Offset(0, -4), child: child),
-                              ),
-                            ),
-                          );
-                        }
+                    Widget buildLogoBlock(Widget child) {
+                      return SizedBox(
+                        width: maxLogoWidth,
+                        height: maxLogoHeight,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: Transform.translate(
+                                offset: const Offset(0, -4), child: child),
+                          ),
+                        ),
+                      );
+                    }
 
-                        Widget buildFallbackContent() {
-                          if (!showLogo) {
-                            return buildCenteredLogo(fallbackIcon);
-                          }
-                          return buildCenteredLogo(buildLogoBlock(fallbackIcon));
-                        }
+                    Widget buildFallbackContent() {
+                      // No icon, just empty space (showing background)
+                      return buildCenteredLogo(fallbackContent);
+                    }
 
-                        if (!showLogo ||
-                            normalizedLogoUrl == null ||
-                            normalizedLogoUrl.isEmpty ||
-                            ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
-                          return buildFallbackContent();
-                        }
+                    if (!showLogo ||
+                        normalizedLogoUrl == null ||
+                        normalizedLogoUrl.isEmpty ||
+                        ImageFailureCache.shouldSkip(normalizedLogoUrl)) {
+                      return buildFallbackContent();
+                    }
 
-                        return CachedNetworkImage(
-                          imageUrl: normalizedLogoUrl,
-                          httpHeaders: HttpClientService().imageHeaders,
+                    return CachedNetworkImage(
+                      imageUrl: normalizedLogoUrl,
+                      httpHeaders: HttpClientService().imageHeaders,
+                      fit: BoxFit.contain,
+                      width: maxLogoWidth,
+                      height: maxLogoHeight,
+                      memCacheWidth: logoCacheWidth,
+                      memCacheHeight: logoCacheHeight,
+                      imageBuilder: (context, imageProvider) {
+                        ImageFailureCache.recordSuccess(normalizedLogoUrl);
+                        final logo = Image(
+                          image: imageProvider,
                           fit: BoxFit.contain,
                           width: maxLogoWidth,
                           height: maxLogoHeight,
-                          memCacheWidth: logoCacheWidth,
-                          memCacheHeight: logoCacheHeight,
-                          imageBuilder: (context, imageProvider) {
-                            ImageFailureCache.recordSuccess(normalizedLogoUrl);
-                            final logo = Image(
-                              image: imageProvider,
-                              fit: BoxFit.contain,
-                              width: maxLogoWidth,
-                              height: maxLogoHeight,
-                              gaplessPlayback: true,
-                            );
-                            if (!showLogo) {
-                              return buildCenteredLogo(fallbackIcon);
-                            }
-                            return buildCenteredLogo(buildLogoBlock(logo));
-                          },
-                          placeholder: (_, __) => buildFallbackContent(),
-                          errorWidget: (_, url, error) {
-                            ImageFailureCache.recordFailure(url, error);
-                            logHandshakeIfNeeded(url, error,
-                                context: 'LiveTV hero logo');
-                            return buildFallbackContent();
-                          },
-                          useOldImageOnUrlChange: true,
+                          gaplessPlayback: true,
                         );
+                        if (!showLogo) {
+                          // Should act like fallback if logo hidden
+                          return buildFallbackContent();
+                        }
+                        return buildCenteredLogo(buildLogoBlock(logo));
                       },
-                    ),
-                  ),
+                      placeholder: (_, __) => buildFallbackContent(),
+                      errorWidget: (_, url, error) {
+                        ImageFailureCache.recordFailure(url, error);
+                        logHandshakeIfNeeded(url, error,
+                            context: 'LiveTV hero logo');
+                        return buildFallbackContent();
+                      },
+                      useOldImageOnUrlChange: true,
+                    );
+                  },
                 ),
               ),
             ),
@@ -4760,7 +4632,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _openChannelPlayer(Channel channel) async {
     if (_isOpeningPlayer) return;
     _isOpeningPlayer = true;
-    
+
     // Pause all UI updates
     _timerManager.cancelAll();
     _artworkService.pauseFetching();
@@ -4899,12 +4771,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final cacheHeight =
                 math.min(1500, (constraints.maxHeight * dpr).round());
 
-            const heroImageWidthFactor = _heroImageWidthFactor;
+            // Use 75% width for the hero image to leave room on the left,
+            // but the gradient mask will smooth the transition.
+            const heroImageWidthFactor = 0.75;
 
             if (isChannelLogoFallback) {
               // Special handling for channel logo fallback with blurred background
-              // Note: No ClipPath here - the matte painter in _buildFullScreenHero
-              // handles clipping with blend modes for soft edge effect
+              // Note: No ClipPath here - the linear gradients in build() handle the masking
               return Stack(
                 fit: StackFit.expand,
                 children: [
@@ -4996,13 +4869,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
             // Render only landscape artwork. Portrait gets rejected by the
             // image guard and falls back to the category/hero fallback.
-            // Note: No ClipPath here - the matte painter in _buildFullScreenHero
-            // handles clipping with blend modes for soft edge effect
+            // Note: Gradient masking is handled by the Stack in build()
             return SizedBox.expand(
               child: Align(
                 alignment: Alignment.centerRight,
                 child: FractionallySizedBox(
-                  widthFactor: _heroImageWidthFactor,
+                  widthFactor: 0.75,
                   heightFactor: 1.0,
                   child: ShaderMask(
                     shaderCallback: (bounds) {
@@ -5044,7 +4916,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       placeholder: (_, __) => _buildGradientPlaceholder(),
                       errorWidget: (_, url, error) {
                         ImageFailureCache.recordFailure(url, error);
-                        ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
+                        ImageLoadProbe.recordFailure(
+                            url, 'hero_backdrop', error);
                         logHandshakeIfNeeded(url, error,
                             context: 'LiveTV hero backdrop');
                         return heroFallback;

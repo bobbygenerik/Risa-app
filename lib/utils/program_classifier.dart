@@ -65,6 +65,38 @@ class ProgramClassifier {
 
   /// Check if a program is kids/family-related.
   static bool isKidsProgram(Program? program, Channel channel) {
+    // Explicit exclusions for adult animated shows that contain 'family' or
+    // 'animation' but are NOT kids-appropriate
+    const excludedShows = [
+      'family guy',
+      'american dad',
+      'south park',
+      'the simpsons',
+      'simpsons',
+      'rick and morty',
+      'rick & morty',
+      'bobs burgers',
+      "bob's burgers",
+      'archer',
+      'futurama',
+      'big mouth',
+      'disenchantment',
+      'bojack horseman',
+      'king of the hill',
+      'beavis and butt-head',
+      'adult swim',
+    ];
+
+    final title = (program?.title ?? '').toLowerCase();
+    final channelName = channel.name.toLowerCase();
+
+    // Check for excluded adult animated shows
+    for (final excluded in excludedShows) {
+      if (title.contains(excluded) || channelName.contains(excluded)) {
+        return false;
+      }
+    }
+
     const keywords = [
       'kids',
       'kid',
@@ -77,6 +109,10 @@ class ProgramClassifier {
       'toons',
       'nursery',
       'preschool',
+      'disney',
+      'nickelodeon',
+      'nick jr',
+      'pbs kids',
     ];
     return _matchesProgramOrChannel(program, channel, keywords);
   }
@@ -137,20 +173,24 @@ class ProgramClassifier {
 
   /// Check if a program is sci-fi/fantasy-related.
   static bool isSciFiProgram(Program? program, Channel channel) {
+    // Exclude weather programs which might mention 'space' in weather context
+    if (isWeatherProgram(program, channel)) {
+      return false;
+    }
+
     const keywords = [
       'sci-fi',
       'scifi',
       'science fiction',
-      'space',
       'alien',
       'robot',
-      'future',
       'galaxy',
       'star trek',
       'star wars',
       'fantasy',
       'supernatural',
       'dystopia',
+      'outer space',
     ];
     return _matchesProgramOrChannel(program, channel, keywords);
   }
@@ -250,9 +290,21 @@ class ProgramClassifier {
   }
 
   static bool _containsKeywords(String value, List<String> keywords) {
+    // Use word boundary matching to avoid false positives like
+    // 'cook' matching 'cookbook' or 'family' matching 'Family Guy'
     for (final keyword in keywords) {
-      if (value.contains(keyword)) {
-        return true;
+      // For multi-word keywords, just use contains
+      if (keyword.contains(' ') || keyword.contains('-')) {
+        if (value.contains(keyword)) {
+          return true;
+        }
+      } else {
+        // For single words, use word boundary regex
+        // \b matches word boundaries (space, punctuation, start/end of string)
+        final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
+        if (pattern.hasMatch(value)) {
+          return true;
+        }
       }
     }
     return false;

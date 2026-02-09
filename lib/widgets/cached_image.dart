@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/widgets/brand_fallback_background.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
@@ -36,7 +37,9 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ImageFailureCache.shouldSkip(imageUrl)) {
+    final normalizedImageUrl = normalizeImageUrl(imageUrl);
+
+    if (ImageFailureCache.shouldSkip(normalizedImageUrl)) {
       return errorWidget ??
           _buildGradientFallback(width, height, Icons.broken_image);
     }
@@ -61,15 +64,16 @@ class CachedImage extends StatelessWidget {
     finalMemCacheHeight ??= screenHeightPx;
 
     // Validate URL before attempting to load
-    if (!_isValidImageUrl(imageUrl)) {
-      ImageFailureCache.recordFailure(imageUrl, 'Invalid URL format');
-      return errorWidget ?? _buildGradientFallback(width, height, Icons.broken_image);
+    if (!_isValidImageUrl(normalizedImageUrl)) {
+      ImageFailureCache.recordFailure(normalizedImageUrl, 'Invalid URL format');
+      return errorWidget ??
+          _buildGradientFallback(width, height, Icons.broken_image);
     }
 
     // Re-enable image loading with conservative caching and downscaling
-    ImageLoadProbe.recordAttempt(imageUrl, 'cached_image');
+    ImageLoadProbe.recordAttempt(normalizedImageUrl, 'cached_image');
     Widget image = CachedNetworkImage(
-      imageUrl: imageUrl,
+      imageUrl: normalizedImageUrl,
       httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
@@ -78,8 +82,8 @@ class CachedImage extends StatelessWidget {
       memCacheWidth: finalMemCacheWidth,
       memCacheHeight: finalMemCacheHeight,
       imageBuilder: (context, imageProvider) {
-        ImageFailureCache.recordSuccess(imageUrl);
-        ImageLoadProbe.recordSuccess(imageUrl, 'cached_image');
+        ImageFailureCache.recordSuccess(normalizedImageUrl);
+        ImageLoadProbe.recordSuccess(normalizedImageUrl, 'cached_image');
         return Image(
           image: imageProvider,
           width: width,
@@ -182,16 +186,15 @@ Widget _buildTransparentPlaceholder(double size, IconData fallbackIcon) {
 }
 
 bool _isValidImageUrl(String url) {
-  if (url.isEmpty) return false;
+  final trimmed = url.trim();
+  if (trimmed.isEmpty) return false;
   try {
-    final uri = Uri.parse(url);
-    if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    final uri = Uri.parse(trimmed);
+    final scheme = uri.scheme.toLowerCase();
+    if (!uri.hasScheme || (scheme != 'http' && scheme != 'https')) {
       return false;
     }
-    final path = uri.path.toLowerCase();
-    if (!path.endsWith('.jpg') && !path.endsWith('.jpeg') && 
-        !path.endsWith('.png') && !path.endsWith('.webp') && 
-        !path.endsWith('.gif') && !path.contains('/image/')) {
+    if (uri.host.isEmpty) {
       return false;
     }
     return true;

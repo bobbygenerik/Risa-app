@@ -1612,14 +1612,15 @@ class LiveTvArtworkService {
       return true;
     }
 
-    // TMDB poster/logo sizes (w92 through w780 are typically poster sizes)
+    // TMDB poster-specific sizes (w92 through w500 are poster-only sizes)
+    // Note: w780 and w1280 are used for BOTH posters and backdrops, so we don't
+    // use those sizes to detect posters - we'd incorrectly reject valid backdrops.
     if (lower.contains('image.tmdb.org') &&
         (lower.contains('/w92/') ||
             lower.contains('/w154/') ||
             lower.contains('/w185/') ||
             lower.contains('/w342/') ||
-            lower.contains('/w500/') ||
-            lower.contains('/w780/'))) {
+            lower.contains('/w500/'))) {
       return true;
     }
 

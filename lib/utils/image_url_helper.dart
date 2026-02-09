@@ -1,11 +1,22 @@
 String normalizeImageUrl(String url) {
-  final uri = Uri.tryParse(url);
-  if (uri == null) return url;
+  final trimmed = url.trim();
+  if (trimmed.isEmpty) return trimmed;
 
-  final host = uri.host.toLowerCase();
-  if (host == 'logo.m3uassets.com') {
-    return uri.replace(scheme: 'http').toString();
+  final candidate = trimmed.startsWith('//') ? 'https:$trimmed' : trimmed;
+  final uri = Uri.tryParse(candidate);
+  if (uri == null) return trimmed;
+
+  if (uri.hasScheme) {
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme == 'http' || scheme == 'https') {
+      return uri.toString();
+    }
+    return trimmed;
   }
 
-  return url;
+  if (RegExp(r'^[^/\s]+\.[^/\s]+(/|$)').hasMatch(candidate)) {
+    return 'https://$candidate';
+  }
+
+  return trimmed;
 }

@@ -873,6 +873,96 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     return '${uri.scheme}://${uri.host}$portSegment';
   }
 
+  Future<bool> _restoreChannelsFromPrefsCache({
+    required SharedPreferences prefs,
+    String? playlistUrl,
+    String? epgUrl,
+    String? reason,
+  }) async {
+    final cachedJson = prefs.getString('flutter.cached_playlist') ??
+        prefs.getString('cached_playlist');
+    if (cachedJson == null || cachedJson.trim().isEmpty) {
+      return false;
+    }
+
+    try {
+      final decoded = await compute(jsonDecode, cachedJson) as List<dynamic>;
+      if (decoded.isEmpty) {
+        return false;
+      }
+
+      final restored = <Map<String, dynamic>>[];
+      for (final item in decoded) {
+        if (item is Map) {
+          restored.add(Map<String, dynamic>.from(item));
+        }
+      }
+      if (restored.isEmpty) {
+        return false;
+      }
+
+      _channelMaps = restored;
+      _channelCache.clear();
+      await _rebuildChannelCachesAsync();
+      _channelCountDb = _channelMaps.length;
+
+      await _setCurrentEpgMapSignature(
+        prefs: prefs,
+        playlistUrl: playlistUrl,
+        epgUrl: epgUrl,
+        channelCount: _channelMaps.length,
+      );
+
+      _invalidateCategoryCaches();
+      unawaited(_computeCategoriesAsync());
+      _updateEpgAllowedChannels();
+      _refreshSmartChannelCache();
+
+      _isLoading = false;
+      _isColdStartLoad = false;
+      _hasLoadedPlaylist = true;
+      _noPlaylistConfigured = false;
+      notifyListeners();
+      _scheduleEpgRefresh(forceRefresh: false);
+
+      final reasonSuffix =
+          (reason == null || reason.isEmpty) ? '' : ' ($reason)';
+      debugLog(
+          'ChannelProvider: Restored ${_channelMaps.length} channels from SharedPreferences cache$reasonSuffix');
+      return true;
+    } catch (e) {
+      debugLog(
+          'ChannelProvider: Failed to restore channels from SharedPreferences cache: $e');
+      return false;
+    }
+  }
+
+  String? _resolveXtreamLogoUrl(String? rawLogoUrl, String serverUrl) {
+    final raw = rawLogoUrl?.trim() ?? '';
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
+      return null;
+    }
+    if (raw.startsWith('data:')) {
+      return raw;
+    }
+    if (raw.startsWith('//')) {
+      final scheme = Uri.tryParse(serverUrl)?.scheme;
+      final safeScheme =
+          (scheme != null && scheme.isNotEmpty) ? scheme : 'https';
+      return '$safeScheme:$raw';
+    }
+    try {
+      final parsed = Uri.parse(raw);
+      if (parsed.hasScheme && parsed.host.isNotEmpty) {
+        return parsed.toString();
+      }
+      final base = Uri.parse(serverUrl);
+      return base.resolve(raw).toString();
+    } catch (_) {
+      return raw;
+    }
+  }
+
   Future<Map<String, String>?> _resolveXtreamCredentials(String m3uUrl) async {
     String? serverUrl;
     String? username;
@@ -1002,7 +1092,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           final name = (s['name'] ?? '').toString();
           final categoryId = (s['category_id'] ?? '').toString();
           final groupTitle = categoryNameById[categoryId] ?? 'Live';
-          final logoUrl = (s['stream_icon'] ?? '').toString();
+          final logoUrl =
+              _resolveXtreamLogoUrl(s['stream_icon']?.toString(), serverUrl);
           final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
 
           final url =
@@ -1011,7 +1102,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             'id': streamId,
             'name': name.isNotEmpty ? name : streamId,
             'url': url,
-            'logoUrl': logoUrl.isNotEmpty ? logoUrl : null,
+            'logoUrl': logoUrl,
             'groupTitle': groupTitle,
             'tvgId': epgId,
           });
@@ -1873,7 +1964,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     logToSystem('=== autoLoadPlaylist START ===', name: 'ChannelProvider');
     // Skip if already loaded AND have channels in memory
     if (_hasLoadedPlaylist && _channelMaps.isNotEmpty) {
-      debugLog('ChannelProvider: Playlist already loaded (${_channelMaps.length} channels), skipping');
+      debugLog(
+          'ChannelProvider: Playlist already loaded (${_channelMaps.length} channels), skipping');
       return;
     }
     if (_autoLoadInProgress || _isLoading) {
@@ -2252,6 +2344,18 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             'ChannelProvider: File cache expired or not found, loading from network');
       }
 
+      // Last local fallback: restore channels from SharedPreferences cache.
+      final restoredFromPrefs = await _restoreChannelsFromPrefsCache(
+        prefs: prefs,
+        playlistUrl: cachedPlaylistUrl,
+        epgUrl: cachedEpgUrl,
+        reason: 'startup fallback',
+      );
+      if (restoredFromPrefs) {
+        unawaited(_backgroundSync(prefs: prefs, url: cachedPlaylistUrl));
+        return;
+      }
+
       debugLog('ChannelProvider: Playlist type: $playlistType');
       _noPlaylistConfigured = false;
 
@@ -2341,10 +2445,19 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: downloading playlist');
           await loadPlaylistFromUrl(playlistUrl);
-          _hasLoadedPlaylist = true;
-          debugLog('ChannelProvider: Auto-load completed successfully');
-          StartupProbe.mark(
-              'ChannelProvider.autoLoadPlaylist: network load finished');
+          if (_channelMaps.isNotEmpty) {
+            _hasLoadedPlaylist = true;
+            debugLog(
+                'ChannelProvider: Auto-load completed successfully (${_channelMaps.length} channels)');
+            StartupProbe.mark(
+                'ChannelProvider.autoLoadPlaylist: network load finished');
+          } else {
+            _hasLoadedPlaylist = false;
+            debugLog(
+                'ChannelProvider: Auto-load finished without channels (error: $_errorMessage)');
+            StartupProbe.mark(
+                'ChannelProvider.autoLoadPlaylist: no channels loaded');
+          }
         } else {
           debugLog('ChannelProvider: Playlist URL is empty');
           StartupProbe.mark(
@@ -2632,6 +2745,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
       _loadingProgress = 0.0;
       _loadingStatus = '';
+      var shouldRethrow = false;
 
       // Provide more helpful error messages
       if (e.toString().contains('HandshakeException') ||
@@ -2668,14 +2782,38 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         // Already handled above
       } else {
         _errorMessage = e.toString();
-        if (!isBackground) {
-          _isLoading = false;
-          _isColdStartLoad = false;
-        } else {
-          _isBackgroundSyncing = false;
+        shouldRethrow = true;
+      }
+
+      // If network/parsing fails and we have no visible data, try SharedPreferences
+      // cache before surfacing a hard failure.
+      if (!isBackground && _channelMaps.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        final restored = await _restoreChannelsFromPrefsCache(
+          prefs: prefs,
+          playlistUrl:
+              (_lastPlaylistUrl?.isNotEmpty ?? false) ? _lastPlaylistUrl : url,
+          epgUrl:
+              prefs.getString('custom_epg_url') ?? prefs.getString('epg_url'),
+          reason: 'network error recovery',
+        );
+        if (restored) {
+          _errorMessage =
+              'Network error while refreshing playlist. Showing cached channels.';
+          notifyListeners();
+          return;
         }
-        notifyListeners();
-        rethrow; // Re-throw so UI can handle it
+      }
+
+      if (!isBackground) {
+        _isLoading = false;
+        _isColdStartLoad = false;
+      } else {
+        _isBackgroundSyncing = false;
+      }
+      notifyListeners();
+      if (shouldRethrow) {
+        rethrow;
       }
     } finally {
       await _setWakeLock(false);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/services/channel_logo_service.dart';
 import 'package:iptv_player/services/http_client_service.dart';
@@ -7,6 +8,8 @@ import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// A widget that displays a channel logo with optional enrichment support.
 class ChannelLogoWidget extends StatefulWidget {
@@ -47,11 +50,12 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   bool _triedEnrichment = false;
   bool _isValidating = false;
   String? _validatedUrl;
+  bool _recoveryEnrichmentScheduled = false;
 
   @override
   void initState() {
     super.initState();
-    _effectiveLogoUrl = widget.logoUrl;
+    _effectiveLogoUrl = _normalizeLogoUrl(widget.logoUrl);
     if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
       if (widget.allowEnrichment) {
         _enrichLogo();
@@ -66,12 +70,13 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     super.didUpdateWidget(oldWidget);
     // Only update if logo URL actually changed (not just widget rebuild)
     if (widget.logoUrl != oldWidget.logoUrl) {
-      final newLogoUrl = widget.logoUrl;
+      final newLogoUrl = _normalizeLogoUrl(widget.logoUrl);
       // Only update state if logo URL actually changed
       if (_effectiveLogoUrl != newLogoUrl) {
         _effectiveLogoUrl = newLogoUrl;
         _triedEnrichment = false;
         _validatedUrl = null;
+        _recoveryEnrichmentScheduled = false;
         if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
           if (widget.allowEnrichment) {
             _enrichLogo();
@@ -96,8 +101,11 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       );
       if (mounted && enrichedUrl != null) {
         setState(() {
-          _effectiveLogoUrl = enrichedUrl;
+          _effectiveLogoUrl = _normalizeLogoUrl(enrichedUrl);
+          _validatedUrl = null;
+          _recoveryEnrichmentScheduled = false;
         });
+        unawaited(_validateLogoIfNeeded());
       }
     } catch (e) {
       // Silently fail
@@ -107,8 +115,9 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   }
 
   Future<void> _validateLogoIfNeeded() async {
-    final url = _effectiveLogoUrl;
+    final url = _normalizeLogoUrl(_effectiveLogoUrl);
     if (url == null || url.isEmpty) return;
+    _effectiveLogoUrl = url;
     if (_validatedUrl == url || _isValidating) return;
     if (ImageValidationService.isKnownInvalid(url)) {
       ImageFailureCache.recordFailure(url, StateError('known_invalid_logo'));
@@ -152,10 +161,48 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     }
   }
 
+  String? _normalizeLogoUrl(String? url) {
+    final raw = url?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    final normalized = normalizeImageUrl(raw);
+    if (normalized.trim().isEmpty) return null;
+    return normalized;
+  }
+
+  bool _isSvgUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.endsWith('.svg') || lower.contains('.svg?');
+  }
+
+  String _hostFromUrl(String url) {
+    try {
+      return Uri.parse(url).host;
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  void _scheduleEnrichmentRecovery() {
+    if (!widget.allowEnrichment) return;
+    if (_isEnriching || _triedEnrichment || _recoveryEnrichmentScheduled) {
+      return;
+    }
+    _recoveryEnrichmentScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _effectiveLogoUrl = null;
+        _validatedUrl = null;
+      });
+      unawaited(_enrichLogo());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final tvWidth = context.tvSpacing(widget.width);
     final tvHeight = context.tvSpacing(widget.height);
+    final effectiveUrl = _normalizeLogoUrl(_effectiveLogoUrl);
     return ClipRRect(
       borderRadius:
           widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
@@ -163,39 +210,61 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         width: tvWidth,
         height: tvHeight,
         color: widget.backgroundColor ?? Colors.transparent,
-        child: (_isValidating && _validatedUrl != _effectiveLogoUrl)
+        child: (_isValidating && _validatedUrl != effectiveUrl)
             ? (widget.placeholder ??
                 _buildGradientFallback(context, tvWidth, tvHeight))
-            : _effectiveLogoUrl != null && _effectiveLogoUrl!.isNotEmpty
-            ? (ImageFailureCache.shouldSkipLogo(_effectiveLogoUrl!)
-                ? (widget.placeholder ??
-                    _buildGradientFallback(context, tvWidth, tvHeight))
-                : Image(
-                    image: LogoImageCache.providerFor(
-                      _effectiveLogoUrl!,
-                      headers: HttpClientService().imageHeaders,
-                    ),
-                    fit: widget.fit,
-                    filterQuality: FilterQuality.high,
-                    gaplessPlayback: true,
-                    frameBuilder: (context, child, frame, wasSync) {
-                      ImageLoadProbe.recordAttempt(
-                          _effectiveLogoUrl!, 'channel_logo_widget');
-                      if (wasSync || frame != null) {
-                        ImageFailureCache.recordSuccess(_effectiveLogoUrl!);
-                        return child;
-                      }
-                      return widget.placeholder ??
-                          _buildGradientFallback(context, tvWidth, tvHeight);
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      ImageFailureCache.recordFailure(_effectiveLogoUrl!, error);
-                      return widget.errorWidget ??
-                          _buildGradientFallback(context, tvWidth, tvHeight);
-                    },
-                  ))
-            : (widget.placeholder ??
-                _buildGradientFallback(context, tvWidth, tvHeight)),
+            : effectiveUrl != null && effectiveUrl.isNotEmpty
+                ? (ImageFailureCache.shouldSkipLogo(effectiveUrl)
+                    ? (widget.placeholder ??
+                        _buildGradientFallback(context, tvWidth, tvHeight))
+                    : _isSvgUrl(effectiveUrl)
+                        ? SvgPicture.network(
+                            effectiveUrl,
+                            fit: widget.fit,
+                            headers: HttpClientService().imageHeaders,
+                            placeholderBuilder: (_) =>
+                                widget.placeholder ??
+                                _buildGradientFallback(
+                                    context, tvWidth, tvHeight),
+                          )
+                        : Builder(builder: (context) {
+                            return Image(
+                              image: LogoImageCache.providerFor(
+                                effectiveUrl,
+                                headers: HttpClientService().imageHeaders,
+                              ),
+                              fit: widget.fit,
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                              frameBuilder: (context, child, frame, wasSync) {
+                                if (widget.channelName == "CWWLVI" ||
+                                    widget.channelName == "PBSWGBH") {
+                                  // debugLog('ChannelLogoWidget: frameBuilder for ${widget.channelName}: wasSync=$wasSync, frame=$frame');
+                                }
+                                ImageLoadProbe.recordAttempt(
+                                    effectiveUrl, 'channel_logo_widget');
+                                if (wasSync || frame != null) {
+                                  ImageFailureCache.recordSuccess(effectiveUrl);
+                                  return child;
+                                }
+                                return widget.placeholder ??
+                                    _buildGradientFallback(
+                                        context, tvWidth, tvHeight);
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                debugLog(
+                                    'ChannelLogoWidget: error channel="${widget.channelName}" host="${_hostFromUrl(effectiveUrl)}" url="$effectiveUrl" err=$error');
+                                ImageFailureCache.recordFailure(
+                                    effectiveUrl, error);
+                                _scheduleEnrichmentRecovery();
+                                return widget.errorWidget ??
+                                    _buildGradientFallback(
+                                        context, tvWidth, tvHeight);
+                              },
+                            );
+                          }))
+                : (widget.placeholder ??
+                    _buildGradientFallback(context, tvWidth, tvHeight)),
       ),
     );
   }
