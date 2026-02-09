@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt" android:drawable="@drawable/4eo">
-    <target
-        android:name="progressBar"
-        android:animation="@drawable/3sh"/>
-    <target
-        android:name="progressBarContainer"
-        android:animation="@drawable/4lv"/>
-</animated-vector>

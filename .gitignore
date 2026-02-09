@@ -69,3 +69,16 @@ ollama-*.service
 
 # Large local EPG files
 docs/IPTVEditor_epg.txt
+# Generated/build artifacts
+build/
+**/build/
+tmp/
+tmp/**
+**/tmp/
+**/.dart_tool/
+**/.pub-cache/
+**/.gradle/
+**/app/intermediates/
+**/intermediates/
+**/.idea/
+**/tmp/tivimate_jadx/

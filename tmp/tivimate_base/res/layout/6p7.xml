@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:layout_width="wrap_content" android:layout_height="wrap_content"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <androidx.leanback.widget.ResizingTextView android:id="@id/9r" android:layout_width="wrap_content" android:layout_height="wrap_content" style="?44p" />
-    <TextView android:id="@id/2i3" android:layout_width="wrap_content" android:layout_height="wrap_content" style="?179" />
-    <TextView android:id="@id/750" android:layout_width="wrap_content" android:layout_height="wrap_content" style="?6pu" />
-</LinearLayout>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.leanback.widget.GuidedActionItemContainer style="?3vh"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <ImageView android:id="@id/r1" style="?13b" />
-    <TextView android:layout_gravity="center_vertical" android:id="@id/2br" android:layout_width="wrap_content" style="?3gm" />
-    <androidx.leanback.widget.picker.DatePicker android:id="@id/4fn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:importantForAccessibility="yes" />
-</androidx.leanback.widget.GuidedActionItemContainer>

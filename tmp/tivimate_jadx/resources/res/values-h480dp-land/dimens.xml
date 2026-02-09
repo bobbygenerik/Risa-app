@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <dimen name="bi">0dp</dimen>
-    <dimen name="1e6">22dp</dimen>
-    <dimen name="2q5">48dp</dimen>
-    <dimen name="1ps">48dp</dimen>
-    <dimen name="1qm">168dp</dimen>
-    <dimen name="7br">0dp</dimen>
-</resources>

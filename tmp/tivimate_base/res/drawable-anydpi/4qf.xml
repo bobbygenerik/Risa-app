@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<vector android:tint="?2n4" android:height="18.0dip" android:width="18.0dip" android:viewportWidth="18.0" android:viewportHeight="18.0"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:name="iconGroup" android:pivotX="9.0" android:pivotY="9.0">
-        <path android:name="iconPath" android:fillColor="@android:color/white" android:pathData="@string/390" />
-    </group>
-</vector>

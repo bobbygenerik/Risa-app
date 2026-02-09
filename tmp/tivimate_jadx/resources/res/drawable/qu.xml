@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/38"
-        android:drawable="@color/3rc"/>
-    <item
-        android:id="@+id/3to"
-        android:drawable="@color/3rc"/>
-</layer-list>
