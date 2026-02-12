@@ -110,12 +110,16 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
     return AlertDialog(
       backgroundColor: AppTheme.darkBackground,
       title: _buildTitle(),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 400,
-        child: filteredIds.isEmpty
-            ? _buildEmptyState()
-            : _buildChannelList(filteredIds, showingSuggestions),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: filteredIds.isEmpty
+              ? _buildEmptyState()
+              : _buildChannelList(filteredIds, showingSuggestions),
+        ),
       ),
       actions: _buildActions(),
     );

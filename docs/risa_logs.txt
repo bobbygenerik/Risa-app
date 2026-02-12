@@ -1,0 +1,800 @@
+--------- beginning of main
+02-11 20:10:19.892 I/flutter (31764): [IMPORTANT:flutter/shell/common/shell.cc(527)] [Action Required]: Impeller opt-out deprecated.
+02-11 20:10:19.892 I/flutter (31764):     The application opted out of Impeller by either using the
+02-11 20:10:19.892 I/flutter (31764):     `--no-enable-impeller` flag or the
+02-11 20:10:19.892 I/flutter (31764):     `io.flutter.embedding.android.EnableImpeller` `AndroidManifest.xml` entry.
+02-11 20:10:19.892 I/flutter (31764):     These options are going to go away in an upcoming Flutter release. Remove
+02-11 20:10:19.892 I/flutter (31764):     the explicit opt-out. If you need to opt-out, please report a bug describing
+02-11 20:10:19.892 I/flutter (31764):     the issue.
+02-11 20:10:19.892 I/flutter (31764): 
+02-11 20:10:19.892 I/flutter (31764):     https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+02-11 20:10:19.892 I/flutter (31764): 
+02-11 20:10:19.989 I/flutter (31764): The Dart VM service is listening on http://127.0.0.1:40241/JaRGpuOaS4c=/
+02-11 20:10:20.487 I/flutter (31764): startup: 0ms - main() entry
+02-11 20:10:20.536 I/flutter (31764): startup: 54ms - Flutter bindings initialized
+02-11 20:10:20.539 I/flutter (31764): startup: 58ms - Image cache config initialized
+02-11 20:10:20.646 I/flutter (31764): startup: 164ms - Image cache limits configured (NORMAL)
+02-11 20:10:20.714 I/flutter (31764): startup: 232ms - SSL handler configured
+02-11 20:10:20.725 I/flutter (31764): startup: 243ms - HTTP client service initialized
+02-11 20:10:20.738 I/flutter (31764): startup: 256ms - Preferred orientations locked (Android)
+02-11 20:10:20.738 I/flutter (31764): startup: 256ms - Launching main app directly
+02-11 20:10:20.771 I/flutter (31764): startup: 289ms - MyAppState initState
+02-11 20:10:20.772 I/flutter (31764): startup: 291ms - MyApp initialization: FastStartup init start
+02-11 20:10:20.773 I/flutter (31764): FastStartup: FastStartup initialization started
+02-11 20:10:20.773 I/flutter (31764): MemoryMapped: Initialized
+02-11 20:10:20.774 I/flutter (31764): BackgroundSync: Initialized
+02-11 20:10:21.075 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:10:21.075 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:10:21.173 I/flutter (31764): LocalDbService: init() called, _isInit=false, _initCompleter=false
+02-11 20:10:21.178 I/flutter (31764): EPG: Quick start initialization
+02-11 20:10:21.421 I/flutter (31764): ChannelProvider: Category isolate compute took 339ms
+02-11 20:10:21.421 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:10:21.421 I/flutter (31764): ChannelProvider: Category compute total 340ms
+02-11 20:10:21.421 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:21.453 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:21.453 I/flutter (31764): LocalDbService: Opening database at /data/user/0/com.risa.app/app_flutter/iptv_local.db
+02-11 20:10:21.477 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:10:21.477 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:10:21.477 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:10:21.532 I/flutter (31764): startup: 1050ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:10:21.540 I/flutter (31764): LocalDbService: WAL mode active
+02-11 20:10:21.673 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:10:21.673 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:10:21.673 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:10:21.720 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:10:21.720 I/flutter (31764): LocalDbService: init() called, _isInit=false, _initCompleter=true
+02-11 20:10:21.720 I/flutter (31764): LocalDbService: Init already in progress, waiting...
+02-11 20:10:21.874 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:10:21.874 I/flutter (31764): content_focus: Shell registered focus callback token=4
+02-11 20:10:21.874 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 4)
+02-11 20:10:21.950 I/flutter (31764): SmartCache: Initialized
+02-11 20:10:21.950 I/flutter (31764): FastStartup: FastStartup initialization completed (+1177ms)
+02-11 20:10:21.951 I/flutter (31764): startup: 1469ms - MyApp initialization: FastStartup init finished
+02-11 20:10:21.952 I/flutter (31764): startup: 1470ms - MyApp initialization: clear old playlists
+02-11 20:10:21.953 I/flutter (31764): startup: 1471ms - MyApp initialization: playlists cleared
+02-11 20:10:21.953 I/flutter (31764): startup: 1471ms - MyApp initialization: check disclaimer
+02-11 20:10:21.954 I/flutter (31764): startup: 1472ms - MyApp initialization: disclaimer checked
+02-11 20:10:21.954 I/flutter (31764): startup: 1472ms - MyApp initialization: check/load playlist
+02-11 20:10:21.956 I/flutter (31764): startup: 1474ms - MyApp initialization: playlist check finished
+02-11 20:10:21.956 I/flutter (31764): startup: 1474ms - MyApp initialization: complete
+02-11 20:10:22.044 I/flutter (31764): content_focus: Shell unregistered focus callback token=4
+02-11 20:10:22.044 I/flutter (31764): content_focus: Shell registered focus callback token=5
+02-11 20:10:22.044 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 5)
+02-11 20:10:22.044 I/flutter (31764): LiveTV: Categories empty but channels present (5570), requesting prefetch...
+02-11 20:10:22.074 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:22.075 I/flutter (31764): LiveTV: Initialized featured index to 5139
+02-11 20:10:22.076 I/flutter (31764): ChannelProvider: DB cache incomplete (5570/7134), but loading anyway to prevent placeholder
+02-11 20:10:22.080 I/flutter (31764): JANK: frame total=155ms build=114ms raster=41ms vsync=0ms
+02-11 20:10:22.080 I/flutter (31764): JANK: frame total=60ms build=57ms raster=3ms vsync=0ms
+02-11 20:10:22.122 I/flutter (31764): content_focus: Shell unregistered focus callback token=5
+02-11 20:10:22.122 I/flutter (31764): content_focus: Shell registered focus callback token=6
+02-11 20:10:22.122 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 6)
+02-11 20:10:22.122 I/flutter (31764): LiveTV: Categories empty but channels present (5570), requesting prefetch...
+02-11 20:10:22.139 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:22.158 I/flutter (31764): startup: 1676ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:10:22.159 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:10:22.160 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:10:22.167 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:10:22.167 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:10:22.168 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:22.241 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:10:22.241 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:22.241 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:10:22.242 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:10:22.242 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:22.242 I/flutter (31764): JANK: frame total=109ms build=106ms raster=3ms vsync=0ms
+02-11 20:10:22.242 I/flutter (31764): JANK: frame total=53ms build=51ms raster=2ms vsync=3ms
+02-11 20:10:22.243 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:10:22.259 I/flutter (31764): content_focus: Shell unregistered focus callback token=6
+02-11 20:10:22.259 I/flutter (31764): content_focus: Shell registered focus callback token=7
+02-11 20:10:22.259 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 7)
+02-11 20:10:22.260 I/flutter (31764): LiveTV: Syncing categories (provider: 62, current: 0)
+02-11 20:10:22.275 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.322 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.323 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:10:22.323 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:10:22.323 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:10:22.323 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:10:22.323 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:10:22.323 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:10:22.323 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:10:22.323 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:10:22.323 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:10:22.323 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:10:22.323 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:10:22.323 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:10:22.323 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:22.323 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:22.323 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:22.323 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:22.323 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:22.323 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:22.323 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:22.323 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:22.323 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:22.323 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:22.323 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:22.323 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:22.323 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:22.323 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:22.323 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:10:22.323 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:22.323 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:22.323 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:22.323 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:22.323 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:10:22.323 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:10:22.323 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:10:22.323 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:10:22.323 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:10:22.323 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:10:22.323 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:10:22.323 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:10:22.323 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:10:22.323 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:10:22.323 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:10:22.323 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:10:22.323 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:10:22.323 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:10:22.323 I/flutter (31764): 
+02-11 20:10:22.442 I/flutter (31764): content_focus: Shell unregistered focus callback token=7
+02-11 20:10:22.442 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 7)
+02-11 20:10:22.463 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.465 I/flutter (31764): JANK: frame total=94ms build=91ms raster=3ms vsync=97ms
+02-11 20:10:22.465 I/flutter (31764): JANK: frame total=91ms build=71ms raster=20ms vsync=0ms
+02-11 20:10:22.468 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.472 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.474 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.476 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:22.476 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:10:22.477 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:22.477 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:10:22.689 I/flutter (31764): ChannelProvider: Async cache rebuild took 6ms
+02-11 20:10:22.693 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:22.694 I/flutter (31764): ChannelProvider: Allowed set size=1457
+02-11 20:10:22.695 I/flutter (31764): EPG: Allowed channel set size: 1457
+02-11 20:10:22.695 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:22.698 I/flutter (31764): ChannelProvider: Category DB load took 8ms
+02-11 20:10:22.698 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:10:22.698 I/flutter (31764): ChannelProvider: Category compute total 9ms
+02-11 20:10:23.301 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:10:23.560 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:10:24.182 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:10:24.182 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:10:24.506 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:10:24.511 I/flutter (31764): ChannelProvider: Async cache rebuild took 4ms
+02-11 20:10:24.514 I/flutter (31764): ChannelProvider: Category DB load took 8ms
+02-11 20:10:24.514 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:10:24.514 I/flutter (31764): ChannelProvider: Category compute total 8ms
+02-11 20:10:24.568 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:10:24.569 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:10:24.591 I/flutter (31764): [PERF] END: PLAYLIST_LOAD_TOTAL took 2422ms
+02-11 20:10:24.591 I/flutter (31764): [PERF] WARNING: PLAYLIST_LOAD_TOTAL took 2422ms (>100ms)
+02-11 20:10:24.591 I/flutter (31764): [PERF] CRITICAL: PLAYLIST_LOAD_TOTAL took 2422ms (>1s)
+02-11 20:10:24.592 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:10:24.592 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:10:24.596 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:24.600 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:10:24.603 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:10:24.604 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:24.617 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:10:24.698 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:10:25.564 I/flutter (31764): ChannelProvider: Deferred DB insert completed in 996ms
+02-11 20:10:25.564 I/flutter (31764): EPG: External DB busy cleared - suspending reads
+02-11 20:10:57.678 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:10:57.678 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:10:57.749 I/flutter (31764): EPG: Quick start initialization
+02-11 20:10:57.750 I/flutter (31764): LiveTV: Skeleton focused
+02-11 20:10:57.752 I/flutter (31764): ChannelProvider: Category isolate compute took 73ms
+02-11 20:10:57.752 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:10:57.752 I/flutter (31764): ChannelProvider: Category compute total 73ms
+02-11 20:10:57.752 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:57.755 I/flutter (31764): JANK: frame total=81ms build=79ms raster=2ms vsync=2ms
+02-11 20:10:57.760 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:10:57.761 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:10:57.761 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:10:57.781 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:57.852 I/flutter (31764): startup: 37370ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:10:57.852 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:10:57.853 I/flutter (31764): LocalDbService: init() called, _isInit=true, _initCompleter=false
+02-11 20:10:57.853 I/flutter (31764): LocalDbService: DB already initialized and open
+02-11 20:10:57.855 I/flutter (31764): ChannelProvider: DB cache incomplete (5570/7134), but loading anyway to prevent placeholder
+02-11 20:10:57.879 I/flutter (31764): startup: 37397ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:10:57.879 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:10:57.879 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:10:57.879 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:10:57.879 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:10:57.880 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:57.881 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:10:57.881 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:10:57.881 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:57.881 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:10:57.941 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:10:57.941 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:10:57.941 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:10:57.942 I/flutter (31764): LiveTV: Syncing categories (provider: 62, current: 0)
+02-11 20:10:57.943 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:57.961 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:57.961 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:10:57.961 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:10:57.961 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:10:57.961 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:10:57.961 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:10:57.961 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:10:57.961 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:10:57.961 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:10:57.961 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:10:57.961 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:10:57.961 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:10:57.961 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:10:57.961 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:57.961 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:57.961 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:57.961 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:57.961 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:57.961 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:57.961 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:57.961 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:57.961 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:57.961 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:57.961 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:57.961 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:57.961 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:57.961 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:57.961 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:10:57.961 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:57.961 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:57.961 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:57.961 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:57.961 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:10:57.961 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:10:57.961 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:10:57.961 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:10:57.961 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:10:57.961 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:10:57.961 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:10:57.961 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:10:57.961 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:10:57.961 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:10:57.961 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:10:57.961 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:10:57.961 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:10:57.961 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:10:57.961 I/flutter (31764): 
+02-11 20:10:58.037 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:10:58.037 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 3)
+02-11 20:10:58.093 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:10:58.094 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:58.096 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:58.098 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:58.099 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:58.099 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:58.099 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:58.099 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:10:58.099 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:58.099 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:10:58.397 I/flutter (31764): ChannelProvider: Async cache rebuild took 3ms
+02-11 20:10:58.399 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:58.400 I/flutter (31764): ChannelProvider: Allowed set size=1457
+02-11 20:10:58.401 I/flutter (31764): EPG: Allowed channel set size: 1457
+02-11 20:10:58.401 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:58.405 I/flutter (31764): ChannelProvider: Category DB load took 7ms
+02-11 20:10:58.405 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:10:58.405 I/flutter (31764): ChannelProvider: Category compute total 7ms
+02-11 20:10:59.010 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:10:59.545 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:10:59.546 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:10:59.663 I/flutter (31764): EPG: Quick start initialization
+02-11 20:10:59.665 I/flutter (31764): ChannelProvider: Category isolate compute took 118ms
+02-11 20:10:59.665 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:10:59.665 I/flutter (31764): ChannelProvider: Category compute total 118ms
+02-11 20:10:59.665 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:59.668 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:10:59.681 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:10:59.681 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:10:59.681 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:10:59.749 I/flutter (31764): JANK: frame total=135ms build=133ms raster=2ms vsync=1ms
+02-11 20:10:59.757 I/flutter (31764): startup: 39276ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:10:59.758 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:10:59.758 I/flutter (31764): LocalDbService: init() called, _isInit=true, _initCompleter=false
+02-11 20:10:59.758 I/flutter (31764): LocalDbService: DB already initialized and open
+02-11 20:10:59.768 I/flutter (31764): ChannelProvider: DB cache incomplete (5570/7134), but loading anyway to prevent placeholder
+02-11 20:10:59.801 I/flutter (31764): startup: 39320ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:10:59.801 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:10:59.803 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:10:59.803 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:10:59.803 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:10:59.804 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:59.805 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:10:59.807 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:10:59.807 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:59.823 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:10:59.863 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:10:59.863 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:10:59.863 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:10:59.863 I/flutter (31764): LiveTV: Syncing categories (provider: 62, current: 0)
+02-11 20:10:59.864 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.875 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.875 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:10:59.875 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:10:59.875 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:10:59.875 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:10:59.875 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:10:59.875 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:10:59.875 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:10:59.875 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:10:59.875 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:10:59.875 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:10:59.875 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:10:59.875 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:10:59.875 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:59.875 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:59.875 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:59.875 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:59.875 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:59.875 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:10:59.875 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:59.875 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:59.875 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:59.875 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:10:59.875 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:59.875 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:59.875 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:59.875 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:59.875 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:10:59.875 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:10:59.875 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:10:59.875 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:10:59.875 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:10:59.875 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:10:59.875 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:10:59.875 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:10:59.875 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:10:59.875 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:10:59.875 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:10:59.875 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:10:59.875 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:10:59.875 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:10:59.875 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:10:59.875 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:10:59.875 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:10:59.875 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:10:59.875 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:10:59.875 I/flutter (31764): 
+02-11 20:10:59.896 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:10:59.954 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:10:59.954 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:10:59.967 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:10:59.967 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 3)
+02-11 20:10:59.972 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.973 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.973 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.973 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:10:59.974 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:59.974 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:10:59.974 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:10:59.974 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:00.339 I/flutter (31764): ChannelProvider: Async cache rebuild took 5ms
+02-11 20:11:00.341 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:00.342 I/flutter (31764): ChannelProvider: Allowed set size=1457
+02-11 20:11:00.343 I/flutter (31764): EPG: Allowed channel set size: 1457
+02-11 20:11:00.343 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:00.346 I/flutter (31764): ChannelProvider: Category DB load took 6ms
+02-11 20:11:00.346 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:11:00.346 I/flutter (31764): ChannelProvider: Category compute total 6ms
+02-11 20:11:00.405 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:11:00.544 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:11:00.757 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:11:00.757 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:11:00.825 I/flutter (31764): EPG: Quick start initialization
+02-11 20:11:00.825 I/flutter (31764): LiveTV: Skeleton focused
+02-11 20:11:00.826 I/flutter (31764): ChannelProvider: Category isolate compute took 68ms
+02-11 20:11:00.827 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:11:00.827 I/flutter (31764): ChannelProvider: Category compute total 69ms
+02-11 20:11:00.827 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:00.828 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:00.867 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:11:00.867 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:11:00.867 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:11:00.925 I/flutter (31764): JANK: frame total=91ms build=89ms raster=2ms vsync=0ms
+02-11 20:11:00.926 I/flutter (31764): startup: 40444ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:11:00.927 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:11:00.927 I/flutter (31764): LocalDbService: init() called, _isInit=true, _initCompleter=false
+02-11 20:11:00.927 I/flutter (31764): LocalDbService: DB already initialized and open
+02-11 20:11:00.936 I/flutter (31764): ChannelProvider: DB cache incomplete (5570/7134), but loading anyway to prevent placeholder
+02-11 20:11:00.968 I/flutter (31764): startup: 40486ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:11:00.968 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:11:00.968 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:11:00.968 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:11:00.968 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:11:00.969 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:00.969 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:11:00.970 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:11:00.970 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:00.970 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:11:01.012 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:11:01.012 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:11:01.012 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:11:01.013 I/flutter (31764): LiveTV: Syncing categories (provider: 62, current: 0)
+02-11 20:11:01.014 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.023 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.023 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:11:01.023 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:11:01.023 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:11:01.023 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:11:01.023 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:11:01.023 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:11:01.023 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:11:01.023 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:11:01.023 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:11:01.023 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:11:01.023 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:11:01.023 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:11:01.023 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:01.023 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:01.023 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:01.024 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:01.024 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:01.024 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:01.024 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:01.024 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:01.024 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:01.024 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:01.024 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:01.024 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:01.024 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:01.024 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:01.024 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:11:01.024 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:01.024 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:01.024 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:01.024 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:01.024 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:11:01.024 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:11:01.024 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:11:01.024 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:11:01.024 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:11:01.024 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:11:01.024 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:11:01.024 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:11:01.024 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:11:01.024 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:11:01.025 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:11:01.025 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:11:01.025 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:11:01.025 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:11:01.025 I/flutter (31764): 
+02-11 20:11:01.046 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.077 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:11:01.077 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 3)
+02-11 20:11:01.092 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:11:01.092 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:11:01.128 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:11:01.128 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:01.128 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.130 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.130 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.131 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:01.131 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:01.131 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:01.131 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:01.218 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:11:01.218 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:11:01.293 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:11:01.299 I/flutter (31764): ChannelProvider: Category DB load took 5ms
+02-11 20:11:01.299 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:11:01.299 I/flutter (31764): ChannelProvider: Category compute total 6ms
+02-11 20:11:01.299 I/flutter (31764): ChannelProvider: Async cache rebuild took 6ms
+02-11 20:11:01.356 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:11:01.360 I/flutter (31764): ChannelProvider: Async cache rebuild took 3ms
+02-11 20:11:01.363 I/flutter (31764): ChannelProvider: Category DB load took 6ms
+02-11 20:11:01.363 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:11:01.363 I/flutter (31764): ChannelProvider: Category compute total 7ms
+02-11 20:11:01.421 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:11:01.421 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:11:01.445 I/flutter (31764): [PERF] END: PLAYLIST_LOAD_TOTAL took 476ms
+02-11 20:11:01.445 I/flutter (31764): [PERF] WARNING: PLAYLIST_LOAD_TOTAL took 476ms (>100ms)
+02-11 20:11:01.445 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:11:01.445 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:11:01.446 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:01.449 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:11:01.451 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:11:01.451 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:01.466 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:11:01.477 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:11:01.523 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:11:01.524 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:01.533 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:11:01.534 I/flutter (31764): EPG: Allowed channel set unchanged; skipping refresh.
+02-11 20:11:01.581 I/flutter (31764): ChannelProvider: Category DB load took 57ms
+02-11 20:11:01.581 I/flutter (31764): ChannelProvider: Loaded 7 categories from DB
+02-11 20:11:01.581 I/flutter (31764): ChannelProvider: Category compute total 57ms
+02-11 20:11:01.610 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:11:01.611 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:11:01.648 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:11:01.648 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:11:01.649 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:01.651 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:11:01.652 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:11:01.652 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:01.654 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:11:01.656 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:11:02.011 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:11:02.011 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:11:02.062 I/flutter (31764): EPG: Quick start initialization
+02-11 20:11:02.064 I/flutter (31764): ChannelProvider: Category isolate compute took 52ms
+02-11 20:11:02.064 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:11:02.064 I/flutter (31764): ChannelProvider: Category compute total 52ms
+02-11 20:11:02.064 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:02.068 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:02.105 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:11:02.105 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:11:02.105 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:11:02.159 I/flutter (31764): JANK: frame total=63ms build=58ms raster=5ms vsync=0ms
+02-11 20:11:02.181 I/flutter (31764): startup: 41700ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:11:02.183 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:11:02.183 I/flutter (31764): LocalDbService: init() called, _isInit=true, _initCompleter=false
+02-11 20:11:02.183 I/flutter (31764): LocalDbService: DB already initialized and open
+02-11 20:11:02.272 I/flutter (31764): ChannelProvider: DB cache incomplete (3095/7134), but loading anyway to prevent placeholder
+02-11 20:11:02.311 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:11:02.361 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:11:02.361 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:02.363 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:11:02.363 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:11:02.363 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:11:02.364 I/flutter (31764): LiveTV: Categories empty but channels present (2717), requesting prefetch...
+02-11 20:11:02.377 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:02.378 I/flutter (31764): LiveTV: Initialized featured index to 1849
+02-11 20:11:02.403 I/flutter (31764): startup: 41921ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:11:02.403 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:11:02.403 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:11:02.403 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:11:02.403 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:11:02.413 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:02.422 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:11:02.423 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:11:02.423 I/flutter (31764): content_focus: Shell registered focus callback token=4
+02-11 20:11:02.423 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 4)
+02-11 20:11:02.423 I/flutter (31764): LiveTV: Syncing categories (provider: 7, current: 0)
+02-11 20:11:02.423 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.442 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.443 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:11:02.443 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:11:02.443 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:11:02.443 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:11:02.443 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:11:02.443 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:11:02.443 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:11:02.443 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:11:02.443 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:11:02.443 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:11:02.443 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:11:02.443 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:11:02.443 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:02.443 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:02.443 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:02.443 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:02.443 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:02.443 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:02.443 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:02.443 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:02.443 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:02.443 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:02.443 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:02.443 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:02.443 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:02.443 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:02.443 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:11:02.443 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:02.443 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:02.443 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:02.443 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:02.443 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:11:02.443 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:11:02.443 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:11:02.443 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:11:02.443 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:11:02.443 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:11:02.443 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:11:02.443 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:11:02.443 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:11:02.443 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:11:02.443 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:11:02.443 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:11:02.443 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:11:02.443 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:11:02.443 I/flutter (31764): 
+02-11 20:11:02.465 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:11:02.465 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:11:02.465 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:02.501 I/flutter (31764): content_focus: Shell unregistered focus callback token=4
+02-11 20:11:02.501 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 4)
+02-11 20:11:02.535 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.585 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.586 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.586 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.586 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:02.586 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:02.586 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:02.586 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:02.681 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:11:02.682 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:11:02.815 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:11:02.825 I/flutter (31764): ChannelProvider: Category DB load took 10ms
+02-11 20:11:02.825 I/flutter (31764): ChannelProvider: Loaded 39 categories from DB
+02-11 20:11:02.825 I/flutter (31764): ChannelProvider: Category compute total 10ms
+02-11 20:11:02.955 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:11:02.955 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:11:02.964 I/flutter (31764): [PERF] END: PLAYLIST_LOAD_TOTAL took 561ms
+02-11 20:11:02.964 I/flutter (31764): [PERF] WARNING: PLAYLIST_LOAD_TOTAL took 561ms (>100ms)
+02-11 20:11:02.964 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:11:02.964 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:11:02.965 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:02.966 I/flutter (31764): ChannelProvider: Async cache rebuild took 20ms
+02-11 20:11:02.967 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:02.967 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:11:02.968 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:11:02.968 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:02.968 I/flutter (31764): ChannelProvider: Allowed set size=1451
+02-11 20:11:02.968 I/flutter (31764): EPG: Allowed channel set size: 1451
+02-11 20:11:02.969 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:03.004 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:11:03.007 I/flutter (31764): ChannelProvider: Category DB load took 41ms
+02-11 20:11:03.007 I/flutter (31764): ChannelProvider: Loaded 47 categories from DB
+02-11 20:11:03.007 I/flutter (31764): ChannelProvider: Category compute total 41ms
+02-11 20:11:03.068 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:11:03.097 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:11:03.225 I/flutter (31764): content_focus: Shell registered focus callback token=1
+02-11 20:11:03.225 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 1)
+02-11 20:11:03.280 I/flutter (31764): EPG: Quick start initialization
+02-11 20:11:03.280 I/flutter (31764): LiveTV: Skeleton focused
+02-11 20:11:03.281 I/flutter (31764): ChannelProvider: Category isolate compute took 55ms
+02-11 20:11:03.281 I/flutter (31764): ChannelProvider: Found 0 categories from 0 channels
+02-11 20:11:03.281 I/flutter (31764): ChannelProvider: Category compute total 55ms
+02-11 20:11:03.281 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:03.283 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:03.320 I/flutter (31764): content_focus: Shell unregistered focus callback token=1
+02-11 20:11:03.320 I/flutter (31764): content_focus: Shell registered focus callback token=2
+02-11 20:11:03.320 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 2)
+02-11 20:11:03.380 I/flutter (31764): JANK: frame total=60ms build=58ms raster=2ms vsync=1ms
+02-11 20:11:03.388 I/flutter (31764): startup: 42906ms - ChannelProvider.autoLoadPlaylist invoked
+02-11 20:11:03.391 I/flutter (31764): ChannelProvider: Auto-loading playlist...
+02-11 20:11:03.391 I/flutter (31764): LocalDbService: init() called, _isInit=true, _initCompleter=false
+02-11 20:11:03.391 I/flutter (31764): LocalDbService: DB already initialized and open
+02-11 20:11:03.434 I/flutter (31764): ChannelProvider: Deferred DB insert completed in 2012ms
+02-11 20:11:03.434 I/flutter (31764): EPG: External DB busy cleared - suspending reads
+02-11 20:11:03.505 I/flutter (31764): EPG: Loaded normalized mapping from file (10582 entries)
+02-11 20:11:03.505 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:03.513 I/flutter (31764): content_focus: Shell unregistered focus callback token=2
+02-11 20:11:03.513 I/flutter (31764): content_focus: Shell registered focus callback token=3
+02-11 20:11:03.513 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 3)
+02-11 20:11:03.513 I/flutter (31764): LiveTV: Categories empty but channels present (1760), requesting prefetch...
+02-11 20:11:03.526 I/flutter (31764): LiveTV: Fetched 0 categories
+02-11 20:11:03.526 I/flutter (31764): LiveTV: Initialized featured index to 1470
+02-11 20:11:03.571 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:11:03.572 I/flutter (31764): ChannelProvider: DB cache incomplete (2070/7134), but loading anyway to prevent placeholder
+02-11 20:11:03.649 I/flutter (31764): startup: 43167ms - ChannelProvider.autoLoadPlaylist: initial chunk loaded from DB
+02-11 20:11:03.649 I/flutter (31764): ChannelProvider: Starting background sync for https://opop.pro/mpjJUXrysJKL
+02-11 20:11:03.649 I/flutter (31764): ChannelProvider: _reloadPlaylistBackground started
+02-11 20:11:03.649 I/flutter (31764): [PERF] START: PLAYLIST_LOAD_TOTAL
+02-11 20:11:03.649 I/flutter (31764): ChannelProvider: Running background playlist update...
+02-11 20:11:03.649 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:03.654 I/flutter (31764): ChannelProvider: Loading playlist from URL: https://opop.pro/mpjJUXrysJKL (using PlaylistLoader)
+02-11 20:11:03.655 I/flutter (31764): content_focus: Shell unregistered focus callback token=3
+02-11 20:11:03.656 I/flutter (31764): content_focus: Shell registered focus callback token=4
+02-11 20:11:03.656 I/flutter (31764): content_focus: Registered content focus: LiveTVScreen (token: 4)
+02-11 20:11:03.656 I/flutter (31764): LiveTV: Syncing categories (provider: 47, current: 0)
+02-11 20:11:03.657 I/flutter (31764): FlutterError: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.664 I/flutter (31764): Unhandled app error: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.665 I/flutter (31764): #0      new Channel.fromMap (package:iptv_player/models/channel.dart:46:16)
+02-11 20:11:03.665 I/flutter (31764): #1      ChannelProvider._getChannelAt.<anonymous closure> (package:iptv_player/providers/channel_provider.dart:1761:22)
+02-11 20:11:03.665 I/flutter (31764): #2      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+02-11 20:11:03.665 I/flutter (31764): #3      ChannelProvider._getChannelAt (package:iptv_player/providers/channel_provider.dart:1760:35)
+02-11 20:11:03.665 I/flutter (31764): #4      ChannelProvider.getFilteredChannels (package:iptv_player/providers/channel_provider.dart:1839:18)
+02-11 20:11:03.665 I/flutter (31764): #5      _LiveTVScreenState._buildFallbackCategories (package:iptv_player/screens/live_tv_screen.dart:1133:30)
+02-11 20:11:03.665 I/flutter (31764): #6      _LiveTVScreenState.build.<anonymous closure> (package:iptv_player/screens/live_tv_screen.dart:1734:38)
+02-11 20:11:03.665 I/flutter (31764): #7      Consumer.buildWithChild (package:provider/src/consumer.dart:179:19)
+02-11 20:11:03.665 I/flutter (31764): #8      SingleChildStatelessWidget.build (package:nested/nested.dart:259:41)
+02-11 20:11:03.665 I/flutter (31764): #9      StatelessElement.build (package:flutter/src/widgets/framework.dart:5892:49)
+02-11 20:11:03.665 I/flutter (31764): #10     SingleChildStatelessElement.build (package:nested/nested.dart:279:18)
+02-11 20:11:03.665 I/flutter (31764): #11     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5820:15)
+02-11 20:11:03.665 I/flutter (31764): #12     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:03.665 I/flutter (31764): #13     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:03.665 I/flutter (31764): #14     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:03.665 I/flutter (31764): #15     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:03.665 I/flutter (31764): #16     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:03.665 I/flutter (31764): #17     SingleChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:7125:14)
+02-11 20:11:03.665 I/flutter (31764): #18     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:03.665 I/flutter (31764): #19     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:03.665 I/flutter (31764): #20     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:03.665 I/flutter (31764): #21     StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+02-11 20:11:03.665 I/flutter (31764): #22     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:03.665 I/flutter (31764): #23     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:03.665 I/flutter (31764): #24     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:03.665 I/flutter (31764): #25     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:03.665 I/flutter (31764): #26     StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+02-11 20:11:03.665 I/flutter (31764): #27     Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+02-11 20:11:03.665 I/flutter (31764): #28     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+02-11 20:11:03.665 I/flutter (31764): #29     StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+02-11 20:11:03.665 I/flutter (31764): #30     Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+02-11 20:11:03.665 I/flutter (31764): #31     BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+02-11 20:11:03.665 I/flutter (31764): #32     BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+02-11 20:11:03.665 I/flutter (31764): #33     BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+02-11 20:11:03.665 I/flutter (31764): #34     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1262:21)
+02-11 20:11:03.665 I/flutter (31764): #35     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+02-11 20:11:03.665 I/flutter (31764): #36     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+02-11 20:11:03.665 I/flutter (31764): #37     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+02-11 20:11:03.665 I/flutter (31764): #38     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+02-11 20:11:03.665 I/flutter (31764): #39     _rootRun (dart:async/zone.dart:1525:13)
+02-11 20:11:03.665 I/flutter (31764): #40     _CustomZone.run (dart:async/zone.dart:1422:19)
+02-11 20:11:03.665 I/flutter (31764): #41     _CustomZone.runGuarded (dart:async/zone.dart:1321:7)
+02-11 20:11:03.665 I/flutter (31764): #42     _invoke (dart:ui/hooks.dart:358:10)
+02-11 20:11:03.665 I/flutter (31764): #43     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+02-11 20:11:03.665 I/flutter (31764): #44     _drawFrame (dart:ui/hooks.dart:328:31)
+02-11 20:11:03.665 I/flutter (31764): 
+02-11 20:11:03.677 I/flutter (31764): ChannelProvider: Allowed set size=496
+02-11 20:11:03.678 I/flutter (31764): EPG: Allowed channel set size: 496
+02-11 20:11:03.678 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:03.700 I/flutter (31764): content_focus: Shell unregistered focus callback token=4
+02-11 20:11:03.700 I/flutter (31764): content_focus: Unregistered content focus: LiveTVScreen (token: 4)
+02-11 20:11:03.712 I/flutter (31764): ChannelProvider: DB category batch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.772 I/flutter (31764): ChannelProvider: DB category page failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.785 I/flutter (31764): ChannelProvider: compute(_filterCategoryIndicesInIsolate) failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.785 I/flutter (31764): LiveTV: Batch category prefetch failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:03.785 I/flutter (31764): LiveTV: Failed to load category "Local": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:03.785 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:03.786 I/flutter (31764): LiveTV: Failed to load category "USA": This widget has been unmounted, so the State no longer has a context (and should be considered defunct).
+02-11 20:11:03.786 I/flutter (31764): Consider canceling any active work during "dispose" or using the "mounted" getter to determine if the State is still active.
+02-11 20:11:03.992 I/flutter (31764): ChannelProvider: Deferred DB insert completed in 2381ms
+02-11 20:11:03.992 I/flutter (31764): EPG: External DB busy cleared - suspending reads
+02-11 20:11:04.195 I/flutter (31764): ChannelProvider: Async cache rebuild took 16ms
+02-11 20:11:04.197 I/flutter (31764): ChannelProvider: Smart cache refresh failed: type 'int' is not a subtype of type 'bool?'
+02-11 20:11:04.198 I/flutter (31764): ChannelProvider: Allowed set size=1457
+02-11 20:11:04.198 I/flutter (31764): EPG: Allowed channel set size: 1457
+02-11 20:11:04.199 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:04.246 I/flutter (31764): ChannelProvider: Category DB load took 50ms
+02-11 20:11:04.247 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:11:04.247 I/flutter (31764): ChannelProvider: Category compute total 51ms
+02-11 20:11:04.556 I/flutter (31764): ChannelProvider: Deferred DB insert completed in 1600ms
+02-11 20:11:04.556 I/flutter (31764): EPG: External DB busy cleared - suspending reads
+02-11 20:11:04.620 I/flutter (31764): M3UParser: (maps) EPG URL not found in header line.
+02-11 20:11:05.253 I/flutter (31764): M3UParser: First logical line: #EXTM3U
+02-11 20:11:05.573 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:11:05.573 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:11:05.751 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:11:05.755 I/flutter (31764): ChannelProvider: Async cache rebuild took 4ms
+02-11 20:11:05.760 I/flutter (31764): ChannelProvider: Category DB load took 9ms
+02-11 20:11:05.760 I/flutter (31764): ChannelProvider: Loaded 62 categories from DB
+02-11 20:11:05.760 I/flutter (31764): ChannelProvider: Category compute total 9ms
+02-11 20:11:05.818 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:11:05.818 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:11:05.845 I/flutter (31764): [PERF] END: PLAYLIST_LOAD_TOTAL took 2195ms
+02-11 20:11:05.845 I/flutter (31764): [PERF] WARNING: PLAYLIST_LOAD_TOTAL took 2195ms (>100ms)
+02-11 20:11:05.845 I/flutter (31764): [PERF] CRITICAL: PLAYLIST_LOAD_TOTAL took 2195ms (>1s)
+02-11 20:11:05.845 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:11:05.845 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:11:05.846 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:05.848 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:11:05.850 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:11:05.850 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:05.851 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:11:05.906 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:11:06.250 I/flutter (31764): M3UParser: (maps) Total channels parsed: 7134
+02-11 20:11:06.250 I/flutter (31764): M3UParser: (maps) Channels with tvg-id: 6101
+02-11 20:11:06.431 I/flutter (31764): ChannelProvider: Parsed 7134 channels (isolate)
+02-11 20:11:06.433 I/flutter (31764): ChannelProvider: Async cache rebuild took 2ms
+02-11 20:11:06.441 I/flutter (31764): ChannelProvider: Category DB load took 10ms
+02-11 20:11:06.441 I/flutter (31764): ChannelProvider: Loaded 34 categories from DB
+02-11 20:11:06.441 I/flutter (31764): ChannelProvider: Category compute total 10ms
+02-11 20:11:06.567 I/flutter (31764): ChannelProvider: Starting deferred DB insert for 7134 channels
+02-11 20:11:06.567 I/flutter (31764): EPG: External DB busy enabled - suspending reads
+02-11 20:11:06.576 I/flutter (31764): [PERF] Memory check (After playlist load)
+02-11 20:11:06.576 I/flutter (31764): ChannelProvider: Loaded 7134 channels, cache size: 0
+02-11 20:11:06.577 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:06.579 I/flutter (31764): ChannelProvider: Allowed set size=6556
+02-11 20:11:06.580 I/flutter (31764): EPG: Allowed channel set size: 6556
+02-11 20:11:06.580 I/flutter (31764): EPG: Progressive init skipped (hasParsed=false, hasPrograms=true, isParsing=false, channels=40)
+02-11 20:11:06.611 I/flutter (31764): ChannelProvider: Reusing persisted EPG mapping (177 entries)
+02-11 20:11:06.615 I/flutter (31764): EPG: Loaded 177 mappings from DB
+02-11 20:11:06.711 I/flutter (31764): ChannelProvider: Deferred DB insert completed in 892ms
+02-11 20:11:06.711 I/flutter (31764): EPG: External DB busy cleared - suspending reads

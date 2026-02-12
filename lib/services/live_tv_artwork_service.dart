@@ -1270,8 +1270,8 @@ class LiveTvArtworkService {
       }
 
       onArtworkUpdate();
-    } catch (_) {
-      // Ignore cache load errors to avoid impacting startup.
+    } catch (e) {
+      debugLog('ArtworkService: loadTitleCache failed: $e');
     }
   }
 
@@ -1294,8 +1294,8 @@ class LiveTvArtworkService {
           }
         }
       });
-    } catch (_) {
-      // Ignore cache load errors to avoid impacting startup.
+    } catch (e) {
+      debugLog('ArtworkService: loadNegativeCache failed: $e');
     }
   }
 
@@ -1329,8 +1329,8 @@ class LiveTvArtworkService {
         _programArtworkTitleCacheKey,
         jsonEncode(ordered),
       );
-    } catch (_) {
-      // Best-effort persistence only.
+    } catch (e) {
+      debugLog('ArtworkService: saveTitleCache failed: $e');
     }
   }
 
@@ -1348,8 +1348,8 @@ class LiveTvArtworkService {
         _programArtworkNegativeCacheKey,
         jsonEncode(ordered),
       );
-    } catch (_) {
-      // Best-effort persistence only.
+    } catch (e) {
+      debugLog('ArtworkService: saveNegativeCache failed: $e');
     }
   }
 
@@ -1696,7 +1696,8 @@ class LiveTvArtworkService {
         fragment: '',
       );
       return normalized.toString().replaceAll(RegExp(r'^//'), '');
-    } catch (_) {
+    } catch (e) {
+      debugLog('ArtworkService: normalizeImageUrl failed: $e');
       return url;
     }
   }

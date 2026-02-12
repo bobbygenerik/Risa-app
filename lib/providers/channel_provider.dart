@@ -317,6 +317,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   bool _dbDisabled = false;
   bool _autoLoadInProgress = false;
   bool _dbReadOnlyRecoveryInFlight = false;
+  DateTime? _lastDbRecoveryTime;
   bool _dbClosedRecoveryInFlight = false;
   bool _noPlaylistConfigured = false;
   bool _xtreamLiveMetadataLoaded = false;
@@ -337,7 +338,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         last = last.substring(0, dotIndex);
       }
       return last.isNotEmpty ? last : null;
-    } catch (_) {
+    } catch (e) {
+      debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
       final clean = url.split('?').first;
       final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
       if (parts.isEmpty) return null;
@@ -571,7 +573,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       // Prime count if DB already has data
       try {
         _channelCountDb = await _db.channelCount();
-      } catch (_) {}
+      } catch (e) { debugLog('ChannelProvider: DB channelCount query failed: $e'); }
     } catch (e) {
       _dbReady = false;
       debugLog('ChannelProvider: DB init failed: $e');
@@ -632,6 +634,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
   bool _isReadOnlyDbError(Object error) {
     final message = error.toString().toLowerCase();
+    // Must mention 'database' to avoid false positives from Dart collection
+    // errors (e.g. "Unsupported operation: read-only" from unmodifiable maps).
+    if (!message.contains('database')) return false;
     return message.contains('read-only') ||
         message.contains('read only') ||
         message.contains('readonly');
@@ -641,7 +646,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (!_isReadOnlyDbError(error) || _dbReadOnlyRecoveryInFlight) {
       return;
     }
+    // Rate-limit: skip recovery if one happened within the last 30 seconds
+    final now = DateTime.now();
+    if (_lastDbRecoveryTime != null &&
+        now.difference(_lastDbRecoveryTime!).inSeconds < 30) {
+      debugLog('ChannelProvider: read-only recovery skipped — cooldown active '
+          '(${now.difference(_lastDbRecoveryTime!).inSeconds}s since last)');
+      return;
+    }
     _dbReadOnlyRecoveryInFlight = true;
+    _lastDbRecoveryTime = now;
     _dbReady = false;
     debugLog('ChannelProvider: Detected read-only DB, attempting recovery');
     unawaited(() async {
@@ -654,6 +668,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         _invalidateCategoryCaches();
         _cachedCategories = null;
         if (_channelMaps.isNotEmpty) {
+          // Delay re-insert to let the freshly-created DB stabilize
+          await Future.delayed(const Duration(seconds: 2));
           unawaited(_deferredDbInsert());
           _updateEpgAllowedChannels();
           _scheduleEpgRefresh(forceRefresh: true);
@@ -814,7 +830,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final byName =
           Map<String, String>.from((decoded['byName'] as Map? ?? const {}));
       return {'byStreamId': byStreamId, 'byName': byName};
-    } catch (_) {
+    } catch (e) {
+      debugLog('ChannelProvider: loadXtreamEpgMap failed: $e');
       return const {'byStreamId': {}, 'byName': {}};
     }
   }
@@ -829,7 +846,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         'byName': byName,
       });
       await file.writeAsString(payload);
-    } catch (_) {}
+    } catch (e) { debugLog('ChannelProvider: saveXtreamEpgMap failed: $e'); }
   }
 
   Future<int> _applyXtreamEpgMapFromCache() async {
@@ -958,7 +975,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
       final base = Uri.parse(serverUrl);
       return base.resolve(raw).toString();
-    } catch (_) {
+    } catch (e) {
+      debugLog('ChannelProvider: resolveXtreamLogoUrl failed: $e');
       return raw;
     }
   }
@@ -998,7 +1016,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         serverUrl = _buildXtreamServerUrl(baseUri);
         username ??= storedUser;
         password ??= storedPass;
-      } catch (_) {
+      } catch (e) {
+        debugLog('ChannelProvider: resolveXtreamCredentials parse failed: $e');
         return null;
       }
     }
@@ -1029,10 +1048,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     try {
       // Canonical Xtream XMLTV endpoint using supplied credentials
       try {
-        final epgUri = Uri.parse(serverUrl).replace(
-          path: (Uri.parse(serverUrl).path.trim().isEmpty)
+        final parsedServerUri = Uri.parse(serverUrl);
+        final epgUri = parsedServerUri.replace(
+          path: (parsedServerUri.path.trim().isEmpty)
               ? 'xmltv.php'
-              : '${Uri.parse(serverUrl).path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+              : '${parsedServerUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
@@ -1083,7 +1103,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             final name = (c['category_name'] ?? '').toString();
             if (id.isNotEmpty) categoryNameById[id] = name;
           }
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: fetching live categories failed: $e'); }
 
         final preview = <Map<String, dynamic>>[];
         for (final s in liveStreams.take(previewLimit)) {
@@ -1170,7 +1190,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               final resolved =
                   '${serverUrl.replaceAll(RegExp(r'/$'), '')}/${epgCandidate.replaceAll(RegExp(r'^/+'), '')}';
               epgUrls.add(resolved);
-            } catch (_) {}
+            } catch (e) { debugLog('ChannelProvider: EPG URL resolve failed: $e'); }
           } else {
             if (streamId.isNotEmpty) {
               streamIdToEpgId[streamId] = epgCandidate;
@@ -1226,7 +1246,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 break;
               }
             }
-          } catch (_) {}
+          } catch (e) { debugLog('ChannelProvider: EPG URL probe failed: $e'); }
         }
         client.close();
       }
@@ -1299,12 +1319,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         await sharedPrefs.setString('custom_epg_url', accepted);
         try {
           await sharedPrefs.setString('epg_url', accepted);
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: set epg_url failed: $e'); }
         try {
           final enc = base64Url.encode(utf8.encode(m3uUrl));
           await sharedPrefs.setString('xtream_epg_url_$enc', accepted);
           await sharedPrefs.setString('xtream_epg_url_$serverUrl', accepted);
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: save per-playlist EPG URL failed: $e'); }
         try {
           await _epgService?.initialize(forceRefresh: true);
           debugLog(
@@ -1618,7 +1638,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           buffer.write(stat.size);
           buffer.write('|');
           buffer.write(stat.modified.millisecondsSinceEpoch);
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: file stat for signature failed: $e'); }
       }
     }
     return buffer.toString();
@@ -1628,7 +1648,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   void cancelPlaylistLoad() {
     try {
       _playlistLoader.cancelCurrent();
-    } catch (_) {}
+    } catch (e) { debugLog('ChannelProvider: cancelPlaylistLoad failed: $e'); }
     _loadingStatus = 'Cancelled';
     _loadingProgress = 0.0;
     _isLoading = false;
@@ -1646,7 +1666,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (!_dbReady && !_dbDisabled) {
       try {
         await _ensureDb();
-      } catch (_) {}
+      } catch (e) { debugLog('ChannelProvider: ensureDb in getChannelCountAsync failed: $e'); }
     }
     if (_dbReady) {
       try {
@@ -2048,8 +2068,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 ),
               );
             }
-          } catch (_) {
-            // ignore malformed saved playlists
+          } catch (e) {
+            debugLog('ChannelProvider: malformed saved playlist: $e');
           }
         }
       }
@@ -2552,6 +2572,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
 
         _channelMaps.clear();
         _channelCache.clear();
+        // FIX: Clear indices too to prevent "wrong category" bugs
+        _channelIndexById.clear();
+        _channelIndicesByGroup.clear();
         _invalidateCategoryCaches();
         _channelCountDb = 0;
       }
@@ -2574,6 +2597,24 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         // Use a new list to avoid concurrent modification issues if UI is reading _channelMaps
         loadingTarget.addAll(chunk);
 
+        // FIX: Incrementally update indices for the new chunk so categories work immediately
+        if (!isBackground) {
+          final startIndex = loadingTarget.length - chunk.length;
+          for (var i = 0; i < chunk.length; i++) {
+            final map = chunk[i];
+            final absIndex = startIndex + i;
+            final id = (map['id'] ?? '').toString();
+            if (id.isNotEmpty) {
+              _channelIndexById[id] = absIndex;
+            }
+            final rawGroup = (map['groupTitle'] ?? '').toString();
+            final group = rawGroup.trim().toLowerCase();
+            // We don't cache lowerGroups/names here for speed, but that's fine for simple category lookup
+            final groupKey = group.isNotEmpty ? group : 'uncategorized';
+            (_channelIndicesByGroup[groupKey] ??= []).add(absIndex);
+          }
+        }
+
         // Critical: Update UI immediately if this is the first "page" of content
         // But do NOT set _isLoading=false yet, or the UI might think we are fully done!
         // We only start showing content, but keep the loading spinner/progress bar active if desired.
@@ -2593,7 +2634,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             _channelCountDb = loadingTarget.length;
             _invalidateCategoryCaches();
             lastUiUpdate = now;
-            notifyListeners();
+            // FIX: Use safe notify to avoid "Build scheduled during frame"
+            _notifyListenersSafe();
           } else {
             // For background, we don't update UI progressively to avoid jank/flash
             // We swill swap at the end.
@@ -2667,7 +2709,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         try {
           final playlistJson = json.encode(loadingTarget);
           await prefs.setString('flutter.cached_playlist', playlistJson);
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: SharedPreferences playlist cache write failed: $e'); }
       } else {
         debugLog(
             'ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
@@ -2996,8 +3038,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           final enc = base64Url.encode(utf8.encode(url));
           await prefs.setString('m3u_epg_url_$enc', epgUrl);
           await prefs.remove('m3u_epg_url_$url');
-        } catch (_) {
-          // ignore per-playlist save errors
+        } catch (e) {
+          debugLog('ChannelProvider: per-playlist EPG URL save failed: $e');
         }
         try {
           await _epgService?.initialize(forceRefresh: true);
@@ -3266,11 +3308,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         await target.delete();
       }
       await sourceFile.rename(target.path);
-    } catch (_) {
+    } catch (e) {
+      debugLog('ChannelProvider: cache file rename failed: $e');
       await sourceFile.copy(target.path);
       try {
         await sourceFile.delete();
-      } catch (_) {}
+      } catch (e) { debugLog('ChannelProvider: cleanup source file failed: $e'); }
     }
     return target.path;
   }
@@ -3290,7 +3333,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           list = decoded
               .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
               .toList();
-        } catch (_) {}
+        } catch (e) { debugLog('ChannelProvider: decode saved playlists failed: $e'); }
       }
 
       String? name;

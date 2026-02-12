@@ -43,11 +43,13 @@ class Channel {
       attributes: map['attributes'] != null
           ? Map<String, String>.from(map['attributes'])
           : null,
-      isHD: map['isHD'],
-      isFavorite: map['isFavorite'],
+      isHD: map['isHD'] is int ? map['isHD'] != 0 : map['isHD'],
+      isFavorite:
+          map['isFavorite'] is int ? map['isFavorite'] != 0 : map['isFavorite'],
       language: map['language'],
       country: map['country'],
-      isHidden: map['isHidden'],
+      isHidden:
+          map['isHidden'] is int ? map['isHidden'] != 0 : map['isHidden'],
       sortOrder: map['sortOrder'],
     );
   }

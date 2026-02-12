@@ -57,6 +57,7 @@ import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iptv_player/utils/artwork_validator.dart';
 
 class _HeroCandidate {
   final Channel channel;
@@ -217,9 +218,7 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-/// A focused Live TV screen. Shows a hero for the currently airing program
-/// on a featured channel, plus channel rows below.
-/// Helper class to hold EPG data for channel cards to prevent unnecessary rebuilds
+
 class _EpgCardData {
   final Program? program;
   final bool hasUsableData;
@@ -418,7 +417,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return prefs.getString('active_playlist_id') ??
           prefs.getString('m3u_url') ??
           prefs.getString('xtream_server');
-    } catch (_) {
+    } catch (e) {
+      debugLog('LiveTvScreen: readPlaylistIdentity failed: $e');
       return null;
     }
   }
@@ -554,8 +554,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
       }
       unawaited(_prefetchInitialRows(force: true));
-    } catch (_) {
-      // Best-effort only.
+    } catch (e) {
+      debugLog('LiveTvScreen: loadLiveTvSnapshot failed: $e');
     }
   }
 
@@ -662,8 +662,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         'categories': categories,
       };
       await prefs.setString(_liveTvSnapshotKey, jsonEncode(snapshot));
-    } catch (_) {
-      // Best-effort persistence only.
+    } catch (e) {
+      debugLog('LiveTvScreen: saveLiveTvSnapshot failed: $e');
     }
   }
 
@@ -765,7 +765,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (!_scrollController.hasClients) return 0.0;
     try {
       return _scrollController.positions.first.pixels;
-    } catch (_) {
+    } catch (e) {
+      debugLog('LiveTvScreen: safeScrollOffset failed: $e');
       return 0.0;
     }
   }
@@ -2622,15 +2623,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
           // Channel logo
           Positioned(
-            top: AppSizes.lg,
-            right: AppSizes.lg,
+            top: context.tvSpacing(AppSizes.xxl),
+            right: context.tvSpacing(AppSizes.lg),
             child: Builder(builder: (context) {
               final scrollPos = _safeScrollOffset();
               final fadeProgress =
                   (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
               return Opacity(
                 opacity: 1.0 - fadeProgress,
-                child: _buildChannelLogo(context, activeChannel),
+                child: SizedBox(
+                  width: context.tvSpacing(72),
+                  height: context.tvSpacing(48),
+                  child: _buildChannelLogo(context, activeChannel),
+                ),
               );
             }),
           ),
@@ -2981,89 +2986,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  bool _isLikelyPosterUrl(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
+  bool _isLikelyPosterUrl(String url) => ArtworkValidator.isLikelyPosterUrl(url);
 
-    // Explicit keywords in path or query
-    if (lower.contains('/poster') ||
-        lower.contains('/portrait') ||
-        lower.contains('/cover') ||
-        lower.contains('type=poster') ||
-        lower.contains('format=portrait')) {
-      return true;
-    }
+  bool _isLikelyLandscapeUrl(String url) => ArtworkValidator.isLikelyLandscapeUrl(url);
 
-    // TMDB poster-specific sizes (w92 through w500)
-    // Note: w780 and w1280 are used for BOTH posters and backdrops
-    if (lower.contains('tmdb.org') &&
-        (lower.contains('/w92/') ||
-            lower.contains('/w154/') ||
-            lower.contains('/w185/') ||
-            lower.contains('/w342/') ||
-            lower.contains('/w500/'))) {
-      return true;
-    }
-
-    // TVDB poster paths
-    if (lower.contains('artworks.thetvdb.com') &&
-        lower.contains('/banners/posters/')) {
-      return true;
-    }
-
-    // Common file naming patterns
-    if (lower.endsWith('_poster.jpg') ||
-        lower.endsWith('_poster.png') ||
-        lower.endsWith('_cover.jpg') ||
-        lower.endsWith('_cover.png')) {
-      return true;
-    }
-
-    return false;
-  }
-
-  bool _isLikelyLandscapeUrl(String url) {
-    if (url.isEmpty) return false;
-    if (_isExplicitBackdropUrl(url)) return true;
-    final lower = url.toLowerCase();
-    if (lower.contains('backdrop') ||
-        lower.contains('background') ||
-        lower.contains('fanart') ||
-        lower.contains('landscape') ||
-        lower.contains('banner')) {
-      return true;
-    }
-    if (lower.contains('image.tmdb.org') &&
-        (lower.contains('/w1280/') ||
-            lower.contains('/w1920/') ||
-            lower.contains('/original/'))) {
-      return true;
-    }
-    final dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
-    final match = dimensionPattern.firstMatch(lower);
-    if (match != null) {
-      final width = int.tryParse(match.group(1) ?? '') ?? 0;
-      final height = int.tryParse(match.group(2) ?? '') ?? 0;
-      if (width > 0 && height > 0) {
-        return width >= (height * 1.2);
-      }
-    }
-    return false;
-  }
-
-  bool _isLikelyChannelLogoUrl(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('/logos/')) return true;
-    if (lower.contains('iptvboss.pro') &&
-        (lower.contains('/logo') || lower.contains('/logos/'))) {
-      return true;
-    }
-    if (lower.contains('logo.') || lower.contains('/logo/')) {
-      return true;
-    }
-    return false;
-  }
+  bool _isLikelyChannelLogoUrl(String url) => ArtworkValidator.isLikelyChannelLogoUrl(url);
 
   bool _isValidProgramArtwork(
     String? url,
@@ -3139,46 +3066,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return true;
   }
 
-  bool _isLikelyTitleLogoUrl(String url) {
-    final lower = url.toLowerCase();
+  bool _isLikelyTitleLogoUrl(String url) => ArtworkValidator.isLikelyTitleLogoUrl(url);
 
-    if (lower.contains('/clearlogo/') ||
-        lower.contains('/logo/') ||
-        lower.contains('/logotype/') ||
-        lower.contains('/titlecard/')) {
-      return true;
-    }
-
-    return lower.endsWith('.svg');
-  }
-
-  bool _isLikelySmallImage(String url) {
-    final lower = url.toLowerCase();
-
-    // Check for small size indicators in URL
-    if (lower.contains('_small') ||
-        lower.contains('_thumb') ||
-        lower.contains('_icon') ||
-        lower.contains('/small/') ||
-        lower.contains('/thumb/') ||
-        lower.contains('/icon/')) {
-      return true;
-    }
-
-    // Check for specific small dimensions in URL
-    final dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
-    final match = dimensionPattern.firstMatch(lower);
-    if (match != null) {
-      final width = int.tryParse(match.group(1) ?? '') ?? 0;
-      final height = int.tryParse(match.group(2) ?? '') ?? 0;
-      // Block images smaller than 400x300
-      if (width > 0 && height > 0 && (width < 400 || height < 300)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  bool _isLikelySmallImage(String url) => ArtworkValidator.isLikelySmallImage(url);
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
@@ -3223,18 +3113,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
       if (host.isEmpty) return path;
       return '$host$path';
-    } catch (_) {
+    } catch (e) {
+      debugLog('LiveTvScreen: normalizeUrl failed: $e');
       return url.toLowerCase();
     }
   }
 
-  bool _isExplicitBackdropUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.contains('backdrop') ||
-        lower.contains('landscape') ||
-        lower.contains('fanart') ||
-        lower.contains('/bg/');
-  }
+
 
   String _applyTmdbSize(String url, String size) {
     try {
@@ -3245,7 +3130,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         segments[2] = size;
         return uri.replace(pathSegments: segments).toString();
       }
-    } catch (_) {}
+    } catch (e) { debugLog('LiveTvScreen: applyTmdbSize failed: $e'); }
     return url;
   }
 

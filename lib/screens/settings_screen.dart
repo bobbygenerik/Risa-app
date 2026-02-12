@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -1129,11 +1130,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         if (custom.trim().isEmpty) {
           await prefs.setString('epg_url', epgUri.toString());
         }
-      } catch (_) {
-        // swallow to avoid leaking credentials
+      } catch (e) {
+        debugLog('Settings: Xtream EPG URL construction failed (credentials not logged)');
       }
-    } catch (_) {
-      // Swallow any unexpected errors silently to avoid leaking credentials or logs.
+    } catch (e) {
+      debugLog('Settings: Xtream EPG URL outer block failed (credentials not logged)');
     }
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
@@ -1346,7 +1347,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         list = decoded
             .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
             .toList();
-      } catch (_) {}
+      } catch (e) { debugLog('Settings: saved_playlists JSON parse failed: $e'); }
     }
 
     int existingIndex = -1;

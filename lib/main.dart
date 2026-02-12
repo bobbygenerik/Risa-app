@@ -100,25 +100,30 @@ Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
   }
 }
 
-final _suppressedErrorPatterns = {
-  '429',
-  'rate limit',
-  'HttpException',
-  'SocketException',
-  'ClientException',
-  'RenderFlex overflowed',
-  'overflowed by',
-  'Invalid image data',
-  'Image data',
-  'Failed to load network image',
-  'NetworkImageLoadException',
-  'HandshakeException',
-  'Connection closed',
-  'Connection reset',
-};
+/// Single compiled RegExp for error suppression — O(1) amortized instead of
+/// O(n) linear scan through individual `.contains()` checks.
+final _suppressedErrorPattern = RegExp(
+  [
+    r'429',
+    r'rate limit',
+    r'HttpException',
+    r'SocketException',
+    r'ClientException',
+    r'RenderFlex overflowed',
+    r'overflowed by',
+    r'Invalid image data',
+    r'Image data',
+    r'Failed to load network image',
+    r'NetworkImageLoadException',
+    r'HandshakeException',
+    r'Connection closed',
+    r'Connection reset',
+  ].map(RegExp.escape).join('|'),
+  caseSensitive: false,
+);
 
 bool _shouldSuppressError(String errorStr) {
-  return _suppressedErrorPatterns.any((pattern) => errorStr.contains(pattern));
+  return _suppressedErrorPattern.hasMatch(errorStr);
 }
 
 void main() {
@@ -132,24 +137,7 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
-      FlutterError.onError = (details) {
-        final exception = details.exception;
-        final message = exception.toString();
-        if (!_shouldSuppressError(message)) {
-          debugLog('FlutterError: $message');
-          if (details.stack != null) {
-            debugLog(details.stack.toString());
-          }
-        }
-      };
-      PlatformDispatcher.instance.onError = (error, stack) {
-        final message = error.toString();
-        if (!_shouldSuppressError(message)) {
-          debugLog('PlatformError: $message');
-          debugLog(stack.toString());
-        }
-        return true;
-      };
+
 
       // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
@@ -169,24 +157,14 @@ void main() {
         StartupProbe.mark('Image cache limits configured (NORMAL)');
       }
 
-      // Force immediate garbage collection and memory cleanup for Shield
-      final tmp = List<int>.generate(1024, (index) => index);
-      tmp.clear();
-
-      // Additional cleanup for Shield devices
+      // Cleanup for low-memory/Shield devices
       if (memoryInfo.isLowMemory) {
         // Clear any existing image cache
         PaintingBinding.instance.imageCache.clear();
         try {
           PaintingBinding.instance.imageCache.clearLiveImages();
-        } catch (_) {
-          // Ignore file deletion errors
-        }
-
-        // Force multiple GC cycles for Shield
-        for (int i = 0; i < 3; i++) {
-          final waste = List<int>.generate(512, (index) => index);
-          waste.clear();
+        } catch (e) {
+          debugLog('main: clearLiveImages failed: $e');
         }
         StartupProbe.mark('Shield memory cleanup completed');
       }
@@ -211,7 +189,6 @@ void main() {
       }
 
       FlutterError.onError = (FlutterErrorDetails details) {
-        // Suppress rate-limit errors from image loading (HTTP 429)
         final errorStr = details.exception.toString();
         if (_shouldSuppressError(errorStr)) {
           debugLog('Suppressed image error: ${details.exception}');
@@ -234,19 +211,13 @@ void main() {
       };
 
       PlatformDispatcher.instance.onError = (error, stack) {
-        final platformMessage = 'PlatformError: $error';
-        logToSystem(platformMessage, name: 'RisaFlutter');
-        // ignore: avoid_print
-        print(platformMessage);
-        unawaited(CrashLogger.instance.logError(
-          error,
-          stack,
-          source: 'platform',
-        ));
-        return true;
-      };
-
-      PlatformDispatcher.instance.onError = (error, stack) {
+        final errorStr = error.toString();
+        if (!_shouldSuppressError(errorStr)) {
+          final platformMessage = 'PlatformError: $error';
+          logToSystem(platformMessage, name: 'RisaFlutter');
+          // ignore: avoid_print
+          print(platformMessage);
+        }
         unawaited(CrashLogger.instance.logError(
           error,
           stack,
@@ -643,7 +614,8 @@ class _MyAppState extends State<MyApp> {
                 },
               );
               playlistUrl = fallbackUri.toString();
-            } catch (_) {
+            } catch (e) {
+              debugLog('main: Xtream fallback URI construction failed (credentials not logged)');
               playlistUrl = '';
             }
           }

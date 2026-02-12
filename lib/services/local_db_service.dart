@@ -22,6 +22,7 @@ class LocalDbService {
   String? _dbPath;
   Future<void> _writeQueue = Future.value();
   int _bulkWriteDepth = 0;
+  DateTime? _lastResetTime;
 
   bool get isReady => _isInit && _db != null;
 
@@ -41,7 +42,9 @@ class LocalDbService {
           await cacheFile.copy(docsPath);
           // Clean up old cache location after successful migration
           await cacheFile.delete();
-        } catch (_) {}
+        } catch (e) {
+          debugLog('LocalDbService: DB migration copy failed: $e');
+        }
       }
     }
     return docsPath;
@@ -77,12 +80,20 @@ class LocalDbService {
         version: 4,
         onConfigure: (db) async {
           try {
-            // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
-            await db.rawQuery('PRAGMA journal_mode=WAL');
+            // PRAGMA journal_mode returns rows; use rawQuery to capture result.
+            final walResult = await db.rawQuery('PRAGMA journal_mode=WAL');
+            final activeMode = walResult.isNotEmpty
+                ? walResult.first.values.first?.toString()
+                : 'unknown';
+            if (activeMode != 'wal') {
+              debugLog('LocalDbService: WAL mode FAILED — active mode: $activeMode');
+            } else {
+              debugLog('LocalDbService: WAL mode active');
+            }
             await db.rawQuery('PRAGMA synchronous=NORMAL');
             await db.rawQuery('PRAGMA busy_timeout=20000');
-          } catch (_) {
-            // Best-effort; continue without WAL if platform rejects PRAGMA.
+          } catch (e) {
+            debugLog('LocalDbService: PRAGMA configuration failed: $e');
           }
         },
         onCreate: (db, _) async {
@@ -161,6 +172,20 @@ class LocalDbService {
           }
         },
       );
+
+      // Quick integrity check to catch corruption early
+      try {
+        final check = await _db!.rawQuery('PRAGMA integrity_check(1)');
+        final result = check.isNotEmpty
+            ? check.first.values.first?.toString()
+            : 'unknown';
+        if (result != 'ok') {
+          debugLog('LocalDbService: integrity_check FAILED: $result');
+        }
+      } catch (e) {
+        debugLog('LocalDbService: integrity_check error: $e');
+      }
+
       _isInit = true;
       completer.complete();
     } catch (e) {
@@ -269,6 +294,9 @@ class LocalDbService {
 
   bool _isReadOnlyError(Object e) {
     final message = e.toString().toLowerCase();
+    // Must mention 'database' to avoid false positives from Dart collection
+    // errors (e.g. "Unsupported operation: read-only" from unmodifiable maps).
+    if (!message.contains('database')) return false;
     return message.contains('read-only') ||
         message.contains('read only') ||
         message.contains('readonly');
@@ -286,7 +314,16 @@ class LocalDbService {
       await _waitForReset();
       return;
     }
+    // Rate-limit resets: max 1 per 30 seconds to prevent reset cascades
+    final now = DateTime.now();
+    if (_lastResetTime != null &&
+        now.difference(_lastResetTime!).inSeconds < 30) {
+      debugLog('LocalDbService: reset skipped — cooldown active '
+          '(${now.difference(_lastResetTime!).inSeconds}s since last reset)');
+      return;
+    }
     _resetting = true;
+    _lastResetTime = now;
     _resetCompleter ??= Completer<void>();
     try {
       debugLog('LocalDbService: resetting read-only database');
@@ -842,12 +879,14 @@ class LocalDbService {
   }
 
   Map<String, dynamic> _hydrateAttrs(Map<String, dynamic> row) {
-    if (row['attrs'] != null) {
+    // Create a mutable copy — sqflite returns unmodifiable maps.
+    final copy = Map<String, dynamic>.from(row);
+    if (copy['attrs'] != null) {
       try {
-        row['attributes'] = json.decode(row['attrs'] as String);
+        copy['attributes'] = json.decode(copy['attrs'] as String);
       } catch (_) {}
     }
-    row.remove('attrs');
-    return row;
+    copy.remove('attrs');
+    return copy;
   }
 }

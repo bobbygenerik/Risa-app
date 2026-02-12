@@ -172,7 +172,8 @@ class _EPGScreenState extends State<EPGScreen>
       return prefs.getString('active_playlist_id') ??
           prefs.getString('m3u_url') ??
           prefs.getString('xtream_server');
-    } catch (_) {
+    } catch (e) {
+      debugLog('EPGScreen: readPlaylistIdentity failed: $e');
       return null;
     }
   }
@@ -281,8 +282,8 @@ class _EPGScreenState extends State<EPGScreen>
       if (mounted) {
         setState(() {});
       }
-    } catch (_) {
-      // Best-effort only.
+    } catch (e) {
+      debugLog('EPGScreen: loadEpgSnapshot failed: $e');
     }
   }
 
@@ -371,8 +372,8 @@ class _EPGScreenState extends State<EPGScreen>
         'channels': payload,
       };
       await prefs.setString(_epgSnapshotKey, jsonEncode(snapshot));
-    } catch (_) {
-      // Best-effort persistence only.
+    } catch (e) {
+      debugLog('EPGScreen: saveEpgSnapshot failed: $e');
     }
   }
 
