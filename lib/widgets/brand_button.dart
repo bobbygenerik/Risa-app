@@ -15,6 +15,8 @@ class BrandPrimaryButton extends StatefulWidget {
   final FocusNode? focusNode;
   final double? fontSize;
   final double? minHeight;
+  final bool isLoading;
+  final bool isDisabled;
 
   const BrandPrimaryButton({
     super.key,
@@ -27,6 +29,8 @@ class BrandPrimaryButton extends StatefulWidget {
     this.focusNode,
     this.fontSize,
     this.minHeight,
+    this.isLoading = false,
+    this.isDisabled = false,
   });
 
   @override
@@ -39,8 +43,11 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
   @override
   Widget build(BuildContext context) {
     const baseColor = AppTheme.primaryBlue;
+    final isInteractive = !widget.isDisabled && !widget.isLoading;
+    final effectiveColor =
+        isInteractive ? baseColor : baseColor.withValues(alpha: 0.5);
     final resolvedColor =
-        _focused ? Colors.white.withValues(alpha: 0.9) : baseColor;
+        _focused ? Colors.white.withValues(alpha: 0.9) : effectiveColor;
     final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
 
     final resolvedPadding = widget.padding.resolve(Directionality.of(context));
@@ -64,60 +71,83 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
       ),
       padding: scaledPadding,
-      child: Row(
-        mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment:
-            widget.expand ? MainAxisAlignment.center : MainAxisAlignment.start,
-        children: [
-          if (widget.icon != null) ...[
-            AnimatedScale(
-              scale: _focused ? 1.15 : 1.0,
-              duration: TVFocusStyle.animationDuration,
-              child: context.iconSm(widget.icon!, color: labelColor),
-            ),
-            SizedBox(width: context.tvSpacing(8)),
-          ],
-          Flexible(
-            child: Text(
-              widget.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: labelColor,
-                fontSize:
-                    context.tvTextSize(widget.fontSize ?? 14).clamp(10.0, 16.0),
-                fontWeight: FontWeight.w600,
-                height: 1.1,
+      child: widget.isLoading
+          ? Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(labelColor),
+                ),
               ),
+            )
+          : Row(
+              mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: widget.expand
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                if (widget.icon != null) ...[
+                  AnimatedScale(
+                    scale: _focused ? 1.15 : 1.0,
+                    duration: TVFocusStyle.animationDuration,
+                    child: context.iconSm(widget.icon!, color: labelColor),
+                  ),
+                  SizedBox(width: context.tvSpacing(8)),
+                ],
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: labelColor,
+                      fontSize: context
+                          .tvTextSize(widget.fontSize ?? 14)
+                          .clamp(10.0, 16.0),
+                      fontWeight: FontWeight.w600,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
 
-    return FocusableActionDetector(
-      focusNode: widget.focusNode,
-      shortcuts: const {
-        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-      },
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            widget.onPressed();
-            return null;
-          },
-        ),
-      },
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
-      onFocusChange: (v) => setState(() => _focused = v),
-      mouseCursor: SystemMouseCursors.click,
-      child: AnimatedScale(
-        scale: _focused ? 1.05 : 1.0,
-        duration: AppDurations.fast,
-        curve: Curves.easeOutCubic,
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: content,
+    return Semantics(
+      button: true,
+      enabled: isInteractive,
+      label: widget.label,
+      child: FocusableActionDetector(
+        enabled: isInteractive,
+        focusNode: widget.focusNode,
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        },
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              if (isInteractive) widget.onPressed();
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (v) => setState(() => _focused = v),
+        onFocusChange: (v) => setState(() => _focused = v),
+        mouseCursor: isInteractive
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.forbidden,
+        child: AnimatedScale(
+          scale: _focused ? 1.05 : 1.0,
+          duration: AppDurations.fast,
+          curve: Curves.easeOutCubic,
+          child: GestureDetector(
+            onTap: isInteractive ? widget.onPressed : null,
+            child: content,
+          ),
         ),
       ),
     );
@@ -136,6 +166,8 @@ class BrandSecondaryButton extends StatefulWidget {
   final FocusNode? focusNode;
   final double? fontSize;
   final double? minHeight;
+  final bool isLoading;
+  final bool isDisabled;
 
   const BrandSecondaryButton({
     super.key,
@@ -148,6 +180,8 @@ class BrandSecondaryButton extends StatefulWidget {
     this.focusNode,
     this.fontSize,
     this.minHeight,
+    this.isLoading = false,
+    this.isDisabled = false,
   });
 
   @override
@@ -169,6 +203,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
 
     final focusFill = Colors.white.withValues(alpha: 0.9);
     final minH = context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0);
+    final isInteractive = !widget.isDisabled && !widget.isLoading;
 
     final content = AnimatedContainer(
       duration: AppDurations.fast,
@@ -178,8 +213,9 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            AppTheme.primaryBlue,
-            AppTheme.primaryBlue.withAlpha((0.9 * 255).round())
+            AppTheme.primaryBlue.withValues(alpha: isInteractive ? 1.0 : 0.5),
+            AppTheme.primaryBlue
+                .withValues(alpha: (0.9 * (isInteractive ? 1.0 : 0.5))),
           ],
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -192,67 +228,92 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           borderRadius: BorderRadius.circular(widget.borderRadius - 1.5),
         ),
         padding: scaledPadding,
-        child: Row(
-          mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: widget.expand
-              ? MainAxisAlignment.center
-              : MainAxisAlignment.start,
-          children: [
-            if (widget.icon != null) ...[
-              AnimatedScale(
-                scale: _focused ? 1.15 : 1.0,
-                duration: TVFocusStyle.animationDuration,
-                child: context.iconSm(
-                  widget.icon!,
-                  color: _focused ? AppTheme.darkBackground : Colors.white,
+        child: widget.isLoading
+            ? Center(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        _focused ? AppTheme.darkBackground : Colors.white),
+                  ),
                 ),
+              )
+            : Row(
+                mainAxisSize:
+                    widget.expand ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisAlignment: widget.expand
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: [
+                  if (widget.icon != null) ...[
+                    AnimatedScale(
+                      scale: _focused ? 1.15 : 1.0,
+                      duration: TVFocusStyle.animationDuration,
+                      child: context.iconSm(
+                        widget.icon!,
+                        color:
+                            _focused ? AppTheme.darkBackground : Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: context.tvSpacing(8)),
+                  ],
+                  Flexible(
+                    child: Text(
+                      widget.label,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color:
+                            _focused ? AppTheme.darkBackground : Colors.white,
+                        fontSize: context
+                            .tvTextSize(widget.fontSize ?? 14)
+                            .clamp(10.0, 16.0),
+                        fontWeight: FontWeight.w600,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: context.tvSpacing(8)),
-            ],
-            Flexible(
-              child: Text(
-                widget.label,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _focused ? AppTheme.darkBackground : Colors.white,
-                  fontSize: context
-                      .tvTextSize(widget.fontSize ?? 14)
-                      .clamp(10.0, 16.0),
-                  fontWeight: FontWeight.w600,
-                  height: 1.1,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
 
-    return FocusableActionDetector(
-      focusNode: widget.focusNode,
-      shortcuts: const {
-        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-      },
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            widget.onPressed();
-            return null;
-          },
-        ),
-      },
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
-      onFocusChange: (v) => setState(() => _focused = v),
-      mouseCursor: SystemMouseCursors.click,
-      child: AnimatedScale(
-        scale: _focused ? 1.05 : 1.0,
-        duration: AppDurations.fast,
-        curve: Curves.easeOutCubic,
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: content,
+    return Semantics(
+      button: true,
+      enabled: isInteractive,
+      label: widget.label,
+      child: FocusableActionDetector(
+        enabled: isInteractive,
+        focusNode: widget.focusNode,
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        },
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              if (isInteractive) widget.onPressed();
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (v) => setState(() => _focused = v),
+        onFocusChange: (v) => setState(() => _focused = v),
+        mouseCursor: isInteractive
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.forbidden,
+        child: AnimatedScale(
+          scale: _focused ? 1.05 : 1.0,
+          duration: AppDurations.fast,
+          curve: Curves.easeOutCubic,
+          child: GestureDetector(
+            onTap: isInteractive ? widget.onPressed : null,
+            child: content,
+          ),
         ),
       ),
     );
