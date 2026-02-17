@@ -1,4 +1,4 @@
-package com.autoapp.auto_app
+package com.risa.companion
 
 import io.flutter.embedding.android.FlutterActivity
 
