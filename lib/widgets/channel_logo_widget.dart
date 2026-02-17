@@ -48,8 +48,6 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   String? _effectiveLogoUrl;
   bool _isEnriching = false;
   bool _triedEnrichment = false;
-  bool _isValidating = false;
-  String? _validatedUrl;
   bool _recoveryEnrichmentScheduled = false;
 
   @override
@@ -61,7 +59,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         _enrichLogo();
       }
     } else {
-      _validateLogoIfNeeded();
+      _checkKnownInvalidOnly();
     }
   }
 
@@ -75,14 +73,13 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       if (_effectiveLogoUrl != newLogoUrl) {
         _effectiveLogoUrl = newLogoUrl;
         _triedEnrichment = false;
-        _validatedUrl = null;
         _recoveryEnrichmentScheduled = false;
         if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
           if (widget.allowEnrichment) {
             _enrichLogo();
           }
         } else {
-          _validateLogoIfNeeded();
+          _checkKnownInvalidOnly();
         }
       }
     }
@@ -102,29 +99,31 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       if (mounted && enrichedUrl != null) {
         setState(() {
           _effectiveLogoUrl = _normalizeLogoUrl(enrichedUrl);
-          _validatedUrl = null;
           _recoveryEnrichmentScheduled = false;
         });
-        unawaited(_validateLogoIfNeeded());
+        _checkKnownInvalidOnly();
       }
     } catch (e) {
       // Silently fail
     } finally {
-      _isEnriching = false;
+      if (mounted) {
+        setState(() {
+          _isEnriching = false;
+        });
+      }
     }
   }
 
-  Future<void> _validateLogoIfNeeded() async {
+  void _checkKnownInvalidOnly() {
     final url = _normalizeLogoUrl(_effectiveLogoUrl);
     if (url == null || url.isEmpty) return;
-    _effectiveLogoUrl = url;
-    if (_validatedUrl == url || _isValidating) return;
+
+    // Check if URL is known to be bad to skip loading attempts
     if (ImageValidationService.isKnownInvalid(url)) {
       ImageFailureCache.recordFailure(url, StateError('known_invalid_logo'));
       if (mounted && _effectiveLogoUrl == url) {
         setState(() {
           _effectiveLogoUrl = null;
-          _validatedUrl = url;
         });
         if (widget.allowEnrichment) {
           unawaited(_enrichLogo());
@@ -132,33 +131,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       }
       return;
     }
-    if (ImageValidationService.isKnownValid(url)) {
-      _validatedUrl = url;
-      return;
-    }
-    _isValidating = true;
-    if (mounted) {
-      setState(() {});
-    }
-    try {
-      final valid = await ImageValidationService.isValid(url);
-      if (!mounted || _effectiveLogoUrl != url) return;
-      if (!valid) {
-        ImageFailureCache.recordFailure(url, StateError('invalid_logo'));
-        setState(() {
-          _effectiveLogoUrl = null;
-          _validatedUrl = url;
-        });
-        if (widget.allowEnrichment) {
-          unawaited(_enrichLogo());
-        }
-      } else {
-        _validatedUrl = url;
-        setState(() {});
-      }
-    } finally {
-      _isValidating = false;
-    }
+    // If not known invalid, proceed to render (Image widget will handle errors)
   }
 
   String? _normalizeLogoUrl(String? url) {
@@ -192,7 +165,6 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       if (!mounted) return;
       setState(() {
         _effectiveLogoUrl = null;
-        _validatedUrl = null;
       });
       unawaited(_enrichLogo());
     });
@@ -203,6 +175,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     final tvWidth = context.tvSpacing(widget.width);
     final tvHeight = context.tvSpacing(widget.height);
     final effectiveUrl = _normalizeLogoUrl(_effectiveLogoUrl);
+
     return ClipRRect(
       borderRadius:
           widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
@@ -210,10 +183,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         width: tvWidth,
         height: tvHeight,
         color: widget.backgroundColor ?? Colors.transparent,
-        child: (_isValidating && _validatedUrl != effectiveUrl)
-            ? (widget.placeholder ??
-                _buildGradientFallback(context, tvWidth, tvHeight))
-            : effectiveUrl != null && effectiveUrl.isNotEmpty
+        child: effectiveUrl != null && effectiveUrl.isNotEmpty
                 ? (ImageFailureCache.shouldSkipLogo(effectiveUrl)
                     ? (widget.placeholder ??
                         _buildGradientFallback(context, tvWidth, tvHeight))
@@ -237,14 +207,12 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                               filterQuality: FilterQuality.high,
                               gaplessPlayback: true,
                               frameBuilder: (context, child, frame, wasSync) {
-                                if (widget.channelName == "CWWLVI" ||
-                                    widget.channelName == "PBSWGBH") {
-                                  // debugLog('ChannelLogoWidget: frameBuilder for ${widget.channelName}: wasSync=$wasSync, frame=$frame');
-                                }
                                 ImageLoadProbe.recordAttempt(
                                     effectiveUrl, 'channel_logo_widget');
                                 if (wasSync || frame != null) {
                                   ImageFailureCache.recordSuccess(effectiveUrl);
+                                  // Mark valid on success so future checks are fast
+                                  ImageValidationService.markValid(effectiveUrl);
                                   return child;
                                 }
                                 return widget.placeholder ??
@@ -256,6 +224,8 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                                     'ChannelLogoWidget: error channel="${widget.channelName}" host="${_hostFromUrl(effectiveUrl)}" url="$effectiveUrl" err=$error');
                                 ImageFailureCache.recordFailure(
                                     effectiveUrl, error);
+                                // Mark invalid on failure to avoid retries
+                                ImageValidationService.markInvalid(effectiveUrl);
                                 _scheduleEnrichmentRecovery();
                                 return widget.errorWidget ??
                                     _buildGradientFallback(
