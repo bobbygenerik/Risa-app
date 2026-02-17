@@ -8,22 +8,22 @@ class FanartService {
   static const _baseUrl = 'https://webservice.fanart.tv/v3';
 
   // Preferred image types in order (landscape-oriented first)
+  // Backdrop-only image types — NO logos (transparent PNGs that look bad as backdrops)
   static const _tvImageKeys = [
     'tvbackground', // Landscape backgrounds
     'showbackground', // Alternative background key
     'tvbanner', // Banners (landscape)
     'seasonbanner', // Season banners
     'tvthumb', // Thumbnails (usually landscape)
-    'hdtvlogo', // HD logos
-    'clearlogo', // Clear logos
+    // hdtvlogo / clearlogo intentionally excluded — they are transparent
+    // PNGs that render as tiny images on dark backgrounds
   ];
 
   static const _movieImageKeys = [
     'moviebackground', // Movie backgrounds
     'moviebanner', // Banners
     'moviethumb', // Thumbnails
-    'hdmovielogo', // HD logos
-    'movielogo', // Logos
+    // hdmovielogo / movielogo intentionally excluded — transparent PNGs
   ];
 
   static const _tvLogoKeys = [

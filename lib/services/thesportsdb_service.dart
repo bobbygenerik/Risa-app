@@ -75,13 +75,13 @@ class TheSportsDbService {
     if (events == null || events.isEmpty) return null;
     for (final raw in events) {
       if (raw is! Map<String, dynamic>) continue;
-      // Prefer strFanart, fallback to strThumb, then strPoster
+      // Only return landscape-oriented images — NO posters (portrait)
       final fanart = raw['strFanart'] as String?;
       if (fanart != null && fanart.isNotEmpty) return fanart;
       final thumb = raw['strThumb'] as String?;
       if (thumb != null && thumb.isNotEmpty) return thumb;
-      final poster = raw['strPoster'] as String?;
-      if (poster != null && poster.isNotEmpty) return poster;
+      // strPoster is portrait/vertical — skip it entirely.
+      // Showing no image is better than showing a blurred-sides portrait.
     }
     return null;
   }

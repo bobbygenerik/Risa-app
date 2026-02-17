@@ -222,6 +222,7 @@ class TvdbService {
   }
 
   static String? _extractImage(Map<String, dynamic> entry) {
+    // First pass: prefer explicit landscape candidates, skip posters
     final landscapeCandidates = [
       entry['banner'],
       entry['image'],
@@ -234,6 +235,7 @@ class TvdbService {
       return normalized;
     }
 
+    // Second pass: try remaining fields BUT still filter out posters
     final fallbackCandidates = [
       entry['image'],
       entry['image_url'],
@@ -244,6 +246,8 @@ class TvdbService {
     for (final value in fallbackCandidates) {
       final normalized = _normalizeCandidate(value);
       if (normalized == null) continue;
+      // Always skip poster paths — they are portrait-oriented
+      if (_isPosterPath(normalized)) continue;
       return normalized;
     }
     return null;
@@ -260,7 +264,10 @@ class TvdbService {
   static bool _isPosterPath(String url) {
     final lower = url.toLowerCase();
     return lower.contains('/banners/posters/') ||
-        lower.contains('/banners/poster/');
+        lower.contains('/banners/poster/') ||
+        lower.contains('/posters/') ||
+        lower.contains('type=poster') ||
+        lower.contains('/portrait/');
   }
 
   /// Fetches best background artwork from TVDB v4 /artworks endpoint.

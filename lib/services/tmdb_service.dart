@@ -549,11 +549,17 @@ class TMDBService {
   static Future<Map<String, dynamic>?> _resolveTmdbBackdrop(
       String normalizedTitle, int? year) async {
     Map<String, dynamic>? details;
-    final tvTitle = normalizedTitle.length <= 4
-        ? '$normalizedTitle channel'
-        : normalizedTitle;
-    details = await getTVDetails(tvTitle, year: year);
+
+    // For short titles (≤4 chars like ESPN, CNN, BBC), try the raw title
+    // first without appending " channel" which can cause false matches.
+    // Only append " channel" as a last-resort fallback.
+    details = await getTVDetails(normalizedTitle, year: year);
     details ??= await getMovieDetails(normalizedTitle, year: year);
+
+    // Fallback for short titles: try with " channel" suffix
+    if (details == null && normalizedTitle.length <= 4) {
+      details = await getTVDetails('$normalizedTitle channel', year: year);
+    }
 
     if (details != null) {
       final tmdbId = details['tmdbId'] as int?;
@@ -561,7 +567,7 @@ class TMDBService {
       final hasBackdrop =
           (details['backdrop'] as String?)?.trim().isNotEmpty == true;
 
-      // If TMDB only has a poster, still try Fanart for real backdrops.
+      // If TMDB only has a poster, still try Fanart for a real landscape backdrop.
       if (!hasBackdrop && tmdbId != null && mediaType != null) {
         final fanartImage = await FanartService.getBackdrop(
           tmdbId,
@@ -573,6 +579,7 @@ class TMDBService {
         }
       }
 
+      // Try TMDB /images endpoint for higher-res backdrops
       if (tmdbId != null && mediaType != null) {
         final tmdbBackdrop = await _getHighResBackdrop(tmdbId, mediaType);
         if (tmdbBackdrop != null && tmdbBackdrop.isNotEmpty) {
@@ -580,10 +587,17 @@ class TMDBService {
         }
       }
 
-      if (!_hasArtwork(details)) {
-        final companyLogo = await _fetchCompanyLogo(normalizedTitle);
-        if (companyLogo != null) {
-          details['backdrop'] = companyLogo;
+      // If we STILL have no backdrop but DO have a poster, use a lower-res
+      // TMDB backdrop endpoint as one more try. The poster itself won't be
+      // returned (it's portrait), but the /images endpoint might have backdrops
+      // below 1920x1080 that _getHighResBackdrop filtered out.
+      if ((details['backdrop'] as String?)?.trim().isNotEmpty != true &&
+          tmdbId != null &&
+          mediaType != null) {
+        final anyBackdrop = await _getAnyBackdrop(tmdbId, mediaType);
+        if (anyBackdrop != null && anyBackdrop.isNotEmpty) {
+          details['backdrop'] = anyBackdrop;
+          debugLog('TMDB: Found lower-res backdrop for "$normalizedTitle": $anyBackdrop');
         }
       }
     }
@@ -593,10 +607,10 @@ class TMDBService {
 
   static bool _hasArtwork(Map<String, dynamic>? details) {
     if (details == null) return false;
+    // Only check for backdrop — posters are portrait and not used for
+    // landscape cards, so a poster-only match should not prevent fallbacks.
     final backdrop = (details['backdrop'] as String?)?.trim();
-    if (backdrop != null && backdrop.isNotEmpty) return true;
-    final poster = (details['poster'] as String?)?.trim();
-    return poster != null && poster.isNotEmpty;
+    return backdrop != null && backdrop.isNotEmpty;
   }
 
   static String? _extractBackdropUrl(Map<String, dynamic>? details) {
@@ -607,17 +621,10 @@ class TMDBService {
     );
     if (backdrop != null && backdrop.isNotEmpty) return backdrop;
 
-    // Only return poster if it's explicitly allowed or high-quality.
-    // We append a hint so the UI knows it's a poster.
-    final poster = _resizeTmdbImageUrl(
-      (details['poster'] as String?)?.trim(),
-      isBackdrop: false,
-    );
-    if (poster != null && poster.isNotEmpty) {
-      // If it contains "poster" or common poster patterns, keep it but
-      // the UI will handle it via _isLikelyPosterUrl.
-      return poster;
-    }
+    // Do NOT fall back to poster images — they are portrait/tall and get
+    // rejected at render time by _LandscapeGuardedImage, but the card has
+    // already committed to showing a corner logo and hiding the fallback.
+    // This caused visual corruption (poster-over-fallback layering).
     return null;
   }
 
@@ -707,24 +714,46 @@ class TMDBService {
     return null;
   }
 
-  static Future<String?> _fetchCompanyLogo(String query) async {
+  /// Like _getHighResBackdrop but accepts ANY resolution backdrop ≥ 640x360.
+  /// Used as a last-resort when the high-res endpoint finds nothing.
+  static Future<String?> _getAnyBackdrop(int tmdbId, String mediaType) async {
+    final typePath = mediaType == 'tv' ? 'tv' : 'movie';
+    final url =
+        '$_baseUrl/$typePath/$tmdbId/images?api_key=$_apiKey&include_image_language=null,en';
     try {
-      final searchUrl =
-          '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(query)}';
-      final response = await http.get(Uri.parse(searchUrl));
-      if (response.statusCode == 200) {
-        final companyData = json.decode(response.body);
-        final companyResults = companyData['results'] as List? ?? [];
-        if (companyResults.isNotEmpty) {
-          final company = companyResults.first;
-          final logoPath = company['logo_path'] as String?;
-          if (logoPath != null && logoPath.isNotEmpty) {
-            return 'https://image.tmdb.org/t/p/w500$logoPath';
-          }
-        }
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final available = (data['backdrops'] as List?) ?? [];
+      if (available.isEmpty) return null;
+
+      // Accept any landscape backdrop ≥ 640x360
+      final filtered = available.where((entry) {
+        final lang = entry['iso_639_1'] as String?;
+        if (lang != null && lang != 'en') return false;
+        final width = (entry['width'] as int?) ?? 0;
+        final height = (entry['height'] as int?) ?? 0;
+        return width >= 640 && height >= 360 && width > height;
+      }).toList();
+
+      if (filtered.isEmpty) return null;
+
+      // Sort by resolution desc
+      filtered.sort((a, b) {
+        final aPixels =
+            ((a['width'] as int?) ?? 0) * ((a['height'] as int?) ?? 0);
+        final bPixels =
+            ((b['width'] as int?) ?? 0) * ((b['height'] as int?) ?? 0);
+        return bPixels.compareTo(aPixels);
+      });
+
+      final best = filtered.first;
+      final filePath = (best['file_path'] as String?)?.trim();
+      if (filePath != null && filePath.isNotEmpty) {
+        return _resizeTmdbImageUrl('$_imageBaseUrl$filePath', isBackdrop: true);
       }
     } catch (e) {
-      debugLog('Company logo lookup failed for "$query": $e');
+      debugLog('TMDB any-backdrop lookup failed for $mediaType/$tmdbId: $e');
     }
     return null;
   }

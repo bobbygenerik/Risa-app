@@ -175,17 +175,33 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     _pendingRequests.add(cacheKey);
 
     try {
-      // First try program's own image URL from EPG
+      // First try program's own image URL from EPG — but validate it's not a poster
       if (currentProgram?.imageUrl != null &&
           currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
-        _addToCache(cacheKey, url);
-        if (mounted) {
-          setState(() {
-            _artworkUrl = url;
-          });
+        final lower = url.toLowerCase();
+        // Reject obvious poster/portrait URLs from EPG
+        final isPoster = lower.contains('/poster') ||
+            lower.contains('/portrait') ||
+            lower.contains('/cover') ||
+            lower.contains('type=poster') ||
+            (lower.contains('tmdb.org') &&
+                (lower.contains('/w92/') ||
+                    lower.contains('/w154/') ||
+                    lower.contains('/w185/') ||
+                    lower.contains('/w342/') ||
+                    lower.contains('/w500/')));
+        if (!isPoster) {
+          _addToCache(cacheKey, url);
+          if (mounted) {
+            setState(() {
+              _artworkUrl = url;
+            });
+          }
+          return;
         }
-        return;
+        // EPG image was poster — fall through to try API sources
+        debugLog('ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
       }
 
       if (isSports) {
@@ -201,18 +217,13 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           return;
         }
 
+        // Sports programs: fall through to TMDB instead of giving up.
+        // Many sports shows (SportsCenter, etc.) have TMDB backdrops.
         debugLog(
-            'ProgramArtwork: No sports hero available for "$searchTitle"; skipping TMDB');
-        _addToCache(cacheKey, null);
-        if (mounted) {
-          setState(() {
-            _artworkUrl = null;
-          });
-        }
-        return;
+            'ProgramArtwork: No sports hero for "$searchTitle"; trying TMDB');
       }
 
-      // General content: TMDB handles TVDB -> TMDB -> Fanart internally
+      // General content (and sports fallback): try TMDB → TVDB → Fanart
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
 

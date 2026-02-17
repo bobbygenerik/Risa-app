@@ -15,6 +15,7 @@ import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/tvdb_service.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
+import 'package:iptv_player/utils/artwork_validator.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
@@ -144,19 +145,51 @@ class LiveTvArtworkService {
   bool _isIdle = false;
   bool _isDisposed = false;
 
-  // Limits
-  static const int _maxProgramArtworkEntries = 100;
-  static const int _maxProgramArtworkTitleEntries = 100;
-  static const int _maxProgramArtworkNegativeEntries = 100;
-  static const int _maxProgramTitleLogoEntries = 50;
-  static const Duration _programArtworkTitleTtl = Duration(hours: 12);
-  static const Duration _artworkNegativeTtl = Duration(hours: 6);
+  // ── Diagnostic counters ──────────────────────────────────────────────
+  int diagEnqueued = 0;
+  int diagFetched = 0;
+  int diagHits = 0;
+  int diagNoMatch = 0;
+  int diagSkipTitleIneligible = 0;
+  int diagSkipNegativeCache = 0;
+  int diagSkipServicesDisabled = 0;
+  int diagSkipAlreadyInFlight = 0;
+  int diagSkipExistingArt = 0;
+  int diagTmdbCalls = 0;
+  int diagTvdbCalls = 0;
 
-  // Cache keys
+  /// Human-readable diagnostic summary for on-screen display.
+  String get diagnosticSummary {
+    final queued = _artworkQueueHigh.length + _artworkQueueLow.length;
+    final services = <String>[];
+    if (_tmdbEnabled) services.add('TMDB');
+    if (_tvdbEnabled) services.add('TVDB');
+    if (_fanartEnabled) services.add('Fanart');
+    if (_sportsDbEnabled) services.add('Sports');
+    final svc = services.isEmpty ? 'NONE' : services.join('+');
+    return 'Art: $diagHits found / $diagFetched tried | '
+        '$diagNoMatch miss | $queued queued\n'
+        'Services: $svc | '
+        'Skip: ${diagSkipNegativeCache}neg ${diagSkipTitleIneligible}inel ${diagSkipExistingArt}exist ${diagSkipAlreadyInFlight}fly ${diagSkipServicesDisabled}dis';
+  }
+
+  // Limits
+  static const int _maxProgramArtworkEntries = 2000;
+  static const int _maxProgramArtworkTitleEntries = 2000;
+  static const int _maxProgramArtworkNegativeEntries = 200;
+  static const int _maxProgramTitleLogoEntries = 100;
+  static const Duration _programArtworkTitleTtl = Duration(hours: 12);
+  // Reduced from 30 min — too aggressive, blocks retries for content that
+  // may match on a different query title variant.
+  static const Duration _artworkNegativeTtl = Duration(minutes: 8);
+
+  // Cache keys — bump version to invalidate stale poster/logo entries
+  // v5: invalidate old caches that may contain poster URLs or logos
   static const String _programArtworkTitleCacheKey =
-      'live_tv_program_artwork_title_cache_v3';
+      'live_tv_program_artwork_title_cache_v5';
+  // v6: clear negative cache so everything gets a fresh chance
   static const String _programArtworkNegativeCacheKey =
-      'live_tv_program_artwork_negative_cache_v3';
+      'live_tv_program_artwork_negative_cache_v6';
 
   // Logging
   static const bool _logArtworkMatches = true;
@@ -166,7 +199,30 @@ class LiveTvArtworkService {
     await Future.wait([
       _loadProgramArtworkTitleCache(),
       _loadProgramArtworkNegativeCache(),
+      _cleanupOldCacheKeys(),
     ]);
+  }
+
+  /// Remove stale cache keys from previous versions so they don't
+  /// consume SharedPreferences storage forever.
+  Future<void> _cleanupOldCacheKeys() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const oldKeys = [
+        'live_tv_program_artwork_title_cache_v4',
+        'live_tv_program_artwork_negative_cache_v5',
+        'live_tv_program_artwork_title_cache_v3',
+        'live_tv_program_artwork_negative_cache_v4',
+      ];
+      for (final key in oldKeys) {
+        if (prefs.containsKey(key)) {
+          await prefs.remove(key);
+          debugLog('LiveTV artwork: Removed stale cache key $key');
+        }
+      }
+    } catch (e) {
+      debugLog('LiveTV artwork: Error cleaning old cache keys: $e');
+    }
   }
 
   /// Dispose of timers and resources.
@@ -218,6 +274,9 @@ class LiveTvArtworkService {
   bool get tvdbEnabled => _tvdbEnabled;
   bool get fanartEnabled => _fanartEnabled;
   bool get sportsDbEnabled => _sportsDbEnabled;
+
+  int get programArtworkCacheSize => _programArtwork.length;
+  int get titleArtworkCacheSize => _programArtworkByTitle.length;
 
   /// Get cached artwork for a program by ID.
   String? getArtwork(String programId) => _programArtwork[programId];
@@ -380,9 +439,7 @@ class LiveTvArtworkService {
   /// Pause artwork fetching (e.g., during playback).
   void pauseFetching() {
     _pauseArtworkFetching = true;
-    _artworkQueueHigh.clear();
-    _artworkQueueLow.clear();
-    _queuedArtworkIds.clear();
+    // Keep queues intact so work resumes on resumeFetching()
     _artworkThrottle?.cancel();
     _artworkThrottle = null;
   }
@@ -403,17 +460,19 @@ class LiveTvArtworkService {
     _suspendArtworkCaches = false;
   }
 
-  /// Enter idle mode (reduces resource usage).
+  /// Enter idle mode (reduces resource usage but keeps artwork fetching active).
   void enterIdleMode() {
     _isIdle = true;
-    pauseFetching();
+    // Don't pause artwork fetching — let the queue continue draining
+    // at a reduced batch size (handled in _drainArtworkQueue).
     MemoryManager.checkMemoryPressure();
   }
 
   /// Exit idle mode.
   void exitIdleMode() {
     _isIdle = false;
-    resumeFetching();
+    // Kick the drain in case it was waiting
+    _scheduleArtworkDrain();
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -424,6 +483,7 @@ class LiveTvArtworkService {
   void enqueueArtwork(Program program, {bool highPriority = false}) {
     if (_pauseArtworkFetching || _suspendArtworkCaches) return;
     if (_queuedArtworkIds.contains(program.id)) return;
+    diagEnqueued++;
     _queuedArtworkIds.add(program.id);
     if (highPriority) {
       _artworkQueueHigh.add(program);
@@ -441,14 +501,17 @@ class LiveTvArtworkService {
   void _scheduleArtworkDrain() {
     debugLog(
         'LiveTV artwork: _scheduleArtworkDrain called (paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle queueHigh=${_artworkQueueHigh.length} queueLow=${_artworkQueueLow.length})');
-    if (_pauseArtworkFetching || _suspendArtworkCaches || _isIdle) {
+    if (_pauseArtworkFetching || _suspendArtworkCaches) {
       debugLog(
-          'LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches idle=$_isIdle');
+          'LiveTV: Artwork drain skipped - paused=$_pauseArtworkFetching suspended=$_suspendArtworkCaches');
       return;
     }
-    _artworkThrottle ??=
-        Timer(const Duration(milliseconds: 700), _drainArtworkQueue);
-    debugLog('LiveTV artwork: Timer scheduled for drain in 700ms');
+    // Use a slower drain interval in idle mode but don't stop entirely
+    final interval = _isIdle
+        ? const Duration(milliseconds: 500)
+        : const Duration(milliseconds: 100);
+    _artworkThrottle ??= Timer(interval, _drainArtworkQueue);
+    debugLog('LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -461,7 +524,9 @@ class LiveTvArtworkService {
       return;
     }
 
-    final batchSize = MemoryManager.isLowMemory ? 1 : 2;
+    // Larger batches drain the queue faster — each item is an HTTP call that
+    // runs in parallel, so bigger batches = more parallelism = faster results.
+    final batchSize = _isIdle ? 4 : (MemoryManager.isLowMemory ? 4 : 12);
     final batch = <Program>[];
     for (var i = 0;
         i < batchSize &&
@@ -476,12 +541,15 @@ class LiveTvArtworkService {
 
     final futures = batch.map((program) async {
       try {
+        diagFetched++;
         debugLog('LiveTV: Fetching artwork for: "${program.title}"');
         final image = await fetchProgramArtwork(program);
         if (_isDisposed) return;
         if (image != null && image.isNotEmpty) {
+          diagHits++;
           debugLog('LiveTV: Found artwork for "${program.title}": $image');
         } else {
+          diagNoMatch++;
           debugLog('LiveTV: No artwork found for "${program.title}"');
         }
       } catch (e) {
@@ -492,7 +560,13 @@ class LiveTvArtworkService {
     await Future.wait(futures);
 
     if (_artworkQueueHigh.isNotEmpty || _artworkQueueLow.isNotEmpty) {
-      _scheduleArtworkDrain();
+      // When the queue is large, drain immediately instead of waiting 200ms.
+      // This prevents the queue from growing faster than we can process it.
+      if (_artworkQueueHigh.length + _artworkQueueLow.length > 10) {
+        _artworkThrottle ??= Timer(Duration.zero, _drainArtworkQueue);
+      } else {
+        _scheduleArtworkDrain();
+      }
     }
   }
 
@@ -509,6 +583,7 @@ class LiveTvArtworkService {
     debugLog(
         'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=$_fanartEnabled sports=$_sportsDbEnabled tvdb=$_tvdbEnabled)');
     if (!(_tmdbEnabled || _fanartEnabled || _sportsDbEnabled || _tvdbEnabled)) {
+      diagSkipServicesDisabled++;
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
         'reason=all_services_disabled (tmdb=$_tmdbEnabled fanart=$_fanartEnabled sports=$_sportsDbEnabled tvdb=$_tvdbEnabled)',
@@ -516,6 +591,7 @@ class LiveTvArtworkService {
       return;
     }
     if (_artworkRequests.contains(program.id)) {
+      diagSkipAlreadyInFlight++;
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
         'reason=request_already_in_flight',
@@ -535,6 +611,7 @@ class LiveTvArtworkService {
           programTitle: program.title,
           source: 'existing',
         )) {
+      diagSkipExistingArt++;
       return;
     }
 
@@ -770,49 +847,46 @@ class LiveTvArtworkService {
     final title = program.title;
     final queryTitles = _buildArtworkQueryTitles(program, channel);
 
-    // Try TVDB first
-    if (_tvdbEnabled) {
-      for (final queryTitle in queryTitles) {
-        try {
-          final tvdbImage =
-              await TvdbService.getBestImage(queryTitle).timeout(timeout);
-          if (_acceptArtworkUrl(
-                tvdbImage,
-                preferLandscape: preferLandscape,
-                programTitle: title,
-                source: 'tvdb',
-              ) &&
-              await ImageValidationService.isValid(tvdbImage)) {
-            _logArtworkDecision(
-              'LiveTV artwork: source=tvdb program="$title" query="$queryTitle" url=$tvdbImage',
-            );
-            return tvdbImage;
-          }
-        } catch (e) {
-          debugLog('TVDB failed: $e');
-        }
-      }
-    }
-
-    // Fallback to TMDB
+    // For each query title, try TVDB + TMDB in parallel to cut latency in half.
     for (final queryTitle in queryTitles) {
       try {
-        final tmdbImage =
-            await TMDBService.getBestBackdrop(queryTitle).timeout(timeout);
-        if (_acceptArtworkUrl(
-              tmdbImage,
-              preferLandscape: preferLandscape,
-              programTitle: title,
-              source: 'tmdb',
-            ) &&
-            await ImageValidationService.isValid(tmdbImage)) {
-          _logArtworkDecision(
-            'LiveTV artwork: source=tmdb program="$title" query="$queryTitle" url=$tmdbImage',
+        final futures = <Future<String?>>[];
+
+        if (_tvdbEnabled) {
+          diagTvdbCalls++;
+          futures.add(
+            TvdbService.getBestImage(queryTitle)
+                .timeout(timeout)
+                .catchError((_) => null as String?),
           );
-          return tmdbImage;
+        }
+
+        diagTmdbCalls++;
+        futures.add(
+          TMDBService.getBestBackdrop(queryTitle)
+              .timeout(timeout)
+              .catchError((_) => null as String?),
+        );
+
+        final results = await Future.wait(futures);
+
+        // Check results in order: TVDB first (if enabled), then TMDB
+        for (final image in results) {
+          if (_acceptArtworkUrl(
+                image,
+                preferLandscape: preferLandscape,
+                programTitle: title,
+                source: 'tvdb_or_tmdb',
+              ) &&
+              await ImageValidationService.isValid(image)) {
+            _logArtworkDecision(
+              'LiveTV artwork: source=parallel program="$title" query="$queryTitle" url=$image',
+            );
+            return image;
+          }
         }
       } catch (e) {
-        debugLog('TMDB failed: $e');
+        debugLog('Parallel fetch failed for "$queryTitle": $e');
       }
     }
 
@@ -1144,19 +1218,19 @@ class LiveTvArtworkService {
   }
 
   int _programArtworkEntryLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkEntries;
+    return MemoryManager.isLowMemory ? 200 : _maxProgramArtworkEntries;
   }
 
   int _programArtworkTitleLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkTitleEntries;
+    return MemoryManager.isLowMemory ? 200 : _maxProgramArtworkTitleEntries;
   }
 
   int _programArtworkNegativeLimit() {
-    return MemoryManager.isLowMemory ? 60 : _maxProgramArtworkNegativeEntries;
+    return MemoryManager.isLowMemory ? 100 : _maxProgramArtworkNegativeEntries;
   }
 
   int _programTitleLogoLimit() {
-    return MemoryManager.isLowMemory ? 30 : _maxProgramTitleLogoEntries;
+    return MemoryManager.isLowMemory ? 50 : _maxProgramTitleLogoEntries;
   }
 
   void _scheduleArtworkUiRefresh() {
@@ -1178,6 +1252,7 @@ class LiveTvArtworkService {
 
   bool _shouldAttemptArtworkByTitle(Program program, [Channel? channel]) {
     if (!_isTitleCacheEligible(program)) {
+      diagSkipTitleIneligible++;
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
         'reason=title_cache_ineligible',
@@ -1192,6 +1267,7 @@ class LiveTvArtworkService {
       _programArtworkNegativeTitleOrder.remove(key);
       return true;
     }
+    diagSkipNegativeCache++;
     debugLog(
       'LiveTV artwork SKIP: program="${program.title}" channel="${channel?.name ?? "unknown"}" '
       'reason=negative_cache_hit (blocked until ${until.toIso8601String()})',
@@ -1223,7 +1299,8 @@ class LiveTvArtworkService {
   void _markArtworkFailure(String key) {
     final count = (_artworkFailureCounts[key] ?? 0) + 1;
     _artworkFailureCounts[key] = count;
-    final minutes = math.min(60, math.pow(2, count).round() * 2);
+    // Gentler backoff: 1, 2, 4, max 5 minutes (was 15)
+    final minutes = math.min(5, math.pow(2, count - 1).round());
     _artworkRetryAfter[key] = DateTime.now().add(Duration(minutes: minutes));
   }
 
@@ -1537,6 +1614,16 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
+    if (ImageValidationService.isKnownInvalid(url)) return false;
+    // Reject posters, channel logos, title logos and small images — these
+    // should not occupy the backdrop cache slot and block real lookups.
+    if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
+    if (ArtworkValidator.isLikelyChannelLogoUrl(url)) return false;
+    if (ArtworkValidator.isLikelyTitleLogoUrl(url)) return false;
+    if (ArtworkValidator.isLikelySmallImage(url)) return false;
+    final channelLogo = channel.logoUrl;
+    if (channelLogo != null && channelLogo == url) return false;
+    if (_matchesChannelLogo(url, channel)) return false;
     return true;
   }
 
@@ -1644,34 +1731,22 @@ class LiveTvArtworkService {
   bool _isTitleCacheEligible(Program program) {
     final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
     if (normalized.isEmpty) return false;
-    // Allow shorter titles (3+ chars) to support more TV programs
-    if (normalized.length < 3) return false;
+    // Allow 2+ char titles to support short show names like "24", "ER", "FX"
+    if (normalized.length < 2) return false;
     if (RegExp(r'^\d+$').hasMatch(normalized)) return false;
     const stopWords = <String>{
-      'news',
-      'live',
       'movie',
       'movies',
-      'sports',
-      'sport',
       'tv',
       'show',
       'channel',
-      'music',
-      'kids',
-      'family',
       'documentary',
       'documentaries',
       'series',
     };
-    // Only reject if the ENTIRE title is a single stop word
-    // Titles like "Live with Kelly" or "Sports Center" are valid
-    if (stopWords.contains(normalized)) return false;
-    final tokens = normalized.split(RegExp(r'\s+'));
-    // Require at least one non-stop-word token OR at least 2 tokens total
-    // This allows "Sports Tonight" (2 tokens) even if both are stop words
-    final nonStop = tokens.where((token) => !stopWords.contains(token));
-    if (nonStop.isEmpty && tokens.length < 2) return false;
+    // Only reject if the ENTIRE normalized title is a single stop word
+    final lower = normalized.toLowerCase();
+    if (stopWords.contains(lower)) return false;
     return true;
   }
 
