@@ -26,10 +26,14 @@ class PrewarmService {
             Provider.of<ChannelProvider>(context, listen: false);
         final channels = channelProvider.channels;
         if (channels.isNotEmpty) {
-          final first = channels.first;
-          if (first.logoUrl != null && first.logoUrl!.isNotEmpty) {
-            images.add(first.logoUrl!);
+          // Prewarm up to 4 images from the start of the list
+          for (final channel in channels.take(4)) {
+            if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+              images.add(channel.logoUrl!);
+            }
           }
+
+          final first = channels.first;
           // Capture featured channel URL synchronously so we don't need to
           // access BuildContext after any `await` in this method.
           try {
@@ -45,25 +49,36 @@ class PrewarmService {
       // Use a neutral ImageConfiguration to avoid holding onto BuildContext
       // across async gaps in this static helper.
       const imageConfig = ImageConfiguration();
-      for (final url in images) {
+      final futures = images.map((url) {
+        final completer = Completer<void>();
         try {
           final provider = NetworkImage(url);
           final stream = provider.resolve(imageConfig);
-          final completer = Completer<void>();
           late ImageStreamListener listener;
-          listener = ImageStreamListener((_, __) {
-            completer.complete();
-            stream.removeListener(listener);
-          }, onError: (error, stack) {
-            completer.complete();
-            stream.removeListener(listener);
-          });
+          listener = ImageStreamListener(
+            (_, __) {
+              if (!completer.isCompleted) {
+                completer.complete();
+              }
+              stream.removeListener(listener);
+            },
+            onError: (error, stack) {
+              if (!completer.isCompleted) {
+                completer.complete();
+              }
+              stream.removeListener(listener);
+            },
+          );
           stream.addListener(listener);
-          await completer.future;
         } catch (_) {
-          // ignore individual failures
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
         }
-      }
+        return completer.future;
+      });
+
+      await Future.wait(futures);
 
       // Pre-initialize a small video player for the featured Live TV channel
       // Use the captured `featuredChannelUrl` to avoid using `context` after awaits.
