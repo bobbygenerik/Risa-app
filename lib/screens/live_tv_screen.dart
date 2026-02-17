@@ -5120,10 +5120,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return fallback;
     }
     ImageLoadProbe.recordAttempt(url, 'live_tv_adaptive');
+    // Prefer `contain` for small/logo-like assets to avoid heavy cropping.
+    final effectiveFit = (ArtworkValidator.isLikelySmallImage(url) ||
+            ArtworkValidator.isLikelyChannelLogoUrl(url))
+        ? BoxFit.contain
+        : defaultFit;
+
     return CachedNetworkImage(
       imageUrl: url,
       httpHeaders: HttpClientService().imageHeaders,
-      fit: defaultFit,
+      fit: effectiveFit,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
       fadeInDuration: Duration.zero,
@@ -5133,7 +5139,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return _LandscapeGuardedImage(
           url: url,
           imageProvider: imageProvider,
-          fit: defaultFit,
+          fit: effectiveFit,
           fallback: fallback,
           probeTag: 'live_tv_card',
         );
