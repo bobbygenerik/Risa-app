@@ -232,7 +232,6 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-
 class _EpgCardData {
   final Program? program;
   final bool hasUsableData;
@@ -3003,7 +3002,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cachedUrl = _normalizeArtworkUrl(cached, isHero: false);
     if (cachedUrl != null && cachedUrl.isNotEmpty) {
       if (_isValidProgramArtwork(cachedUrl, channel,
-            programTitle: program.title, source: 'cached', forCard: true)) {
+          programTitle: program.title, source: 'cached', forCard: true)) {
         final normalized = normalizeImageUrl(cachedUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
@@ -3020,7 +3019,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final byTitleUrl = _normalizeArtworkUrl(byTitle, isHero: false);
     if (byTitleUrl != null && byTitleUrl.isNotEmpty) {
       if (_isValidProgramArtwork(byTitleUrl, channel,
-            programTitle: program.title, source: 'title_cache', forCard: true)) {
+          programTitle: program.title, source: 'title_cache', forCard: true)) {
         final normalized = normalizeImageUrl(byTitleUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
@@ -3043,7 +3042,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgUrl = _normalizeArtworkUrl(program.imageUrl, isHero: false);
     if (epgUrl != null && epgUrl.isNotEmpty) {
       if (_isValidProgramArtwork(epgUrl, channel,
-            programTitle: program.title, source: 'card_epg', forCard: true)) {
+          programTitle: program.title, source: 'card_epg', forCard: true)) {
         final normalized = normalizeImageUrl(epgUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
@@ -3060,11 +3059,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  bool _isLikelyPosterUrl(String url) => ArtworkValidator.isLikelyPosterUrl(url);
+  bool _isLikelyPosterUrl(String url) =>
+      ArtworkValidator.isLikelyPosterUrl(url);
 
-  bool _isLikelyLandscapeUrl(String url) => ArtworkValidator.isLikelyLandscapeUrl(url);
+  bool _isLikelyLandscapeUrl(String url) =>
+      ArtworkValidator.isLikelyLandscapeUrl(url);
 
-  bool _isLikelyChannelLogoUrl(String url) => ArtworkValidator.isLikelyChannelLogoUrl(url);
+  bool _isLikelyChannelLogoUrl(String url) =>
+      ArtworkValidator.isLikelyChannelLogoUrl(url);
 
   bool _isValidProgramArtwork(
     String? url,
@@ -3093,7 +3095,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    if (!forCard && !_isLikelyLandscapeUrl(url)) {
+    if (!_isLikelyLandscapeUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_not_landscape',
       );
@@ -3141,9 +3143,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return true;
   }
 
-  bool _isLikelyTitleLogoUrl(String url) => ArtworkValidator.isLikelyTitleLogoUrl(url);
+  bool _isLikelyTitleLogoUrl(String url) =>
+      ArtworkValidator.isLikelyTitleLogoUrl(url);
 
-  bool _isLikelySmallImage(String url) => ArtworkValidator.isLikelySmallImage(url);
+  bool _isLikelySmallImage(String url) =>
+      ArtworkValidator.isLikelySmallImage(url);
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
@@ -3194,8 +3198,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-
-
   String _applyTmdbSize(String url, String size) {
     try {
       final uri = Uri.parse(url);
@@ -3205,7 +3207,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         segments[2] = size;
         return uri.replace(pathSegments: segments).toString();
       }
-    } catch (e) { debugLog('LiveTvScreen: applyTmdbSize failed: $e'); }
+    } catch (e) {
+      debugLog('LiveTvScreen: applyTmdbSize failed: $e');
+    }
     return url;
   }
 
@@ -3776,7 +3780,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 15}) {
+  void _prefetchRowArtworkForChannels(List<Channel> channels,
+      {int limit = 15}) {
     if (channels.isEmpty) return;
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);

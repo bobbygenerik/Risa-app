@@ -493,17 +493,16 @@ class TMDBService {
   }
 
   static bool _hasArtwork(Map<String, dynamic>? details) {
+    // Only count backdrops — posters are portrait and not used for landscape cards.
     final backdrop = (details?['backdrop'] as String?)?.trim();
-    if (backdrop?.isNotEmpty == true) return true;
-    final poster = (details?['poster'] as String?)?.trim();
-    return poster?.isNotEmpty == true;
+    return backdrop?.isNotEmpty == true;
   }
 
   static String? _extractBackdropUrl(Map<String, dynamic>? details) {
     final backdrop = (details?['backdrop'] as String?)?.trim();
     if (backdrop?.isNotEmpty == true) return backdrop;
-    final poster = (details?['poster'] as String?)?.trim();
-    if (poster?.isNotEmpty == true) return poster;
+    // Do NOT fall back to poster — portrait images cause visual corruption
+    // on landscape cards and get rejected at render time anyway.
     return null;
   }
 

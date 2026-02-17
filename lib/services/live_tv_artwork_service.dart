@@ -331,10 +331,11 @@ class LiveTvArtworkService {
       if (byTitle != null && byTitle.isNotEmpty) return true;
     }
 
-    // Check EPG-provided image URL
+    // Check EPG-provided image URL — but only if it's not a poster
     if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
-      // EPG provides an image - consider ready
-      return true;
+      if (!ArtworkValidator.isLikelyPosterUrl(program.imageUrl!)) {
+        return true;
+      }
     }
 
     return false;
@@ -511,7 +512,8 @@ class LiveTvArtworkService {
         ? const Duration(milliseconds: 500)
         : const Duration(milliseconds: 100);
     _artworkThrottle ??= Timer(interval, _drainArtworkQueue);
-    debugLog('LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
+    debugLog(
+        'LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -1639,6 +1641,8 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
+    // Always reject known poster URLs regardless of preferLandscape
+    if (_isLikelyPosterUrl(url)) return false;
     if (!preferLandscape) return true;
     return _isLikelyLandscapeUrl(url);
   }
@@ -1711,9 +1715,15 @@ class LiveTvArtworkService {
       return true;
     }
 
-    // TVDB poster paths
-    if (lower.contains('artworks.thetvdb.com') &&
-        lower.contains('/banners/posters/')) {
+    // TVDB poster paths (any posters path, not just /banners/posters/)
+    if (lower.contains('thetvdb.com') &&
+        (lower.contains('/posters/') || lower.contains('/poster/'))) {
+      return true;
+    }
+
+    // OMDb poster URLs — always portrait images from Amazon/IMDb CDN
+    if (lower.contains('m.media-amazon.com') ||
+        lower.contains('ia.media-imdb.com')) {
       return true;
     }
 
@@ -1721,7 +1731,9 @@ class LiveTvArtworkService {
     if (lower.endsWith('_poster.jpg') ||
         lower.endsWith('_poster.png') ||
         lower.endsWith('_cover.jpg') ||
-        lower.endsWith('_cover.png')) {
+        lower.endsWith('_cover.png') ||
+        lower.endsWith('-poster.jpg') ||
+        lower.endsWith('-poster.png')) {
       return true;
     }
 

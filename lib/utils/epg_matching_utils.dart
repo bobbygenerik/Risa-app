@@ -312,14 +312,13 @@ class EPGMatchingUtils {
     normalized = normalized.replaceAll(_partRe, '');
     normalized = normalized.replaceAll(_yearSuffixRe, '');
     normalized = normalized.replaceAll(_yearParenRe, '');
-    normalized = normalized.replaceAll(_triggerWordRe, '');
+    // Don't strip "news"/"live"/"sports" — they are valid TMDB search terms
+    // and stripping them collapses titles like "BBC News" → "bbc" which hurts lookups
     normalized = normalized.replaceAll(_multiSpaceRe, ' ').trim();
     return normalized.isEmpty ? title : normalized;
   }
 
-  // Re-add removed trigger regex locally for legacy support if needed
-  static final RegExp _triggerWordRe =
-      RegExp(r'\b(news|live|sports)\b', caseSensitive: false);
+  // _triggerWordRe removed — no longer strip news/live/sports from artwork titles
 
   static String normalizeForFilter(String text) {
     // Legacy support for older usages

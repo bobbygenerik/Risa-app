@@ -172,16 +172,10 @@ class CachedChannelLogo extends StatelessWidget {
 }
 
 Widget _buildTransparentPlaceholder(double size, IconData fallbackIcon) {
+  // No generic TV icon — show nothing when logo is unavailable.
   return SizedBox(
     width: size,
     height: size,
-    child: Center(
-      child: Icon(
-        fallbackIcon,
-        size: size * 0.6,
-        color: Colors.white.withAlpha((0.75 * 255).round()),
-      ),
-    ),
   );
 }
 

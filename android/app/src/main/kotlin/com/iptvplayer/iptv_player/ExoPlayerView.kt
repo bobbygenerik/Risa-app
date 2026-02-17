@@ -135,12 +135,12 @@ class ExoPlayerView(
         try {
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    2000,  // min buffer - drastically reduced
-                    4000,  // max buffer - drastically reduced
-                    500,   // playback start - reduced
-                    1000   // rebuffer - reduced
+                    15_000,  // min buffer: 15s — enough to ride out brief network hiccups
+                    50_000,  // max buffer: 50s — standard ExoPlayer default
+                    1_500,   // playback start: 1.5s before first play
+                    3_000    // rebuffer: 3s before resuming after stall
                 )
-                .setTargetBufferBytes(4 * 1024 * 1024) // 4MB instead of 24MB
+                .setTargetBufferBytes(DefaultLoadControl.DEFAULT_TARGET_BUFFER_BYTES)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
 

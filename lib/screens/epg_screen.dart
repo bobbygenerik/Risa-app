@@ -1,4 +1,5 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/artwork_validator.dart';
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
 import 'dart:collection';
@@ -137,7 +138,7 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
-      
+
       // Ensure we have focus
       _firstChannelFocus.requestFocus();
     });
@@ -158,8 +159,16 @@ class _EPGScreenState extends State<EPGScreen>
 
       if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
         debugLog('EPG Screen: Found EPG URL - initializing service');
-        // Initialize without forcing a refresh so cache behavior is respected
-        unawaited(epgService.initialize());
+        // If we have very few loaded channels compared to available, force a reload
+        final loadedCount = epgService.loadedProgramChannelCount;
+        final availableCount = epgService.availableChannels.length;
+        if (loadedCount < 50 && availableCount > 100) {
+          debugLog(
+              'EPG Screen: Data sparse ($loadedCount/$availableCount loaded) - forcing refresh');
+          unawaited(epgService.forceRefresh());
+        } else {
+          unawaited(epgService.initialize());
+        }
       }
     } catch (e) {
       debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
@@ -828,8 +837,8 @@ class _EPGScreenState extends State<EPGScreen>
                                   ),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
-                                    child:
-                                        _buildChannelColumn(filteredChannels, categoryNames),
+                                    child: _buildChannelColumn(
+                                        filteredChannels, categoryNames),
                                   ),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
@@ -1011,7 +1020,7 @@ class _EPGScreenState extends State<EPGScreen>
                         ? null
                         : () {
                             // Clear image failure cache to retry blocked logos
-                            ImageFailureCache.clear(); 
+                            ImageFailureCache.clear();
                             unawaited(_triggerEpgRefresh());
                           },
                     icon: AnimatedBuilder(
@@ -1362,21 +1371,23 @@ class _EPGScreenState extends State<EPGScreen>
                 _showChannelContextMenu(context, channel),
             firstChannelFocusNode: _firstChannelFocus,
             onFocusCategories: () {
-                // Return to selected category, or first if none/lost
-               final selected = _epgState.selectedCategory ?? 'All Channels';
-               final idx = categories.indexOf(selected);
-               if (idx >= 0) {
-                   _categoryFocusNodeForIndex(idx).requestFocus();
-               } else {
-                   _firstCategoryFocus.requestFocus();
-               }
+              // Return to selected category, or first if none/lost
+              final selected = _epgState.selectedCategory ?? 'All Channels';
+              final idx = categories.indexOf(selected);
+              if (idx >= 0) {
+                _categoryFocusNodeForIndex(idx).requestFocus();
+              } else {
+                _firstCategoryFocus.requestFocus();
+              }
             },
             onFocusCategoryAtIndex: null, // Disable direct index mapping
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
             onFocusProgramForChannel: (channel) =>
-                _programFocusNodeForChannel(channel).requestFocus(), // Removed index passing
-            channelFocusNodeForChannel: (channel, index) => _channelFocusNodeForChannel(channel, index),
+                _programFocusNodeForChannel(channel)
+                    .requestFocus(), // Removed index passing
+            channelFocusNodeForChannel: (channel, index) =>
+                _channelFocusNodeForChannel(channel, index),
             controller: _sidebarController,
           ),
         ),
@@ -2110,17 +2121,6 @@ class _EPGScreenState extends State<EPGScreen>
     context.push('/player', extra: catchupChannel);
   }
 
-  bool _isLikelyPosterUrl(String url) {
-    final lower = url.toLowerCase();
-    if (lower.contains('/w500') ||
-        lower.contains('/w342') ||
-        lower.contains('/w300') ||
-        lower.contains('/w185') ||
-        lower.contains('poster') ||
-        lower.contains('portrait') ||
-        lower.contains('cover')) {
-      return true;
-    }
-    return false;
-  }
+  bool _isLikelyPosterUrl(String url) =>
+      ArtworkValidator.isLikelyPosterUrl(url);
 }

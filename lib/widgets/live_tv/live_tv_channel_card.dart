@@ -193,6 +193,7 @@ class LiveTvChannelCard extends StatelessWidget {
         ? ''
         : displayTitle(currentProgram, channel);
     final progress = currentProgram?.progressPercentage ?? 0.0;
+
     final imageUrl = getImageUrl(
       currentProgram,
       channel,
@@ -205,8 +206,10 @@ class LiveTvChannelCard extends StatelessWidget {
         matchesChannelLogo(normalizedImageUrl, channel);
     final hasChannelLogo =
         channel.logoUrl != null && channel.logoUrl!.isNotEmpty;
-    final hideCornerLogo =
-        isLogoBackdrop || (normalizedImageUrl == null && hasChannelLogo);
+    // Always hide corner logo when channel has a logo — the fallback already
+    // displays it, so showing both is redundant and looks wrong when artwork
+    // loads asynchronously or gets rejected by the landscape guard.
+    final hideCornerLogo = isLogoBackdrop || hasChannelLogo;
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final cacheWidth = math.min(800, (cardWidth * dpr).round());
     final cacheHeight = math.min(800, (cardHeight * dpr).round());

@@ -35,9 +35,15 @@ class ArtworkValidator {
       return true;
     }
 
-    // TVDB poster paths
-    if (lower.contains('artworks.thetvdb.com') &&
-        lower.contains('/banners/posters/')) {
+    // TVDB poster paths (any posters path, not just /banners/posters/)
+    if (lower.contains('thetvdb.com') &&
+        (lower.contains('/posters/') || lower.contains('/poster/'))) {
+      return true;
+    }
+
+    // OMDb poster URLs — always portrait images
+    if (lower.contains('m.media-amazon.com') ||
+        lower.contains('ia.media-imdb.com')) {
       return true;
     }
 
@@ -45,8 +51,20 @@ class ArtworkValidator {
     if (lower.endsWith('_poster.jpg') ||
         lower.endsWith('_poster.png') ||
         lower.endsWith('_cover.jpg') ||
-        lower.endsWith('_cover.png')) {
+        lower.endsWith('_cover.png') ||
+        lower.endsWith('-poster.jpg') ||
+        lower.endsWith('-poster.png')) {
       return true;
+    }
+
+    // Dimension metadata in URL indicating portrait aspect ratio
+    final match = _dimensionPattern.firstMatch(lower);
+    if (match != null) {
+      final width = int.tryParse(match.group(1) ?? '') ?? 0;
+      final height = int.tryParse(match.group(2) ?? '') ?? 0;
+      if (width > 0 && height > 0 && height > width) {
+        return true;
+      }
     }
 
     return false;
@@ -62,32 +80,51 @@ class ArtworkValidator {
   }
 
   /// Returns true if the URL likely points to a landscape/wide image.
+  ///
+  /// Strategy: default to **true** (accept) unless the URL is explicitly
+  /// poster, portrait, logo, or has dimension metadata proving it's tall.
+  /// This matches the permissive approach used inside LiveTvArtworkService
+  /// and prevents valid artwork from being silently dropped.
   static bool isLikelyLandscapeUrl(String url) {
     if (url.isEmpty) return false;
-    if (isExplicitBackdropUrl(url)) return true;
+
+    // Reject if it's clearly poster/portrait/logo
+    if (isLikelyPosterUrl(url)) return false;
+
     final lower = url.toLowerCase();
-    if (lower.contains('backdrop') ||
-        lower.contains('background') ||
-        lower.contains('fanart') ||
-        lower.contains('landscape') ||
-        lower.contains('banner')) {
-      return true;
+    if (lower.contains('/logo') ||
+        lower.contains('_logo') ||
+        lower.contains('-logo')) {
+      return false;
     }
+
+    // Explicit landscape signals — accept immediately
+    if (isExplicitBackdropUrl(url)) return true;
+    if (lower.contains('banner')) return true;
+
+    // TMDB: backdrop-specific sizes are fine; /original/ is ambiguous
+    // (could be poster or backdrop) so don't auto-accept it.
     if (lower.contains('image.tmdb.org') &&
-        (lower.contains('/w1280/') ||
-            lower.contains('/w1920/') ||
-            lower.contains('/original/'))) {
+        (lower.contains('/w780/') ||
+            lower.contains('/w1280/') ||
+            lower.contains('/w1920/'))) {
       return true;
     }
+
+    // If dimensions are in the filename, check aspect ratio
     final match = _dimensionPattern.firstMatch(lower);
     if (match != null) {
       final width = int.tryParse(match.group(1) ?? '') ?? 0;
       final height = int.tryParse(match.group(2) ?? '') ?? 0;
       if (width > 0 && height > 0) {
-        return width >= (height * 1.2);
+        // Reject only if clearly portrait (taller than wide)
+        return width >= (height * 0.9);
       }
     }
-    return false;
+
+    // Default: accept — better to show a slightly wrong aspect ratio image
+    // than to show no artwork at all.
+    return true;
   }
 
   /// Returns true if the URL looks like a channel logo rather than program artwork.
@@ -99,9 +136,9 @@ class ArtworkValidator {
         (lower.contains('/logo') || lower.contains('/logos/'))) {
       return true;
     }
-    if (lower.contains('logo.') || lower.contains('/logo/')) {
-      return true;
-    }
+    // Match explicit /logo/ path segments but NOT domain names like
+    // 'logo.m3uassets.com' — those are CDNs that serve program images too.
+    if (lower.contains('/logo/')) return true;
     return false;
   }
 

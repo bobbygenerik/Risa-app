@@ -9,11 +9,12 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
+import '../widgets/chewie_player_widget.dart';
+import '../blocs/epg_bloc.dart';
 import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/chewie_player_widget.dart';
 import '../utils/memory_manager.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
@@ -58,9 +59,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     super.initState();
     _initializePlayer();
     _schedulePlayerWarmup();
+    // Suppress EPG notifyListeners() during playback to prevent UI rebuilds
+    // that cause frame drops while video is playing.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         FocusScope.of(context).requestFocus(_playerFocusNode);
+        try {
+          context.read<EpgBloc>().add(const EpgSetPlaybackMode(true));
+        } catch (_) {}
       }
     });
   }
@@ -100,6 +106,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   void dispose() {
+    // Re-enable EPG notifications when leaving the player
+    try {
+      context.read<EpgBloc>().add(const EpgSetPlaybackMode(false));
+    } catch (_) {}
     _playerFocusNode.dispose();
     try {
       if (_transcriptionServiceRef != null && _transcriptionListener != null) {
@@ -219,17 +229,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            ChewiePlayerWidget(
-                              key: ValueKey(widget.videoUrl ??
-                                  widget.streamUrl ??
-                                  widget.channel?.url ??
-                                  'player_key'),
-                              url: widget.videoUrl ??
-                                  widget.streamUrl ??
-                                  widget.channel?.url ??
-                                  '',
-                              isLive: widget.isLive,
-                            ),
+                            // Use Chewie (ExoPlayer backend) on all platforms
+                              ChewiePlayerWidget(
+                                key: ValueKey(widget.videoUrl ??
+                                    widget.streamUrl ??
+                                    widget.channel?.url ??
+                                    'player_key'),
+                                url: widget.videoUrl ??
+                                    widget.streamUrl ??
+                                    widget.channel?.url ??
+                                    '',
+                                isLive: widget.isLive,
+                              ),
                             if (_videoUnavailable)
                               Positioned.fill(
                                 child: Container(
