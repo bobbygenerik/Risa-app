@@ -3147,6 +3147,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         searchName,
         candidate,
         playlistTokens: searchTokens,
+        playlistNormalizedName: searchNameNorm,
       );
 
       if (score > bestScore) {
