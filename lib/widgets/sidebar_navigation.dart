@@ -524,8 +524,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                     child: Center(
                       child: Image(
                         image: AssetImage(_isExpanded
-                            ? 'assets/images/croppedlogo2.png'
-                            : 'assets/images/lonelogo (1).png'),
+                            ? 'assets/images/logo.png'
+                            : 'assets/images/logo_icon.png'),
                         height: _isExpanded ? 28 : 20,
                       ),
                     ),

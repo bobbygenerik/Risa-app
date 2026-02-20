@@ -14,7 +14,6 @@ import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
-import 'package:iptv_player/utils/artwork_validator.dart';
 import 'package:iptv_player/widgets/brand_fallback_background.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
@@ -180,8 +179,18 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (currentProgram?.imageUrl != null &&
           currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
-        // Reject poster/portrait URLs from EPG using centralized validator
-        final isPoster = ArtworkValidator.isLikelyPosterUrl(url);
+        final lower = url.toLowerCase();
+        // Reject obvious poster/portrait URLs from EPG
+        final isPoster = lower.contains('/poster') ||
+            lower.contains('/portrait') ||
+            lower.contains('/cover') ||
+            lower.contains('type=poster') ||
+            (lower.contains('tmdb.org') &&
+                (lower.contains('/w92/') ||
+                    lower.contains('/w154/') ||
+                    lower.contains('/w185/') ||
+                    lower.contains('/w342/') ||
+                    lower.contains('/w500/')));
         if (!isPoster) {
           _addToCache(cacheKey, url);
           if (mounted) {
@@ -192,8 +201,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           return;
         }
         // EPG image was poster — fall through to try API sources
-        debugLog(
-            'ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
+        debugLog('ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
       }
 
       if (isSports) {
@@ -269,12 +277,10 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         imageBuilder: (context, imageProvider) {
           ImageFailureCache.recordSuccess(_artworkUrl!);
           ImageLoadProbe.recordSuccess(_artworkUrl!, 'program_artwork');
-          return _LandscapeGuard(
-            imageProvider: imageProvider,
-            url: _artworkUrl!,
+          return Image(
+            image: imageProvider,
             fit: widget.fit,
-            fallback: widget.placeholder ??
-                _buildGradientFallback(context, tvWidth, tvHeight),
+            gaplessPlayback: true,
           );
         },
         placeholder: (context, url) =>
@@ -318,88 +324,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Inline landscape guard for ProgramArtworkWidget — rejects portrait images
-/// at decode time and shows the fallback instead.
-class _LandscapeGuard extends StatefulWidget {
-  const _LandscapeGuard({
-    required this.imageProvider,
-    required this.url,
-    required this.fit,
-    required this.fallback,
-  });
-
-  final ImageProvider imageProvider;
-  final String url;
-  final BoxFit fit;
-  final Widget fallback;
-
-  @override
-  State<_LandscapeGuard> createState() => _LandscapeGuardState();
-}
-
-class _LandscapeGuardState extends State<_LandscapeGuard> {
-  ImageStream? _stream;
-  ImageInfo? _info;
-  late final ImageStreamListener _streamListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _streamListener = ImageStreamListener(
-      (info, sync) {
-        if (!mounted) return;
-        setState(() => _info = info);
-      },
-      onError: (error, stackTrace) {
-        if (!mounted) return;
-        ImageFailureCache.recordFailure(widget.url, error);
-        setState(() => _info = null);
-      },
-    );
-    _resolveImage();
-  }
-
-  void _resolveImage() {
-    _stream?.removeListener(_streamListener);
-    _info = null;
-    final stream = widget.imageProvider.resolve(const ImageConfiguration());
-    _stream = stream;
-    stream.addListener(_streamListener);
-  }
-
-  @override
-  void didUpdateWidget(covariant _LandscapeGuard old) {
-    super.didUpdateWidget(old);
-    if (old.imageProvider != widget.imageProvider) _resolveImage();
-  }
-
-  @override
-  void dispose() {
-    _stream?.removeListener(_streamListener);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final info = _info;
-    if (info == null) return widget.fallback;
-    final w = info.image.width;
-    final h = info.image.height;
-    // Reject portrait images (taller than wide)
-    if (w / h < 1.0) {
-      ImageFailureCache.recordPortrait(widget.url);
-      ImageLoadProbe.recordFailure(
-          widget.url, 'program_artwork', Exception('Portrait rejected'));
-      return widget.fallback;
-    }
-    return Image(
-      image: widget.imageProvider,
-      fit: widget.fit,
-      gaplessPlayback: true,
     );
   }
 }

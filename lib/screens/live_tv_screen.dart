@@ -232,6 +232,7 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
+
 class _EpgCardData {
   final Program? program;
   final bool hasUsableData;
@@ -356,8 +357,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       false; // Prevents skeleton from reappearing after content displayed
   static const Duration _skeletonStuckThreshold = Duration(seconds: 35);
   static const Duration _skeletonWatchInterval = Duration(seconds: 3);
-  bool _startupOverlayActive = false;
-  DateTime? _overlayShownAt;
   Timer? _idleTimer;
   DateTime _lastInteractionAt = DateTime.now();
   bool _isIdle = false;
@@ -1526,9 +1525,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         decoration: const BoxDecoration(
           color: AppColors.background,
         ),
-        child: Consumer<ChannelProvider>(
-          builder: (context, channelProvider, _) {
-            final hasChannels = channelProvider.hasChannels;
+        child: Selector<ChannelProvider,
+            ({bool hasChannels, int channelCount, bool noPlaylistConfigured, String? errorMessage, bool isLoading, bool isColdStartLoad, double loadingProgress, String loadingStatus})>(
+          selector: (context, provider) => (
+            hasChannels: provider.hasChannels,
+            channelCount: provider.channelCount,
+            noPlaylistConfigured: provider.noPlaylistConfigured,
+            errorMessage: provider.errorMessage,
+            isLoading: provider.isLoading,
+            isColdStartLoad: provider.isColdStartLoad,
+            loadingProgress: provider.loadingProgress,
+            loadingStatus: provider.loadingStatus,
+          ),
+          shouldRebuild: (prev, next) =>
+              prev.hasChannels != next.hasChannels ||
+              prev.channelCount != next.channelCount ||
+              prev.noPlaylistConfigured != next.noPlaylistConfigured ||
+              prev.errorMessage != next.errorMessage ||
+              prev.isLoading != next.isLoading ||
+              prev.isColdStartLoad != next.isColdStartLoad ||
+              prev.loadingProgress != next.loadingProgress ||
+              prev.loadingStatus != next.loadingStatus,
+          builder: (context, channelProviderState, _) {
+            final channelProvider = context.read<ChannelProvider>();
+            final hasChannels = channelProviderState.hasChannels;
 
             final latestCategories = channelProvider.getAllCategoryNames();
             if (latestCategories.isNotEmpty) {
@@ -1628,58 +1648,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 epgLoadingState.isParsing ||
                 epgLoadingState.isLoading ||
                 categoriesNotReady;
-            // Show overlay during cold start or when EPG is actively parsing
-            // Keep overlay visible for minimum 500ms to prevent flicker
-            final now = DateTime.now();
-            final minDisplayTime = _overlayShownAt != null &&
-                now.difference(_overlayShownAt!) <
-                    const Duration(milliseconds: 500);
-            final allowBlockingUi = !_hasShownContent;
-            final showStartupOverlay = allowBlockingUi &&
-                ((channelProvider.isColdStartLoad &&
-                        _startupOverlayActive &&
-                        overlayBusy &&
-                        !hasDisplayData) ||
-                    (epgLoadingState.isParsing ||
-                        epgLoadingState.isDownloading) ||
-                    minDisplayTime);
-            if (channelProvider.isColdStartLoad && !_startupOverlayActive) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (!_startupOverlayActive) {
-                  setState(() {
-                    _startupOverlayActive = true;
-                    _overlayShownAt = DateTime.now();
-                  });
-                }
-              });
-            }
-            // Track when overlay is shown for EPG parsing
-            if (showStartupOverlay && _overlayShownAt == null) {
-              _overlayShownAt = DateTime.now();
-            }
-            if (_startupOverlayActive && hasDisplayData) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (_startupOverlayActive) {
-                  setState(() {
-                    _startupOverlayActive = false;
-                    _overlayShownAt = null;
-                  });
-                }
-              });
-            }
-            if (_startupOverlayActive && !overlayBusy && !minDisplayTime) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (_startupOverlayActive) {
-                  setState(() {
-                    _startupOverlayActive = false;
-                    _overlayShownAt = null;
-                  });
-                }
-              });
-            }
+            final showStartupOverlay = false; // Disabled by user request, use skeleton loaders instead
+
             final epgStatus = epgLoadingState.isDownloading
                 ? 'Downloading EPG data...'
                 : epgLoadingState.isParsing
@@ -1688,32 +1658,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         ? 'Loading EPG cache...'
                         : null;
             Widget wrapWithOverlay(Widget child) {
-              if (!showStartupOverlay) return child;
-              return Stack(
-                children: [
-                  child,
-                  Positioned.fill(
-                    child: ClipRect(
-                      child: BackdropFilter(
-                        // Reduced blur sigma for better performance on low-end/TV GPUs
-                        // (was 18, lowered to 6 to avoid long GPU queue/dequeue delays).
-                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                        child: Container(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          alignment: Alignment.center,
-                          child: _buildColdStartOverlayCard(
-                            titleText: epgStatus != null ? 'Loading EPG' : null,
-                            statusText: _replaceEpgWithData(
-                                channelProvider.loadingStatus),
-                            secondaryStatusText: epgStatus,
-                            progress: channelProvider.loadingProgress,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
+              return child;
             }
 
             Widget buildSkeleton() => _buildSkeletonLoaderTracked(
@@ -1807,9 +1752,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   return buildSkeleton();
                 }
 
-                // CRITICAL: Wrap Hero in Consumer<IncrementalEpgService> so it reacts to background EPG flow
-                return wrapWithOverlay(Consumer<IncrementalEpgService>(
-                  builder: (context, epgService, _) {
+                // CRITICAL: Wrap Hero in Selector so it reacts to background EPG flow but ignores progress ticks
+                return wrapWithOverlay(Selector<IncrementalEpgService,
+                    ({bool hasPrograms, bool isLoading, bool isParsing, bool isDownloading, bool isBatchLoading, bool hasUrl, String? error, bool hasUsableData})>(
+                  selector: (context, epg) => (
+                    hasPrograms: epg.hasLoadedPrograms,
+                    isLoading: epg.isLoading,
+                    isParsing: epg.isParsing,
+                    isDownloading: epg.isDownloading,
+                    isBatchLoading: epg.isBatchLoading,
+                    hasUrl: epg.hasEpgUrl,
+                    error: epg.error,
+                    hasUsableData: epg.hasUsableData,
+                  ),
+                  shouldRebuild: (prev, next) =>
+                      prev.hasPrograms != next.hasPrograms ||
+                      prev.isLoading != next.isLoading ||
+                      prev.isParsing != next.isParsing ||
+                      prev.isDownloading != next.isDownloading ||
+                      prev.isBatchLoading != next.isBatchLoading ||
+                      prev.hasUrl != next.hasUrl ||
+                      prev.error != next.error ||
+                      prev.hasUsableData != next.hasUsableData,
+                  builder: (context, epgState, _) {
+                    final epgService = context.read<IncrementalEpgService>();
                     // Try to find channels with EPG data ready
                     // FIX: Don't filter out channels just because EPG is missing!
                     // We want to show the channels ASAP.
@@ -1829,12 +1795,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         return _buildEpgError(epgService.error!);
                       }
 
-                      final isEpgLoading = epgService.isLoading ||
-                          epgService.isParsing ||
-                          epgService.isDownloading;
+                      final isEpgLoading = epgState.isLoading ||
+                          epgState.isParsing ||
+                          epgState.isDownloading;
 
                       // Also check if batch loading is in progress
-                      final isBatchLoading = epgService.isBatchLoading;
+                      final isBatchLoading = epgState.isBatchLoading;
 
                       // Only show skeleton if we haven't shown content yet
                       // This prevents flickering when EPG background refreshes occur
@@ -1848,7 +1814,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       // Give EPG a short grace period to load programs if none are present yet
                       // But if we already have programs (just no matches), fail immediately
                       // Skip this if we've already shown content once
-                      final gracefulWait = !epgService.hasLoadedPrograms &&
+                      final gracefulWait = !epgState.hasPrograms &&
                           timeSinceInit.inSeconds < 5 &&
                           !_hasShownContent;
 
@@ -1859,14 +1825,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       }
 
                       // EPG NOT loading, no error, but still no channels with data after timeout
-                      if (!epgService.hasEpgUrl) {
+                      if (!epgState.hasUrl) {
                         _markSkeletonVisibility(false);
                         return _buildEpgError(
                             'No EPG URL configured. Please add an EPG URL in Settings.');
                       }
 
                       // Check if EPG has any loaded programs at all
-                      if (!epgService.hasLoadedPrograms) {
+                      if (!epgState.hasPrograms) {
                         _markSkeletonVisibility(false);
                         return _buildEpgError(
                             'EPG data could not be loaded. Check your EPG URL in Settings.');
@@ -3002,7 +2968,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cachedUrl = _normalizeArtworkUrl(cached, isHero: false);
     if (cachedUrl != null && cachedUrl.isNotEmpty) {
       if (_isValidProgramArtwork(cachedUrl, channel,
-          programTitle: program.title, source: 'cached', forCard: true)) {
+            programTitle: program.title, source: 'cached', forCard: true)) {
         final normalized = normalizeImageUrl(cachedUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
@@ -3019,7 +2985,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final byTitleUrl = _normalizeArtworkUrl(byTitle, isHero: false);
     if (byTitleUrl != null && byTitleUrl.isNotEmpty) {
       if (_isValidProgramArtwork(byTitleUrl, channel,
-          programTitle: program.title, source: 'title_cache', forCard: true)) {
+            programTitle: program.title, source: 'title_cache', forCard: true)) {
         final normalized = normalizeImageUrl(byTitleUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
@@ -3042,7 +3008,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgUrl = _normalizeArtworkUrl(program.imageUrl, isHero: false);
     if (epgUrl != null && epgUrl.isNotEmpty) {
       if (_isValidProgramArtwork(epgUrl, channel,
-          programTitle: program.title, source: 'card_epg', forCard: true)) {
+            programTitle: program.title, source: 'card_epg', forCard: true, isEpgFallback: true)) {
         final normalized = normalizeImageUrl(epgUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
@@ -3059,14 +3025,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  bool _isLikelyPosterUrl(String url) =>
-      ArtworkValidator.isLikelyPosterUrl(url);
+  bool _isLikelyPosterUrl(String url) => ArtworkValidator.isLikelyPosterUrl(url);
 
-  bool _isLikelyLandscapeUrl(String url) =>
-      ArtworkValidator.isLikelyLandscapeUrl(url);
+  bool _isLikelyLandscapeUrl(String url) => ArtworkValidator.isLikelyLandscapeUrl(url);
 
-  bool _isLikelyChannelLogoUrl(String url) =>
-      ArtworkValidator.isLikelyChannelLogoUrl(url);
+  bool _isLikelyChannelLogoUrl(String url) => ArtworkValidator.isLikelyChannelLogoUrl(url);
 
   bool _isValidProgramArtwork(
     String? url,
@@ -3074,6 +3037,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String? programTitle,
     String? source,
     bool forCard = false,
+    bool isEpgFallback = false,
   }) {
     if (url == null || url.isEmpty) return false;
     if (ImageValidationService.isKnownInvalid(url)) {
@@ -3088,19 +3052,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    // Always reject poster URLs — landscape-only cards & hero.
+    
+    // Always reject poster URLs — landscape-only cards & hero, even for EPG fallbacks.
     if (_isLikelyPosterUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_poster',
       );
       return false;
     }
-    if (!_isLikelyLandscapeUrl(url)) {
+    
+    // Cards bypass the strict landscape check, and EPG fallbacks bypass it everywhere.
+    if (!forCard && !isEpgFallback && !_isLikelyLandscapeUrl(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_not_landscape',
       );
       return false;
     }
+    
     // Avoid title logos (clearart) for backgrounds.
     if (_isLikelyTitleLogoUrl(url)) {
       _logArtworkDecision(
@@ -3108,6 +3076,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
+    
     final channelLogo = channel.logoUrl;
     if (channelLogo != null && channelLogo == url) {
       _logArtworkDecision(
@@ -3121,13 +3090,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    // Block small images that would look bad when scaled up
-    if (_isLikelySmallImage(url)) {
+    
+    // Block small images that would look bad when scaled up, UNLESS it's an EPG fallback
+    if (!isEpgFallback && _isLikelySmallImage(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_small',
       );
       return false;
     }
+    
     return true;
   }
 
@@ -3143,11 +3114,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return true;
   }
 
-  bool _isLikelyTitleLogoUrl(String url) =>
-      ArtworkValidator.isLikelyTitleLogoUrl(url);
+  bool _isLikelyTitleLogoUrl(String url) => ArtworkValidator.isLikelyTitleLogoUrl(url);
 
-  bool _isLikelySmallImage(String url) =>
-      ArtworkValidator.isLikelySmallImage(url);
+  bool _isLikelySmallImage(String url) => ArtworkValidator.isLikelySmallImage(url);
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
@@ -3198,6 +3167,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
+
+
   String _applyTmdbSize(String url, String size) {
     try {
       final uri = Uri.parse(url);
@@ -3207,9 +3178,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         segments[2] = size;
         return uri.replace(pathSegments: segments).toString();
       }
-    } catch (e) {
-      debugLog('LiveTvScreen: applyTmdbSize failed: $e');
-    }
+    } catch (e) { debugLog('LiveTvScreen: applyTmdbSize failed: $e'); }
     return url;
   }
 
@@ -3780,8 +3749,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  void _prefetchRowArtworkForChannels(List<Channel> channels,
-      {int limit = 15}) {
+  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 15}) {
     if (channels.isEmpty) return;
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
@@ -5120,16 +5088,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return fallback;
     }
     ImageLoadProbe.recordAttempt(url, 'live_tv_adaptive');
-    // Prefer `contain` for small/logo-like assets to avoid heavy cropping.
-    final effectiveFit = (ArtworkValidator.isLikelySmallImage(url) ||
-            ArtworkValidator.isLikelyChannelLogoUrl(url))
-        ? BoxFit.contain
-        : defaultFit;
-
     return CachedNetworkImage(
       imageUrl: url,
       httpHeaders: HttpClientService().imageHeaders,
-      fit: effectiveFit,
+      fit: defaultFit,
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
       fadeInDuration: Duration.zero,
@@ -5139,7 +5101,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return _LandscapeGuardedImage(
           url: url,
           imageProvider: imageProvider,
-          fit: effectiveFit,
+          fit: defaultFit,
           fallback: fallback,
           probeTag: 'live_tv_card',
         );

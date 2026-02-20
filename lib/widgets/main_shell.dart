@@ -51,8 +51,6 @@ class _MainShellState extends State<MainShell> {
   DateTime? _lastBackPress;
   DateTime?
       _lastNavTime; // Track navigation timing to prevent PopScope conflict
-  DateTime?
-      _lastBackPressFromHome; // Track back press on home for exit confirmation
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -353,48 +351,37 @@ class _MainShellState extends State<MainShell> {
       return;
     }
 
-    // On home screen: require double-back to exit
+    // On home screen: exit directly
     if (location == '/home') {
-      if (_lastBackPressFromHome == null) {
-        _lastBackPressFromHome = now;
-        debugLog('MainShell back nav: first back on home - showing toast');
-        _showExitHint();
-      } else if (now.difference(_lastBackPressFromHome!).inMilliseconds <
-          2000) {
-        debugLog('MainShell back nav: double-back confirmed - going to /exit');
-        final channelProvider = context.read<ChannelProvider>();
-        if (channelProvider.isLoading) {
-          showDialog<bool>(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: const Text('Playlist still saving'),
-                content: const Text(
-                    'Saving is still in progress. Leaving now may interrupt it.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Stay'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Exit'),
-                  ),
-                ],
-              );
-            },
-          ).then((leave) {
-            if (leave == true && mounted) {
-              context.go('/exit');
-            }
-          });
-        } else {
-          context.go('/exit');
-        }
+      debugLog('MainShell back nav: back on home - going to /exit');
+      final channelProvider = context.read<ChannelProvider>();
+      if (channelProvider.isLoading) {
+        showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Playlist still saving'),
+              content: const Text(
+                  'Saving is still in progress. Leaving now may interrupt it.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Stay'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Exit'),
+                ),
+              ],
+            );
+          },
+        ).then((leave) {
+          if (leave == true && mounted) {
+            context.go('/exit');
+          }
+        });
       } else {
-        // Too much time between back presses, reset
-        _lastBackPressFromHome = now;
-        _showExitHint();
+        context.go('/exit');
       }
       return;
     }
@@ -402,16 +389,6 @@ class _MainShellState extends State<MainShell> {
     // Any other screen: go to home
     debugLog('MainShell back nav: handling $location -> home');
     context.go('/home');
-  }
-
-  void _showExitHint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Press back again to exit'),
-        duration: Duration(seconds: 2),
-        backgroundColor: Colors.black87,
-      ),
-    );
   }
 
   void _showSearchDialog() {

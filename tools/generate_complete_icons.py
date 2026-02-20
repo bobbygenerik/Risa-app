@@ -67,7 +67,7 @@ android_sizes = {
     'xxxhdpi': 192,
 }
 
-logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'lonelogo (1).png')
+logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'logo_icon.png')
 android_base_dir = os.path.join(PROJECT_ROOT, 'android', 'app', 'src', 'main', 'res')
 
 print("Generating Android app icons...")

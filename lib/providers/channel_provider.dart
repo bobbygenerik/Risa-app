@@ -2256,8 +2256,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             name: 'ChannelProvider');
       }
 
-      // Fallback: Try file-based M3U cache if present and fresh - use streaming parser
-      if (cacheFilePath != null && cacheAge != null && cacheAge < 21600000) {
+      // Fallback: Try file-based cache if present - use streaming parser
+      // Removed the 6 hour limitation (cacheAge < 21600000) so we can always load instantly
+      // and let the _backgroundSync handle freshness.
+      if (cacheFilePath != null && cacheAge != null) {
         try {
           final file = File(cacheFilePath);
           if (await file.exists()) {
@@ -2271,26 +2273,46 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             // Parse from file in isolate to avoid blocking main thread and OOM
             final parseStart = DateTime.now();
             final List<Map<String, dynamic>> allChannels = [];
-            DateTime lastCacheUiUpdate = DateTime.now();
-            final parsed = await parsePlaylistCancelable(
-              filePath: cacheFilePath,
-              onProgress: (count) {
-                _loadingStatus = 'Parsing cached playlist: $count channels';
-                _loadingProgress = 0.3 + (count / 20000).clamp(0.0, 0.6);
-                final now = DateTime.now();
-                if (now.difference(lastCacheUiUpdate).inMilliseconds > 500) {
-                  lastCacheUiUpdate = now;
-                  notifyListeners();
-                }
-              },
-              onChannelsChunk: (chunk) => allChannels.addAll(chunk),
-            );
+            String? epgUrlFromCache; // Legacy M3U cache extracted EPG URL
+            
+            try {
+              final randomAccessFile = await file.open();
+              final firstByte = await randomAccessFile.readByte();
+              await randomAccessFile.close();
+              
+              if (firstByte == 91) { // '[' character indicates JSON array
+                debugLog('ChannelProvider: Cache file is JSON array, parsing via compute...');
+                final jsonString = await file.readAsString();
+                final List<dynamic> decoded = await compute(jsonDecode, jsonString) as List<dynamic>;
+                allChannels.addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
+              } else {
+                debugLog('ChannelProvider: Cache file is M3U, parsing via Streaming Parser...');
+                DateTime lastCacheUiUpdate = DateTime.now();
+                final parsed = await parsePlaylistCancelable(
+                  filePath: cacheFilePath,
+                  onProgress: (count) {
+                    _loadingStatus = 'Parsing cached playlist: $count channels';
+                    _loadingProgress = 0.3 + (count / 20000).clamp(0.0, 0.6);
+                    final now = DateTime.now();
+                    if (now.difference(lastCacheUiUpdate).inMilliseconds > 500) {
+                      lastCacheUiUpdate = now;
+                      notifyListeners();
+                    }
+                  },
+                  onChannelsChunk: (chunk) => allChannels.addAll(chunk),
+                );
+                epgUrlFromCache = parsed['epgUrl'];
+              }
+            } catch (e) {
+              debugLog('ChannelProvider: Failed to parse cache file: $e');
+            }
+
             final parseDuration = DateTime.now().difference(parseStart);
             debugLog(
                 'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms. Found ${allChannels.length} channels.');
 
             // Extract and save EPG URL from cache if found
-            final epgUrl = parsed['epgUrl'] as String?;
+            final epgUrl = epgUrlFromCache; // Only M3U parsing used to return this. Json doesn't cache it inside the file.
             if (epgUrl != null && epgUrl.isNotEmpty) {
               final prefs = await SharedPreferences.getInstance();
               final oldUrl = prefs.getString('epg_url');
@@ -2312,10 +2334,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             await _setCurrentEpgMapSignature(
               prefs: prefs,
               playlistUrl: _lastPlaylistUrl,
-              epgUrl: parsed['epgUrl'] as String?,
-              channelCount:
-                  parsed['channelCount'] as int? ?? _channelMaps.length,
-              channelsFile: parsed['channelsFile'] as String?,
+              epgUrl: epgUrlFromCache,
+              channelCount: allChannels.length,
+              channelsFile: null,
             );
             if (_dbReady) {
               _loadingStatus = 'Saving to database... don\'t close the app.';
@@ -2740,11 +2761,19 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final dir = await getApplicationDocumentsDirectory();
       final now = DateTime.now().millisecondsSinceEpoch;
       final cacheFile = File('${dir.path}/$_playlistCacheFileName');
-      // PlaylistLoader stores temp files internally; we just write cache metadata
+      
+      // Write to the cache file immediately so future cold starts can use it
       if (loadingTarget.isNotEmpty) {
-        await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
-        await prefs.setInt('cache_timestamp', now);
-        await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
+        try {
+          final jsonString = json.encode(loadingTarget);
+          await cacheFile.writeAsString(jsonString);
+          await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
+          await prefs.setInt('cache_timestamp', now);
+          await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
+          debugLog('ChannelProvider: Correctly persisted file cache to disk.');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to write cacheFile to disk: $e');
+        }
       }
 
       if (!isBackground) {

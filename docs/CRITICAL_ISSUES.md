@@ -20,20 +20,17 @@
 
 ---
 
-## 2. PLAYLIST RE-PARSING EVERY TIME ❌
-**Symptoms**: Going back to Live TV triggers full playlist download/parse (7134 channels)
-**Root Cause**: 
-```
-ChannelProvider: File cache expired or not found, loading from network
-M3UParser: (maps) Total channels parsed: 7134
-```
-Cache is being invalidated or not persisted properly
-
-**Fix Needed**:
-- Check cache expiry logic in `channel_provider.dart:2247`
-- Ensure cache file is written and persists
-- Increase cache TTL or make it session-based
-- Don't reload if already loaded in memory
+### 3. Playlist re-parsing every time (EPG Loading Speed)
+- **Status:** 🟢 RESOLVED
+- **Symptoms:** Going back to Live TV (cold start) triggered full playlist download/parse (7134 channels).
+- **Root Cause:** 
+  1. `PlaylistLoader` was never actually writing the parsed playlist to the fallback file cache on disk.
+  2. The database deferred insert might fail or get interrupted if the app is killed early.
+  3. The cache expiry logic in `channel_provider.dart` artificially rejected the file cache if it was older than 6 hours, forcing a UI-blocking network load instead of a background sync.
+- **Fix:** 
+  1. Updated `_loadPlaylistFromUrlImpl` to properly write the `loadingTarget` array to disk as a JSON file.
+  2. Updated the cache parser in `autoLoadPlaylist` to seamlessly read JSON.
+  3. Removed the hard 6-hour limit on the fallback cache. The app now loads stale caches instantly and runs `_backgroundSync()` for freshness.ady loaded in memory
 
 **Files to Fix**:
 - `lib/providers/channel_provider.dart` - Cache logic around line 2247

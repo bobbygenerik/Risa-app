@@ -67,7 +67,7 @@ sizes = {
 }
 
 # Base directory for Android resources
-logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'lonelogo (1).png')
+logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'logo_icon.png')
 base_dir = os.path.join(PROJECT_ROOT, 'android', 'app', 'src', 'main', 'res')
 
 print("Generating app icons with lone logo...")

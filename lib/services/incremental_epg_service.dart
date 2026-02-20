@@ -495,12 +495,12 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         await _loadNormalizedMappingFromPrefs();
         await loadMappingsFromDb();
 
-        // Skip current-day-only parse; go straight to full-window parsing
-        // to avoid under-matching feeds that are future-dated or shifted.
+        // Start with current-day-only parse for faster cold starts
+        // We'll load the full window in the background afterward.
         await _loadChannelList(
           forceRefresh: forceRefresh,
           allowStaleCache: !forceRefresh,
-          currentDayOnly: false,
+          currentDayOnly: true,
         );
 
         // Load remaining days in background

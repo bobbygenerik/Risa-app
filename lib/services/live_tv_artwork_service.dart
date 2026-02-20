@@ -331,11 +331,10 @@ class LiveTvArtworkService {
       if (byTitle != null && byTitle.isNotEmpty) return true;
     }
 
-    // Check EPG-provided image URL — but only if it's not a poster
+    // Check EPG-provided image URL
     if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
-      if (!ArtworkValidator.isLikelyPosterUrl(program.imageUrl!)) {
-        return true;
-      }
+      // EPG provides an image - consider ready
+      return true;
     }
 
     return false;
@@ -512,8 +511,7 @@ class LiveTvArtworkService {
         ? const Duration(milliseconds: 500)
         : const Duration(milliseconds: 100);
     _artworkThrottle ??= Timer(interval, _drainArtworkQueue);
-    debugLog(
-        'LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
+    debugLog('LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -1127,6 +1125,7 @@ class LiveTvArtworkService {
         channel,
         programTitle: program.title,
         source: 'hero_epg',
+        isEpgFallback: true,
       )) {
         final normalized = normalizeImageUrl(direct!);
         _logArtworkDecision(
@@ -1614,15 +1613,21 @@ class LiveTvArtworkService {
     Channel channel, {
     String? programTitle,
     String? source,
+    bool isEpgFallback = false,
   }) {
     if (url == null || url.isEmpty) return false;
     if (ImageValidationService.isKnownInvalid(url)) return false;
-    // Reject posters, channel logos, title logos and small images — these
-    // should not occupy the backdrop cache slot and block real lookups.
+    
+    // Always reject posters, even for EPG fallback
     if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
+    
+    // For EPG fallback, we are more permissive with small images.
+    if (!isEpgFallback) {
+      if (ArtworkValidator.isLikelySmallImage(url)) return false;
+    }
+    
     if (ArtworkValidator.isLikelyChannelLogoUrl(url)) return false;
     if (ArtworkValidator.isLikelyTitleLogoUrl(url)) return false;
-    if (ArtworkValidator.isLikelySmallImage(url)) return false;
     final channelLogo = channel.logoUrl;
     if (channelLogo != null && channelLogo == url) return false;
     if (_matchesChannelLogo(url, channel)) return false;
@@ -1641,8 +1646,6 @@ class LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
-    // Always reject known poster URLs regardless of preferLandscape
-    if (_isLikelyPosterUrl(url)) return false;
     if (!preferLandscape) return true;
     return _isLikelyLandscapeUrl(url);
   }
@@ -1715,15 +1718,9 @@ class LiveTvArtworkService {
       return true;
     }
 
-    // TVDB poster paths (any posters path, not just /banners/posters/)
-    if (lower.contains('thetvdb.com') &&
-        (lower.contains('/posters/') || lower.contains('/poster/'))) {
-      return true;
-    }
-
-    // OMDb poster URLs — always portrait images from Amazon/IMDb CDN
-    if (lower.contains('m.media-amazon.com') ||
-        lower.contains('ia.media-imdb.com')) {
+    // TVDB poster paths
+    if (lower.contains('artworks.thetvdb.com') &&
+        lower.contains('/banners/posters/')) {
       return true;
     }
 
@@ -1731,9 +1728,7 @@ class LiveTvArtworkService {
     if (lower.endsWith('_poster.jpg') ||
         lower.endsWith('_poster.png') ||
         lower.endsWith('_cover.jpg') ||
-        lower.endsWith('_cover.png') ||
-        lower.endsWith('-poster.jpg') ||
-        lower.endsWith('-poster.png')) {
+        lower.endsWith('_cover.png')) {
       return true;
     }
 
