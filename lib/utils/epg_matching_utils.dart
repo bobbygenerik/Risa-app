@@ -179,9 +179,10 @@ class EPGMatchingUtils {
     String playlistName,
     EpgMatchCandidate candidate, {
     Set<String>? playlistTokens,
+    String? playlistNormalizedName,
   }) {
     // 1. Normalized Fingerprint Match (Tier 3 check repeated for scoring)
-    final plNorm = normalizeChannelName(playlistName);
+    final plNorm = playlistNormalizedName ?? normalizeChannelName(playlistName);
     if (plNorm == candidate.normalizedName && plNorm.isNotEmpty) {
       return 100.0; // Perfect normalized match
     }

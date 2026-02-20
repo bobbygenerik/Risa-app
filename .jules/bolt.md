@@ -9,3 +9,7 @@
 ## 2025-10-27 - Channel Logo Lazy Validation
 **Learning:** Proactively validating image URLs with `http.head` (via `ImageValidationService`) in widgets used in lists (like `ChannelLogoWidget`) causes N+1 network requests, severely impacting scroll performance and server load.
 **Action:** Rely on the `Image` widget's built-in error handling (`errorBuilder`) to detect broken images. Only mark the URL as invalid *after* the `Image` widget fails to load it. This removes the overhead for all valid images (the happy path).
+
+## 2025-12-08 - EPG Matching Loop Optimization
+**Learning:** `EPGMatchingUtils.calculateMatchScore` was performing redundant string normalization ($O(N \times L)$) inside a tight loop when matching a playlist channel against thousands of EPG candidates.
+**Action:** When implementing matching algorithms that iterate over large datasets, always identify invariant calculations (like normalizing the search term) and lift them out of the loop. Pass pre-calculated values as optional parameters to utility functions.
