@@ -9,7 +9,7 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
-import '../widgets/native_exo_player_widget.dart';
+import '../widgets/chewie_player_widget.dart';
 import '../blocs/epg_bloc.dart';
 import 'epg_screen.dart';
 
@@ -42,7 +42,6 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
-  final GlobalKey<NativeExoPlayerWidgetState> _exoPlayerKey = GlobalKey<NativeExoPlayerWidgetState>();
   bool _isLoading = true;
   bool _showControls = true;
   bool _isPlaying = true;
@@ -230,21 +229,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Use NativeExoPlayerWidget for IPTV buffer configuration
-                              NativeExoPlayerWidget(
-                                key: _exoPlayerKey,
+                            // Use Chewie (ExoPlayer backend) on all platforms
+                              ChewiePlayerWidget(
+                                key: ValueKey(widget.videoUrl ??
+                                    widget.streamUrl ??
+                                    widget.channel?.url ??
+                                    'player_key'),
                                 url: widget.videoUrl ??
                                     widget.streamUrl ??
                                     widget.channel?.url ??
                                     '',
                                 isLive: widget.isLive,
-                                onStateChanged: (state) {
-                                  if (mounted) {
-                                    setState(() {
-                                      _isPlaying = state != 'ended' && state != 'idle';
-                                    });
-                                  }
-                                },
                               ),
                             if (_videoUnavailable)
                               Positioned.fill(
@@ -549,17 +544,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    _exoPlayerKey.currentState?.playOrPause();
     _showControlsAndAutoHide();
   }
 
   void _rewind() {
-    _exoPlayerKey.currentState?.seekBackward(10);
     _showControlsAndAutoHide();
   }
 
   void _fastForward() {
-    _exoPlayerKey.currentState?.seekForward(10);
     _showControlsAndAutoHide();
   }
 
