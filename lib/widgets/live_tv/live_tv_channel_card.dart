@@ -254,13 +254,31 @@ class LiveTvChannelCard extends StatelessWidget {
               children: [
                 if (normalizedImageUrl != null)
                   Positioned.fill(
-                    child: buildAdaptiveImage(
-                      context,
-                      normalizedImageUrl,
-                      BoxFit.cover,
-                      cacheWidth,
-                      cacheHeight,
-                      fallback,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // 1. Background layer: stretches to cover the box, heavily darkened
+                        Opacity(
+                          opacity: 0.3,
+                          child: buildAdaptiveImage(
+                            context,
+                            normalizedImageUrl,
+                            BoxFit.cover,
+                            cacheWidth,
+                            cacheHeight,
+                            fallback,
+                          ),
+                        ),
+                        // 2. Foreground layer: fits entirely inside the box without clipping
+                        buildAdaptiveImage(
+                            context,
+                            normalizedImageUrl,
+                            BoxFit.contain,
+                            cacheWidth,
+                            cacheHeight,
+                            const SizedBox.shrink(), // Fallback already handled by bg
+                          ),
+                      ],
                     ),
                   )
                 else
@@ -458,13 +476,17 @@ class ChannelLogoWidget extends StatelessWidget {
     if (isSvg) {
       return Padding(
         padding: const EdgeInsets.all(3),
-        child: SvgPicture.network(
-          url,
+        child: SizedBox(
           width: width - 6,
           height: height - 6,
-          fit: BoxFit.contain,
-          headers: HttpClientService().imageHeaders,
-          placeholderBuilder: (_) => const SizedBox.shrink(),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SvgPicture.network(
+              url,
+              headers: HttpClientService().imageHeaders,
+              placeholderBuilder: (_) => const SizedBox.shrink(),
+            ),
+          ),
         ),
       );
     }
@@ -476,21 +498,27 @@ class ChannelLogoWidget extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(3),
-      child: Image(
-        image: provider,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-        frameBuilder: (context, child, frame, wasSync) {
-          if (wasSync || frame != null) {
-            ImageFailureCache.recordSuccess(url);
-            return child;
-          }
-          return const SizedBox.shrink();
-        },
-        errorBuilder: (context, error, stackTrace) {
-          ImageFailureCache.recordFailure(url, error);
-          return const SizedBox.shrink();
-        },
+      child: SizedBox(
+        width: width - 6,
+        height: height - 6,
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: Image(
+            image: provider,
+            filterQuality: FilterQuality.high,
+            frameBuilder: (context, child, frame, wasSync) {
+              if (wasSync || frame != null) {
+                ImageFailureCache.recordSuccess(url);
+                return child;
+              }
+              return const SizedBox.shrink();
+            },
+            errorBuilder: (context, error, stackTrace) {
+              ImageFailureCache.recordFailure(url, error);
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       ),
     );
   }

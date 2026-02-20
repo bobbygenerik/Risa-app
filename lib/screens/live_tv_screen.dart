@@ -4719,7 +4719,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Align(
                 alignment: Alignment.centerRight,
                 child: FractionallySizedBox(
-                  widthFactor: 0.75,
+                  widthFactor: 0.85,  // Wider canvas to compensate for containment shrinking
                   heightFactor: 1.0,
                   child: ShaderMask(
                     shaderCallback: (bounds) {
@@ -4731,14 +4731,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           Colors.white,
                           Colors.white,
                         ],
-                        stops: const [0.0, 0.15, 1.0],
+                        stops: const [0.0, 0.25, 1.0], // Smoother gradient for contained images
                       ).createShader(bounds);
                     },
                     blendMode: BlendMode.dstIn,
                     child: CachedNetworkImage(
                       imageUrl: normalizedHeroUrl,
                       httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain, // Prevent vertical cropping on extreme landscape posters
                       alignment: Alignment.centerRight,
                       filterQuality: FilterQuality.high,
                       memCacheWidth: cacheWidth,
@@ -4750,7 +4750,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             _LandscapeGuardedImage(
                               url: normalizedHeroUrl,
                               imageProvider: imageProvider,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain, // Match parent
                               alignment: Alignment.centerRight,
                               fallback: heroFallback,
                               probeTag: 'hero_backdrop',

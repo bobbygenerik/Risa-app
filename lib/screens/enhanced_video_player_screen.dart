@@ -9,7 +9,7 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
-import '../widgets/chewie_player_widget.dart';
+import '../widgets/native_exo_player_widget.dart';
 import '../blocs/epg_bloc.dart';
 import 'epg_screen.dart';
 
@@ -42,9 +42,10 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
+  final GlobalKey<NativeExoPlayerWidgetState> _exoPlayerKey = GlobalKey<NativeExoPlayerWidgetState>();
   bool _isLoading = true;
   bool _showControls = true;
-  final bool _isPlaying = false;
+  bool _isPlaying = true;
   bool _showGuide = false;
   final double _progress = 0.0;
   BoxFit _videoFit = BoxFit.contain;
@@ -229,17 +230,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Use Chewie (ExoPlayer backend) on all platforms
-                              ChewiePlayerWidget(
-                                key: ValueKey(widget.videoUrl ??
-                                    widget.streamUrl ??
-                                    widget.channel?.url ??
-                                    'player_key'),
+                            // Use NativeExoPlayerWidget for IPTV buffer configuration
+                              NativeExoPlayerWidget(
+                                key: _exoPlayerKey,
                                 url: widget.videoUrl ??
                                     widget.streamUrl ??
                                     widget.channel?.url ??
                                     '',
                                 isLive: widget.isLive,
+                                onStateChanged: (state) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isPlaying = state != 'ended' && state != 'idle';
+                                    });
+                                  }
+                                },
                               ),
                             if (_videoUnavailable)
                               Positioned.fill(
@@ -544,17 +549,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    // Better player has built-in controls
+    _exoPlayerKey.currentState?.playOrPause();
     _showControlsAndAutoHide();
   }
 
   void _rewind() {
-    // Better player has built-in controls
+    _exoPlayerKey.currentState?.seekBackward(10);
     _showControlsAndAutoHide();
   }
 
   void _fastForward() {
-    // Better player has built-in controls
+    _exoPlayerKey.currentState?.seekForward(10);
     _showControlsAndAutoHide();
   }
 
