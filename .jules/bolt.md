@@ -13,3 +13,7 @@
 ## 2025-12-08 - EPG Matching Loop Optimization
 **Learning:** `EPGMatchingUtils.calculateMatchScore` was performing redundant string normalization ($O(N \times L)$) inside a tight loop when matching a playlist channel against thousands of EPG candidates.
 **Action:** When implementing matching algorithms that iterate over large datasets, always identify invariant calculations (like normalizing the search term) and lift them out of the loop. Pass pre-calculated values as optional parameters to utility functions.
+
+## 2025-12-08 - ListView Virtualization Anti-Pattern
+**Learning:** Manually tracking visibility in `ListView` parents (e.g., clamping `itemCount` based on scroll notifications) defeats Flutter's built-in virtualization and introduces performance overhead due to unnecessary rebuilds.
+**Action:** Trust `ListView.builder` / `ListView.separated` to handle virtualization. Only use manual visibility tracking for complex logic that the framework cannot handle (e.g., pausing video players).
