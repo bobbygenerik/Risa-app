@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/app_dialog.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -1217,7 +1218,33 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _handleClearEpg() async {
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppDialog(
+        title: 'Clear EPG Data?',
+        content: const Text(
+          'This will delete all cached program data. You will need to re-download the EPG.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          AppDialogButton(
+            text: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          AppDialogButton(
+            text: 'Clear',
+            isPrimary: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('live_tv_program_artwork_title_cache_v1');
     await prefs.remove('live_tv_program_artwork_negative_cache_v1');
@@ -1231,6 +1258,31 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _handleClearArtworkCache() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppDialog(
+        title: 'Clear Artwork Cache?',
+        content: const Text(
+          'This will delete all cached artwork and negative cache entries.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          AppDialogButton(
+            text: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          AppDialogButton(
+            text: 'Clear',
+            isPrimary: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
     // Access artwork service from LiveTV screen's state
     // For now, just clear SharedPreferences keys
     final prefs = await SharedPreferences.getInstance();
