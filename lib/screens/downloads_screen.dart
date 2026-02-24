@@ -7,6 +7,7 @@ import 'package:iptv_player/models/download_item.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -263,6 +264,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                           color: AppTheme.textSecondary,
                                           fontSize: 14,
                                         ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      BrandPrimaryButton(
+                                        label: 'Open TV Guide',
+                                        icon: Icons.dvr,
+                                        onPressed: () => context.go('/epg'),
                                       ),
                                     ],
                                   ),
