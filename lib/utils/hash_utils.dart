@@ -10,12 +10,17 @@ String fnv1aHex(String input) {
   return hash.toRadixString(16).padLeft(8, '0');
 }
 
+final _whitespaceRegex = RegExp(r'\s+');
+
 /// Generate stable channel id: prefer tvgId if present and non-empty,
 /// otherwise deterministic hash of normalized url + name.
 String stableChannelId(
     {String? tvgId, required String name, required String url}) {
-  if (tvgId != null && tvgId.trim().isNotEmpty) return tvgId.trim();
-  final normalizedUrl = url.trim().replaceAll(RegExp(r'\s+'), '');
+  if (tvgId != null) {
+    final trimmedTvgId = tvgId.trim();
+    if (trimmedTvgId.isNotEmpty) return trimmedTvgId;
+  }
+  final normalizedUrl = url.trim().replaceAll(_whitespaceRegex, '');
   final key = '${normalizedUrl.toLowerCase()}|${name.trim().toLowerCase()}';
   return 'ch_${fnv1aHex(key)}';
 }
