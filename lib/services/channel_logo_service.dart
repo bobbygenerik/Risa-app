@@ -9,6 +9,7 @@ import 'dart:io';
 class ChannelLogoService {
   static final Map<String, String?> _logoCache = {};
   static bool _initialized = false;
+  static Timer? _saveDebounceTimer;
   static const String _cacheFileName = 'channel_logos_cache.json';
 
   // Known channel name to logo mappings (common channels)
@@ -252,6 +253,13 @@ class ChannelLogoService {
   }
 
   static Future<void> _saveCache() async {
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = Timer(const Duration(seconds: 2), () {
+      _performSave();
+    });
+  }
+
+  static Future<void> _performSave() async {
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.path}/$_cacheFileName');
