@@ -24,9 +24,6 @@ class M3UParserService {
     caseSensitive: false,
   );
 
-  static final RegExp _urlRegex =
-      RegExp(r'(?:[a-z0-9+\.\-]+)://\S+', caseSensitive: false);
-
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
 
@@ -236,28 +233,124 @@ class M3UParserService {
   }
 
   RegExpMatch? _lastUrlMatch(String line) {
-    RegExpMatch? lastMatch;
-    for (final match in _urlRegex.allMatches(line)) {
-      // SKIP if this URL appears to be an attribute value (e.g., tvg-logo="http://...")
-      // We look for a quote or equals sign immediately preceding the match
-      if (match.start > 0) {
-        final prevChar = line[match.start - 1];
-        if (prevChar == '"' || prevChar == "'" || prevChar == '=') {
-          continue;
-        }
+    int searchEnd = line.length;
+    while (true) {
+      if (searchEnd <= 0) return null;
+      // Find '://' backwards
+      final idx = line.lastIndexOf('://', searchEnd - 1);
+      if (idx == -1) return null;
 
-        // Also check for leading =" or =' if match starts at index 2+
-        if (match.start >= 2) {
-          final prefix = line.substring(match.start - 2, match.start);
+      // Found '://' at idx. Check scheme backwards from idx-1
+      int schemeStart = idx;
+      bool validScheme = false;
+
+      if (schemeStart > 0) {
+        int i = schemeStart - 1;
+        while (i >= 0) {
+          final code = line.codeUnitAt(i);
+          if (!_isSchemeChar(code)) break;
+          i--;
+        }
+        schemeStart = i + 1;
+        if (schemeStart < idx) {
+          validScheme = true;
+        }
+      }
+
+      if (!validScheme) {
+        searchEnd = idx; // Continue search before '://'
+        continue;
+      }
+
+      // Check pre-conditions (quote/equals)
+      bool isAttribute = false;
+      if (schemeStart > 0) {
+        final prevChar = line[schemeStart - 1];
+        if (prevChar == '"' || prevChar == "'" || prevChar == '=') {
+          isAttribute = true;
+        } else if (schemeStart >= 2) {
+          final prefix = line.substring(schemeStart - 2, schemeStart);
           if (prefix == '="' || prefix == "='") {
-            continue;
+            isAttribute = true;
           }
         }
       }
 
-      lastMatch = match;
+      if (isAttribute) {
+        searchEnd = schemeStart;
+        continue;
+      }
+
+      // SHADOW CHECK: Ensure this match is not part of a larger match to the left.
+      bool isShadowed = false;
+      if (schemeStart > 0) {
+        if (!_isWhitespace(line.codeUnitAt(schemeStart - 1))) {
+          int leftScan = schemeStart - 1;
+          while (leftScan >= 0) {
+            final code = line.codeUnitAt(leftScan);
+            if (_isWhitespace(code)) {
+              break;
+            }
+
+            // Check for '://'
+            if (code == 58 && leftScan + 2 < schemeStart) {
+              // : is 58
+              if (leftScan + 2 < line.length &&
+                  line.codeUnitAt(leftScan + 1) == 47 &&
+                  line.codeUnitAt(leftScan + 2) == 47) {
+                // Found '://' at leftScan.
+                // Check scheme for this one.
+                int sStart = leftScan;
+                bool vScheme = false;
+                if (sStart > 0) {
+                  int j = sStart - 1;
+                  while (j >= 0) {
+                    final c = line.codeUnitAt(j);
+                    if (!_isSchemeChar(c)) break;
+                    j--;
+                  }
+                  sStart = j + 1;
+                  if (sStart < leftScan) {
+                    vScheme = true;
+                  }
+                }
+                if (vScheme) {
+                  isShadowed = true;
+                  break;
+                }
+              }
+            }
+            leftScan--;
+          }
+        }
+      }
+
+      if (isShadowed) {
+        searchEnd = idx;
+        continue;
+      }
+
+      // Find end of URL
+      int afterSchemeIdx = idx + 3;
+      int k = afterSchemeIdx;
+      final len = line.length;
+      while (k < len) {
+        final code = line.codeUnitAt(k);
+        if (_isWhitespace(code)) {
+          break;
+        }
+        k++;
+      }
+
+      int urlEnd = k;
+      if (urlEnd > afterSchemeIdx) {
+        return _SimpleMatch(
+            schemeStart, urlEnd, line, line.substring(schemeStart, urlEnd));
+      } else {
+        searchEnd = idx;
+        continue;
+      }
     }
-    return lastMatch;
   }
 
   List<String> _splitExtinfSegments(String line) {
@@ -619,4 +712,55 @@ class M3UParserService {
     return grouped;
   }
 
+}
+
+bool _isSchemeChar(int code) {
+  return (code >= 97 && code <= 122) || // a-z
+      (code >= 65 && code <= 90) || // A-Z
+      (code >= 48 && code <= 57) || // 0-9
+      code == 43 ||
+      code == 46 ||
+      code == 45; // + . -
+}
+
+bool _isWhitespace(int code) {
+  return code == 32 || (code >= 9 && code <= 13);
+}
+
+class _SimpleMatch implements RegExpMatch {
+  @override
+  final int start;
+  @override
+  final int end;
+  @override
+  final String input;
+  final String _match;
+
+  _SimpleMatch(this.start, this.end, this.input, this._match);
+
+  @override
+  String? group(int group) {
+    if (group == 0) return _match;
+    return null;
+  }
+
+  @override
+  String? operator [](int group) => this.group(group);
+
+  @override
+  List<String?> groups(List<int> groupIndices) {
+    return groupIndices.map(group).toList();
+  }
+
+  @override
+  int get groupCount => 0;
+
+  @override
+  RegExp get pattern => throw UnimplementedError();
+
+  @override
+  Iterable<String> get groupNames => [];
+
+  @override
+  String? namedGroup(String name) => null;
 }
