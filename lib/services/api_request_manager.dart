@@ -78,7 +78,7 @@ class ApiRequestManager {
       return result;
     } finally {
       // Always clean up in-flight tracking
-      await _inFlightRequests.remove(cacheKey);
+      _inFlightRequests.remove(cacheKey);
       _requestStartTimes.remove(cacheKey);
     }
   }
