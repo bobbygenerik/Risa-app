@@ -12,6 +12,9 @@ class ChannelLogoService {
   static Timer? _saveDebounceTimer;
   static const String _cacheFileName = 'channel_logos_cache.json';
 
+  // Sorted entries for optimized partial matching
+  static List<MapEntry<String, String>>? _sortedKnownLogos;
+
   // Known channel name to logo mappings (common channels)
   static final Map<String, String> _knownLogos = {
     // Canadian Sports
@@ -226,6 +229,15 @@ class ChannelLogoService {
   /// Initialize the service and load cache
   static Future<void> init() async {
     if (_initialized) return;
+
+    // Pre-sort known logos by key length descending to prioritize specific matches
+    // (e.g. "fox sports" before "fox")
+    if (_sortedKnownLogos == null) {
+      final entries = _knownLogos.entries.toList();
+      entries.sort((a, b) => b.key.length.compareTo(a.key.length));
+      _sortedKnownLogos = entries;
+    }
+
     await _loadCache();
     _initialized = true;
   }
@@ -294,8 +306,20 @@ class ChannelLogoService {
       return _logoCache[normalized];
     }
 
-    // Check known logos mapping
-    for (final entry in _knownLogos.entries) {
+    // Fast path: Exact match (O(1))
+    if (_knownLogos.containsKey(normalized)) {
+      final url = _knownLogos[normalized]!;
+      if (await _verifyUrl(url)) {
+        _logoCache[normalized] = url;
+        unawaited(_saveCache());
+        return url;
+      }
+    }
+
+    // Fuzzy match: Check if channel name contains a known logo key
+    // Iterating sorted entries ensures longer (more specific) keys are checked first.
+    final entries = _sortedKnownLogos ?? _knownLogos.entries;
+    for (final entry in entries) {
       if (normalized.contains(entry.key) || entry.key.contains(normalized)) {
         final url = entry.value;
         // Verify the URL works
@@ -304,16 +328,6 @@ class ChannelLogoService {
           unawaited(_saveCache());
           return url;
         }
-      }
-    }
-
-    // Try exact match
-    if (_knownLogos.containsKey(normalized)) {
-      final url = _knownLogos[normalized]!;
-      if (await _verifyUrl(url)) {
-        _logoCache[normalized] = url;
-        unawaited(_saveCache());
-        return url;
       }
     }
 
