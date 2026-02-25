@@ -18,6 +18,9 @@ class ImageValidationService {
   // In-flight validation to avoid duplicate HEAD requests
   static final Map<String, Future<bool>> _pendingValidations = {};
 
+  // Shared HTTP client to reuse connections
+  static final http.Client _client = http.Client();
+
   /// Returns true if the URL is known to be invalid (404, non-image, etc.).
   static bool isKnownInvalid(String? url) {
     if (url == null || url.isEmpty) return true;
@@ -110,7 +113,7 @@ class ImageValidationService {
         return false;
       }
 
-      final response = await http.head(uri).timeout(
+      final response = await _client.head(uri).timeout(
             const Duration(seconds: 5),
           );
 
