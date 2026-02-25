@@ -15,6 +15,9 @@ class ImageValidationService {
   static const int _maxGoodEntries = 500;
   static const int _maxBadEntries = 300;
 
+  // Shared HTTP client to reuse connections (keep-alive)
+  static final http.Client _client = http.Client();
+
   // In-flight validation to avoid duplicate HEAD requests
   static final Map<String, Future<bool>> _pendingValidations = {};
 
@@ -110,7 +113,7 @@ class ImageValidationService {
         return false;
       }
 
-      final response = await http.head(uri).timeout(
+      final response = await _client.head(uri).timeout(
             const Duration(seconds: 5),
           );
 
