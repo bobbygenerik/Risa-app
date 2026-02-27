@@ -44,7 +44,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
   bool _isLoading = true;
   bool _showControls = true;
-  bool _isPlaying = true;
+  final bool _isPlaying = true;
   bool _showGuide = false;
   final double _progress = 0.0;
   BoxFit _videoFit = BoxFit.contain;

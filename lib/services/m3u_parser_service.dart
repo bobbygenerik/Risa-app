@@ -78,147 +78,146 @@ class M3UParserService {
       // Channel Parsing Logic
       if (line.contains('EXTINF:')) {
         for (final segment in _splitExtinfSegments(line)) {
-           // Inline processExtinfSegment logic to access closure variables
-           final urlMatch = _lastUrlMatch(segment);
-           final infoPart = urlMatch != null
+          // Inline processExtinfSegment logic to access closure variables
+          final urlMatch = _lastUrlMatch(segment);
+          final infoPart = urlMatch != null
               ? segment.substring(0, urlMatch.start).trimRight()
               : segment;
-           currentInfo = _extractExtinfPayload(infoPart);
-           if (currentInfo == null) continue;
-           currentAttributes = _parseAttributes(currentInfo!);
+          currentInfo = _extractExtinfPayload(infoPart);
+          if (currentInfo == null) continue;
+          currentAttributes = _parseAttributes(currentInfo!);
 
-           if (channelCount < 3) {
-             debugLog(
-               'M3UParser: Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
-             );
-           }
+          if (channelCount < 3) {
+            debugLog(
+              'M3UParser: Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
+            );
+          }
 
-           if (urlMatch != null) {
-              final inlineUrl = urlMatch.group(0) ?? '';
-              if (inlineUrl.isNotEmpty) {
-                 if (!seenUrls.add(inlineUrl)) {
-                    currentInfo = null;
-                    currentAttributes = {};
-                    continue;
-                 }
-                 final channelName = _extractChannelName(currentInfo!);
-                 final channel = Channel(
-                   id: stableChannelId(
-                     tvgId: currentAttributes['tvg-id'],
-                     name: channelName,
-                     url: inlineUrl,
-                   ),
-                   name: channelName,
-                   url: inlineUrl,
-                   logoUrl: currentAttributes['tvg-logo'],
-                   groupTitle: currentAttributes['group-title'],
-                   tvgId: currentAttributes['tvg-id'],
-                   attributes: currentAttributes,
-                   sortOrder: channelCount,
-                 );
-                 channels.add(channel);
-                 channelCount++;
-                 if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
-                   tvgIdCount++;
-                 }
-                 currentInfo = null;
-                 currentAttributes = {};
+          if (urlMatch != null) {
+            final inlineUrl = urlMatch.group(0) ?? '';
+            if (inlineUrl.isNotEmpty) {
+              if (!seenUrls.add(inlineUrl)) {
+                currentInfo = null;
+                currentAttributes = {};
+                continue;
               }
-           }
-        }
-      } else if (!line.startsWith('#') && currentInfo != null) {
-          final urlMatch = _lastUrlMatch(line);
-          if (urlMatch == null) {
-            currentInfo = null;
-            currentAttributes = {};
-            return;
-          }
-          final channelUrl = urlMatch.group(0) ?? '';
-          if (channelUrl.isEmpty) {
-            currentInfo = null;
-            currentAttributes = {};
-            return;
-          }
-          if (!seenUrls.add(channelUrl)) {
-            currentInfo = null;
-            currentAttributes = {};
-            return;
-          }
-          final channelName = _extractChannelName(currentInfo!);
-          final channel = Channel(
-            id: stableChannelId(
-              tvgId: currentAttributes['tvg-id'],
-              name: channelName,
-              url: channelUrl,
-            ),
-            name: channelName,
-            url: channelUrl,
-            logoUrl: currentAttributes['tvg-logo'],
-            groupTitle: currentAttributes['group-title'],
-            tvgId: currentAttributes['tvg-id'],
-            attributes: currentAttributes,
-            sortOrder: channelCount,
-          );
-
-          channels.add(channel);
-          channelCount++;
-          if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
-            tvgIdCount++;
-          }
-          if (channelCount <= 5) {
-            debugLog('M3UParser: Added channel #$channelCount: $channelName');
-            debugLog('M3UParser: Channel URL: $line');
-            debugLog('M3UParser: URL valid: ${Uri.tryParse(line) != null}');
-            if (line.isEmpty) {
-              debugLog(
-                  'M3UParser: WARNING - Empty URL for channel: $channelName');
+              final channelName = _extractChannelName(currentInfo!);
+              final channel = Channel(
+                id: stableChannelId(
+                  tvgId: currentAttributes['tvg-id'],
+                  name: channelName,
+                  url: inlineUrl,
+                ),
+                name: channelName,
+                url: inlineUrl,
+                logoUrl: currentAttributes['tvg-logo'],
+                groupTitle: currentAttributes['group-title'],
+                tvgId: currentAttributes['tvg-id'],
+                attributes: currentAttributes,
+                sortOrder: channelCount,
+              );
+              channels.add(channel);
+              channelCount++;
+              if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
+                tvgIdCount++;
+              }
+              currentInfo = null;
+              currentAttributes = {};
             }
           }
+        }
+      } else if (!line.startsWith('#') && currentInfo != null) {
+        final urlMatch = _lastUrlMatch(line);
+        if (urlMatch == null) {
           currentInfo = null;
           currentAttributes = {};
-      } else if (!line.startsWith('#') && currentInfo == null) {
-          // Found a URL without EXTINF - this might be malformed M3U
-          if (channelCount < 3) {
-            debugLog('M3UParser: WARNING - Found URL without EXTINF: $line');
+          return;
+        }
+        final channelUrl = urlMatch.group(0) ?? '';
+        if (channelUrl.isEmpty) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        if (!seenUrls.add(channelUrl)) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        final channelName = _extractChannelName(currentInfo!);
+        final channel = Channel(
+          id: stableChannelId(
+            tvgId: currentAttributes['tvg-id'],
+            name: channelName,
+            url: channelUrl,
+          ),
+          name: channelName,
+          url: channelUrl,
+          logoUrl: currentAttributes['tvg-logo'],
+          groupTitle: currentAttributes['group-title'],
+          tvgId: currentAttributes['tvg-id'],
+          attributes: currentAttributes,
+          sortOrder: channelCount,
+        );
+
+        channels.add(channel);
+        channelCount++;
+        if ((channel.tvgId?.trim().isNotEmpty ?? false)) {
+          tvgIdCount++;
+        }
+        if (channelCount <= 5) {
+          debugLog('M3UParser: Added channel #$channelCount: $channelName');
+          debugLog('M3UParser: Channel URL: $line');
+          debugLog('M3UParser: URL valid: ${Uri.tryParse(line) != null}');
+          if (line.isEmpty) {
+            debugLog(
+                'M3UParser: WARNING - Empty URL for channel: $channelName');
           }
+        }
+        currentInfo = null;
+        currentAttributes = {};
+      } else if (!line.startsWith('#') && currentInfo == null) {
+        // Found a URL without EXTINF - this might be malformed M3U
+        if (channelCount < 3) {
+          debugLog('M3UParser: WARNING - Found URL without EXTINF: $line');
+        }
       }
     }
 
     // Single-pass processing
     int processedCount = 0;
     for (final rawLine in rawLines) {
-        processedCount++;
-        final trimmedRaw = rawLine.trim();
-        if (trimmedRaw.isEmpty) continue;
+      processedCount++;
+      final trimmedRaw = rawLine.trim();
+      if (trimmedRaw.isEmpty) continue;
 
-        // Pass 1 reassembly logic
-        if (trimmedRaw.startsWith('#') ||
-            trimmedRaw.contains('://') ||
-            trimmedRaw.contains('EXTINF:')) {
-
-            if (pendingLine != null) {
-                processLogicalLine(pendingLine!);
-            }
-            pendingLine = trimmedRaw;
-        } else if (pendingLine != null) {
-            pendingLine = pendingLine! + trimmedRaw;
-        } else {
-            // Fallback for files not starting with # (treat as start of new line)
-            if (pendingLine != null) {
-                processLogicalLine(pendingLine!);
-            }
-            pendingLine = trimmedRaw;
+      // Pass 1 reassembly logic
+      if (trimmedRaw.startsWith('#') ||
+          trimmedRaw.contains('://') ||
+          trimmedRaw.contains('EXTINF:')) {
+        if (pendingLine != null) {
+          processLogicalLine(pendingLine);
         }
-
-        // Show progress occasionally
-        if (processedCount % 50000 == 0) {
-           debugLog('M3UParser: Processed $processedCount raw lines...');
+        pendingLine = trimmedRaw;
+      } else if (pendingLine != null) {
+        pendingLine = pendingLine + trimmedRaw;
+      } else {
+        // Fallback for files not starting with # (treat as start of new line)
+        if (pendingLine != null) {
+          processLogicalLine(pendingLine);
         }
+        pendingLine = trimmedRaw;
+      }
+
+      // Show progress occasionally
+      if (processedCount % 50000 == 0) {
+        debugLog('M3UParser: Processed $processedCount raw lines...');
+      }
     }
 
     // Process final pending line
     if (pendingLine != null) {
-        processLogicalLine(pendingLine!);
+      processLogicalLine(pendingLine);
     }
 
     debugLog('M3UParser: Total channels parsed: ${channels.length}');
@@ -232,7 +231,7 @@ class M3UParserService {
     return line.substring(idx + 'EXTINF:'.length);
   }
 
-  RegExpMatch? _lastUrlMatch(String line) {
+  _SimpleMatch? _lastUrlMatch(String line) {
     int searchEnd = line.length;
     while (true) {
       if (searchEnd <= 0) return null;
@@ -393,7 +392,8 @@ class M3UParserService {
 
       if (!headerProcessed) {
         headerProcessed = true;
-        debugLog('M3UParser: First logical line: ${line.length > 200 ? '${line.substring(0, 200)}...' : line}');
+        debugLog(
+            'M3UParser: First logical line: ${line.length > 200 ? '${line.substring(0, 200)}...' : line}');
         _tryCaptureEpgUrl(line);
       }
 
@@ -441,16 +441,19 @@ class M3UParserService {
             if (progressPort != null && channelCount % 200 == 0) {
               try {
                 // Send progress count
-                progressPort.send({'type': 'progress', 'channels': channelCount});
-                
+                progressPort
+                    .send({'type': 'progress', 'channels': channelCount});
+
                 // CRITICAL: Send the actual chunk of data!
                 // We send the last 200 items (or all since last send)
                 // Actually, since we are adding to a main list, we can just slice it?
                 // Or better: maintain a temporary buffer for the current chunk.
                 // But since we already added to 'channelMaps', let's just slice the last 200.
-                final int chunkStart = (channelCount - 200).clamp(0, channelCount);
+                final int chunkStart =
+                    (channelCount - 200).clamp(0, channelCount);
                 final chunk = channelMaps.sublist(chunkStart, channelCount);
-                progressPort.send({'type': 'channels_chunk', 'channels': chunk});
+                progressPort
+                    .send({'type': 'channels_chunk', 'channels': chunk});
               } catch (_) {}
             }
             currentInfo = null;
@@ -520,25 +523,25 @@ class M3UParserService {
         if (urlMatch != null) {
           final channelUrl = urlMatch.group(0) ?? '';
           if (channelUrl.isNotEmpty && seenUrls.add(channelUrl)) {
-             debugLog('M3UParser: Found bare URL, auto-adding: $channelUrl');
-             // Fallback name from URL
-             String fallbackName = 'Channel ${channelCount + 1}';
-             try {
-               final uri = Uri.parse(channelUrl);
-               fallbackName = uri.pathSegments.last;
-             } catch (_) {}
-             
-             channelMaps.add({
-                'id': stableChannelId(name: fallbackName, url: channelUrl),
-                'name': fallbackName,
-                'url': channelUrl,
-                'groupTitle': 'Uncategorized',
-                'attributes': <String, String>{},
-                'sortOrder': channelCount,
-                'isFavorite': false,
-                'isHidden': false,
-             });
-             channelCount++;
+            debugLog('M3UParser: Found bare URL, auto-adding: $channelUrl');
+            // Fallback name from URL
+            String fallbackName = 'Channel ${channelCount + 1}';
+            try {
+              final uri = Uri.parse(channelUrl);
+              fallbackName = uri.pathSegments.last;
+            } catch (_) {}
+
+            channelMaps.add({
+              'id': stableChannelId(name: fallbackName, url: channelUrl),
+              'name': fallbackName,
+              'url': channelUrl,
+              'groupTitle': 'Uncategorized',
+              'attributes': <String, String>{},
+              'sortOrder': channelCount,
+              'isFavorite': false,
+              'isHidden': false,
+            });
+            channelCount++;
           }
         }
       }
@@ -578,31 +581,29 @@ class M3UParserService {
       processLogicalLine(pendingLine.trim());
     }
 
-
-    
     // Send any remaining channels as a final chunk (if not already sent in batches)
     // CRITICAL FIX: Always send ALL channels at the end to ensure nothing is lost
     // This handles playlists with <200 channels or exact multiples of 200
     if (progressPort != null && channelMaps.isNotEmpty) {
-       try {
-         // Just send everything - the receiver will deduplicate if needed
-         // Or better: only send what hasn't been sent yet
-         final int lastSentIndex = (channelCount ~/ 200) * 200;
-         if (lastSentIndex < channelMaps.length) {
-           final chunk = channelMaps.sublist(lastSentIndex);
-           if (chunk.isNotEmpty) {
-             progressPort.send({'type': 'channels_chunk', 'channels': chunk});
-           }
-         }
-       } catch (_) {}
+      try {
+        // Just send everything - the receiver will deduplicate if needed
+        // Or better: only send what hasn't been sent yet
+        final int lastSentIndex = (channelCount ~/ 200) * 200;
+        if (lastSentIndex < channelMaps.length) {
+          final chunk = channelMaps.sublist(lastSentIndex);
+          if (chunk.isNotEmpty) {
+            progressPort.send({'type': 'channels_chunk', 'channels': chunk});
+          }
+        }
+      } catch (_) {}
     }
 
     debugLog('M3UParser: (maps) Total channels parsed: $channelCount');
     debugLog('M3UParser: (maps) Channels with tvg-id: $tvgIdCount');
     return {
       'channels': channelMaps,
-      'movies': const <Map<String, dynamic>>[],  // VOD detection skipped
-      'series': const <Map<String, dynamic>>[],  // VOD detection skipped
+      'movies': const <Map<String, dynamic>>[], // VOD detection skipped
+      'series': const <Map<String, dynamic>>[], // VOD detection skipped
       'channelCount': channelCount,
       'epgUrl': _epgUrl,
     };
@@ -711,7 +712,6 @@ class M3UParserService {
 
     return grouped;
   }
-
 }
 
 bool _isSchemeChar(int code) {
@@ -727,40 +727,22 @@ bool _isWhitespace(int code) {
   return code == 32 || (code >= 9 && code <= 13);
 }
 
-class _SimpleMatch implements RegExpMatch {
-  @override
+class _SimpleMatch {
   final int start;
-  @override
   final int end;
-  @override
   final String input;
   final String _match;
 
   _SimpleMatch(this.start, this.end, this.input, this._match);
 
-  @override
   String? group(int group) {
     if (group == 0) return _match;
     return null;
   }
 
-  @override
   String? operator [](int group) => this.group(group);
 
-  @override
   List<String?> groups(List<int> groupIndices) {
     return groupIndices.map(group).toList();
   }
-
-  @override
-  int get groupCount => 0;
-
-  @override
-  RegExp get pattern => throw UnimplementedError();
-
-  @override
-  Iterable<String> get groupNames => [];
-
-  @override
-  String? namedGroup(String name) => null;
 }
