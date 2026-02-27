@@ -612,9 +612,9 @@ class M3UParserService {
   /// Extracts channel name from EXTINF line
   String _extractChannelName(String info) {
     // Channel name is usually after the last comma
-    final parts = info.split(',');
-    if (parts.length > 1) {
-      return parts.last.trim();
+    final lastComma = info.lastIndexOf(',');
+    if (lastComma != -1) {
+      return info.substring(lastComma + 1).trim();
     }
     return 'Unknown Channel';
   }
