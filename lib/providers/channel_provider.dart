@@ -181,6 +181,27 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<String> _channelLowerNames = [];
   List<String> _channelLowerGroups = [];
 
+  void _buildIndicesForChunk(List<Map<String, dynamic>> chunk, int startIndex) {
+    for (var i = 0; i < chunk.length; i++) {
+      final map = chunk[i];
+      final absIndex = startIndex + i;
+      final id = (map['id'] ?? '').toString();
+      if (id.isNotEmpty) {
+        _channelIndexById[id] = absIndex;
+      }
+
+      final name = (map['name'] as String?) ?? '';
+      _channelLowerNames.add(name.toLowerCase());
+
+      final rawGroup = (map['groupTitle'] ?? '').toString();
+      final group = rawGroup.trim().toLowerCase();
+      _channelLowerGroups.add(group);
+
+      final groupKey = group.isNotEmpty ? group : 'uncategorized';
+      (_channelIndicesByGroup[groupKey] ??= []).add(absIndex);
+    }
+  }
+
   /// Lightweight sync cache rebuild for small playlists or when isolate not available
   void _rebuildChannelCachesSync() {
     _channelIndexById.clear();
@@ -2596,6 +2617,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         // FIX: Clear indices too to prevent "wrong category" bugs
         _channelIndexById.clear();
         _channelIndicesByGroup.clear();
+        _channelLowerNames.clear();
+        _channelLowerGroups.clear();
         _invalidateCategoryCaches();
         _channelCountDb = 0;
       }
@@ -2621,19 +2644,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         // FIX: Incrementally update indices for the new chunk so categories work immediately
         if (!isBackground) {
           final startIndex = loadingTarget.length - chunk.length;
-          for (var i = 0; i < chunk.length; i++) {
-            final map = chunk[i];
-            final absIndex = startIndex + i;
-            final id = (map['id'] ?? '').toString();
-            if (id.isNotEmpty) {
-              _channelIndexById[id] = absIndex;
-            }
-            final rawGroup = (map['groupTitle'] ?? '').toString();
-            final group = rawGroup.trim().toLowerCase();
-            // We don't cache lowerGroups/names here for speed, but that's fine for simple category lookup
-            final groupKey = group.isNotEmpty ? group : 'uncategorized';
-            (_channelIndicesByGroup[groupKey] ??= []).add(absIndex);
-          }
+          _buildIndicesForChunk(chunk, startIndex);
         }
 
         // Critical: Update UI immediately if this is the first "page" of content
