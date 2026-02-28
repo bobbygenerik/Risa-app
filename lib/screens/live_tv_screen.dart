@@ -1149,10 +1149,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   List<String> _buildFallbackCategories(ChannelProvider provider) {
     if (!provider.hasChannels) return [];
-    final preview = provider.getFilteredChannels(limit: 200);
+    final channels = provider.channels;
     final seen = <String>{};
     final categories = <String>[];
-    for (final channel in preview) {
+    for (final channel in channels) {
       final trimmed = (channel.groupTitle ?? '').trim();
       final name = trimmed.isEmpty ? 'Uncategorized' : trimmed;
       if (seen.add(name)) {
