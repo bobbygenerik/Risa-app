@@ -3601,6 +3601,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     // FIX: Don't try to load if we are currently parsing or doing a full refresh.
     // This prevents marking channels as "attempted" (empty) while data is still being ingested.
     if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
+      _deferredChannelRequests.addAll(channelIds);
       return;
     }
 
@@ -3664,6 +3665,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> ensureChannelLoaded(String channelId,
       {String? channelName}) async {
     if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
+      _deferredChannelRequests.add(channelId);
       return;
     }
     final epgId = _internalToEpgIdMapping[channelId] ??
