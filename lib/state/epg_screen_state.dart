@@ -14,8 +14,6 @@ class EPGScreenState extends ChangeNotifier {
   static const int _channelsPerPage = 50;
   int _currentPage = 0;
   bool _isLoadingMore = false;
-  List<Channel> _paginatedChannels = [];
-  bool _hasMore = true;
 
   // Scroll synchronization
   bool _syncingScroll = false;
@@ -27,10 +25,8 @@ class EPGScreenState extends ChangeNotifier {
   Set<String> get epgFavoriteChannelIds => _epgFavoriteChannelIds;
   int get currentPage => _currentPage;
   bool get isLoadingMore => _isLoadingMore;
-  List<Channel> get paginatedChannels => _paginatedChannels;
   bool get syncingScroll => _syncingScroll;
   int get channelsPerPage => _channelsPerPage;
-  bool get hasMore => _hasMore;
 
   // Category management
   void setSelectedCategory(String? category) {
@@ -59,26 +55,10 @@ class EPGScreenState extends ChangeNotifier {
   // Pagination management
   void _resetPagination() {
     _currentPage = 0;
-    _paginatedChannels.clear();
-  }
-
-  void updatePaginatedChannels(List<Channel> allChannels) {
-    final sameLength = _paginatedChannels.length == allChannels.length;
-    if (sameLength && allChannels.isNotEmpty) {
-      final sameFirst = _paginatedChannels.first.id == allChannels.first.id;
-      final sameLast = _paginatedChannels.last.id == allChannels.last.id;
-      if (sameFirst && sameLast) {
-        return;
-      }
-    } else if (sameLength && allChannels.isEmpty) {
-      return;
-    }
-    _paginatedChannels = allChannels;
-    notifyListeners();
   }
 
   void loadMoreChannels() {
-    if (_isLoadingMore || !_hasMore) return;
+    if (_isLoadingMore) return;
     _isLoadingMore = true;
     _currentPage++;
     notifyListeners();
@@ -86,10 +66,6 @@ class EPGScreenState extends ChangeNotifier {
       _isLoadingMore = false;
       notifyListeners();
     });
-  }
-
-  void setHasMore(bool value) {
-    _hasMore = value;
   }
 
   // Scroll synchronization
