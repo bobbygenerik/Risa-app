@@ -340,6 +340,7 @@ class _MainShellState extends State<MainShell> {
     if (location == '/settings' ||
         (lastLocation != null && lastLocation.startsWith('/settings'))) {
       debugLog('MainShell back nav: handling settings -> home');
+      _lastNavTime = DateTime.now();
       context.go('/home');
       return;
     }
@@ -388,6 +389,7 @@ class _MainShellState extends State<MainShell> {
 
     // Any other screen: go to home
     debugLog('MainShell back nav: handling $location -> home');
+    _lastNavTime = DateTime.now();
     context.go('/home');
   }
 
