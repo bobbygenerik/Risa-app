@@ -2183,7 +2183,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return _buildSkeletonLoaderTracked();
     }
 
-    final selectionPool = epgHeroCandidates;
+    final selectionPool = epgHeroCandidates.isNotEmpty
+        ? epgHeroCandidates
+        : [
+            _HeroCandidate(
+              channel: allChannels.first,
+              heroImage: '',
+            )
+          ];
     _lastHeroCandidateCount = selectionPool.length;
     _prefetchTitleLogosForCandidates(selectionPool);
     _prefetchRowArtworkForChannels(
