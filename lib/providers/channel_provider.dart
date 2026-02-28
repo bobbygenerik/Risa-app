@@ -1743,13 +1743,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       try {
         final categories = await _db.getCategories(limit: categoryLimit);
         final result = <String, List<Channel>>{};
-        for (final c in categories) {
-          final rows = await _db.getChannelsForCategoryPage(
-            c,
+        if (categories.isNotEmpty) {
+          final rowsByCategory = await _db.getChannelsForCategoriesPage(
+            categories,
             offset: 0,
             limit: channelLimit,
           );
-          result[c] = rows.map((m) => Channel.fromMap(m)).toList();
+          for (final c in categories) {
+            final rows = rowsByCategory[c] ?? const [];
+            result[c] = rows.map((m) => Channel.fromMap(m)).toList();
+          }
         }
         return result;
       } catch (e) {

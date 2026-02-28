@@ -422,36 +422,76 @@ class LocalDbService {
     if (categories.isEmpty) return {};
     final safeLimit = limit.clamp(0, 500);
     final safeOffset = offset.clamp(0, 1000000);
-    final results = await _withDbRead((db) async {
-      final batch = db.batch();
-      for (final category in categories) {
-        final trimmedCategory = category.trim();
-        if (trimmedCategory.toLowerCase() == 'uncategorized') {
-          batch.query(
-            'channels',
-            where:
-                'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
-            whereArgs: ['', 'Uncategorized'],
-            orderBy: 'idx ASC',
-            limit: safeLimit,
-            offset: safeOffset,
-          );
-          continue;
-        }
-        // Use rawQuery with TRIM() to match normalized category names
-        batch.rawQuery(
-          'SELECT * FROM channels WHERE TRIM(groupTitle) = ? ORDER BY idx ASC LIMIT ? OFFSET ?',
-          [trimmedCategory, safeLimit, safeOffset],
-        );
-      }
-      return batch.commit(noResult: false);
-    });
+
     final mapped = <String, List<Map<String, dynamic>>>{};
-    for (var i = 0; i < categories.length; i++) {
-      final rows =
-          (results[i] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      mapped[categories[i]] = rows.map(_hydrateAttrs).toList();
+    for (final c in categories) {
+      mapped[c] = [];
     }
+
+    final hasUncategorized = categories.any((c) => c.trim().toLowerCase() == 'uncategorized');
+    final specificCategories = categories
+        .where((c) => c.trim().toLowerCase() != 'uncategorized')
+        .map((c) => c.trim())
+        .toList();
+
+    // Split into chunks to respect SQLite's variable limits
+    const int chunkSize = 500;
+
+    await _withDbRead((db) async {
+      // Handle named categories in chunks
+      for (var i = 0; i < specificCategories.length; i += chunkSize) {
+        final chunk = specificCategories.sublist(
+            i, (i + chunkSize).clamp(0, specificCategories.length));
+        if (chunk.isEmpty) continue;
+
+        final placeholders = List.filled(chunk.length, '?').join(',');
+
+        // SQLite 3.25.0+ supports window functions.
+        // We partition by TRIM(groupTitle) and order by idx.
+        final rows = await db.rawQuery(
+          '''
+          SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (
+              PARTITION BY TRIM(groupTitle)
+              ORDER BY idx ASC
+            ) as row_num
+            FROM channels
+            WHERE TRIM(groupTitle) IN ($placeholders)
+          ) WHERE row_num > ? AND row_num <= ?
+          ''',
+          [...chunk, safeOffset, safeOffset + safeLimit],
+        );
+
+        for (final row in rows) {
+          final groupTitle = (row['groupTitle'] as String?)?.trim() ?? '';
+          // We need to match the original category string requested (which might have different casing)
+          final matchedCat = categories.firstWhere(
+            (c) => c.trim().toLowerCase() == groupTitle.toLowerCase(),
+            orElse: () => groupTitle,
+          );
+          if (mapped.containsKey(matchedCat)) {
+            mapped[matchedCat]!.add(_hydrateAttrs(row));
+          }
+        }
+      }
+
+      // Handle Uncategorized
+      if (hasUncategorized) {
+        final uncategorizedCat = categories.firstWhere((c) => c.trim().toLowerCase() == 'uncategorized');
+        final uncategorizedRows = await db.query(
+          'channels',
+          where: 'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
+          whereArgs: ['', 'Uncategorized'],
+          orderBy: 'idx ASC',
+          limit: safeLimit,
+          offset: safeOffset,
+        );
+        for (final row in uncategorizedRows) {
+          mapped[uncategorizedCat]!.add(_hydrateAttrs(row));
+        }
+      }
+    });
+
     return mapped;
   }
 
