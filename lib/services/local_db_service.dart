@@ -666,6 +666,30 @@ class LocalDbService {
     };
   }
 
+  Future<void> deleteProgramsForEpgIds(List<String> epgIds) async {
+    if (epgIds.isEmpty) return;
+
+    // Split into chunks to avoid SQLite variable limits (usually 999)
+    const int chunkSize = 500;
+
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          for (var i = 0; i < epgIds.length; i += chunkSize) {
+            final chunk = epgIds.sublist(
+                i, (i + chunkSize).clamp(0, epgIds.length));
+            final placeholders = List.filled(chunk.length, '?').join(',');
+            await txn.delete(
+              'epg_programs',
+              where: 'epgId IN ($placeholders)',
+              whereArgs: chunk,
+            );
+          }
+        });
+      });
+    });
+  }
+
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
