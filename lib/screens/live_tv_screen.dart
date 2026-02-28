@@ -701,18 +701,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
 
-      // If we are NOT in cold start and focus is already within this screen,
-      // respect it. Otherwise, claim focus for the watch button.
+      // If we are NOT in cold start and the user already has focus SOMEWHERE
+      // (either in this screen or in the sidebar), respect it.
       if (!channelProvider.isColdStartLoad &&
           currentFocus != null &&
-          currentFocus.context != null) {
-        final isFocusWithinScreen = currentFocus.context!
-                .findAncestorStateOfType<_LiveTVScreenState>() ==
-            this;
-        if (isFocusWithinScreen) {
-          // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
-          return;
-        }
+          currentFocus.context != null &&
+          currentFocus != FocusManager.instance.rootScope) {
+        // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
+        return;
       }
 
       // Start with Watch Now button for better UX - user sees hero first
