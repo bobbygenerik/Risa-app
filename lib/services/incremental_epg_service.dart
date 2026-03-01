@@ -132,9 +132,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, String> _manualMappings = {};
   static const String _manualMappingsKey = 'epg_manual_mappings';
   String? _playlistIdentity;
-  // FIX: Don't suspend DB reads during parsing/loading since we use WAL mode.
-  // Blocking reads causes UI to show no data for ~7s during parse.
-  bool get _suspendDbReads => _dbDisabled;
 
   IncrementalEpgService() {
     WidgetsBinding.instance.addObserver(this);
@@ -3598,11 +3595,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
-    // FIX: Don't try to load if we are currently parsing or doing a full refresh.
-    // This prevents marking channels as "attempted" (empty) while data is still being ingested.
-    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
-      _deferredChannelRequests.addAll(channelIds);
+    if (_dbDisabled) {
       return;
+    }
+    // During parsing/loading, defer requested channels and load after parse completes.
+    if (_isParsing || _isLoading || _isDownloading) {
+      for (final id in channelIds) {
+        _deferredChannelRequests.add(id);
+      }
     }
 
     final effectiveNames =
@@ -3664,9 +3664,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> ensureChannelLoaded(String channelId,
       {String? channelName}) async {
-    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
-      _deferredChannelRequests.add(channelId);
+    if (_dbDisabled) {
       return;
+    }
+    if (_isParsing || _isLoading || _isDownloading) {
+      _deferredChannelRequests.add(channelId);
     }
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
@@ -3708,13 +3710,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     List<String?>? channelNames,
   }) async {
     if (channelIds.isEmpty) return;
+    if (_dbDisabled) {
+      return;
+    }
     // During parsing/loading, defer requested channels and load after parse completes.
-    if (_isParsing || _isLoading || _isDownloading || _suspendDbReads) {
-      // Queue channel IDs so they are retried after parse finishes.
+    if (_isParsing || _isLoading || _isDownloading) {
       for (final id in channelIds) {
         _deferredChannelRequests.add(id);
       }
-      return;
     }
     debugLog(
         'EPG: ensureChannelsLoadedBatch called with ${channelIds.length} channels');
@@ -3864,9 +3867,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> loadMappingsFromDb() async {
     try {
       if (_dbDisabled) {
-        return;
-      }
-      if (_suspendDbReads) {
         return;
       }
       if (!_db.isReady) {
@@ -4069,9 +4069,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       if (_dbDisabled) {
         return;
       }
-      if (_suspendDbReads) {
-        return;
-      }
       if (!_db.isReady) {
         return;
       }
@@ -4125,7 +4122,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       debugLog(
-          'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}, suspendReads=$_suspendDbReads');
+          'EPG: _loadProgramsFromDbBatch called with ${epgIds.length} epgIds, dbReady=${_db.isReady}');
 
       // If DB is genuinely disabled (e.g. fatal error), stop
       if (_dbDisabled) {
@@ -4134,9 +4131,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _batchTimer = null;
         return;
       }
-
-      // Don't suspend for parsing anymore (WAL mode)
-      // if (_suspendDbReads) ...
 
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final endMs = nowMs + (_epgFutureWindowHours * 3600000);
