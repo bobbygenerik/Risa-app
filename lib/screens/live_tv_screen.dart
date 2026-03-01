@@ -703,18 +703,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
 
-      // If we are NOT in cold start and focus is already within this screen,
-      // respect it. Otherwise, claim focus for the watch button.
+      // If we are NOT in cold start and the user already has focus SOMEWHERE
+      // (either in this screen or in the sidebar), respect it.
       if (!channelProvider.isColdStartLoad &&
           currentFocus != null &&
-          currentFocus.context != null) {
-        final isFocusWithinScreen = currentFocus.context!
-                .findAncestorStateOfType<_LiveTVScreenState>() ==
-            this;
-        if (isFocusWithinScreen) {
-          // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
-          return;
-        }
+          currentFocus.context != null &&
+          currentFocus != FocusManager.instance.rootScope) {
+        // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
+        return;
       }
 
       // Start with Watch Now button for better UX - user sees hero first
@@ -1151,10 +1147,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   List<String> _buildFallbackCategories(ChannelProvider provider) {
     if (!provider.hasChannels) return [];
-    final preview = provider.getFilteredChannels(limit: 200);
+    final channels = provider.channels;
     final seen = <String>{};
     final categories = <String>[];
-    for (final channel in preview) {
+    for (final channel in channels) {
       final trimmed = (channel.groupTitle ?? '').trim();
       final name = trimmed.isEmpty ? 'Uncategorized' : trimmed;
       if (seen.add(name)) {
@@ -2186,7 +2182,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return _buildSkeletonLoaderTracked();
     }
 
-    final selectionPool = epgHeroCandidates;
+    final selectionPool = epgHeroCandidates.isNotEmpty
+        ? epgHeroCandidates
+        : [
+            _HeroCandidate(
+              channel: allChannels.first,
+              heroImage: '',
+            )
+          ];
     _lastHeroCandidateCount = selectionPool.length;
     _prefetchTitleLogosForCandidates(selectionPool);
     _prefetchRowArtworkForChannels(
