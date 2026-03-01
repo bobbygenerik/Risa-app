@@ -167,6 +167,7 @@ class CachedChannelLogo extends StatelessWidget {
       fit: BoxFit.contain,
       backgroundColor: Colors.transparent,
       borderRadius: BorderRadius.circular(8),
+      allowEnrichment: true,
     );
   }
 }

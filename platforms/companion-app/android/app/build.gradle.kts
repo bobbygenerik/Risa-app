@@ -20,6 +20,7 @@ android {
     }
 
     defaultConfig {
+        // Unique Application ID for Companion App
         applicationId = "com.risa.companion"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.

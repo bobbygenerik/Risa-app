@@ -422,36 +422,76 @@ class LocalDbService {
     if (categories.isEmpty) return {};
     final safeLimit = limit.clamp(0, 500);
     final safeOffset = offset.clamp(0, 1000000);
-    final results = await _withDbRead((db) async {
-      final batch = db.batch();
-      for (final category in categories) {
-        final trimmedCategory = category.trim();
-        if (trimmedCategory.toLowerCase() == 'uncategorized') {
-          batch.query(
-            'channels',
-            where:
-                'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
-            whereArgs: ['', 'Uncategorized'],
-            orderBy: 'idx ASC',
-            limit: safeLimit,
-            offset: safeOffset,
-          );
-          continue;
-        }
-        // Use rawQuery with TRIM() to match normalized category names
-        batch.rawQuery(
-          'SELECT * FROM channels WHERE TRIM(groupTitle) = ? ORDER BY idx ASC LIMIT ? OFFSET ?',
-          [trimmedCategory, safeLimit, safeOffset],
-        );
-      }
-      return batch.commit(noResult: false);
-    });
+
     final mapped = <String, List<Map<String, dynamic>>>{};
-    for (var i = 0; i < categories.length; i++) {
-      final rows =
-          (results[i] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-      mapped[categories[i]] = rows.map(_hydrateAttrs).toList();
+    for (final c in categories) {
+      mapped[c] = [];
     }
+
+    final hasUncategorized = categories.any((c) => c.trim().toLowerCase() == 'uncategorized');
+    final specificCategories = categories
+        .where((c) => c.trim().toLowerCase() != 'uncategorized')
+        .map((c) => c.trim())
+        .toList();
+
+    // Split into chunks to respect SQLite's variable limits
+    const int chunkSize = 500;
+
+    await _withDbRead((db) async {
+      // Handle named categories in chunks
+      for (var i = 0; i < specificCategories.length; i += chunkSize) {
+        final chunk = specificCategories.sublist(
+            i, (i + chunkSize).clamp(0, specificCategories.length));
+        if (chunk.isEmpty) continue;
+
+        final placeholders = List.filled(chunk.length, '?').join(',');
+
+        // SQLite 3.25.0+ supports window functions.
+        // We partition by TRIM(groupTitle) and order by idx.
+        final rows = await db.rawQuery(
+          '''
+          SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (
+              PARTITION BY TRIM(groupTitle)
+              ORDER BY idx ASC
+            ) as row_num
+            FROM channels
+            WHERE TRIM(groupTitle) IN ($placeholders)
+          ) WHERE row_num > ? AND row_num <= ?
+          ''',
+          [...chunk, safeOffset, safeOffset + safeLimit],
+        );
+
+        for (final row in rows) {
+          final groupTitle = (row['groupTitle'] as String?)?.trim() ?? '';
+          // We need to match the original category string requested (which might have different casing)
+          final matchedCat = categories.firstWhere(
+            (c) => c.trim().toLowerCase() == groupTitle.toLowerCase(),
+            orElse: () => groupTitle,
+          );
+          if (mapped.containsKey(matchedCat)) {
+            mapped[matchedCat]!.add(_hydrateAttrs(row));
+          }
+        }
+      }
+
+      // Handle Uncategorized
+      if (hasUncategorized) {
+        final uncategorizedCat = categories.firstWhere((c) => c.trim().toLowerCase() == 'uncategorized');
+        final uncategorizedRows = await db.query(
+          'channels',
+          where: 'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
+          whereArgs: ['', 'Uncategorized'],
+          orderBy: 'idx ASC',
+          limit: safeLimit,
+          offset: safeOffset,
+        );
+        for (final row in uncategorizedRows) {
+          mapped[uncategorizedCat]!.add(_hydrateAttrs(row));
+        }
+      }
+    });
+
     return mapped;
   }
 
@@ -666,6 +706,30 @@ class LocalDbService {
     };
   }
 
+  Future<void> deleteProgramsForEpgIds(List<String> epgIds) async {
+    if (epgIds.isEmpty) return;
+
+    // Split into chunks to avoid SQLite variable limits (usually 999)
+    const int chunkSize = 500;
+
+    await _withBulkWrite(() async {
+      await _queueWrite((db) async {
+        await db.transaction((txn) async {
+          for (var i = 0; i < epgIds.length; i += chunkSize) {
+            final chunk = epgIds.sublist(
+                i, (i + chunkSize).clamp(0, epgIds.length));
+            final placeholders = List.filled(chunk.length, '?').join(',');
+            await txn.delete(
+              'epg_programs',
+              where: 'epgId IN ($placeholders)',
+              whereArgs: chunk,
+            );
+          }
+        });
+      });
+    });
+  }
+
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
@@ -826,43 +890,26 @@ class LocalDbService {
   }
 
   /// Bulk insert programs for multiple channels.
-  Future<void> insertAllPrograms(Map<String, List<Map<String, dynamic>>> programsByChannel) async {
+  Future<void> insertAllPrograms(
+      Map<String, List<Map<String, dynamic>>> programsByChannel) async {
     if (programsByChannel.isEmpty) return;
 
-    // Flatten all programs into a single list for batching
-    final allPrograms = <Map<String, dynamic>>[];
-    for (final entry in programsByChannel.entries) {
-      final epgId = entry.key;
-      for (final p in entry.value) {
-        // Create a copy of the map to inject epgId efficiently
-        final programData = Map<String, dynamic>.from(p);
-        programData['epgId'] = epgId;
-        allPrograms.add(programData);
-      }
-    }
-
-    if (allPrograms.isEmpty) return;
-
+    // Use a fixed-size buffer to batch inserts without flattening everything first
     const int batchSize = 500;
-    for (var i = 0; i < allPrograms.length; i += batchSize) {
-      final end = (i + batchSize).clamp(0, allPrograms.length);
-      final chunk = allPrograms.sublist(i, end);
+    final buffer = <Map<String, dynamic>>[];
+
+    // Helper to flush the buffer to DB
+    Future<void> flushBuffer(List<Map<String, dynamic>> batchItems) async {
+      if (batchItems.isEmpty) return;
 
       await _withBulkWrite(() async {
         await _queueWrite((db) async {
           await db.transaction((txn) async {
             final batch = txn.batch();
-            for (final p in chunk) {
+            for (final p in batchItems) {
               batch.insert(
                 'epg_programs',
-                {
-                  'epgId': p['epgId'],
-                  'startTs': p['startTs'],
-                  'endTs': p['endTs'],
-                  'title': p['title'],
-                  'description': p['description'],
-                  'imageUrl': p['imageUrl'],
-                },
+                p,
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
             }
@@ -870,11 +917,33 @@ class LocalDbService {
           });
         });
       });
+    }
 
-      // Yield to event loop to keep UI responsive
-      if (i + batchSize < allPrograms.length) {
-        await Future.delayed(Duration.zero);
+    for (final entry in programsByChannel.entries) {
+      final epgId = entry.key;
+      for (final p in entry.value) {
+        // Construct the exact map needed for insertion directly
+        buffer.add({
+          'epgId': epgId,
+          'startTs': p['startTs'],
+          'endTs': p['endTs'],
+          'title': p['title'],
+          'description': p['description'],
+          'imageUrl': p['imageUrl'],
+        });
+
+        if (buffer.length >= batchSize) {
+          await flushBuffer(List.from(buffer));
+          buffer.clear();
+          // Yield to event loop to keep UI responsive
+          await Future.delayed(Duration.zero);
+        }
       }
+    }
+
+    // Flush any remaining items
+    if (buffer.isNotEmpty) {
+      await flushBuffer(List.from(buffer));
     }
   }
 

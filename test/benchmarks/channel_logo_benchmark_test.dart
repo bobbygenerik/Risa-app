@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
-import 'package:iptv_player/services/image_validation_service.dart';
 
 class MockHttpOverrides extends HttpOverrides {
   int headRequestCount = 0;
@@ -56,7 +55,16 @@ class MockHttpClientRequest extends Fake implements HttpClientRequest {
   }
 
   @override
+  void add(List<int> data) {}
+
+  @override
+  void write(Object? obj) {}
+
+  @override
   HttpHeaders get headers => MockHttpHeaders();
+
+  @override
+  void abort([Object? exception, StackTrace? stackTrace]) {}
 }
 
 class MockHttpHeaders extends Fake implements HttpHeaders {
