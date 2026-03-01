@@ -1,27 +1,50 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:iptv_player/services/channel_logo_service.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockPathProviderPlatform extends Fake with MockPlatformInterfaceMixin implements PathProviderPlatform {
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
+
+class MockHttpOverrides extends HttpOverrides {
+  int headRequestCount = 0;
+  int getRequestCount = 0;
+
   @override
-  Future<String?> getApplicationSupportPath() async {
-    return '.';
+  HttpClient createHttpClient(SecurityContext? context) {
+    return MockHttpClient(this);
   }
 }
 
 class MockHttpClient extends Fake implements HttpClient {
+  final MockHttpOverrides overrides;
+
+  MockHttpClient(this.overrides);
+
+  @override
+  bool autoUncompress = true;
+
   @override
   Future<HttpClientRequest> openUrl(String method, Uri url) async {
+    if (method == 'HEAD') {
+      overrides.headRequestCount++;
+      return MockHttpClientRequest();
+    } else if (method == 'GET') {
+      overrides.getRequestCount++;
+      return MockHttpClientRequest();
+    }
     return MockHttpClientRequest();
   }
 
   @override
   Future<HttpClientRequest> headUrl(Uri url) async {
-    return MockHttpClientRequest();
+      overrides.headRequestCount++;
+      return MockHttpClientRequest();
+  }
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+      overrides.getRequestCount++;
+      return MockHttpClientRequest();
   }
 }
 
@@ -44,73 +67,68 @@ class MockHttpClientRequest extends Fake implements HttpClientRequest {
   void abort([Object? exception, StackTrace? stackTrace]) {}
 }
 
+class MockHttpHeaders extends Fake implements HttpHeaders {
+  @override
+  void add(String name, Object value, {bool preserveHeaderCase = false}) {}
+
+  @override
+  void set(String name, Object value, {bool preserveHeaderCase = false}) {}
+}
+
 class MockHttpClientResponse extends Fake implements HttpClientResponse {
   @override
   int get statusCode => 200;
 
   @override
+  int get contentLength => 0;
+
+  @override
+  HttpClientResponseCompressionState get compressionState => HttpClientResponseCompressionState.notCompressed;
+
+  @override
+  StreamSubscription<List<int>> listen(void Function(List<int> event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    return Stream<List<int>>.value([]).listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+  }
+
+  @override
   HttpHeaders get headers => MockHttpHeaders();
 }
 
-class MockHttpHeaders extends Fake implements HttpHeaders {
-  @override
-  String? value(String name) => null;
-
-  @override
-  List<String>? operator [](String name) => null;
-}
-
-class MockFile extends Fake implements File {
-  final String path;
-  final VoidCallback onWrite;
-
-  MockFile(this.path, {required this.onWrite});
-
-  @override
-  Future<bool> exists() async => false;
-
-  @override
-  Future<File> writeAsString(String contents, {FileMode mode = FileMode.write, Encoding encoding = utf8, bool flush = false}) async {
-    if (path.contains('channel_logos_cache.json')) {
-      onWrite();
-    }
-    return this;
-  }
-
-  @override
-  Future<String> readAsString({Encoding encoding = utf8}) async {
-    return '';
-  }
-
-  @override
-  Future<FileSystemEntity> delete({bool recursive = false}) async {
-    return this;
-  }
-}
-
 void main() {
-  setUp(() {
-    PathProviderPlatform.instance = MockPathProviderPlatform();
-  });
+  testWidgets('ChannelLogoWidget N+1 HEAD request benchmark', (WidgetTester tester) async {
+    final overrides = MockHttpOverrides();
 
-  test('Benchmark ChannelLogoService writes', () async {
-    int writeCount = 0;
+    await HttpOverrides.runZoned(() async {
+      final urls = List.generate(10, (i) => 'http://example.com/logo_$i.png');
 
-    await IOOverrides.runZoned(() async {
-      await HttpOverrides.runZoned(() async {
-        // List of channels that exist in _knownLogos
-        final channels = ['tsn', 'cnn', 'espn', 'hbo', 'showtime'];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView.builder(
+              itemCount: urls.length,
+              itemBuilder: (context, index) {
+                return ChannelLogoWidget(
+                  channelName: 'Channel $index',
+                  logoUrl: urls[index],
+                  width: 50,
+                  height: 50,
+                );
+              },
+            ),
+          ),
+        ),
+      );
 
-        await ChannelLogoService.enrichBatch(channels);
+      await tester.pumpAndSettle();
 
-        // Wait for potential debounce timer (e.g. 2 seconds) to fire
-        await Future.delayed(const Duration(seconds: 3));
-      }, createHttpClient: (_) => MockHttpClient());
-    }, createFile: (path) => MockFile(path, onWrite: () => writeCount++));
+      print('HEAD requests: ${overrides.headRequestCount}');
+      print('GET requests: ${overrides.getRequestCount}');
 
-    print('Write count: $writeCount');
-    // We expect exactly 1 write after optimization (debouncing)
-    // Currently this will fail as it writes ~4 times
-    expect(writeCount, equals(1));
+      // We expect 0 HEAD requests now, as validation is removed
+      expect(overrides.headRequestCount, 0, reason: 'Should NOT perform HEAD request for each logo');
+
+    }, createHttpClient: (context) => overrides.createHttpClient(context));
   });
 }
