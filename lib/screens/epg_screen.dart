@@ -86,6 +86,7 @@ class _EPGScreenState extends State<EPGScreen>
   static const int _epgSnapshotChannelLimit = 60;
   bool _snapshotApplied = false;
   Timer? _snapshotSaveDebounce;
+  List<Channel> _lastFilteredChannels = [];
 
   @override
   void initState() {
@@ -279,8 +280,6 @@ class _EPGScreenState extends State<EPGScreen>
       if (favoriteIds.isNotEmpty) {
         _epgState.setEpgFavoriteChannelIds(favoriteIds);
       }
-      _epgState.updatePaginatedChannels(channels);
-      _epgState.setHasMore(true);
       if (programSnapshot.isNotEmpty) {
         final epgService =
             Provider.of<IncrementalEpgService>(context, listen: false);
@@ -566,7 +565,7 @@ class _EPGScreenState extends State<EPGScreen>
     }
     _categoryFocusNodes.clear();
     _snapshotSaveDebounce?.cancel();
-    unawaited(_saveEpgSnapshot(_epgState.paginatedChannels));
+    unawaited(_saveEpgSnapshot(_lastFilteredChannels));
     _timerService.unregister('epg_auto_refresh');
     _epgState.removeListener(_handleEpgStateChanged);
     _epgState.dispose();
@@ -782,12 +781,11 @@ class _EPGScreenState extends State<EPGScreen>
                 final allFilteredChannels = rawChannels.take(expected).toList();
                 _scheduleSnapshotSave(allFilteredChannels);
 
-                // FIX: Do NOT update state during build. Use the data directly.
-                // We only update the state when the page changes or filters change,
-                // which is handled by the controllers, not the build method.
-
                 // Use the fresh data directly for this frame
                 final filteredChannels = allFilteredChannels;
+
+                // Update the local tracker for dispose-time saving without triggering rebuilds
+                _lastFilteredChannels = allFilteredChannels;
 
                 // Calculate header height for offset
                 const headerHeight =
@@ -826,7 +824,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
                                     child:
-                                        _buildChannelColumn(filteredChannels, categoryNames),
+                                        _buildChannelColumn(filteredChannels, categoryNames, hasMore),
                                   ),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
@@ -1313,7 +1311,7 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildChannelColumn(List<Channel> channels, List<String> categories) {
+  Widget _buildChannelColumn(List<Channel> channels, List<String> categories, bool hasMore) {
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     return Column(
@@ -1347,7 +1345,7 @@ class _EPGScreenState extends State<EPGScreen>
             channels: channels,
             isLoadingMore: _epgState.isLoadingMore,
             onLoadMore: () {
-              if (!_epgState.hasMore) return;
+              if (!hasMore) return;
               setState(() {
                 _epgState.loadMoreChannels();
               });
