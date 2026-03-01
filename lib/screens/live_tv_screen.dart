@@ -1774,79 +1774,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       prev.hasUsableData != next.hasUsableData,
                   builder: (context, epgState, _) {
                     final epgService = context.read<IncrementalEpgService>();
-                    // Try to find channels with EPG data ready
-                    // FIX: Don't filter out channels just because EPG is missing!
-                    // We want to show the channels ASAP.
-                    // final readyChannels = _filterChannelsWithLoadedEpg(previewList, epgService);
 
                     // Trigger EPG load for visible channels but don't hide them
                     _ensureEpgForChannels(previewList, epgService);
 
                     List<Channel> displayChannels = previewList;
-                    final timeSinceInit = DateTime.now().difference(_initTime);
-
-                    if (displayChannels.isEmpty) {
-                      // Check for explicit EPG errors first
-                      if (epgService.error != null &&
-                          epgService.error!.isNotEmpty) {
-                        _markSkeletonVisibility(false);
-                        return _buildEpgError(epgService.error!);
-                      }
-
-                      final isEpgLoading = epgState.isLoading ||
-                          epgState.isParsing ||
-                          epgState.isDownloading;
-
-                      // Also check if batch loading is in progress
-                      final isBatchLoading = epgState.isBatchLoading;
-
-                      // Only show skeleton if we haven't shown content yet
-                      // This prevents flickering when EPG background refreshes occur
-                      if ((isEpgLoading || isBatchLoading) &&
-                          !_hasShownContent) {
-                        debugLog(
-                            'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
-                        return buildSkeleton();
-                      }
-
-                      // Give EPG a short grace period to load programs if none are present yet
-                      // But if we already have programs (just no matches), fail immediately
-                      // Skip this if we've already shown content once
-                      final gracefulWait = !epgState.hasPrograms &&
-                          timeSinceInit.inSeconds < 5 &&
-                          !_hasShownContent;
-
-                      if (gracefulWait) {
-                        debugLog(
-                            'LiveTV: EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
-                        return buildSkeleton();
-                      }
-
-                      // EPG NOT loading, no error, but still no channels with data after timeout
-                      if (!epgState.hasUrl) {
-                        _markSkeletonVisibility(false);
-                        return _buildEpgError(
-                            'No EPG URL configured. Please add an EPG URL in Settings.');
-                      }
-
-                      // Check if EPG has any loaded programs at all
-                      if (!epgState.hasPrograms) {
-                        _markSkeletonVisibility(false);
-                        return _buildEpgError(
-                            'EPG data could not be loaded. Check your EPG URL in Settings.');
-                      }
-
-                      // EPG has programs but none matched - show error about mappings
-                      _markSkeletonVisibility(false);
-                      debugLog(
-                          'LiveTV: EPG has ${epgService.availableChannels.length} channels but none matched ${previewList.length} playlist channels');
-                      return _buildEpgError(
-                          'EPG channels did not match playlist. Check EPG mappings in Settings.');
-                    }
 
                     _markSkeletonVisibility(false);
-
-                    // displayChannels already defined above
 
                     // Handle Stable ID vs Index
                     if (_featuredChannelId != null) {
