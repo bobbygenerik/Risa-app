@@ -262,6 +262,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ContentFocusRegistrant<LiveTVScreen>,
         WidgetsBindingObserver {
   int _featuredIndex = 0;
+  late final int _featuredShuffleSeed;
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
   late final ScrollController _scrollController;
@@ -377,6 +378,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void initState() {
     super.initState();
+    // Seed featured shuffle from current date so order is stable within a day
+    final now = DateTime.now();
+    _featuredShuffleSeed = now.year * 10000 + now.month * 100 + now.day;
     WidgetsBinding.instance.addObserver(this);
     _artworkService = LiveTvArtworkService(
       onArtworkUpdate: () {
@@ -1507,6 +1511,44 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _restoreCardFocusIfMissing();
     final bool shouldScrollFirst =
         _scrollController.hasClients && _safeScrollOffset() > 100;
+    
+    // DEBUG: Always show diagnostic info to identify blank screen cause
+    Widget debugStateInfo = const SizedBox.shrink();
+    if (kDebugMode) {
+      debugStateInfo = Positioned(
+        top: 60,
+        left: 10,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.red.withAlpha(200),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Builder(
+            builder: (context) {
+              final channelProvider = context.read<ChannelProvider>();
+              return Text(
+                'hasChannels: ${channelProvider.hasChannels}\n'
+                'isLoading: ${channelProvider.isLoading}\n'
+                'isColdStart: ${channelProvider.isColdStartLoad}\n'
+                'hasLoadedPlaylist: ${channelProvider.hasLoadedPlaylist}\n'
+                'noPlaylistConfigured: ${channelProvider.noPlaylistConfigured}\n'
+                'error: ${channelProvider.errorMessage ?? "none"}\n'
+                '_hasShownContent: $_hasShownContent\n'
+                '_categoryNames: ${_categoryNames.length}\n'
+                '_categoryCache: ${_categoryChannelCache.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+    
     return PopScope(
       canPop: !shouldScrollFirst,
       onPopInvokedWithResult: (didPop, result) {
@@ -1608,7 +1650,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
 
             if (!hasChannels && channelProvider.noPlaylistConfigured) {
-              return buildNoPlaylistState(channelProvider.errorMessage);
+              return Stack(
+                children: [
+                  buildNoPlaylistState(channelProvider.errorMessage),
+                  if (kDebugMode)
+                    Positioned(
+                      top: 60,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withAlpha(200),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'NO PLAYLIST STATE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
             }
 
             // Use Selector to only rebuild when loading state changes, not on every EPG update
@@ -1668,23 +1734,51 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   progress: channelProvider.loadingProgress,
                 );
 
+            Widget wrapWithDebugBadge(Widget child, String label) {
+              if (!kDebugMode) return child;
+              return Stack(
+                children: [
+                  child,
+                  Positioned(
+                    top: 60,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withAlpha(200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'SKELETON: $label',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
             // Block UI until EPG is ready when we have displayable data.
             // But only block on initial load - don't re-display skeleton after content shown
             if ((shouldBlockForEpg || epgBusy) && !_hasShownContent) {
-              return buildSkeleton();
+              return wrapWithDebugBadge(buildSkeleton(), 'EPG_BLOCK');
             }
 
             // Show loading overlay during cold start, skeleton only for warm starts
             if (channelProvider.isColdStartLoad &&
                 overlayBusy &&
                 !_hasShownContent) {
-              return buildSkeleton();
+              return wrapWithDebugBadge(buildSkeleton(), 'COLD_START');
             }
 
             if (!hasChannels &&
                 channelProvider.isLoading &&
                 !channelProvider.noPlaylistConfigured) {
-              return buildSkeleton();
+              return wrapWithDebugBadge(buildSkeleton(), 'NO_CHANNELS_LOADING');
             }
 
             // If we have categories (data), SHOW THE UI! The EPG can populate later.
@@ -1726,6 +1820,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return buildNoPlaylistState(errorMessage);
             }
 
+            // SAFETY FALLBACK: If we reach this point but have no displayable content,
+            // show skeleton to prevent blank screen. This handles edge cases where:
+            // - _hasShownContent is true but data was cleared
+            // - hasChannels is true but categories are still being built
+            // - Any other state desynchronization
+            if (_categoryNames.isEmpty ||
+                (_categoryChannelCache.isEmpty && hasChannels)) {
+              debugLog(
+                  'LiveTV: Safety fallback triggered - showing skeleton while content loads');
+              return wrapWithDebugBadge(buildSkeleton(), 'SAFETY_FALLBACK');
+            }
+
             _requestCategoryPrefetch();
             _maybeRefreshCategories(channelProvider.channelCount);
             final previewCount = channelProvider.channelCount;
@@ -1747,7 +1853,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         ? snapshot.data!
                         : channelProvider.channels;
                 if (previewList.isEmpty) {
-                  return buildSkeleton();
+                  return wrapWithDebugBadge(buildSkeleton(), 'EMPTY_PREVIEW');
                 }
 
                 // CRITICAL: Wrap Hero in Selector so it reacts to background EPG flow but ignores progress ticks
@@ -1806,7 +1912,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           !_hasShownContent) {
                         debugLog(
                             'LiveTV: Waiting for EPG (${timeSinceInit.inMilliseconds}ms, batchLoading=$isBatchLoading)');
-                        return buildSkeleton();
+                        return wrapWithDebugBadge(buildSkeleton(), 'EPG_WAITING');
                       }
 
                       // Give EPG a short grace period to load programs if none are present yet
@@ -1819,7 +1925,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       if (gracefulWait) {
                         debugLog(
                             'LiveTV: EPG not ready yet, waiting (${timeSinceInit.inMilliseconds}ms)');
-                        return buildSkeleton();
+                        return wrapWithDebugBadge(buildSkeleton(), 'GRACEFUL_WAIT');
                       }
 
                       // EPG NOT loading, no error, but still no channels with data after timeout
@@ -1832,8 +1938,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       // Check if EPG has any loaded programs at all
                       if (!epgState.hasPrograms) {
                         _markSkeletonVisibility(false);
-                        return _buildEpgError(
-                            'EPG data could not be loaded. Check your EPG URL in Settings.');
+                        return Stack(
+                          children: [
+                            _buildEpgError(
+                                'EPG data could not be loaded. Check your EPG URL in Settings.'),
+                            if (kDebugMode)
+                              Positioned(
+                                top: 60,
+                                left: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.withAlpha(200),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'EPG ERROR: No Programs',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
                       }
 
                       // EPG has programs but none matched - show error about mappings
@@ -1906,6 +2036,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               ),
                             ),
                           ),
+                        // ── State debug overlay ──
+                        if (kDebugMode) debugStateInfo,
                       ],
                     );
                   },
@@ -1927,8 +2059,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgService = context.read<IncrementalEpgService>();
     final mostWatched = channelProvider.mostWatchedChannels;
 
-    // Use stabilized channels if already initialized and fallback haven't changed much
-    if (_featuredChannelsInitialized && _stableFeaturedChannels.isNotEmpty) {
+    // Use stabilized channels if already initialized and we have enough
+    if (_featuredChannelsInitialized && _stableFeaturedChannels.length >= 5) {
       return RepaintBoundary(
         child: _buildChannelSection(
           context,
@@ -1938,6 +2070,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           allowCategoryPaging: false,
         ),
       );
+    }
+    // If we stabilized with too few channels, re-evaluate
+    if (_featuredChannelsInitialized && _stableFeaturedChannels.length < 5) {
+      _featuredChannelsInitialized = false;
     }
 
     // Mix most-watched with random selection for balanced featured content
@@ -1964,24 +2100,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (missingChannelIds.add(channelId)) {
           missingChannelNames.add(channel.epgLookupNameFallback);
         }
-        continue;
+        // Don't skip — show channel with logo/name while EPG loads
       }
 
-      if (epgService.shouldHideChannel(
+      // Only hide channels we positively know are bad — not those merely lacking EPG
+      if (currentProgram != null && epgService.shouldHideChannel(
         channelId,
         channelName: channel.epgLookupNameFallback,
       )) {
         continue;
       }
 
-      final displayTitle = _displayProgramTitle(currentProgram, channel);
-      final normalizedTitle = normalizeForFilter(displayTitle);
-      if (featuredProgramTitles.contains(normalizedTitle)) {
-        debugLog(
-            'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
-        continue;
+      if (currentProgram != null) {
+        final displayTitle = _displayProgramTitle(currentProgram, channel);
+        final normalizedTitle = normalizeForFilter(displayTitle);
+        if (featuredProgramTitles.contains(normalizedTitle)) {
+          debugLog(
+              'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
+          continue;
+        }
+        featuredProgramTitles.add(normalizedTitle);
       }
-      featuredProgramTitles.add(normalizedTitle);
 
       if (!addedChannelIds.contains(channelId)) {
         featuredChannels.add(channel);
@@ -1995,7 +2134,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         .toList();
 
     // Shuffle for randomness
-    availableChannels.shuffle(math.Random());
+    // Use date-seeded random so order is stable during rebuilds but refreshes daily
+    availableChannels.shuffle(math.Random(_featuredShuffleSeed));
 
     final targetFeaturedCount = 10; // Total featured channels to show
     final remainingSlots = targetFeaturedCount - featuredChannels.length;
@@ -2016,24 +2156,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (missingChannelIds.add(channelId)) {
           missingChannelNames.add(channel.epgLookupNameFallback);
         }
-        continue;
+        // Don't skip — show channel with logo/name while EPG loads
       }
 
-      if (epgService.shouldHideChannel(
+      // Only hide channels we positively know are bad — not those merely lacking EPG
+      if (currentProgram != null && epgService.shouldHideChannel(
         channelId,
         channelName: channel.epgLookupNameFallback,
       )) {
         continue;
       }
 
-      final displayTitle = _displayProgramTitle(currentProgram, channel);
-      final normalizedTitle = normalizeForFilter(displayTitle);
-      if (featuredProgramTitles.contains(normalizedTitle)) {
-        debugLog(
-            'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
-        continue;
+      if (currentProgram != null) {
+        final displayTitle = _displayProgramTitle(currentProgram, channel);
+        final normalizedTitle = normalizeForFilter(displayTitle);
+        if (featuredProgramTitles.contains(normalizedTitle)) {
+          debugLog(
+              'LiveTV: Skipping channel "${channel.name}" - program "${currentProgram.title}" already featured');
+          continue;
+        }
+        featuredProgramTitles.add(normalizedTitle);
       }
-      featuredProgramTitles.add(normalizedTitle);
 
       featuredChannels.add(channel);
       addedChannelIds.add(channelId);
@@ -2047,12 +2190,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (featuredChannels.length >= targetFeaturedCount) break;
         final channelId = channel.epgLookupId;
         if (addedChannelIds.contains(channelId)) continue;
-        if (epgService.shouldHideChannel(
-          channelId,
-          channelName: channel.epgLookupNameFallback,
-        )) {
-          continue;
-        }
         featuredChannels.add(channel);
         addedChannelIds.add(channelId);
       }
@@ -3211,20 +3348,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return _applyTmdbSize(url, size);
   }
 
-  bool _isHighResHeroImage(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('image.tmdb.org')) {
-      if (lower.contains('/original/') ||
-          lower.contains('/w1920/') ||
-          lower.contains('/w1280/')) {
-        return true;
-      }
-    }
-    // Fallback: assume false without size check
-    return false;
-  }
-
   String _displayProgramTitle(Program program, Channel? channel) {
     final trimmed = program.title.trim();
     if (trimmed.isEmpty) return program.title;
@@ -3268,7 +3391,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         groupTitle: channel.groupTitle,
       );
 
-      if (epgService.shouldHideChannel(
+      // Only hide channels we positively know are bad — not those merely lacking EPG
+      if (program != null && epgService.shouldHideChannel(
         channelId,
         channelName: channel.epgLookupNameFallback,
       )) {
@@ -3485,14 +3609,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (program == null) {
         missingIds.add(channelId);
         missingNames.add(channel.epgLookupNameFallback);
-        // Don't skip channels in featured row - show them even without EPG
-        // This allows users to see channels while EPG is still loading
-        // Only skip if we have many channels with EPG and this one doesn't match
-        final hasManyWithEpg = filteredChannels.length > 10;
-        if (isFirstRow && hasManyWithEpg) {
-          // Skip only if we already have enough channels with EPG
-          continue;
-        }
+        // Always include — show channel with logo/name while EPG loads
       }
 
       // Removed shouldHideChannel check strictly hiding channels.
