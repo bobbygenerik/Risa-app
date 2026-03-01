@@ -200,9 +200,12 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
     final bool isHero = widget.probeTag.contains('hero');
     // Cards: reject portrait (aspect < 1.0) — no posters ever.
     // Hero: require 1.3:1 minimum to ensure proper widescreen look.
+    // NOTE: Do NOT call markInvalid() here — a portrait aspect ratio is a
+    // composition issue, not a broken URL. Permanently blacklisting the URL
+    // prevents any future attempt to use it (e.g. after a different program
+    // airs on the same channel). Record the portrait hit for diagnostics only.
     if (isHero && width / height < 1.3) {
       ImageFailureCache.recordPortrait(widget.url);
-      ImageValidationService.markInvalid(widget.url);
       ImageLoadProbe.recordFailure(
         widget.url,
         widget.probeTag,
@@ -212,7 +215,6 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
     }
     if (!isHero && width / height < 1.0) {
       ImageFailureCache.recordPortrait(widget.url);
-      ImageValidationService.markInvalid(widget.url);
       ImageLoadProbe.recordFailure(
         widget.url,
         widget.probeTag,
@@ -1881,32 +1883,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           displayChannels,
                         ),
                         _buildBackgroundUpdateIndicator(context),
-                        // ── Artwork diagnostic overlay ──
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: IgnorePointer(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.black87,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '${_artworkService.diagnosticSummary}\n'
-                                'Cards: $_diagCardArtHit hit / $_diagCardArtMiss miss / $_diagCardNoProgram noProg / $_diagCardValidationReject valRej\n'
-                                'Hero: $_diagHeroArtHit hit / $_diagHeroArtMiss miss / $_diagHeroValidationReject valRej\n'
-                                'Cache: ${_artworkService.programArtworkCacheSize} id / ${_artworkService.titleArtworkCacheSize} title',
-                                style: const TextStyle(
-                                  color: Colors.greenAccent,
-                                  fontSize: 9,
-                                  fontFamily: 'monospace',
+                        // ── Artwork diagnostic overlay (debug builds only) ──
+                        if (kDebugMode)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IgnorePointer(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black87,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${_artworkService.diagnosticSummary}\n'
+                                  'Cards: $_diagCardArtHit hit / $_diagCardArtMiss miss / $_diagCardNoProgram noProg / $_diagCardValidationReject valRej\n'
+                                  'Hero: $_diagHeroArtHit hit / $_diagHeroArtMiss miss / $_diagHeroValidationReject valRej\n'
+                                  'Cache: ${_artworkService.programArtworkCacheSize} id / ${_artworkService.titleArtworkCacheSize} title',
+                                  style: const TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 9,
+                                    fontFamily: 'monospace',
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
                       ],
                     );
                   },
@@ -3357,25 +3360,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         );
       }
 
-      // 3. Fall back to the direct image URL provided in the EPG XML itself
+      // 3. Fall back to the direct image URL provided in the EPG XML itself.
+      // isEpgFallback:true bypasses the landscape-keyword URL check so that
+      // opaque CDN paths (e.g. cdn.example.com/images/abc.jpg) aren't rejected.
+      // preferHighRes is intentionally NOT applied here — EPG images from the
+      // provider's own CDN should always be shown rather than leaving the hero
+      // blank while waiting for TMDB/TVDB to respond.
       final direct = _normalizeArtworkUrl(program.imageUrl, isHero: true);
       if (_isValidProgramArtwork(
         direct,
         channel,
         programTitle: program.title,
         source: 'hero_epg',
+        isEpgFallback: true,
       )) {
         final normalized = normalizeImageUrl(direct!);
-        if (!preferHighRes || _isHighResHeroImage(normalized)) {
-          _logArtworkDecision(
-            'LiveTV artwork: hero source=epg program="${program.title}" url=$normalized',
-          );
-          _diagHeroArtHit++;
-          return normalized;
-        }
         _logArtworkDecision(
-          'LiveTV artwork: skip low-res epg program="${program.title}" url=$normalized',
+          'LiveTV artwork: hero source=epg program="${program.title}" url=$normalized',
         );
+        _diagHeroArtHit++;
+        return normalized;
       } else {
         // EPG image was rejected or missing — tracked by _diagHeroArtMiss counter
       }

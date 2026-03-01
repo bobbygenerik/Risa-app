@@ -1354,27 +1354,17 @@ class LiveTvArtworkService {
   }
 
   Future<void> _loadProgramArtworkNegativeCache() async {
+    // Do not restore the negative cache across sessions. A previous failure
+    // may have been transient (API outage, network issue) and should not block
+    // fetches in a fresh session. The negative cache is still written during a
+    // session to avoid hammering APIs within a single run, but it always starts
+    // empty. Also clear any stale data left from a previous session.
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_programArtworkNegativeCacheKey);
-      if (raw == null || raw.isEmpty) return;
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) return;
-      _programArtworkNegativeByTitle.clear();
-      _programArtworkNegativeTitleOrder.clear();
-      final now = DateTime.now();
-      decoded.forEach((key, value) {
-        if (value is int) {
-          final until = DateTime.fromMillisecondsSinceEpoch(value);
-          if (until.isAfter(now)) {
-            _programArtworkNegativeByTitle[key] = until;
-            _programArtworkNegativeTitleOrder.addLast(key);
-          }
-        }
-      });
-    } catch (e) {
-      debugLog('ArtworkService: loadNegativeCache failed: $e');
-    }
+      await prefs.remove(_programArtworkNegativeCacheKey);
+    } catch (_) {}
+    _programArtworkNegativeByTitle.clear();
+    _programArtworkNegativeTitleOrder.clear();
   }
 
   void _scheduleProgramArtworkTitleSave() {
