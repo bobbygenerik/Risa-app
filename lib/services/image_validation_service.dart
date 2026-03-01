@@ -132,11 +132,20 @@ class ImageValidationService {
         }
         markValid(url);
         return true;
-      } else {
+      } else if (response.statusCode == 404 || response.statusCode == 410) {
+        // Definitively gone — safe to mark as invalid and skip future attempts.
         debugLog(
             'ImageValidation: Rejected $url — status: ${response.statusCode}');
         markInvalid(url);
         return false;
+      } else {
+        // Any other non-2xx (e.g. 405 Method Not Allowed, 500, 503):
+        // Do NOT mark as invalid — 405 means the server doesn't support HEAD
+        // but the URL itself may be perfectly valid (images still load via GET).
+        // Transient server errors should not permanently block the URL either.
+        debugLog(
+            'ImageValidation: Allowing $url despite status ${response.statusCode}');
+        return true;
       }
     } catch (e) {
       // Network errors — don't aggressively mark as bad; might be transient

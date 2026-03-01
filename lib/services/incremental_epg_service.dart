@@ -4036,25 +4036,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           // Check if any entries need clearing
           final keysToClear =
               buffer.keys.where((k) => cleared[k] != false).toList();
-          if (keysToClear.isEmpty) {
-            // Fast path: no clearing needed, batch insert all at once
-            await _db.insertAllPrograms(buffer);
-          } else {
-            // Some entries need clearing - handle them individually, batch the rest
-            final filteredBuffer =
-                Map<String, List<Map<String, dynamic>>>.fromEntries(
-              buffer.entries.where((e) => !keysToClear.contains(e.key)),
-            );
-            // Clear and insert for channels that need it
-            for (final epgId in keysToClear) {
-              await _db.insertPrograms(epgId, buffer[epgId]!,
-                  clearExisting: true);
-            }
-            // Batch insert the rest
-            if (filteredBuffer.isNotEmpty) {
-              await _db.insertAllPrograms(filteredBuffer);
-            }
+          if (keysToClear.isNotEmpty) {
+            await _db.deleteProgramsForEpgIds(keysToClear);
           }
+          await _db.insertAllPrograms(buffer);
           dbBatchMs += dbTimer.elapsedMilliseconds;
           dbBatchCount++;
         } catch (e) {

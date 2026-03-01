@@ -76,21 +76,13 @@ Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
   try {
     if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
 
-    // Simple heuristic: assume low memory if running on older Android or Shield
+    // Simple heuristic: assume low memory if running on older Android (pre-8.0).
+    // Shield TV devices (2–3 GB RAM) are NOT low-memory and should not be
+    // treated as such — the old override was degrading artwork loading on one
+    // of the most common IPTV devices.
     if (Platform.isAndroid) {
       final info = await Process.run('getprop', ['ro.build.version.sdk']);
       final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
-
-      // Check if it's a Shield device
-      final model = await Process.run('getprop', ['ro.product.model']);
-      final modelName = model.stdout.toString().toLowerCase();
-      final isShield = modelName.contains('shield');
-
-      // Shield devices need more conservative memory management
-      if (isShield) {
-        return _DeviceMemoryInfo(isLowMemory: true);
-      }
-
       return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
     }
 

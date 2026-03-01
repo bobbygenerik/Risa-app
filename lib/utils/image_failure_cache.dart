@@ -68,20 +68,20 @@ class ImageFailureCache {
     if (url.isEmpty) return;
     _failureCounts[url] = (_failureCounts[url] ?? 0) + 1;
 
-    // Detect TLS / connection-level errors → blacklist entire host
+    // Only blacklist the entire host on hard TLS failures — these indicate a
+    // structural incompatibility (wrong TLS version, bad cert) that will affect
+    // every URL on that host. Transient errors like connection refused or
+    // socket closed should NOT blacklist the host; they may be temporary.
     final errStr = error.toString().toLowerCase();
     if (errStr.contains('handshakeexception') ||
         errStr.contains('wrong_version_number') ||
         errStr.contains('tlsexception') ||
-        errStr.contains('certificate_verify_failed') ||
-        errStr.contains('connection refused') ||
-        errStr.contains('connection closed') ||
-        errStr.contains('socketexception')) {
+        errStr.contains('certificate_verify_failed')) {
       final host = _hostFromUrl(url);
       if (host.isNotEmpty && !_blacklistedHosts.contains(host)) {
         _blacklistedHosts.add(host);
         debugLog(
-            'ImageFailureCache: blacklisted host "$host" due to TLS/connection error: $error');
+            'ImageFailureCache: blacklisted host "$host" due to TLS error: $error');
       }
     }
   }
