@@ -60,7 +60,6 @@ class EPGMatchingUtils {
   static final RegExp _yearParenRe =
       RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$');
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
-  static final RegExp _digitRe = RegExp(r'\d'); // Cached for tokenization
 
   static const Map<String, String> _numberWordMap = {
     'one': '1',
@@ -160,6 +159,17 @@ class EPGMatchingUtils {
     return s;
   }
 
+  /// Checks if a string contains any digit using fast ascii bounds check.
+  static bool _hasDigit(String s) {
+    for (int i = 0; i < s.length; i++) {
+      final code = s.codeUnitAt(i);
+      if (code >= 48 && code <= 57) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Tokenizes a string for Jaccard/Overlap matching (Tier 4).
   static Set<String> tokenize(String input) {
     // Use the shared cleaning logic so tokens match the normalization assumptions
@@ -169,7 +179,7 @@ class EPGMatchingUtils {
         .split(_fuzzyTokenSplitRe)
         .where((t) =>
             t.isNotEmpty &&
-            (t.length >= _minTokenLength || _digitRe.hasMatch(t)))
+            (t.length >= _minTokenLength || _hasDigit(t)))
         .toSet();
   }
 
