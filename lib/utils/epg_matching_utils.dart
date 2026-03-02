@@ -153,10 +153,19 @@ class EPGMatchingUtils {
   /// Aggressively normalizes a channel name to create a "fingerprint" (collapsed).
   /// Used for Tier 3 matching.
   static String normalizeChannelName(String input) {
-    var s = cleanChannelName(input);
-    // Collapse to only alphanumeric chars
-    s = s.replaceAll(_nonAlphaNumRe, '');
-    return s;
+    final s = cleanChannelName(input);
+    // Collapse to only alphanumeric chars using fast manual iteration instead of Regex
+    final codes = <int>[];
+    for (int i = 0; i < s.length; i++) {
+      final code = s.codeUnitAt(i);
+      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
+                             (code >= 65 && code <= 90) ||  // A-Z
+                             (code >= 48 && code <= 57);    // 0-9
+      if (isAlphanumeric) {
+        codes.add(code);
+      }
+    }
+    return String.fromCharCodes(codes);
   }
 
   /// Checks if a string contains any digit using fast ascii bounds check.
@@ -174,13 +183,34 @@ class EPGMatchingUtils {
   static Set<String> tokenize(String input) {
     // Use the shared cleaning logic so tokens match the normalization assumptions
     final cleaned = cleanChannelName(input);
+    final tokens = <String>{};
 
-    return cleaned
-        .split(_fuzzyTokenSplitRe)
-        .where((t) =>
-            t.isNotEmpty &&
-            (t.length >= _minTokenLength || _hasDigit(t)))
-        .toSet();
+    // Fast manual string tokenization replacing Regex split
+    int startIdx = 0;
+    for (int i = 0; i < cleaned.length; i++) {
+      final code = cleaned.codeUnitAt(i);
+      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
+                             (code >= 65 && code <= 90) ||  // A-Z
+                             (code >= 48 && code <= 57);    // 0-9
+      if (!isAlphanumeric) {
+        if (i > startIdx) {
+          final t = cleaned.substring(startIdx, i);
+          if (t.length >= _minTokenLength || _hasDigit(t)) {
+            tokens.add(t);
+          }
+        }
+        startIdx = i + 1;
+      }
+    }
+
+    if (startIdx < cleaned.length) {
+      final t = cleaned.substring(startIdx);
+      if (t.length >= _minTokenLength || _hasDigit(t)) {
+        tokens.add(t);
+      }
+    }
+
+    return tokens;
   }
 
   /// Calculates a match score (0.0 - 100.0) between a playlist name and an EPG candidate.
