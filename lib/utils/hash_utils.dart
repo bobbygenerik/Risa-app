@@ -2,9 +2,9 @@
 String fnv1aHex(String input) {
   const int fnvPrime = 0x01000193;
   int hash = 0x811C9DC5;
-  final bytes = input.codeUnits;
-  for (var b in bytes) {
-    hash ^= b;
+  final length = input.length;
+  for (int i = 0; i < length; i++) {
+    hash ^= input.codeUnitAt(i);
     hash = (hash * fnvPrime) & 0xFFFFFFFF;
   }
   return hash.toRadixString(16).padLeft(8, '0');
