@@ -6,7 +6,13 @@ import 'dart:math' as math;
 // Feature extraction worker: returns color histogram (256 bins), edge
 // features (64 bins), texture features (32 bins), and dimensions.
 Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
-  final decoded = decodeImage(bytes);
+  Image? decoded;
+  try {
+    decoded = decodeImage(bytes);
+  } catch (e) {
+    decoded = null;
+  }
+
   if (decoded == null) {
     return {
       'colorHistogram': <double>[],
@@ -21,7 +27,7 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
   final maxSize = 200;
   Image work = decoded;
   if (decoded.width > maxSize || decoded.height > maxSize) {
-    work = copyResize(decoded, width: maxSize, height: (decoded.height * maxSize / decoded.width).round());
+    work = copyResize(decoded, width: maxSize, height: (decoded.height * maxSize / decoded.width).round(), interpolation: Interpolation.nearest);
   }
 
   final width = work.width;
@@ -45,7 +51,10 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
   }
 
   // Normalize histogram
-  final maxCount = histogram.reduce((a, b) => a > b ? a : b);
+  double maxCount = 0.0;
+  for (int i = 0; i < histogram.length; i++) {
+    if (histogram[i] > maxCount) maxCount = histogram[i];
+  }
   if (maxCount > 0) {
     for (int i = 0; i < histogram.length; i++) {
       histogram[i] /= maxCount;
@@ -77,7 +86,10 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
         edgeFeatures[bin]++;
       }
     }
-    final maxEdge = edgeFeatures.reduce((a, b) => a > b ? a : b);
+    double maxEdge = 0.0;
+    for(int i = 0; i < edgeFeatures.length; i++) {
+        if(edgeFeatures[i] > maxEdge) maxEdge = edgeFeatures[i];
+    }
     if (maxEdge > 0) {
       for (int i = 0; i < edgeFeatures.length; i++) {
         edgeFeatures[i] /= maxEdge;
@@ -106,7 +118,10 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
         textureFeatures[bin]++;
       }
     }
-    final maxTex = textureFeatures.reduce((a, b) => a > b ? a : b);
+    double maxTex = 0.0;
+    for(int i = 0; i < textureFeatures.length; i++) {
+        if(textureFeatures[i] > maxTex) maxTex = textureFeatures[i];
+    }
     if (maxTex > 0) {
       for (int i = 0; i < textureFeatures.length; i++) {
         textureFeatures[i] /= maxTex;
@@ -128,12 +143,18 @@ Map<String, dynamic> processLogoIsolate(Map<String, dynamic> params) {
   final bytes = params['bytes'] as Uint8List;
   final maxLogoSize = params['maxLogoSize'] as int? ?? 200;
 
-  final decoded = decodeImage(bytes);
+  Image? decoded;
+  try {
+    decoded = decodeImage(bytes);
+  } catch (e) {
+    decoded = null;
+  }
+
   if (decoded == null) return {'bytes': Uint8List(0), 'width': 0, 'height': 0};
 
   Image work = decoded;
   if (decoded.width > maxLogoSize || decoded.height > maxLogoSize) {
-    work = copyResize(decoded, width: maxLogoSize, height: (decoded.height * maxLogoSize / decoded.width).round());
+    work = copyResize(decoded, width: maxLogoSize, height: (decoded.height * maxLogoSize / decoded.width).round(), interpolation: Interpolation.nearest);
   }
 
   final encoded = encodePng(work);
