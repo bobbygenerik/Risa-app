@@ -8,6 +8,9 @@ import 'package:iptv_player/utils/sports_classifier.dart';
 class ProgramClassifier {
   ProgramClassifier._();
 
+  // Cache compiled regular expressions to avoid heavy RegExp instantiation in hot paths
+  static final Map<String, RegExp> _regexCache = {};
+
   /// Check if a program is sports-related.
   static bool isSportsProgram(Program program, [Channel? channel]) {
     return SportsClassifier.isSportsProgram(program, channel);
@@ -301,7 +304,11 @@ class ProgramClassifier {
       } else {
         // For single words, use word boundary regex
         // \b matches word boundaries (space, punctuation, start/end of string)
-        final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
+        var pattern = _regexCache[keyword];
+        if (pattern == null) {
+          pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
+          _regexCache[keyword] = pattern;
+        }
         if (pattern.hasMatch(value)) {
           return true;
         }
