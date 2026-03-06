@@ -487,11 +487,15 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     return mapping.tags.any((tag) => channelKeywords.contains(tag));
   }
 
+  static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+  static final RegExp _numberSplitRe = RegExp(r'[0-9]+');
+
   String _normalizeForComparison(String input) {
     return input
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$'), '');
+        .replaceAll(_nonAlphanumericRe, '')
+        .replaceAll(_qualitySuffixRe, '');
   }
 
   List<String> _extractKeywords(String? channelName, String? groupTitle) {
@@ -503,7 +507,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
       // Split into potential keywords
       final parts =
-          normalized.split(RegExp(r'[0-9]+')).where((part) => part.length > 2);
+          normalized.split(_numberSplitRe).where((part) => part.length > 2);
       keywords.addAll(parts);
     }
 

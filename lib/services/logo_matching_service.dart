@@ -268,14 +268,17 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
 
   // Private methods
 
+  static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+
   Future<String?> _findLogoUrl(String channelName, String? providerId) async {
     // This is a simplified implementation
     // In a real app, you'd have a comprehensive logo database or API
 
     final normalizedName = channelName
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$'), '');
+        .replaceAll(_nonAlphanumericRe, '')
+        .replaceAll(_qualitySuffixRe, '');
 
     // Common logo URL patterns
     final patterns = [

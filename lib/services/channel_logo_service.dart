@@ -281,16 +281,17 @@ class ChannelLogoService {
     }
   }
 
+  static final RegExp _qualityRegex = RegExp(r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*', caseSensitive: false);
+  static final RegExp _bracketsRegex = RegExp(r'[\(\)\[\]\{\}]');
+  static final RegExp _whitespaceRegex = RegExp(r'\s+');
+
   /// Normalize channel name for lookup
   static String _normalize(String name) {
     return name
         .toLowerCase()
-        .replaceAll(
-            RegExp(r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*',
-                caseSensitive: false),
-            ' ')
-        .replaceAll(RegExp(r'[\(\)\[\]\{\}]'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(_qualityRegex, ' ')
+        .replaceAll(_bracketsRegex, '')
+        .replaceAll(_whitespaceRegex, ' ')
         .trim();
   }
 

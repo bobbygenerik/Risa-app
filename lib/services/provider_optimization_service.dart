@@ -368,6 +368,8 @@ class ProviderOptimizationService extends ChangeNotifier {
 
   // Private methods
 
+  static final RegExp _digitsOnlyRe = RegExp(r'^\d+$');
+
   PlaylistCharacteristics _analyzePlaylistCharacteristics(
       List<Channel> channels) {
     final characteristics = PlaylistCharacteristics();
@@ -378,7 +380,7 @@ class ProviderOptimizationService extends ChangeNotifier {
       characteristics.channelIds.add(channelId);
 
       // Check for numeric IDs
-      if (RegExp(r'^\d+$').hasMatch(channelId)) {
+      if (_digitsOnlyRe.hasMatch(channelId)) {
         characteristics.numericIdCount++;
       }
 
@@ -396,7 +398,7 @@ class ProviderOptimizationService extends ChangeNotifier {
       if (tvgId != null) {
         characteristics.tvgIds.add(tvgId);
 
-        if (RegExp(r'^\d+$').hasMatch(tvgId)) {
+        if (_digitsOnlyRe.hasMatch(tvgId)) {
           characteristics.numericTvgIdCount++;
         }
       }
@@ -554,6 +556,9 @@ class ProviderOptimizationService extends ChangeNotifier {
     return null;
   }
 
+  // Cache for compiled regular expressions to avoid recompilation
+  static final Map<String, RegExp> _patternRegexCache = {};
+
   List<OptimizedMatchResult> _applyPatternMatching(
     ProviderMatchingStrategy strategy,
     String channelId,
@@ -563,7 +568,13 @@ class ProviderOptimizationService extends ChangeNotifier {
 
     for (final pattern in strategy.patterns) {
       try {
-        final regex = RegExp(pattern.pattern);
+        RegExp regex;
+        if (_patternRegexCache.containsKey(pattern.pattern)) {
+          regex = _patternRegexCache[pattern.pattern]!;
+        } else {
+          regex = RegExp(pattern.pattern);
+          _patternRegexCache[pattern.pattern] = regex;
+        }
 
         // Try matching against channel ID
         final idMatch = regex.firstMatch(channelId);
