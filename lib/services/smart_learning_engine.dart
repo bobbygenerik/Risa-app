@@ -485,11 +485,14 @@ class SmartLearningEngine extends ChangeNotifier {
     return sortedEntries.map((e) => e.key).toList();
   }
 
+  static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
+  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+
   String _normalizeForPattern(String input) {
     return input
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$'), '');
+        .replaceAll(_nonAlphanumericRe, '')
+        .replaceAll(_qualitySuffixRe, '');
   }
 
   double _calculateStringSimilarity(String a, String b) {

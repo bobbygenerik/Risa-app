@@ -177,13 +177,16 @@ class TvdbService {
 
   /// Extracts TVDB ID from search result entry.
   /// The ID can be in various fields depending on API version.
+  static final RegExp _trailingDigitsRe = RegExp(r'(\d+)$');
+  static final RegExp _digitsRe = RegExp(r'(\d+)');
+
   static int? _extractId(Map<String, dynamic> entry) {
     // Direct 'id' field (most common)
     final id = entry['id'];
     if (id is int) return id;
     if (id is String) {
       // TVDB v4 search returns string IDs like "series-12345"
-      final match = RegExp(r'(\d+)$').firstMatch(id);
+      final match = _trailingDigitsRe.firstMatch(id);
       if (match != null) {
         return int.tryParse(match.group(1)!);
       }
@@ -196,7 +199,7 @@ class TvdbService {
     // ObjectID field (used in some responses)
     final objectId = entry['objectID'];
     if (objectId is String) {
-      final match = RegExp(r'(\d+)').firstMatch(objectId);
+      final match = _digitsRe.firstMatch(objectId);
       if (match != null) {
         return int.tryParse(match.group(1)!);
       }

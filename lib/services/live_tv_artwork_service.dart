@@ -1466,11 +1466,17 @@ class LiveTvArtworkService {
     return EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
   }
 
+  static final RegExp _nonWordWhitespaceRe = RegExp(r'[^\w\s]');
+  static final RegExp _whitespaceRe = RegExp(r'\s+');
+  static final RegExp _channelSeparatorsRe = RegExp(r'\s*[-:|]\s*');
+  static final RegExp _qualityKeywordsRe = RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false);
+  static final RegExp _networkKeywordsRe = RegExp(r'\b(tv|channel|network)\b', caseSensitive: false);
+
   String _normalizeForFilter(String title) {
     return title
         .toLowerCase()
-        .replaceAll(RegExp(r'[^\w\s]'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(_nonWordWhitespaceRe, '')
+        .replaceAll(_whitespaceRe, ' ')
         .trim();
   }
 
@@ -1480,12 +1486,10 @@ class LiveTvArtworkService {
 
   String _cleanChannelNameForQuery(String name) {
     var cleaned = name;
-    cleaned = cleaned.replaceAll(RegExp(r'\s*[-:|]\s*'), ' ');
-    cleaned = cleaned.replaceAll(
-        RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(
-        RegExp(r'\b(tv|channel|network)\b', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    cleaned = cleaned.replaceAll(_channelSeparatorsRe, ' ');
+    cleaned = cleaned.replaceAll(_qualityKeywordsRe, '');
+    cleaned = cleaned.replaceAll(_networkKeywordsRe, '');
+    cleaned = cleaned.replaceAll(_whitespaceRe, ' ').trim();
     return cleaned;
   }
 
@@ -1640,6 +1644,9 @@ class LiveTvArtworkService {
     return _isLikelyLandscapeUrl(url);
   }
 
+  static final RegExp _imageExtRe = RegExp(r'\.(png|jpg|jpeg|webp)$');
+  static final RegExp _imageSizeRe = RegExp(r'(\d+)x(\d+)');
+
   bool _isLikelyLandscapeUrl(String url) {
     if (url.isEmpty) return false;
     final lower = url.toLowerCase();
@@ -1663,11 +1670,10 @@ class LiveTvArtworkService {
     }
 
     // If dimensions are in the filename, prefer wider aspect ratios.
-    final extMatch = RegExp(r'\.(png|jpg|jpeg|webp)$').firstMatch(lower);
+    final extMatch = _imageExtRe.firstMatch(lower);
     if (extMatch != null) {
       final beforeExt = lower.substring(0, extMatch.start);
-      final sizeRegex = RegExp(r'(\d+)x(\d+)');
-      final match = sizeRegex.firstMatch(beforeExt);
+      final match = _imageSizeRe.firstMatch(beforeExt);
       if (match != null) {
         final w = int.tryParse(match.group(1) ?? '');
         final h = int.tryParse(match.group(2) ?? '');
@@ -1725,12 +1731,14 @@ class LiveTvArtworkService {
     return false;
   }
 
+  static final RegExp _digitsOnlyRe = RegExp(r'^\d+$');
+
   bool _isTitleCacheEligible(Program program) {
     final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
     if (normalized.isEmpty) return false;
     // Allow 2+ char titles to support short show names like "24", "ER", "FX"
     if (normalized.length < 2) return false;
-    if (RegExp(r'^\d+$').hasMatch(normalized)) return false;
+    if (_digitsOnlyRe.hasMatch(normalized)) return false;
     const stopWords = <String>{
       'movie',
       'movies',
@@ -1757,6 +1765,8 @@ class LiveTvArtworkService {
     return normalizedUrl == normalizedLogo;
   }
 
+  static final RegExp _doubleSlashStartRe = RegExp(r'^//');
+
   String? _normalizeUrl(String? url) {
     if (url == null || url.isEmpty) return null;
     try {
@@ -1767,7 +1777,7 @@ class LiveTvArtworkService {
         queryParameters: {},
         fragment: '',
       );
-      return normalized.toString().replaceAll(RegExp(r'^//'), '');
+      return normalized.toString().replaceAll(_doubleSlashStartRe, '');
     } catch (e) {
       debugLog('ArtworkService: normalizeImageUrl failed: $e');
       return url;
@@ -1808,6 +1818,8 @@ class LiveTvArtworkService {
     return false;
   }
 
+  static final RegExp _yearTrailingRe = RegExp(r'\(\d{4}\)$');
+
   bool _isMovieProgram(Program program, Channel channel) {
     final groupTitle = (channel.groupTitle ?? '').toLowerCase();
 
@@ -1820,7 +1832,7 @@ class LiveTvArtworkService {
     }
 
     // Check for movie-like patterns (year in title, etc.)
-    if (RegExp(r'\(\d{4}\)$').hasMatch(program.title)) {
+    if (_yearTrailingRe.hasMatch(program.title)) {
       return true;
     }
 

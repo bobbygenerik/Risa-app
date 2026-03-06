@@ -649,8 +649,8 @@ class TMDBService {
     if (t1 == t2) return 1.0;
     if (t1.contains(t2) || t2.contains(t1)) return 0.8;
     // Simple word match ratio
-    final words1 = t1.split(RegExp(r'\s+')).toSet();
-    final words2 = t2.split(RegExp(r'\s+')).toSet();
+    final words1 = t1.split(_whitespaceRe).toSet();
+    final words2 = t2.split(_whitespaceRe).toSet();
     if (words1.isEmpty || words2.isEmpty) return 0.0;
     final intersection = words1.intersection(words2);
     return intersection.length / math.max(words1.length, words2.length);
