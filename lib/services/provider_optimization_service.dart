@@ -315,10 +315,7 @@ class ProviderOptimizationService extends ChangeNotifier {
       'customProviders':
           _providerConfigs.values.where((c) => c.customConfiguration).length,
       'averageConfidence': _providerConfigs.isNotEmpty
-          ? _providerConfigs.values
-                  .map((c) => c.confidence)
-                  .reduce((a, b) => a + b) /
-              _providerConfigs.length
+          ? _calculateAverageConfidence()
           : 0.0,
       'supportedProviderTypes': _knownProviders.keys.toList(),
     };
@@ -364,6 +361,14 @@ class ProviderOptimizationService extends ChangeNotifier {
     await _saveProviderConfigs();
     debugLog('Cleared all provider configurations');
     notifyListeners();
+  }
+
+  double _calculateAverageConfidence() {
+    double sum = 0.0;
+    for (final config in _providerConfigs.values) {
+      sum += config.confidence;
+    }
+    return sum / _providerConfigs.length;
   }
 
   // Private methods

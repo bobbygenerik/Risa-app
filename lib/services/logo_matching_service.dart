@@ -444,7 +444,10 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
       }
 
       // Normalize histogram
-      final maxCount = histogram.reduce(math.max);
+      double maxCount = 0.0;
+      for (int i = 0; i < histogram.length; i++) {
+        if (histogram[i] > maxCount) maxCount = histogram[i];
+      }
       if (maxCount > 0) {
         for (int i = 0; i < histogram.length; i++) {
           histogram[i] /= maxCount;
@@ -510,7 +513,10 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
     }
 
     // Normalize
-    final maxValue = edgeFeatures.reduce(math.max);
+    double maxValue = 0.0;
+    for (int i = 0; i < edgeFeatures.length; i++) {
+      if (edgeFeatures[i] > maxValue) maxValue = edgeFeatures[i];
+    }
     if (maxValue > 0) {
       for (int i = 0; i < edgeFeatures.length; i++) {
         edgeFeatures[i] /= maxValue;
@@ -575,7 +581,10 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
     }
 
     // Normalize
-    final maxValue = textureFeatures.reduce(math.max);
+    double maxValue = 0.0;
+    for (int i = 0; i < textureFeatures.length; i++) {
+      if (textureFeatures[i] > maxValue) maxValue = textureFeatures[i];
+    }
     if (maxValue > 0) {
       for (int i = 0; i < textureFeatures.length; i++) {
         textureFeatures[i] /= maxValue;
