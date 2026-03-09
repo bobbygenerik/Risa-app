@@ -34,7 +34,8 @@ class SmartLearningEngine extends ChangeNotifier {
       await _loadProviderPatterns();
       await _loadUserCorrections();
       debugLog(
-          'Smart Learning Engine initialized: ${_learningData.length} entries, ${_userCorrections.length} corrections');
+        'Smart Learning Engine initialized: ${_learningData.length} entries, ${_userCorrections.length} corrections',
+      );
     } catch (e) {
       debugLog('Failed to initialize Smart Learning Engine: $e');
     }
@@ -60,8 +61,10 @@ class SmartLearningEngine extends ChangeNotifier {
         timestamp: DateTime.now(),
         providerId: providerId,
         groupTitle: groupTitle,
-        confidence:
-            _calculateCorrectionConfidence(originalEpgId, correctedEpgId),
+        confidence: _calculateCorrectionConfidence(
+          originalEpgId,
+          correctedEpgId,
+        ),
       );
 
       _userCorrections[channelId] = correction;
@@ -78,7 +81,8 @@ class SmartLearningEngine extends ChangeNotifier {
       await _saveLearningData();
 
       debugLog(
-          'Learned from correction: $channelId -> $correctedEpgId (was $originalEpgId)');
+        'Learned from correction: $channelId -> $correctedEpgId (was $originalEpgId)',
+      );
       notifyListeners();
     } catch (e) {
       debugLog('Failed to learn from correction: $e');
@@ -100,12 +104,14 @@ class SmartLearningEngine extends ChangeNotifier {
     if (_userCorrections.containsKey(channelId)) {
       final correction = _userCorrections[channelId];
       if (correction != null) {
-        suggestions.add(LearningMatchSuggestion(
-          epgId: correction.correctedEpgId,
-          confidence: 1.0,
-          source: MatchSource.userCorrection,
-          reason: 'Previously corrected by user',
-        ));
+        suggestions.add(
+          LearningMatchSuggestion(
+            epgId: correction.correctedEpgId,
+            confidence: 1.0,
+            source: MatchSource.userCorrection,
+            reason: 'Previously corrected by user',
+          ),
+        );
       }
     }
 
@@ -113,8 +119,11 @@ class SmartLearningEngine extends ChangeNotifier {
     if (providerId != null && _providerPatterns.containsKey(providerId)) {
       final pattern = _providerPatterns[providerId];
       if (pattern != null) {
-        final providerMatches =
-            _getProviderMatches(pattern, channelName, groupTitle);
+        final providerMatches = _getProviderMatches(
+          pattern,
+          channelName,
+          groupTitle,
+        );
         suggestions.addAll(providerMatches);
       }
     }
@@ -129,13 +138,15 @@ class SmartLearningEngine extends ChangeNotifier {
       );
 
       if (boostedConfidence > baseSuggestion.value) {
-        suggestions.add(LearningMatchSuggestion(
-          epgId: baseSuggestion.key,
-          confidence: boostedConfidence,
-          source: MatchSource.boostedBase,
-          originalConfidence: baseSuggestion.value,
-          reason: 'Confidence boosted by learning',
-        ));
+        suggestions.add(
+          LearningMatchSuggestion(
+            epgId: baseSuggestion.key,
+            confidence: boostedConfidence,
+            source: MatchSource.boostedBase,
+            originalConfidence: baseSuggestion.value,
+            reason: 'Confidence boosted by learning',
+          ),
+        );
       }
     }
 
@@ -234,17 +245,20 @@ class SmartLearningEngine extends ChangeNotifier {
       }
 
       // Merge with existing data
-      _learningData
-          .addAll(Map<String, dynamic>.from(data['learningData'] ?? {}));
+      _learningData.addAll(
+        Map<String, dynamic>.from(data['learningData'] ?? {}),
+      );
 
-      final importedPatterns =
-          Map<String, dynamic>.from(data['providerPatterns'] ?? {});
+      final importedPatterns = Map<String, dynamic>.from(
+        data['providerPatterns'] ?? {},
+      );
       for (final entry in importedPatterns.entries) {
         _providerPatterns[entry.key] = ProviderPattern.fromJson(entry.value);
       }
 
-      final importedCorrections =
-          Map<String, dynamic>.from(data['userCorrections'] ?? {});
+      final importedCorrections = Map<String, dynamic>.from(
+        data['userCorrections'] ?? {},
+      );
       for (final entry in importedCorrections.entries) {
         _userCorrections[entry.key] = UserCorrection.fromJson(entry.value);
       }
@@ -254,7 +268,8 @@ class SmartLearningEngine extends ChangeNotifier {
       await _saveUserCorrections();
 
       debugLog(
-          'Imported learning data: ${_userCorrections.length} corrections, ${_providerPatterns.length} patterns');
+        'Imported learning data: ${_userCorrections.length} corrections, ${_providerPatterns.length} patterns',
+      );
       notifyListeners();
     } catch (e) {
       debugLog('Failed to import learning data: $e');
@@ -346,7 +361,10 @@ class SmartLearningEngine extends ChangeNotifier {
   }
 
   List<LearningMatchSuggestion> _getProviderMatches(
-      ProviderPattern pattern, String channelName, String? groupTitle) {
+    ProviderPattern pattern,
+    String channelName,
+    String? groupTitle,
+  ) {
     final suggestions = <LearningMatchSuggestion>[];
 
     // Check channel name patterns
@@ -355,12 +373,14 @@ class SmartLearningEngine extends ChangeNotifier {
       final epgIds = pattern.channelPatterns[channelKey];
       if (epgIds != null) {
         for (final epgId in epgIds) {
-          suggestions.add(LearningMatchSuggestion(
-            epgId: epgId,
-            confidence: 0.8,
-            source: MatchSource.providerPattern,
-            reason: 'Matches provider channel pattern',
-          ));
+          suggestions.add(
+            LearningMatchSuggestion(
+              epgId: epgId,
+              confidence: 0.8,
+              source: MatchSource.providerPattern,
+              reason: 'Matches provider channel pattern',
+            ),
+          );
         }
       }
     }
@@ -372,12 +392,14 @@ class SmartLearningEngine extends ChangeNotifier {
         final epgIds = pattern.groupPatterns[groupKey];
         if (epgIds != null) {
           for (final epgId in epgIds) {
-            suggestions.add(LearningMatchSuggestion(
-              epgId: epgId,
-              confidence: 0.7,
-              source: MatchSource.providerPattern,
-              reason: 'Matches provider group pattern',
-            ));
+            suggestions.add(
+              LearningMatchSuggestion(
+                epgId: epgId,
+                confidence: 0.7,
+                source: MatchSource.providerPattern,
+                reason: 'Matches provider group pattern',
+              ),
+            );
           }
         }
       }
@@ -386,8 +408,12 @@ class SmartLearningEngine extends ChangeNotifier {
     return suggestions;
   }
 
-  double _boostConfidenceWithLearning(String epgId, double baseConfidence,
-      String channelId, String? providerId) {
+  double _boostConfidenceWithLearning(
+    String epgId,
+    double baseConfidence,
+    String channelId,
+    String? providerId,
+  ) {
     double boost = 0.0;
 
     // Check if this EPG ID has been corrected before
@@ -414,7 +440,9 @@ class SmartLearningEngine extends ChangeNotifier {
   }
 
   List<LearningMatchSuggestion> _findSimilarCorrections(
-      String channelName, String? providerId) {
+    String channelName,
+    String? providerId,
+  ) {
     final suggestions = <LearningMatchSuggestion>[];
     final normalizedName = _normalizeForPattern(channelName);
 
@@ -425,18 +453,24 @@ class SmartLearningEngine extends ChangeNotifier {
       // Skip if different provider (if provider specified)
       if (providerId != null && correction.providerId != providerId) continue;
 
-      final normalizedCorrectionName =
-          _normalizeForPattern(correction.channelName);
-      final similarity =
-          _calculateStringSimilarity(normalizedName, normalizedCorrectionName);
+      final normalizedCorrectionName = _normalizeForPattern(
+        correction.channelName,
+      );
+      final similarity = _calculateStringSimilarity(
+        normalizedName,
+        normalizedCorrectionName,
+      );
 
       if (similarity > 0.7) {
-        suggestions.add(LearningMatchSuggestion(
-          epgId: correction.correctedEpgId,
-          confidence: similarity * 0.6, // Lower confidence for inferred matches
-          source: MatchSource.similarCorrection,
-          reason: 'Similar to previously corrected channel',
-        ));
+        suggestions.add(
+          LearningMatchSuggestion(
+            epgId: correction.correctedEpgId,
+            confidence:
+                similarity * 0.6, // Lower confidence for inferred matches
+            source: MatchSource.similarCorrection,
+            reason: 'Similar to previously corrected channel',
+          ),
+        );
       }
     }
 
@@ -461,7 +495,10 @@ class SmartLearningEngine extends ChangeNotifier {
   }
 
   double _getPatternBoost(
-      ProviderPattern pattern, String channelName, String epgId) {
+    ProviderPattern pattern,
+    String channelName,
+    String epgId,
+  ) {
     final channelKey = _normalizeForPattern(channelName);
     final channelPatterns = pattern.channelPatterns[channelKey];
     if (channelPatterns != null && channelPatterns.contains(epgId)) {
@@ -486,7 +523,9 @@ class SmartLearningEngine extends ChangeNotifier {
   }
 
   static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
-  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+  static final RegExp _qualitySuffixRe = RegExp(
+    r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$',
+  );
 
   String _normalizeForPattern(String input) {
     return input
@@ -523,22 +562,32 @@ class SmartLearningEngine extends ChangeNotifier {
   }
 
   Map<String, dynamic> _getStatistics() {
+    // ⚡ Bolt: Performance Optimization
+    // Consolidated multiple O(n) iterable operations (.map, .reduce) into single `for` loops.
+    // This avoids creating intermediate iterables, closures, and multiple passes,
+    // reducing time complexity from O(3n) to O(n) and saving memory allocations.
+    double totalConfidence = 0.0;
+    for (final correction in _userCorrections.values) {
+      totalConfidence += correction.confidence;
+    }
+
+    String? mostCorrectedProvider;
+    int maxCorrections = -1;
+    for (final entry in _providerPatterns.entries) {
+      if (entry.value.correctionCount > maxCorrections) {
+        maxCorrections = entry.value.correctionCount;
+        mostCorrectedProvider = entry.key;
+      }
+    }
+
     return {
       'totalCorrections': _userCorrections.length,
       'totalProviderPatterns': _providerPatterns.length,
       'totalLearningEntries': _learningData.length,
       'averageCorrectionConfidence': _userCorrections.isNotEmpty
-          ? _userCorrections.values
-                  .map((c) => c.confidence)
-                  .reduce((a, b) => a + b) /
-              _userCorrections.length
+          ? totalConfidence / _userCorrections.length
           : 0.0,
-      'mostCorrectedProvider': _providerPatterns.isNotEmpty
-          ? _providerPatterns.entries
-              .reduce((a, b) =>
-                  a.value.correctionCount > b.value.correctionCount ? a : b)
-              .key
-          : null,
+      'mostCorrectedProvider': mostCorrectedProvider,
     };
   }
 
@@ -571,8 +620,9 @@ class SmartLearningEngine extends ChangeNotifier {
 
   Future<void> _saveProviderPatterns() async {
     final prefs = await SharedPreferences.getInstance();
-    final data =
-        _providerPatterns.map((key, value) => MapEntry(key, value.toJson()));
+    final data = _providerPatterns.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
     await prefs.setString(_providerPatternsKey, jsonEncode(data));
   }
 
@@ -590,8 +640,9 @@ class SmartLearningEngine extends ChangeNotifier {
 
   Future<void> _saveUserCorrections() async {
     final prefs = await SharedPreferences.getInstance();
-    final data =
-        _userCorrections.map((key, value) => MapEntry(key, value.toJson()));
+    final data = _userCorrections.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
     await prefs.setString(_userCorrectionsKey, jsonEncode(data));
   }
 }
@@ -670,12 +721,18 @@ class ProviderPattern {
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
         providerId: json['providerId'],
-        channelPatterns: Map<String, List<String>>.from(json['channelPatterns']
-                ?.map((k, v) => MapEntry(k, List<String>.from(v))) ??
-            {}),
-        groupPatterns: Map<String, List<String>>.from(json['groupPatterns']
-                ?.map((k, v) => MapEntry(k, List<String>.from(v))) ??
-            {}),
+        channelPatterns: Map<String, List<String>>.from(
+          json['channelPatterns']?.map(
+                (k, v) => MapEntry(k, List<String>.from(v)),
+              ) ??
+              {},
+        ),
+        groupPatterns: Map<String, List<String>>.from(
+          json['groupPatterns']?.map(
+                (k, v) => MapEntry(k, List<String>.from(v)),
+              ) ??
+              {},
+        ),
         correctionCount: json['correctionCount'],
         averageConfidence: json['averageConfidence'],
         hasLogoPatterns: json['hasLogoPatterns'],

@@ -38,7 +38,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       await _loadMappingHistory();
 
       debugLog(
-          'Cross-Playlist Mapping Service initialized: ${_crossPlaylistMappings.length} mappings');
+        'Cross-Playlist Mapping Service initialized: ${_crossPlaylistMappings.length} mappings',
+      );
     } catch (e) {
       debugLog('Failed to initialize Cross-Playlist Mapping Service: $e');
     }
@@ -80,14 +81,16 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       _updateCrossPlaylistMappings(epgId, sharedMapping);
 
       // Add to history
-      _addToHistory(MappingHistoryEntry(
-        action: MappingAction.shared,
-        timestamp: timestamp,
-        sourceChannelId: sourceChannelId,
-        sourcePlaylistId: sourcePlaylistId,
-        epgId: epgId,
-        details: 'Shared mapping: $sourceChannelName -> $epgId',
-      ));
+      _addToHistory(
+        MappingHistoryEntry(
+          action: MappingAction.shared,
+          timestamp: timestamp,
+          sourceChannelId: sourceChannelId,
+          sourcePlaylistId: sourcePlaylistId,
+          epgId: epgId,
+          details: 'Shared mapping: $sourceChannelName -> $epgId',
+        ),
+      );
 
       await _saveSharedMappings();
       await _saveCrossPlaylistMappings();
@@ -118,36 +121,43 @@ class CrossPlaylistMappingService extends ChangeNotifier {
         }
 
         if (mapping.confidence < minConfidence) {
-          results.add(ImportedMappingResult(
-            channelId: mapping.sourceChannelId,
-            epgId: mapping.epgId,
-            success: false,
-            reason: 'Low confidence (${mapping.confidence.toStringAsFixed(2)})',
-          ));
+          results.add(
+            ImportedMappingResult(
+              channelId: mapping.sourceChannelId,
+              epgId: mapping.epgId,
+              success: false,
+              reason:
+                  'Low confidence (${mapping.confidence.toStringAsFixed(2)})',
+            ),
+          );
           continue;
         }
 
         // Check if mapping already exists
         final existingMapping = _findExistingMapping(mapping.sourceChannelId);
         if (existingMapping != null && !overwriteExisting) {
-          results.add(ImportedMappingResult(
-            channelId: mapping.sourceChannelId,
-            epgId: mapping.epgId,
-            success: false,
-            reason: 'Mapping already exists',
-          ));
+          results.add(
+            ImportedMappingResult(
+              channelId: mapping.sourceChannelId,
+              epgId: mapping.epgId,
+              success: false,
+              reason: 'Mapping already exists',
+            ),
+          );
           continue;
         }
 
         // Import the mapping
         await _importSingleMapping(mapping, overwriteExisting);
 
-        results.add(ImportedMappingResult(
-          channelId: mapping.sourceChannelId,
-          epgId: mapping.epgId,
-          success: true,
-          confidence: mapping.confidence,
-        ));
+        results.add(
+          ImportedMappingResult(
+            channelId: mapping.sourceChannelId,
+            epgId: mapping.epgId,
+            success: true,
+            confidence: mapping.confidence,
+          ),
+        );
 
         // Update usage statistics
         mapping.usageCount++;
@@ -158,7 +168,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       await _saveSharedMappings();
 
       debugLog(
-          'Imported ${results.where((r) => r.success).length} mappings from playlist: $sourcePlaylistId');
+        'Imported ${results.where((r) => r.success).length} mappings from playlist: $sourcePlaylistId',
+      );
       notifyListeners();
     } catch (e) {
       debugLog('Failed to import mappings from playlist $sourcePlaylistId: $e');
@@ -182,11 +193,13 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       // 1. Find exact matches by channel ID
       for (final mapping in _sharedMappings.values) {
         if (mapping.sourceChannelId == channelId) {
-          compatible.add(CompatibleMapping(
-            mapping: mapping,
-            matchReason: MatchReason.exactChannelId,
-            confidence: mapping.confidence,
-          ));
+          compatible.add(
+            CompatibleMapping(
+              mapping: mapping,
+              matchReason: MatchReason.exactChannelId,
+              confidence: mapping.confidence,
+            ),
+          );
         }
       }
 
@@ -194,25 +207,32 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       final normalizedName = _normalizeForComparison(channelName);
       for (final mapping in _sharedMappings.values) {
         if (mapping.sourceChannelName == channelName) {
-          compatible.add(CompatibleMapping(
-            mapping: mapping,
-            matchReason: MatchReason.exactChannelName,
-            confidence: mapping.confidence,
-          ));
+          compatible.add(
+            CompatibleMapping(
+              mapping: mapping,
+              matchReason: MatchReason.exactChannelName,
+              confidence: mapping.confidence,
+            ),
+          );
           continue;
         }
 
-        final normalizedSourceName =
-            _normalizeForComparison(mapping.sourceChannelName);
-        final nameSimilarity =
-            _calculateStringSimilarity(normalizedName, normalizedSourceName);
+        final normalizedSourceName = _normalizeForComparison(
+          mapping.sourceChannelName,
+        );
+        final nameSimilarity = _calculateStringSimilarity(
+          normalizedName,
+          normalizedSourceName,
+        );
 
         if (nameSimilarity >= 0.8) {
-          compatible.add(CompatibleMapping(
-            mapping: mapping,
-            matchReason: MatchReason.similarChannelName,
-            confidence: mapping.confidence * nameSimilarity,
-          ));
+          compatible.add(
+            CompatibleMapping(
+              mapping: mapping,
+              matchReason: MatchReason.similarChannelName,
+              confidence: mapping.confidence * nameSimilarity,
+            ),
+          );
         }
       }
 
@@ -221,12 +241,14 @@ class CrossPlaylistMappingService extends ChangeNotifier {
         for (final mapping in _sharedMappings.values) {
           if (mapping.providerId == providerId &&
               _isChannelCompatible(channelName, groupTitle, mapping)) {
-            compatible.add(CompatibleMapping(
-              mapping: mapping,
-              matchReason: MatchReason.sameProvider,
-              confidence:
-                  mapping.confidence * 0.8, // Slight penalty for indirect match
-            ));
+            compatible.add(
+              CompatibleMapping(
+                mapping: mapping,
+                matchReason: MatchReason.sameProvider,
+                confidence: mapping.confidence *
+                    0.8, // Slight penalty for indirect match
+              ),
+            );
           }
         }
       }
@@ -235,12 +257,14 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       final channelKeywords = _extractKeywords(channelName, groupTitle);
       for (final mapping in _sharedMappings.values) {
         if (mapping.tags.any((tag) => channelKeywords.contains(tag))) {
-          compatible.add(CompatibleMapping(
-            mapping: mapping,
-            matchReason: MatchReason.keywordMatch,
-            confidence: mapping.confidence *
-                0.7, // Lower confidence for keyword matches
-          ));
+          compatible.add(
+            CompatibleMapping(
+              mapping: mapping,
+              matchReason: MatchReason.keywordMatch,
+              confidence: mapping.confidence *
+                  0.7, // Lower confidence for keyword matches
+            ),
+          );
         }
       }
 
@@ -289,15 +313,17 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       _crossPlaylistMappings['${playlistId}_$channelId'] = crossMapping;
 
       // Add to history
-      _addToHistory(MappingHistoryEntry(
-        action: MappingAction.applied,
-        timestamp: DateTime.now(),
-        sourceChannelId: channelId,
-        sourcePlaylistId: playlistId,
-        epgId: mapping.epgId,
-        details:
-            'Applied shared mapping: ${mapping.sourceChannelName} -> ${mapping.epgId}',
-      ));
+      _addToHistory(
+        MappingHistoryEntry(
+          action: MappingAction.applied,
+          timestamp: DateTime.now(),
+          sourceChannelId: channelId,
+          sourcePlaylistId: playlistId,
+          epgId: mapping.epgId,
+          details:
+              'Applied shared mapping: ${mapping.sourceChannelName} -> ${mapping.epgId}',
+        ),
+      );
 
       await _saveCrossPlaylistMappings();
 
@@ -335,16 +361,19 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       }
 
       // Import cross-playlist mappings
-      final crossMappingsData =
-          Map<String, dynamic>.from(data['crossPlaylistMappings'] ?? {});
+      final crossMappingsData = Map<String, dynamic>.from(
+        data['crossPlaylistMappings'] ?? {},
+      );
       for (final entry in crossMappingsData.entries) {
-        _crossPlaylistMappings[entry.key] =
-            CrossPlaylistMapping.fromJson(entry.value);
+        _crossPlaylistMappings[entry.key] = CrossPlaylistMapping.fromJson(
+          entry.value,
+        );
       }
 
       // Import shared mappings (merge, don't overwrite)
-      final sharedMappingsData =
-          Map<String, dynamic>.from(data['sharedMappings'] ?? {});
+      final sharedMappingsData = Map<String, dynamic>.from(
+        data['sharedMappings'] ?? {},
+      );
       for (final entry in sharedMappingsData.entries) {
         if (!_sharedMappings.containsKey(entry.key)) {
           _sharedMappings[entry.key] = SharedMapping.fromJson(entry.value);
@@ -360,7 +389,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       // Trim history if too long
       if (_mappingHistory.length > _maxHistoryEntries) {
         _mappingHistory.removeRange(
-            0, _mappingHistory.length - _maxHistoryEntries);
+          0,
+          _mappingHistory.length - _maxHistoryEntries,
+        );
       }
 
       await _saveCrossPlaylistMappings();
@@ -368,7 +399,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       await _saveMappingHistory();
 
       debugLog(
-          'Imported mappings: ${_sharedMappings.length} shared, ${_crossPlaylistMappings.length} cross-playlist');
+        'Imported mappings: ${_sharedMappings.length} shared, ${_crossPlaylistMappings.length} cross-playlist',
+      );
       notifyListeners();
     } catch (e) {
       debugLog('Failed to import mappings: $e');
@@ -393,24 +425,36 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
   /// Get mapping statistics
   Map<String, dynamic> getMappingStatistics() {
+    // ⚡ Bolt: Performance Optimization
+    // Replaced multiple O(n) iterable operations (.where, .map, .reduce, .fold)
+    // with a single manual `for` loop. This avoids multiple passes over the collection,
+    // eliminates intermediate allocations, and reduces function invocation overhead.
+    // Impact: Changes O(4n) time complexity and O(n) space complexity to O(n) time and O(1) space.
+    double totalConfidence = 0.0;
+    int totalUsage = 0;
+    int publicMappings = 0;
+    SharedMapping? mostUsed;
+
+    for (final mapping in _sharedMappings.values) {
+      if (mapping.isPublic) {
+        publicMappings++;
+      }
+      totalConfidence += mapping.confidence;
+      totalUsage += mapping.usageCount;
+      if (mostUsed == null || mapping.usageCount > mostUsed.usageCount) {
+        mostUsed = mapping;
+      }
+    }
+
     return {
       'crossPlaylistMappings': _crossPlaylistMappings.length,
       'sharedMappings': _sharedMappings.length,
-      'publicMappings': _sharedMappings.values.where((m) => m.isPublic).length,
+      'publicMappings': publicMappings,
       'averageConfidence': _sharedMappings.isNotEmpty
-          ? _sharedMappings.values
-                  .map((m) => m.confidence)
-                  .reduce((a, b) => a + b) /
-              _sharedMappings.length
+          ? totalConfidence / _sharedMappings.length
           : 0.0,
-      'totalUsage': _sharedMappings.values
-          .map((m) => m.usageCount)
-          .fold(0, (sum, count) => sum + count),
-      'mostUsedMapping': _sharedMappings.isNotEmpty
-          ? _sharedMappings.values
-              .reduce((a, b) => a.usageCount > b.usageCount ? a : b)
-              .epgId
-          : null,
+      'totalUsage': totalUsage,
+      'mostUsedMapping': mostUsed?.epgId,
       'historyEntries': _mappingHistory.length,
     };
   }
@@ -422,7 +466,10 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   List<String> _generateTags(
-      String? channelName, String? epgId, String? providerId) {
+    String? channelName,
+    String? epgId,
+    String? providerId,
+  ) {
     final tags = <String>[];
 
     if (channelName != null) {
@@ -462,7 +509,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   Future<void> _importSingleMapping(
-      SharedMapping mapping, bool overwrite) async {
+    SharedMapping mapping,
+    bool overwrite,
+  ) async {
     final crossMapping = CrossPlaylistMapping(
       playlistId: 'imported', // This would be the current playlist ID
       channelId: mapping.sourceChannelId,
@@ -477,7 +526,10 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   bool _isChannelCompatible(
-      String channelName, String? groupTitle, SharedMapping mapping) {
+    String channelName,
+    String? groupTitle,
+    SharedMapping mapping,
+  ) {
     // Simple compatibility check - can be made more sophisticated
     if (groupTitle != null && mapping.sourceChannelName.contains(groupTitle)) {
       return true;
@@ -488,7 +540,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
-  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+  static final RegExp _qualitySuffixRe = RegExp(
+    r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$',
+  );
   static final RegExp _numberSplitRe = RegExp(r'[0-9]+');
 
   String _normalizeForComparison(String input) {
@@ -552,7 +606,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     // Trim history if too long
     if (_mappingHistory.length > _maxHistoryEntries) {
       _mappingHistory.removeRange(
-          0, _mappingHistory.length - _maxHistoryEntries);
+        0,
+        _mappingHistory.length - _maxHistoryEntries,
+      );
     }
   }
 
@@ -572,7 +628,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_crossPlaylistMappingsKey);
     if (data != null) {
-      final Map<String, dynamic> decoded = await compute(jsonDecode, data) as Map<String, dynamic>;
+      final Map<String, dynamic> decoded =
+          await compute(jsonDecode, data) as Map<String, dynamic>;
       _crossPlaylistMappings.clear();
       decoded.forEach((key, value) {
         _crossPlaylistMappings[key] = CrossPlaylistMapping.fromJson(value);
@@ -582,8 +639,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
   Future<void> _saveCrossPlaylistMappings() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = _crossPlaylistMappings
-        .map((key, value) => MapEntry(key, value.toJson()));
+    final data = _crossPlaylistMappings.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
     await prefs.setString(_crossPlaylistMappingsKey, jsonEncode(data));
   }
 
@@ -591,7 +649,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_sharedMappingsKey);
     if (data != null) {
-      final Map<String, dynamic> decoded = await compute(jsonDecode, data) as Map<String, dynamic>;
+      final Map<String, dynamic> decoded =
+          await compute(jsonDecode, data) as Map<String, dynamic>;
       _sharedMappings.clear();
       decoded.forEach((key, value) {
         _sharedMappings[key] = SharedMapping.fromJson(value);
@@ -601,8 +660,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
   Future<void> _saveSharedMappings() async {
     final prefs = await SharedPreferences.getInstance();
-    final data =
-        _sharedMappings.map((key, value) => MapEntry(key, value.toJson()));
+    final data = _sharedMappings.map(
+      (key, value) => MapEntry(key, value.toJson()),
+    );
     await prefs.setString(_sharedMappingsKey, jsonEncode(data));
   }
 
@@ -610,7 +670,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_mappingHistoryKey);
     if (data != null) {
-      final List<dynamic> decoded = await compute(jsonDecode, data) as List<dynamic>;
+      final List<dynamic> decoded =
+          await compute(jsonDecode, data) as List<dynamic>;
       _mappingHistory.clear();
       for (final entryData in decoded) {
         _mappingHistory.add(MappingHistoryEntry.fromJson(entryData));
@@ -795,13 +856,7 @@ class ImportedMappingResult {
   });
 }
 
-enum MappingAction {
-  shared,
-  applied,
-  imported,
-  exported,
-  deleted,
-}
+enum MappingAction { shared, applied, imported, exported, deleted }
 
 enum MatchReason {
   exactChannelId,
