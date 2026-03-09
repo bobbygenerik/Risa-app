@@ -150,7 +150,8 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
                   color: Colors.green.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: Colors.green.withAlpha((0.3 * 255).round())),
+                    color: Colors.green.withAlpha((0.3 * 255).round()),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -161,10 +162,8 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
                         entry.currentMapping != null
                             ? 'Currently mapped to: ${entry.currentMapping}'
                             : 'Automatically matched via fuzzy logic',
-                        style:
-                            AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.green,
-                        ),
+                        style: AppTheme.darkTheme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.green),
                       ),
                     ),
                   ],
@@ -177,8 +176,10 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
             Expanded(
               child: _isLoading
                   ? Center(
-                      child:
-                          CircularProgressIndicator(color: AppColors.primary))
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
                   : _buildSuggestionsList(),
             ),
 
@@ -219,9 +220,9 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
     final filteredSuggestions = _searchQuery.isEmpty
         ? _suggestions
         : _suggestions.where((suggestion) {
-            return suggestion.key
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase());
+            return suggestion.key.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                );
           }).toList();
 
     if (filteredSuggestions.isEmpty) {
@@ -328,9 +329,7 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
     try {
       final entry = widget.entry;
       final channel = entry.channel as Channel;
-      await widget.epgService.removeManualMapping(
-        channel.epgLookupId,
-      );
+      await widget.epgService.removeManualMapping(channel.epgLookupId);
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -361,7 +360,8 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
   List<MapEntry<String, dynamic>>? _cachedSortedGroups;
 
   List<MapEntry<String, dynamic>> _getSortedGroups(
-      Map<String, dynamic> groupStats) {
+    Map<String, dynamic> groupStats,
+  ) {
     if (_cachedSortedGroups != null) return _cachedSortedGroups!;
     _cachedSortedGroups = groupStats.entries.toList()
       ..sort((a, b) => b.value['matchRate'].compareTo(a.value['matchRate']));
@@ -408,9 +408,7 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
             SizedBox(height: 24),
 
             // Detailed breakdown
-            Expanded(
-              child: _buildDetailedBreakdown(analytics),
-            ),
+            Expanded(child: _buildDetailedBreakdown(analytics)),
           ],
         ),
       ),
@@ -493,7 +491,11 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
   }
 
   Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -543,18 +545,27 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
         SizedBox(height: 16),
 
         // High confidence
-        _buildConfidenceGroup('High Confidence (80%+)',
-            analytics['highConfidence'], Colors.green),
+        _buildConfidenceGroup(
+          'High Confidence (80%+)',
+          analytics['highConfidence'],
+          Colors.green,
+        ),
         SizedBox(height: 8),
 
         // Medium confidence
-        _buildConfidenceGroup('Medium Confidence (60-79%)',
-            analytics['mediumConfidence'], Colors.orange),
+        _buildConfidenceGroup(
+          'Medium Confidence (60-79%)',
+          analytics['mediumConfidence'],
+          Colors.orange,
+        ),
         SizedBox(height: 8),
 
         // Low confidence
         _buildConfidenceGroup(
-            'Low Confidence (<60%)', analytics['lowConfidence'], Colors.red),
+          'Low Confidence (<60%)',
+          analytics['lowConfidence'],
+          Colors.red,
+        ),
         SizedBox(height: 16),
 
         // Groups analysis
@@ -566,9 +577,7 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
           ),
         ),
         SizedBox(height: 16),
-        Expanded(
-          child: _buildGroupsList(analytics['groupStats']),
-        ),
+        Expanded(child: _buildGroupsList(analytics['groupStats'])),
       ],
     );
   }
@@ -671,27 +680,40 @@ class _EpgAnalyticsDialogState extends State<EpgAnalyticsDialog> {
   }
 
   Map<String, dynamic> _calculateAnalytics() {
+    // ⚡ Bolt: Performance Optimization
+    // Fused 5 separate O(n) `.where()` and `.reduce()` passes over `mappingEntries` into a single loop.
+    // This reduces O(5n) time complexity to O(n), eliminates intermediate iterables, and
+    // prevents closure allocation inside frequent UI updates.
     final total = widget.mappingEntries.length;
-    final matched = widget.mappingEntries
-        .where((e) => e.hasEpgData || e.currentMapping != null)
-        .length;
+
+    int matched = 0;
+    double totalConfidence = 0.0;
+    int highConfidence = 0;
+    int mediumConfidence = 0;
+    int lowConfidence = 0;
+
+    for (final entry in widget.mappingEntries) {
+      if (entry.hasEpgData || entry.currentMapping != null) {
+        matched++;
+      }
+
+      totalConfidence += entry.confidence;
+
+      if (entry.confidence >= 0.8) {
+        highConfidence++;
+      } else if (entry.confidence >= 0.6) {
+        mediumConfidence++;
+      } else {
+        lowConfidence++;
+      }
+    }
+
     final unmatched = total - matched;
     final matchRate = total > 0 ? (matched / total) * 100 : 0.0;
 
     final avgConfidence = widget.mappingEntries.isNotEmpty
-        ? widget.mappingEntries
-                .map((e) => e.confidence)
-                .reduce((a, b) => a + b) /
-            widget.mappingEntries.length
+        ? totalConfidence / widget.mappingEntries.length
         : 0.0;
-
-    final highConfidence =
-        widget.mappingEntries.where((e) => e.confidence >= 0.8).length;
-    final mediumConfidence = widget.mappingEntries
-        .where((e) => e.confidence >= 0.6 && e.confidence < 0.8)
-        .length;
-    final lowConfidence =
-        widget.mappingEntries.where((e) => e.confidence < 0.6).length;
 
     // Group statistics
     final groupStats = <String, dynamic>{};
