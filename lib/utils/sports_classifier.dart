@@ -19,7 +19,7 @@ class SportsClassifier {
     'nhl',
     'ufc',
     'bellator',
-    'daZN',
+    'dazn',
     'eurosport',
   ];
 
@@ -60,15 +60,21 @@ class SportsClassifier {
 
   /// Determines if a channel is clearly a sports outlet.
   static bool isSportsChannel(Channel channel) {
-    final combined = <String?>[
-      channel.name,
-      channel.groupTitle,
-      channel.tvgId,
-    ]
-        .where((value) => value?.isNotEmpty == true)
-        .map((value) => value!.toLowerCase())
-        .join(' ');
-    return _matchesKeywordList(combined, _sportsChannelKeywords);
+    // Check directly instead of mapping and joining an array to avoid allocations
+    final name = channel.name.toLowerCase();
+    if (_matchesKeywordList(name, _sportsChannelKeywords)) return true;
+
+    final groupTitle = channel.groupTitle?.toLowerCase();
+    if (groupTitle != null && groupTitle.isNotEmpty) {
+      if (_matchesKeywordList(groupTitle, _sportsChannelKeywords)) return true;
+    }
+
+    final tvgId = channel.tvgId?.toLowerCase();
+    if (tvgId != null && tvgId.isNotEmpty) {
+      if (_matchesKeywordList(tvgId, _sportsChannelKeywords)) return true;
+    }
+
+    return false;
   }
 
   /// Determines if the current program represents sports.
@@ -80,22 +86,26 @@ class SportsClassifier {
       return true;
     }
 
-    final category = (program.category ?? '').toLowerCase();
-    if (_matchesKeywordList(category, _sportsCategoryKeywords)) {
-      return true;
+    final category = program.category?.toLowerCase();
+    if (category != null && category.isNotEmpty) {
+      if (_matchesKeywordList(category, _sportsCategoryKeywords)) {
+        return true;
+      }
     }
 
-    if (isSportsChannel(channel ?? Channel(id: '', name: '', url: ''))) {
+    if (channel != null && isSportsChannel(channel)) {
       return true;
     }
 
     return false;
   }
 
-  static bool _matchesKeywordList(String value, Iterable<String> keywords) {
-    for (final keyword in keywords) {
-      if (keyword.isEmpty) continue;
-      if (value.contains(keyword.toLowerCase())) {
+  static bool _matchesKeywordList(String value, List<String> keywords) {
+    // Manual loop avoids iterator allocation
+    for (int i = 0; i < keywords.length; i++) {
+      if (keywords[i].isEmpty) continue;
+      // Keywords are already lowercased in the constant lists
+      if (value.contains(keywords[i])) {
         return true;
       }
     }
