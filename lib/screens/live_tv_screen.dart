@@ -274,6 +274,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   int _diagHeroArtMiss = 0;
   int _diagHeroValidationReject = 0;
   String? _lastRoutePath;
+  // Notifier incremented when hero artwork changes — only rebuilds the hero image widget,
+  // not the full screen (avoids rebuilding all rows on every TMDB/Fanart result).
+  final ValueNotifier<int> _heroArtworkVersion = ValueNotifier<int>(0);
+  // Throttle for hero artwork version increments — caps hero rebuild rate at ~10fps.
+  Timer? _heroArtworkDebounce;
+  // Coarser debounce for card artwork updates (cards are in rows, not just hero).
+  Timer? _artworkRebuildDebounce;
+  // Cached result of _buildHeroCandidates to avoid re-iterating 60 channels on every artwork setState.
+  // Only invalidated when EPG programs change (hasUsableData/hasLoadedPrograms transitions).
+  List<_HeroCandidate>? _cachedHeroCandidates;
+  bool _heroCandidatesCacheValid = false;
+  // Cached program-type row widgets — only invalidated when EPG usable data changes.
+  // Each _buildProgramTypeRow iterates 60 channels; caching avoids 600+ getCurrentProgram()
+  // calls per artwork setState (which fires up to 4x/sec).
+  final Map<String, Widget> _cachedProgramTypeRows = {};
+  bool _programTypeRowCacheValid = false;
 
   late final FocusNode _watchButtonFocus;
   late final FocusNode _settingsButtonFocus;
@@ -349,7 +365,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const bool _debugRowProbe = false;
 
   // Timer for EPG loading timeout fallback
-  late final DateTime _initTime;
   Timer? _skeletonWatchdog;
   DateTime? _skeletonShownAt;
   DateTime? _lastRecoveryAttempt;
@@ -380,11 +395,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     WidgetsBinding.instance.addObserver(this);
     _artworkService = LiveTvArtworkService(
       onArtworkUpdate: () {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        // Throttle hero image rebuilds to ~10fps — burst artwork results (e.g. batch TMDB
+        // fetch completing) would otherwise drive ValueListenableBuilder at unbounded rate.
+        if (_heroArtworkDebounce?.isActive != true) {
+          _heroArtworkVersion.value++;
+          _heroArtworkDebounce = Timer(const Duration(milliseconds: 100), () {});
+        }
+        // Debounce a full setState for card row artwork updates (more expensive).
+        if (_artworkRebuildDebounce?.isActive == true) return;
+        _artworkRebuildDebounce = Timer(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() {});
+        });
       },
     );
     _artworkService.initialize();
-    _initTime = DateTime.now(); // Track init time for EPG loading timeout
     // Initialize scroll controller
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScrollPrefetch);
@@ -1007,6 +1032,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   void dispose() {
+    _heroArtworkDebounce?.cancel();
+    _artworkRebuildDebounce?.cancel();
+    _heroArtworkVersion.dispose();
     _artworkService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     FocusManager.instance.removeListener(_handleFocusChange);
@@ -1768,15 +1796,43 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       prev.isLoading != next.isLoading ||
                       prev.isParsing != next.isParsing ||
                       prev.isDownloading != next.isDownloading ||
-                      prev.isBatchLoading != next.isBatchLoading ||
+                      // isBatchLoading intentionally excluded — batch state changes
+                      // are high-frequency and don't require a full hero rebuild.
                       prev.hasUrl != next.hasUrl ||
                       prev.error != next.error ||
                       prev.hasUsableData != next.hasUsableData,
                   builder: (context, epgState, _) {
                     final epgService = context.read<IncrementalEpgService>();
 
-                    // Trigger EPG load for visible channels but don't hide them
-                    _ensureEpgForChannels(previewList, epgService);
+                    // EPG state changed (Selector fired) — debounce cache invalidation.
+                    // At startup, EPG state changes 3-4× in rapid succession (hasPrograms
+                    // toggling as batches load). Each immediate invalidation forces 600+
+                    // fuzzy EPG ID lookups on the main thread (374ms worst-case build).
+                    // Debouncing collapses all changes within 600ms into a single rebuild
+                    // after the storm settles, eliminating startup JANK.
+                    _timerManager.debounce(
+                      'epg_cache_invalidate',
+                      const Duration(milliseconds: 600),
+                      () {
+                        if (!mounted) return;
+                        setState(() {
+                          _heroCandidatesCacheValid = false;
+                          _programTypeRowCacheValid = false;
+                          _cachedProgramTypeRows.clear();
+                        });
+                      },
+                    );
+
+                    // Debounce EPG load trigger — rapid Selector fires at startup would
+                    // otherwise stack a new addPostFrameCallback on every rebuild.
+                    _timerManager.debounce(
+                      'epg_ensure_channels',
+                      const Duration(milliseconds: 50),
+                      () {
+                        if (!mounted) return;
+                        _ensureEpgForChannels(previewList, epgService);
+                      },
+                    );
 
                     List<Channel> displayChannels = previewList;
 
@@ -1993,10 +2049,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     if (missingChannelIds.isNotEmpty) {
-      unawaited(epgService.ensureChannelsLoadedBatch(
-        missingChannelIds.toList(),
-        channelNames: missingChannelNames,
-      ));
+      final capturedIds = missingChannelIds.toList();
+      final capturedNames = List<String?>.from(missingChannelNames);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(epgService.ensureChannelsLoadedBatch(
+          capturedIds,
+          channelNames: capturedNames,
+        ));
+      });
     }
 
     // Only stabilize featured list when EPG is ready and we have enough channels
@@ -2006,8 +2067,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         !epgService.isDownloading;
     final hasEnoughChannels = featuredChannels.length >= 5;
     if (featuredChannels.isNotEmpty && epgReady && hasEnoughChannels) {
-      _stableFeaturedChannels = List.from(featuredChannels);
-      _featuredChannelsInitialized = true;
+      // Defer state mutation out of build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!_featuredChannelsInitialized) {
+          _stableFeaturedChannels = List.from(featuredChannels);
+          _featuredChannelsInitialized = true;
+        }
+      });
     }
 
     if (featuredChannels.isEmpty) return const SizedBox.shrink();
@@ -2045,6 +2112,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     List<Channel> allChannels,
     bool Function(Program?, Channel) classifier,
   ) {
+    // Return cached widget if EPG hasn't changed since last build.
+    // EPG lookups here (60 channels × 10 rows = 600 getCurrentProgram calls) are the
+    // main source of 110ms build frames when artwork setState fires.
+    if (_programTypeRowCacheValid && _cachedProgramTypeRows.containsKey(title)) {
+      return _cachedProgramTypeRows[title]!;
+    }
+
     final epgService = context.read<IncrementalEpgService>();
 
     final matchingChannels = <Channel>[];
@@ -2069,14 +2143,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     }
 
-    if (matchingChannels.isEmpty) return const SizedBox.shrink();
-
-    return _buildChannelSection(
-      context,
-      title,
-      matchingChannels,
-      allowCategoryPaging: false,
-    );
+    final widget = matchingChannels.isEmpty
+        ? const SizedBox.shrink()
+        : _buildChannelSection(
+            context,
+            title,
+            matchingChannels,
+            allowCategoryPaging: false,
+          );
+    _cachedProgramTypeRows[title] = widget;
+    _programTypeRowCacheValid = true;
+    return widget;
   }
 
   Widget _buildFullScreenHero(
@@ -2138,14 +2215,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final activeChannel = selectedHero?.channel ?? featuredChannel;
     final currentProgram = selectedHero?.program;
 
-    final heroImage = _resolveHeroImage(
-          currentProgram,
-          activeChannel,
-          allowFetch: true,
-          highPriority: true,
-          preferHighRes: true,
-        ) ??
-        '';
+    // heroImage is now resolved inside ValueListenableBuilder to re-read on artwork updates
+    // without triggering a full screen rebuild.
     if (selectedHero?.program != null) {
       _artworkService.ensureFreshProgramArtwork(
         selectedHero!.program!,
@@ -2166,11 +2237,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             SliverToBoxAdapter(
               child: SizedBox(
                 height: heroHeight,
-                child: _buildHeroContent(
-                  activeChannel,
-                  currentProgram,
-                  heroImage,
-                  0.0,
+                // ValueListenableBuilder: only this subtree rebuilds when artwork loads
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _heroArtworkVersion,
+                  builder: (context, _, __) {
+                    final freshImage = _resolveHeroImage(
+                          currentProgram,
+                          activeChannel,
+                          allowFetch: true,
+                          highPriority: true,
+                          preferHighRes: true,
+                        ) ??
+                        '';
+                    return _buildHeroContent(
+                      activeChannel,
+                      currentProgram,
+                      freshImage,
+                      0.0,
+                    );
+                  },
                 ),
               ),
             ),
@@ -2212,11 +2297,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   opacity: 1.0 - fadeProgress,
                   child: Stack(
                     children: [
-                      _buildHeroContent(
-                        activeChannel,
-                        currentProgram,
-                        heroImage,
-                        0.0,
+                      // ValueListenableBuilder: only this subtree rebuilds when artwork loads
+                      ValueListenableBuilder<int>(
+                        valueListenable: _heroArtworkVersion,
+                        builder: (context, _, __) {
+                          final freshImage = _resolveHeroImage(
+                                currentProgram,
+                                activeChannel,
+                                allowFetch: true,
+                                highPriority: true,
+                                preferHighRes: true,
+                              ) ??
+                              '';
+                          return _buildHeroContent(
+                            activeChannel,
+                            currentProgram,
+                            freshImage,
+                            0.0,
+                          );
+                        },
                       ),
                       // Left Gradient Mask (Fades image into background)
                       Positioned(
@@ -2626,40 +2725,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             Text('Updating...',
                 style: AppTypography.smallText(context)
                     .copyWith(color: Colors.white)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEpgError(String message) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'EPG error',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: context.tvSpacing(8)),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: context.tvSpacing(24)),
-            GoToSettingsButton(
-              onPressed: _goToSettings,
-              focusNode: _settingsButtonFocus,
-            ),
           ],
         ),
       ),
@@ -3145,20 +3210,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return _applyTmdbSize(url, size);
   }
 
-  bool _isHighResHeroImage(String url) {
-    if (url.isEmpty) return false;
-    final lower = url.toLowerCase();
-    if (lower.contains('image.tmdb.org')) {
-      if (lower.contains('/original/') ||
-          lower.contains('/w1920/') ||
-          lower.contains('/w1280/')) {
-        return true;
-      }
-    }
-    // Fallback: assume false without size check
-    return false;
-  }
-
   String _displayProgramTitle(Program program, Channel? channel) {
     final trimmed = program.title.trim();
     if (trimmed.isEmpty) return program.title;
@@ -3188,9 +3239,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   List<_HeroCandidate> _buildHeroCandidates(
     List<Channel> channels,
-    IncrementalEpgService epgService,
-  ) {
+    IncrementalEpgService epgService, {
+    bool forceRefresh = false,
+  }) {
     if (channels.isEmpty) return [];
+
+    // Use cached result if valid — avoids iterating 60 channels on every artwork setState
+    if (!forceRefresh && _heroCandidatesCacheValid && _cachedHeroCandidates != null) {
+      return _cachedHeroCandidates!;
+    }
 
     final candidates = <_HeroCandidate>[];
     // Scan all channels in the preview list (usually 60) to find the best heroes
@@ -3230,7 +3287,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
 
     // Limit to top 15 after sorting
-    return candidates.take(15).toList();
+    final result = candidates.take(15).toList();
+    _cachedHeroCandidates = result;
+    _heroCandidatesCacheValid = true;
+    return result;
   }
 
   String? _resolveHeroImage(
@@ -3449,11 +3509,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
       filteredChannels.add(channel);
     }
+    // Defer side-effect calls so they never fire directly inside build().
+    // Calling them synchronously here caused 130-176ms jank frames on every scroll.
     if (missingIds.isNotEmpty) {
-      unawaited(epgService.ensureChannelsLoadedBatch(
-        missingIds,
-        channelNames: missingNames,
-      ));
+      // Capture lists before the callback fires (they're local)
+      final capturedIds = List<String>.from(missingIds);
+      final capturedNames = List<String?>.from(missingNames);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(epgService.ensureChannelsLoadedBatch(
+          capturedIds,
+          channelNames: capturedNames,
+        ));
+      });
     }
     if (filteredChannels.isEmpty) return const SizedBox.shrink();
 
@@ -3487,7 +3555,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _initialRowVisibleCount(context, cardWidth, rowInset);
       if (filteredChannels.length <= initialVisible &&
           (_categoryHasMore[sectionKey] ?? true)) {
-        _requestMoreCategoryChannels(sectionKey);
+        // Defer to avoid triggering setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _requestMoreCategoryChannels(sectionKey);
+        });
       }
     }
     final rowController = _rowScrollControllers.putIfAbsent(
@@ -4468,15 +4540,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       debugLog('Stack: $st');
       logToSystem('TAP ERROR: $e', name: 'RisaTap');
     } finally {
+      // Always resume service-level state regardless of mounted — these are
+      // not widget operations and must run even if the widget was disposed,
+      // otherwise artwork stays permanently suspended across screen navigations.
+      _artworkService.resumeFetching();
+      _artworkService.resumeCaches();
+
       if (mounted) {
         _isOpeningPlayer = false;
-        _artworkService.resumeFetching();
-        _artworkService.resumeCaches();
         _suspendHeroBackground = false;
         // Restart hero rotation
         _startFeaturedRotation();
         // Reload categories since _releaseArtworkCachesForPlayback cleared the cache
         unawaited(_prefetchInitialRows(force: true));
+      } else {
+        _isOpeningPlayer = false;
       }
     }
   }

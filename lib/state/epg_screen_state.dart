@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/models/channel.dart';
 
 class EPGScreenState extends ChangeNotifier {
   // Date and view state

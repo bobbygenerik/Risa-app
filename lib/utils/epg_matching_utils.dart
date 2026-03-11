@@ -10,7 +10,6 @@ class EPGMatchingUtils {
   // --- Constants for Jaccard/Token matching ---
   static const int _minTokenLength =
       2; // Reduced to 2 to catch "UK", "US", "BBC 1" -> "1"
-  static final RegExp _fuzzyTokenSplitRe = RegExp(r'[^a-zA-Z0-9]+');
 
   // --- Normalization Regexes ---
   static final RegExp invalidXmlCharRe =
@@ -45,7 +44,6 @@ class EPGMatchingUtils {
 
   // Punctuation/Brackets to strip
   static final RegExp _bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
-  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]+');
 
   // --- Normalization for Artwork/Programs (Retained from previous version) ---
   static final RegExp _dashColonRe = RegExp(r'\s*[-:]\s*');
