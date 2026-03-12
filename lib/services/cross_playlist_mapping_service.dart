@@ -557,20 +557,27 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
     if (channelName != null) {
       final normalized = _normalizeForComparison(channelName);
-      keywords.add(normalized);
+      if (normalized.length > 2) {
+        keywords.add(normalized);
+      }
 
       // Split into potential keywords
-      final parts =
-          normalized.split(_numberSplitRe).where((part) => part.length > 2);
-      keywords.addAll(parts);
+      final parts = normalized.split(_numberSplitRe);
+      for (final part in parts) {
+        if (part.length > 2) {
+          keywords.add(part);
+        }
+      }
     }
 
     if (groupTitle != null) {
       final normalizedGroup = _normalizeForComparison(groupTitle);
-      keywords.add(normalizedGroup);
+      if (normalizedGroup.length > 2) {
+        keywords.add(normalizedGroup);
+      }
     }
 
-    return keywords.where((keyword) => keyword.length > 2).toList();
+    return keywords;
   }
 
   double _calculateStringSimilarity(String a, String b) {
