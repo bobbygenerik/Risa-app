@@ -16,3 +16,7 @@
 ## 2026-03-12 - [Avoid Chained Iterable Operations in Hot Paths]
 **Learning:** Chained operations like `.where(...).toList()` on results of `.split()` inside tight loops (like extracting keywords from channel names) generate multiple intermediate lists, iterators, and strings, increasing CPU overhead and GC pressure. Converting these to direct sequential operations (`for` loop and `if (string.length > 2)`) avoids all intermediate allocations.
 **Action:** In frequently executed parsing or processing loops, favor manual `for` loops and direct conditional checks over elegant but costly functional iterable chains.
+
+## 2026-03-24 - [Avoid Chained Iterable Operations in Dialogs]
+**Learning:** In the `ChannelSelectionDialog`, `channelProvider.channels` was filtered using two separate `.where(...).toList()` blocks in sequence. The first creates an intermediate list of channels matching the category, and the second filters that intermediate list by a search query to create a final list. This pattern scales poorly as channels grow to 10k+, creating short-lived arrays and nested iterators per keystroke.
+**Action:** Used a single O(n) manual loop to evaluate both conditions (`category` and `searchQuery`) simultaneously. `toLowerCase()` is computed once for the search query before the loop instead of being applied per channel, avoiding massive string allocations.

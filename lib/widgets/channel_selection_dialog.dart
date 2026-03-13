@@ -51,21 +51,25 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
             final categories = channelProvider.getAllCategoryNames();
             final allChannels = channelProvider.channels;
 
-            List<Channel> filteredChannels = allChannels;
+            List<Channel> filteredChannels = [];
+            final hasCategoryFilter = _selectedCategory != null && _selectedCategory!.isNotEmpty;
+            final hasSearchQuery = _searchQuery.isNotEmpty;
+            final lowerSearchQuery = hasSearchQuery ? _searchQuery.toLowerCase() : '';
 
-            // Filter by category
-            if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
-              filteredChannels = filteredChannels
-                  .where((c) => c.groupTitle == _selectedCategory)
-                  .toList();
-            }
-
-            // Filter by search query
-            if (_searchQuery.isNotEmpty) {
-              filteredChannels = filteredChannels
-                  .where((c) =>
-                      c.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-                  .toList();
+            // Single pass filtering to avoid chained iterable allocations
+            if (!hasCategoryFilter && !hasSearchQuery) {
+              filteredChannels = allChannels;
+            } else {
+              for (int i = 0; i < allChannels.length; i++) {
+                final c = allChannels[i];
+                if (hasCategoryFilter && c.groupTitle != _selectedCategory) {
+                  continue;
+                }
+                if (hasSearchQuery && !c.name.toLowerCase().contains(lowerSearchQuery)) {
+                  continue;
+                }
+                filteredChannels.add(c);
+              }
             }
 
             return Column(
