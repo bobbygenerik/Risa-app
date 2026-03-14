@@ -133,6 +133,7 @@ class _EPGScreenState extends State<EPGScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       final favoritesList = prefs.getStringList('epg_favorite_channels') ?? [];
       _epgState.setEpgFavoriteChannelIds(Set.from(favoritesList));
 

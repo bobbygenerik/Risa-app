@@ -42,6 +42,7 @@ class SettingsLayout extends StatefulWidget {
 
 class _SettingsLayoutState extends State<SettingsLayout> {
   final List<FocusNode> _menuFocusNodes = [];
+  bool _menuFocusRecoveryScheduled = false;
 
   @override
   void initState() {
@@ -50,12 +51,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     for (int i = 0; i < widget.categories.length; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu_$i'));
     }
-    // Optionally autofocus the selected menu item when the layout is shown
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && widget.autoFocusOnShow) {
-        requestMenuFocus();
-      }
-    });
+    _scheduleMenuFocusRecovery(force: widget.autoFocusOnShow);
     widget.controller?._bind(requestMenuFocus);
   }
 
@@ -71,10 +67,14 @@ class _SettingsLayoutState extends State<SettingsLayout> {
       for (int i = 0; i < widget.categories.length; i++) {
         _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu_$i'));
       }
+      _scheduleMenuFocusRecovery();
     }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._unbind(requestMenuFocus);
       widget.controller?._bind(requestMenuFocus);
+    }
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      _scheduleMenuFocusRecovery();
     }
   }
 
@@ -94,28 +94,24 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     }
   }
 
+  void _scheduleMenuFocusRecovery({bool force = false}) {
+    if (_menuFocusRecoveryScheduled) return;
+    _menuFocusRecoveryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _menuFocusRecoveryScheduled = false;
+      if (!mounted) return;
+      final primaryFocus = FocusManager.instance.primaryFocus;
+      final hasFocusedContext = primaryFocus?.context != null;
+      if (!force && hasFocusedContext) {
+        return;
+      }
+      requestMenuFocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    // Ensure the sidebar grabs focus when this screen is shown or when focus is lost
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final primaryFocus = FocusManager.instance.primaryFocus;
-      if (primaryFocus != null) {
-        final focusContext = primaryFocus.context;
-        // If something has focus, don't steal it
-        if (focusContext != null) {
-          return;
-        }
-      }
-      // Only request focus if nothing has focus
-      final node = widget.selectedIndex < _menuFocusNodes.length
-          ? _menuFocusNodes[widget.selectedIndex]
-          : null;
-      if (node != null && !node.hasPrimaryFocus) {
-        node.requestFocus();
-      }
-    });
 
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,

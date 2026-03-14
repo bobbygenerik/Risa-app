@@ -368,6 +368,60 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Timer? _skeletonWatchdog;
   DateTime? _skeletonShownAt;
   DateTime? _lastRecoveryAttempt;
+
+  void _scheduleVisibleRowEpgEnsure(
+    String sectionKey,
+    IncrementalEpgService epgService,
+    List<String> channelIds,
+    List<String?> channelNames,
+  ) {
+    if (channelIds.isEmpty) return;
+    final idsSnapshot = List<String>.from(channelIds);
+    final namesSnapshot = List<String?>.from(channelNames);
+    _timerManager.debounce(
+      'ensure_row_$sectionKey',
+      const Duration(milliseconds: 16),
+      () {
+        if (!mounted) return;
+        unawaited(epgService.ensureChannelsLoadedBatch(
+          idsSnapshot,
+          channelNames: namesSnapshot,
+        ));
+      },
+    );
+  }
+
+  void _scheduleCategoryPageRequest(String category) {
+    _timerManager.debounce(
+      'category_page_$category',
+      const Duration(milliseconds: 16),
+      () {
+        if (!mounted) return;
+        _requestMoreCategoryChannels(category);
+      },
+    );
+  }
+
+  void _scheduleRowScrollReset(
+    String sectionKey,
+    ScrollController controller, {
+    int attempt = 0,
+  }) {
+    _timerManager.start(
+      'row_reset_$sectionKey',
+      attempt == 0 ? Duration.zero : const Duration(milliseconds: 16),
+      () {
+        if (!mounted) return;
+        if (controller.hasClients) {
+          controller.jumpTo(0);
+          return;
+        }
+        if (attempt < 2) {
+          _scheduleRowScrollReset(sectionKey, controller, attempt: attempt + 1);
+        }
+      },
+    );
+  }
   bool _isSkeletonVisible = false;
   bool _recoveryInFlight = false;
   bool _hasShownContent =
@@ -3512,16 +3566,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Defer side-effect calls so they never fire directly inside build().
     // Calling them synchronously here caused 130-176ms jank frames on every scroll.
     if (missingIds.isNotEmpty) {
-      // Capture lists before the callback fires (they're local)
-      final capturedIds = List<String>.from(missingIds);
-      final capturedNames = List<String?>.from(missingNames);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        unawaited(epgService.ensureChannelsLoadedBatch(
-          capturedIds,
-          channelNames: capturedNames,
-        ));
-      });
+      _scheduleVisibleRowEpgEnsure(
+        title,
+        epgService,
+        missingIds,
+        missingNames,
+      );
     }
     if (filteredChannels.isEmpty) return const SizedBox.shrink();
 
@@ -3555,11 +3605,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _initialRowVisibleCount(context, cardWidth, rowInset);
       if (filteredChannels.length <= initialVisible &&
           (_categoryHasMore[sectionKey] ?? true)) {
-        // Defer to avoid triggering setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _requestMoreCategoryChannels(sectionKey);
-        });
+        _scheduleCategoryPageRequest(sectionKey);
       }
     }
     final rowController = _rowScrollControllers.putIfAbsent(
@@ -3568,12 +3614,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     if (!_rowScrollInitialized.contains(sectionKey)) {
       _rowScrollInitialized.add(sectionKey);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (rowController.hasClients) {
-          rowController.jumpTo(0);
-        }
-      });
+      _scheduleRowScrollReset(sectionKey, rowController);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

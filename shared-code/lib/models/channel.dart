@@ -110,3 +110,57 @@ class Channel {
     return 'Channel(id: $id, name: $name, url: $url, groupTitle: $groupTitle)';
   }
 }
+
+extension ChannelEpgLookup on Channel {
+  static String? _attributeValue(Map<String, String>? attrs, String key) {
+    if (attrs == null || attrs.isEmpty) return null;
+    for (final entry in attrs.entries) {
+      if (entry.key.toLowerCase() == key) {
+        final value = entry.value.trim();
+        if (value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
+  static String? _tvgNameValue(Map<String, String>? attrs) {
+    return _attributeValue(attrs, 'tvg-name') ??
+        _attributeValue(attrs, 'tvg_name');
+  }
+
+  /// Use a stable identifier for persisted mappings and caches.
+  String get epgLookupId {
+    final tvg = tvgId?.trim();
+    if (tvg != null && tvg.isNotEmpty) {
+      return tvg;
+    }
+    return id.trim();
+  }
+
+  /// Transient alias metadata that can still be used for exact EPG matching.
+  String? get epgLookupAliasId => _tvgNameValue(attributes);
+
+  /// Only use name-based matching when tvg-id is missing/empty.
+  String? get epgLookupName {
+    final tvg = tvgId?.trim();
+    if (tvg != null && tvg.isNotEmpty) {
+      return null;
+    }
+    final alias = epgLookupAliasId;
+    if (alias != null) {
+      return alias;
+    }
+    final trimmed = name.trim();
+    return trimmed.isNotEmpty ? trimmed : null;
+  }
+
+  /// Prefer tvg-name metadata before falling back to the display name.
+  String? get epgLookupNameFallback {
+    final alias = epgLookupAliasId;
+    if (alias != null) {
+      return alias;
+    }
+    final trimmed = name.trim();
+    return trimmed.isNotEmpty ? trimmed : null;
+  }
+}

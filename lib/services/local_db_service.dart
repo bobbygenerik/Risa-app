@@ -501,13 +501,13 @@ class LocalDbService {
     final rows = await _withDbRead((db) {
       return db.query(
         'channels',
-        columns: const ['id', 'tvgId', 'name'],
+        columns: const ['id', 'tvgId', 'name', 'attrs'],
         orderBy: 'idx ASC',
         limit: safeLimit,
         offset: offset,
       );
     });
-    return rows;
+    return rows.map(_hydrateAttrs).toList();
   }
 
   Future<List<String>> getCategories({int? limit}) async {

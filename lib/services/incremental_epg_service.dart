@@ -3120,9 +3120,24 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
-    if (!allowLoose) return null;
-
     final searchName = channelName?.trim() ?? '';
+    if (searchName.isNotEmpty) {
+      final rawNameMatch = _matchRawEpgId(searchName);
+      if (rawNameMatch != null) {
+        return _cacheResolvedMapping(channelId, rawNameMatch);
+      }
+
+      if (_normalizedAvailableChannels != null) {
+        final normSearchName = EPGMatchingUtils.normalizeChannelName(searchName);
+        if (normSearchName.isNotEmpty &&
+            _normalizedAvailableChannels!.containsKey(normSearchName)) {
+          return _cacheResolvedMapping(
+              channelId, _normalizedAvailableChannels![normSearchName]!.first);
+        }
+      }
+    }
+
+    if (!allowLoose) return null;
     if (searchName.isEmpty) return null;
 
     // ------------------------------------------

@@ -766,6 +766,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     final allowed = <String>{};
     for (final map in maps) {
       final attrs = map['attributes'];
+      final tvgNameRaw = _extractTvgNameFromAttributes(attrs);
       final tvgIdRaw = (map['tvgId'] as String?) ??
           (attrs is Map ? (attrs['tvg-id'] as String?) : null) ??
           (map['tvg-id'] as String?) ??
@@ -775,16 +776,33 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final name = (map['name'] as String?)?.trim() ?? '';
       if (tvgId.isNotEmpty) {
         allowed.add(IncrementalEpgService.normalizeForAllowedId(tvgId));
-      } else {
+      } else if (id.isNotEmpty) {
+        allowed.add(IncrementalEpgService.normalizeForAllowedId(id));
+      }
+      final tvgName = tvgNameRaw?.trim() ?? '';
+      if (tvgName.isNotEmpty) {
+        allowed.add(IncrementalEpgService.normalizeForAllowedId(tvgName));
+      } else if (tvgId.isEmpty) {
         if (id.isNotEmpty) {
-          allowed.add(IncrementalEpgService.normalizeForAllowedId(id));
-        }
-        if (name.isNotEmpty) {
+          allowed.add(IncrementalEpgService.normalizeForAllowedId(name));
+        } else if (name.isNotEmpty) {
           allowed.add(IncrementalEpgService.normalizeForAllowedId(name));
         }
       }
     }
     return allowed;
+  }
+
+  static String? _extractTvgNameFromAttributes(dynamic attrs) {
+    if (attrs is! Map) return null;
+    for (final entry in attrs.entries) {
+      final key = entry.key.toString().toLowerCase();
+      if (key == 'tvg-name' || key == 'tvg_name') {
+        final value = entry.value?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    }
+    return null;
   }
 
   Future<void> _loadAllowedChannelsFromDb() async {
@@ -802,21 +820,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           limit: pageSize,
         );
         if (rows.isEmpty) break;
-        for (final row in rows) {
-          final tvgId = (row['tvgId'] as String?)?.trim() ?? '';
-          final id = (row['id'] as String?)?.trim() ?? '';
-          final name = (row['name'] as String?)?.trim() ?? '';
-          if (tvgId.isNotEmpty) {
-            allowed.add(IncrementalEpgService.normalizeForAllowedId(tvgId));
-          } else {
-            if (id.isNotEmpty) {
-              allowed.add(IncrementalEpgService.normalizeForAllowedId(id));
-            }
-            if (name.isNotEmpty) {
-              allowed.add(IncrementalEpgService.normalizeForAllowedId(name));
-            }
-          }
-        }
+        allowed.addAll(_buildAllowedSet(rows));
         if (rows.length < pageSize) break;
         offset += pageSize;
       }
@@ -1472,19 +1476,22 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
       final id = (map['id'] as String?)?.trim() ?? '';
       final url = (map['url'] as String?)?.trim() ?? '';
-      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
-      final name = (map['name'] as String?) ?? '';
+      final channelId =
+        tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
+      final channelNameForLookup =
+          (_extractTvgNameFromAttributes(map['attributes']) ??
+                  (map['name'] as String?) ?? '')
+              .trim();
       if (channelId.isEmpty) continue;
 
-      // Always provide the name as a fallback for fuzzy logic
-      final channelNameForLookup = name.trim();
       if (tvgId.isNotEmpty) {
         channelsWithTvgId++;
       }
 
       final epgId = _epgService!.resolveEpgId(
         channelId,
-        channelName: channelNameForLookup,
+        channelName:
+            channelNameForLookup.isNotEmpty ? channelNameForLookup : null,
         cache: true,
         allowLoose: true,
       );
@@ -3835,14 +3842,17 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
       final id = (map['id'] as String?)?.trim() ?? '';
       final url = (map['url'] as String?)?.trim() ?? '';
-      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
-      final name = (map['name'] as String?) ?? '';
-      // Always provide the name as a fallback for fuzzy logic
-      final channelNameForLookup = name.trim();
+      final channelId =
+        tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
+      final channelNameForLookup =
+          (_extractTvgNameFromAttributes(map['attributes']) ??
+                  (map['name'] as String?) ?? '')
+              .trim();
 
       if (channelId.isNotEmpty &&
           epgService.hasEpgMatch(channelId,
-              channelName: channelNameForLookup)) {
+              channelName:
+                  channelNameForLookup.isNotEmpty ? channelNameForLookup : null)) {
         matched++;
       }
 
