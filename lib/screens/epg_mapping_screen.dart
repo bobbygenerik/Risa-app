@@ -64,22 +64,31 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     for (final channel in widget.channels) {
       final tvgId = channel.epgLookupId;
       final existingMapping = _epgService.getManualMapping(tvgId);
-      final hasEpgData =
-          _epgService.hasEpgMatch(tvgId, channelName: channel.epgLookupName);
-      final suggestedMatches =
-          _epgService.getSuggestedMatches(tvgId, channel.epgLookupName, limit: 5);
+      final hasEpgData = _epgService.hasEpgMatch(
+        tvgId,
+        channelName: channel.epgLookupName,
+      );
+      final suggestedMatches = _epgService.getSuggestedMatches(
+        tvgId,
+        channel.epgLookupName,
+        limit: 5,
+      );
 
-      final confidence =
-          _calculateChannelMatchConfidence(channel, suggestedMatches);
+      final confidence = _calculateChannelMatchConfidence(
+        channel,
+        suggestedMatches,
+      );
       _matchConfidence[tvgId] = confidence;
 
-      _mappingEntries.add(ChannelMappingEntry(
-        channel: channel,
-        currentMapping: existingMapping,
-        hasEpgData: hasEpgData,
-        confidence: confidence,
-        suggestedMatches: suggestedMatches,
-      ));
+      _mappingEntries.add(
+        ChannelMappingEntry(
+          channel: channel,
+          currentMapping: existingMapping,
+          hasEpgData: hasEpgData,
+          confidence: confidence,
+          suggestedMatches: suggestedMatches,
+        ),
+      );
     }
   }
 
@@ -89,12 +98,16 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   double _calculateChannelMatchConfidence(
-      Channel channel, List<MapEntry<String, double>> suggestions) {
+    Channel channel,
+    List<MapEntry<String, double>> suggestions,
+  ) {
     if (suggestions.isEmpty) return 0.0;
 
     final tvgId = channel.epgLookupId;
-    final hasExactMatch =
-        _epgService.hasEpgMatch(tvgId, channelName: channel.epgLookupName);
+    final hasExactMatch = _epgService.hasEpgMatch(
+      tvgId,
+      channelName: channel.epgLookupName,
+    );
     if (hasExactMatch) return 1.0;
 
     return suggestions.first.value;
@@ -113,28 +126,47 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _applyFilters() {
-    _filteredEntries = _getSortedMappingEntries.where((entry) {
+    // ⚡ Bolt: Performance Optimization
+    // Fused `.where(...).toList()` into a single O(n) loop to reduce allocations.
+    // Pre-calculate lowercased search query to avoid repeated allocations per entry.
+    final hasSearch = _searchQuery.isNotEmpty;
+    final query = hasSearch ? _searchQuery.toLowerCase() : '';
+    final result = <ChannelMappingEntry>[];
+
+    final entries = _getSortedMappingEntries;
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+
       // Apply search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
+      if (hasSearch) {
         if (!entry.channel.name.toLowerCase().contains(query) &&
             !entry.channel.epgLookupId.toLowerCase().contains(query)) {
-          return false;
+          continue;
         }
       }
 
       // Apply match status filter
+      bool matchesFilter = false;
       switch (_currentFilter) {
         case MatchFilter.matched:
-          return entry.hasEpgData || entry.currentMapping != null;
+          matchesFilter = entry.hasEpgData || entry.currentMapping != null;
+          break;
         case MatchFilter.unmatched:
-          return !entry.hasEpgData && entry.currentMapping == null;
+          matchesFilter = !entry.hasEpgData && entry.currentMapping == null;
+          break;
         case MatchFilter.lowConfidence:
-          return entry.confidence < 0.7;
+          matchesFilter = entry.confidence < 0.7;
+          break;
         case MatchFilter.all:
-          return true;
+          matchesFilter = true;
+          break;
       }
-    }).toList();
+
+      if (matchesFilter) {
+        result.add(entry);
+      }
+    }
+    _filteredEntries = result;
   }
 
   @override
@@ -166,8 +198,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
         children: [
           Text(
             'EPG Mapping',
-            style: AppTheme.darkTheme.textTheme.headlineMedium
-                ?.copyWith(color: Colors.white),
+            style: AppTheme.darkTheme.textTheme.headlineMedium?.copyWith(
+              color: Colors.white,
+            ),
           ),
           Text(
             '$matchedCount/$totalCount channels matched',
@@ -261,9 +294,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              color: AppColors.progressForeground,
-            ),
+            CircularProgressIndicator(color: AppColors.progressForeground),
             SizedBox(height: 16),
             Text(
               'Loading EPG data...',
@@ -304,9 +335,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   Widget _buildChannelMappingCard(ChannelMappingEntry entry) {
-    final isSelected = _selectedChannelIds.contains(
-      entry.channel.epgLookupId,
-    );
+    final isSelected = _selectedChannelIds.contains(entry.channel.epgLookupId);
 
     return Card(
       color: AppTheme.sidebarBackground,
@@ -397,8 +426,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
           SizedBox(width: 4),
           Text(
             'Matched',
-            style: AppTheme.darkTheme.textTheme.bodySmall
-                ?.copyWith(color: Colors.green),
+            style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+              color: Colors.green,
+            ),
           ),
         ],
       );
@@ -409,8 +439,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
           SizedBox(width: 4),
           Text(
             'Needs Review',
-            style: AppTheme.darkTheme.textTheme.bodySmall
-                ?.copyWith(color: Colors.orange),
+            style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+              color: Colors.orange,
+            ),
           ),
         ],
       );
@@ -421,8 +452,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
           SizedBox(width: 4),
           Text(
             'Unmatched',
-            style: AppTheme.darkTheme.textTheme.bodySmall
-                ?.copyWith(color: Colors.red),
+            style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+              color: Colors.red,
+            ),
           ),
         ],
       );
@@ -455,8 +487,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
         LinearProgressIndicator(
           value: confidence,
           backgroundColor: AppTheme.highlight,
-          valueColor:
-              AlwaysStoppedAnimation<Color>(_getConfidenceColor(confidence)),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            _getConfidenceColor(confidence),
+          ),
         ),
       ],
     );
@@ -534,13 +567,20 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _bulkAutoMap() async {
-    final entries = _getSortedMappingEntries
-        .where((e) =>
-            _selectedChannelIds.contains(e.channel.epgLookupId))
-        .where((e) => e.confidence > 0.7)
-        .toList();
+    // ⚡ Bolt: Performance Optimization
+    // Fused chained `.where(...).where(...).toList()` into a single loop
+    // to avoid intermediate iterable allocations during bulk operations.
+    final result = <ChannelMappingEntry>[];
+    final sortedEntries = _getSortedMappingEntries;
+    for (int i = 0; i < sortedEntries.length; i++) {
+      final entry = sortedEntries[i];
+      if (_selectedChannelIds.contains(entry.channel.epgLookupId) &&
+          entry.confidence > 0.7) {
+        result.add(entry);
+      }
+    }
 
-    if (entries.isEmpty) {
+    if (result.isEmpty) {
       if (mounted) {
         SnackbarUtils.showWarning(
           context,
@@ -550,7 +590,7 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       return;
     }
 
-    for (final entry in entries) {
+    for (final entry in result) {
       final suggestions = _epgService.getSuggestedMatches(
         entry.channel.epgLookupId,
         entry.channel.epgLookupName,
@@ -569,7 +609,10 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
     await _initializeMapping();
 
     if (mounted) {
-      SnackbarUtils.showSuccess(context, 'Auto-mapped ${entries.length} channels');
+      SnackbarUtils.showSuccess(
+        context,
+        'Auto-mapped ${result.length} channels',
+      );
     }
   }
 
@@ -589,10 +632,8 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   void _showChannelMappingDialog(ChannelMappingEntry entry) {
     showDialog(
       context: context,
-      builder: (context) => ChannelMappingDialog(
-        entry: entry,
-        epgService: _epgService,
-      ),
+      builder: (context) =>
+          ChannelMappingDialog(entry: entry, epgService: _epgService),
     ).then((_) => _initializeMapping());
   }
 
@@ -623,9 +664,4 @@ class ChannelMappingEntry {
   });
 }
 
-enum MatchFilter {
-  all,
-  matched,
-  unmatched,
-  lowConfidence,
-}
+enum MatchFilter { all, matched, unmatched, lowConfidence }
