@@ -45,6 +45,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 Row(
                   children: [
                     IconButton(
+                      tooltip: 'Back',
                       icon: context.backIcon(),
                       onPressed: () => context.go('/home'),
                     ),
@@ -146,6 +147,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       top: context.vScale(4),
                       right: context.scale(4),
                       child: IconButton(
+                        tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
                         icon: Icon(
                           isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
                           size: context.tvIconSize(16),

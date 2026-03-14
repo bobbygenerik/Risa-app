@@ -22,6 +22,7 @@ class _DebugScreenState extends State<DebugScreen> {
         backgroundColor: AppTheme.darkBackground,
         actions: [
           IconButton(
+            tooltip: 'Clear logs',
             icon: const Icon(Icons.clear),
             onPressed: () {
               PerformanceMonitor.clear();
@@ -29,6 +30,7 @@ class _DebugScreenState extends State<DebugScreen> {
             },
           ),
           IconButton(
+            tooltip: 'Copy logs to clipboard',
             icon: const Icon(Icons.copy),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: logs.join('\n')));
