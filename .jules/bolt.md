@@ -13,3 +13,7 @@
 ## 2025-10-24 - Avoid chained iterable operations in hot paths
 **Learning:** Chained operations like `<String?>[...].where(...).map(...).join(' ')` inside tight loops (like checking 10k channels) generate multiple intermediate lists, iterators, and strings, drastically increasing CPU overhead and GC pressure. Converting these to direct sequential operations (`if (channel.name != null) ...`) with manual `for` loops avoids all allocations and was measured to be ~40% faster.
 **Action:** In frequently executed classification or parsing loops, favor manual index-based loops and sequential null-checks over elegant but costly functional iterable chains (`map`, `where`, `join`).
+
+## 2025-05-23 - [Intermediate Iterable Allocations in Hot Paths]
+**Learning:** Chained operations like `.where(...).map(...).toList()`, `.where(...).length`, or uses of `.fold(...)` create multiple intermediate `Iterable` instances, closures, and invoke function calls repeatedly. In frequent UI paths (like filtering EPG mappings) or utility metrics (like cache sizing), this induces measurable overhead and GC pressure.
+**Action:** Replace functional array methods (`where`, `map`, `fold`) with manual `for` loops in hot, frequently-rebuilt UI paths and loops. A manual `for` loop with local variables avoids intermediate instantiations and function closure overhead entirely.

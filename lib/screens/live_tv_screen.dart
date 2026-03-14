@@ -3701,12 +3701,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (!mounted) return;
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
-      final channelIds = channels
-          .map((c) => c.epgLookupId)
-          .where((id) => id.isNotEmpty)
-          .toList();
-      final channelNames =
-          channels.map((c) => c.epgLookupNameFallback).toList();
+
+      // ⚡ Bolt: Performance Optimization
+      // Fused chained iterable operations (.map().where().toList()) into a single
+      // manual loop to prevent intermediate object allocations during post-frame callbacks.
+      final List<String> channelIds = [];
+      final List<String> channelNames = [];
+
+      for (final c in channels) {
+        final id = c.epgLookupId;
+        if (id.isNotEmpty) {
+          channelIds.add(id);
+        }
+        channelNames.add(c.epgLookupNameFallback);
+      }
+
       if (channelIds.isEmpty) return;
       unawaited(epgService.ensureChannelsLoadedBatch(
         channelIds,

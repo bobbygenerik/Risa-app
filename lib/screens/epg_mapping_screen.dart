@@ -113,28 +113,45 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _applyFilters() {
-    _filteredEntries = _getSortedMappingEntries.where((entry) {
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .where(...).toList() with a pre-allocated manual loop to
+    // prevent allocating intermediate Iterable objects during typing/filtering.
+    final List<ChannelMappingEntry> filtered = [];
+    final String query = _searchQuery.toLowerCase();
+    final bool hasQuery = query.isNotEmpty;
+
+    for (final entry in _getSortedMappingEntries) {
       // Apply search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
+      if (hasQuery) {
         if (!entry.channel.name.toLowerCase().contains(query) &&
             !entry.channel.epgLookupId.toLowerCase().contains(query)) {
-          return false;
+          continue;
         }
       }
 
       // Apply match status filter
+      bool matchesFilter = false;
       switch (_currentFilter) {
         case MatchFilter.matched:
-          return entry.hasEpgData || entry.currentMapping != null;
+          matchesFilter = entry.hasEpgData || entry.currentMapping != null;
+          break;
         case MatchFilter.unmatched:
-          return !entry.hasEpgData && entry.currentMapping == null;
+          matchesFilter = !entry.hasEpgData && entry.currentMapping == null;
+          break;
         case MatchFilter.lowConfidence:
-          return entry.confidence < 0.7;
+          matchesFilter = entry.confidence < 0.7;
+          break;
         case MatchFilter.all:
-          return true;
+          matchesFilter = true;
+          break;
       }
-    }).toList();
+
+      if (matchesFilter) {
+        filtered.add(entry);
+      }
+    }
+
+    _filteredEntries = filtered;
   }
 
   @override
@@ -154,9 +171,16 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final matchedCount = _getSortedMappingEntries
-        .where((e) => e.hasEpgData || e.currentMapping != null)
-        .length;
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .where(...).length with a direct for loop to prevent allocating
+    // an intermediate Iterable that is immediately discarded during UI builds.
+    int matchedCount = 0;
+    for (final e in _getSortedMappingEntries) {
+      if (e.hasEpgData || e.currentMapping != null) {
+        matchedCount++;
+      }
+    }
+
     final totalCount = _getSortedMappingEntries.length;
 
     return AppBar(
@@ -534,11 +558,16 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   void _bulkAutoMap() async {
-    final entries = _getSortedMappingEntries
-        .where((e) =>
-            _selectedChannelIds.contains(e.channel.epgLookupId))
-        .where((e) => e.confidence > 0.7)
-        .toList();
+    // ⚡ Bolt: Performance Optimization
+    // Fused chained .where() calls into a single loop to avoid multiple
+    // intermediate Iterable allocations.
+    final List<ChannelMappingEntry> entries = [];
+    for (final e in _getSortedMappingEntries) {
+      if (_selectedChannelIds.contains(e.channel.epgLookupId) &&
+          e.confidence > 0.7) {
+        entries.add(e);
+      }
+    }
 
     if (entries.isEmpty) {
       if (mounted) {

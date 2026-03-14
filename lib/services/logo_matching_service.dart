@@ -719,8 +719,14 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
   }
 
   int _getCacheSize() {
-    // Calculate total cache size in bytes
-    return _logoCache.values.fold(0, (sum, logo) => sum + logo.bytes.length);
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .fold() with a manual for-loop. This avoids allocating
+    // an iterator, a closure, and executing a function call per item.
+    int sum = 0;
+    for (final logo in _logoCache.values) {
+      sum += logo.bytes.length;
+    }
+    return sum;
   }
 
   double _getAverageFileSize() {
