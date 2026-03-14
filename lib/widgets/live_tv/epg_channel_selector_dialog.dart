@@ -87,19 +87,32 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
     final showingSuggestions = _searchQuery.isEmpty;
     
     if (showingSuggestions) {
-      final suggestedIds = _suggestions.map((e) => e.key).toSet();
-      final otherIds = widget.epgChannelIds
-          .where((id) => !suggestedIds.contains(id))
-          .toList();
-      return [..._suggestions.map((e) => e.key), ...otherIds];
+      // Avoid .map().toSet() and .where().toList() chained iterables.
+      final suggestedIds = <String>{};
+      final result = <String>[];
+      for (final s in _suggestions) {
+        suggestedIds.add(s.key);
+        result.add(s.key);
+      }
+      for (final id in widget.epgChannelIds) {
+        if (!suggestedIds.contains(id)) {
+          result.add(id);
+        }
+      }
+      return result;
     }
     
-    return widget.epgChannelIds.where((id) {
+    // Hoist toLowerCase() to avoid redundant string allocations in the loop.
+    final queryLower = _searchQuery.toLowerCase();
+    final result = <String>[];
+    for (final id in widget.epgChannelIds) {
       final displayName = _getDisplayNameForEpgId(id).toLowerCase();
       final idLower = id.toLowerCase();
-      final queryLower = _searchQuery.toLowerCase();
-      return displayName.contains(queryLower) || idLower.contains(queryLower);
-    }).toList();
+      if (displayName.contains(queryLower) || idLower.contains(queryLower)) {
+        result.add(id);
+      }
+    }
+    return result;
   }
 
   @override

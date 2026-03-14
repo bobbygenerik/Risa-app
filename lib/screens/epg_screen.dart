@@ -1751,19 +1751,30 @@ class _EPGScreenState extends State<EPGScreen>
 
           if (searchQuery.isEmpty) {
             // Show suggestions first, then all others
-            final suggestedIds = suggestions.map((e) => e.key).toSet();
-            final otherIds = epgChannelIds
-                .where((id) => !suggestedIds.contains(id))
-                .toList();
-            filteredIds = [...suggestions.map((e) => e.key), ...otherIds];
+            // Fused chained iterables into manual loops to avoid intermediate list allocations
+            final suggestedIds = <String>{};
+            filteredIds = <String>[];
+            for (final s in suggestions) {
+              suggestedIds.add(s.key);
+              filteredIds.add(s.key);
+            }
+            for (final id in epgChannelIds) {
+              if (!suggestedIds.contains(id)) {
+                filteredIds.add(id);
+              }
+            }
           } else {
-            filteredIds = epgChannelIds.where((id) {
+            // Hoist toLowerCase() to avoid string allocations inside the loop
+            final queryLower = searchQuery.toLowerCase();
+            filteredIds = <String>[];
+            for (final id in epgChannelIds) {
               final displayName = _getDisplayNameForEpgId(id).toLowerCase();
               final idLower = id.toLowerCase();
-              final queryLower = searchQuery.toLowerCase();
-              return displayName.contains(queryLower) ||
-                  idLower.contains(queryLower);
-            }).toList();
+              if (displayName.contains(queryLower) ||
+                  idLower.contains(queryLower)) {
+                filteredIds.add(id);
+              }
+            }
           }
 
           return AlertDialog(
