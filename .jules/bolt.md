@@ -13,6 +13,7 @@
 ## 2025-10-24 - Avoid chained iterable operations in hot paths
 **Learning:** Chained operations like `<String?>[...].where(...).map(...).join(' ')` inside tight loops (like checking 10k channels) generate multiple intermediate lists, iterators, and strings, drastically increasing CPU overhead and GC pressure. Converting these to direct sequential operations (`if (channel.name != null) ...`) with manual `for` loops avoids all allocations and was measured to be ~40% faster.
 **Action:** In frequently executed classification or parsing loops, favor manual index-based loops and sequential null-checks over elegant but costly functional iterable chains (`map`, `where`, `join`).
+
 ## 2026-03-12 - [Avoid Chained Iterable Operations in Hot Paths]
 **Learning:** Chained operations like `.where(...).toList()` on results of `.split()` inside tight loops (like extracting keywords from channel names) generate multiple intermediate lists, iterators, and strings, increasing CPU overhead and GC pressure. Converting these to direct sequential operations (`for` loop and `if (string.length > 2)`) avoids all intermediate allocations.
 **Action:** In frequently executed parsing or processing loops, favor manual `for` loops and direct conditional checks over elegant but costly functional iterable chains.
@@ -20,3 +21,7 @@
 ## 2026-03-24 - [Avoid Chained Iterable Operations in Dialogs]
 **Learning:** In the `ChannelSelectionDialog`, `channelProvider.channels` was filtered using two separate `.where(...).toList()` blocks in sequence. The first creates an intermediate list of channels matching the category, and the second filters that intermediate list by a search query to create a final list. This pattern scales poorly as channels grow to 10k+, creating short-lived arrays and nested iterators per keystroke.
 **Action:** Used a single O(n) manual loop to evaluate both conditions (`category` and `searchQuery`) simultaneously. `toLowerCase()` is computed once for the search query before the loop instead of being applied per channel, avoiding massive string allocations.
+
+## 2026-03-25 - [Avoid Chained Iterable Operations in Filtering and Bulk Actions]
+**Learning:** In `EpgMappingScreen`, chained iterable operations like `.where(...).toList()` and `.where(...).where(...).toList()` were used for UI filtering and bulk auto-mapping selection. While elegant, these chains allocate multiple intermediate iterators and lists, which scales poorly with large EPG datasets. Additionally, `toLowerCase()` was being called on the search query for every entry instead of being cached outside the loop.
+**Action:** Replaced chained iterables in `_applyFilters` and `_bulkAutoMap` with single manual `for` loops. This fuses operations into a single O(n) pass, avoids intermediate allocations, and caches invariant string conversions (e.g. `query.toLowerCase()`) before the loop.
