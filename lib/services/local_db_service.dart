@@ -429,10 +429,17 @@ class LocalDbService {
     }
 
     final hasUncategorized = categories.any((c) => c.trim().toLowerCase() == 'uncategorized');
-    final specificCategories = categories
-        .where((c) => c.trim().toLowerCase() != 'uncategorized')
-        .map((c) => c.trim())
-        .toList();
+
+    // OPTIMIZATION: Refactored `.where().map().toList()` chains into standard
+    // looping bounds with cached `.trim()` strings to avoid multi-pass iterations
+    // and object creation during large database batch writes.
+    final specificCategories = <String>[];
+    for (final c in categories) {
+      final trimmed = c.trim();
+      if (trimmed.toLowerCase() != 'uncategorized') {
+        specificCategories.add(trimmed);
+      }
+    }
 
     // Split into chunks to respect SQLite's variable limits
     const int chunkSize = 500;
