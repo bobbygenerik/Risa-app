@@ -37,6 +37,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with ContentFocusRegistrant<SettingsScreen> {
+  static final RegExp _httpPrefixRe = RegExp(r'^https?://');
+  static final RegExp _leadingSlashRe = RegExp(r'^/');
+
   // Navigation State
   int _selectedIndex = 0;
 
@@ -94,8 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   DateTime? _xtreamPanelCountsFetchedAt;
   bool _xtreamPanelCountsInFlight = false;
   FocusNode? _lastGeneralFocusNode;
-  final SettingsLayoutController _layoutController =
-      SettingsLayoutController();
+  final SettingsLayoutController _layoutController = SettingsLayoutController();
 
   @override
   void initState() {
@@ -441,7 +443,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   : Colors.transparent),
                           borderRadius: BorderRadius.circular(8),
                           border: isFocused
-                              ? Border.all(color: AppTheme.focusBorder, width: 2)
+                              ? Border.all(
+                                  color: AppTheme.focusBorder, width: 2)
                               : null,
                         ),
                         alignment: Alignment.center,
@@ -456,7 +459,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                             const SizedBox(width: 8),
                             Text(
                                 isM3u
-                                    ? AppLocalizations.of(context)!.inputMethodM3u
+                                    ? AppLocalizations.of(context)!
+                                        .inputMethodM3u
                                     : AppLocalizations.of(context)!
                                         .inputMethodXtream,
                                 style: TextStyle(
@@ -543,11 +547,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                           children: [
                             Text(
                               hasContent
-                                  ? AppLocalizations.of(context)!.itemsLoaded(totalContent)
+                                  ? AppLocalizations.of(context)!
+                                      .itemsLoaded(totalContent)
                                   : (errorMessage != null &&
                                           errorMessage.isNotEmpty
-                                      ? AppLocalizations.of(context)!.playlistError
-                                      : AppLocalizations.of(context)!.noPlaylistLoaded),
+                                      ? AppLocalizations.of(context)!
+                                          .playlistError
+                                      : AppLocalizations.of(context)!
+                                          .noPlaylistLoaded),
                               style: TextStyle(
                                 color: hasContent
                                     ? AppTheme.accentGreen
@@ -572,7 +579,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 responsePreview.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               BrandSecondaryButton(
-                                label: AppLocalizations.of(context)!.viewResponse,
+                                label:
+                                    AppLocalizations.of(context)!.viewResponse,
                                 onPressed: () => _showPlaylistResponsePreview(
                                     responsePreview),
                                 padding: const EdgeInsets.symmetric(
@@ -640,7 +648,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           tooltip: AppLocalizations.of(context)!.cancelLoad,
                           onPressed: () {
                             cp.cancelPlaylistLoad();
-                            _showMessage(AppLocalizations.of(context)!.playlistLoadCancelled);
+                            _showMessage(AppLocalizations.of(context)!
+                                .playlistLoadCancelled);
                           },
                         )
                       : null,
@@ -703,7 +712,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           tooltip: AppLocalizations.of(context)!.cancelLoad,
                           onPressed: () {
                             cp.cancelPlaylistLoad();
-                            _showMessage(AppLocalizations.of(context)!.playlistLoadCancelled);
+                            _showMessage(AppLocalizations.of(context)!
+                                .playlistLoadCancelled);
                           },
                         )
                       : null,
@@ -732,7 +742,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final detected = epgService.currentUrl ?? _detectedEpgUrl;
                 return SettingsActionTile(
                   title: AppLocalizations.of(context)!.detectedEpgUrl,
-                  subtitle: detected.isNotEmpty ? detected : AppLocalizations.of(context)!.noneDetected,
+                  subtitle: detected.isNotEmpty
+                      ? detected
+                      : AppLocalizations.of(context)!.noneDetected,
                   icon: Icons.link,
                   onTap: null,
                 );
@@ -760,7 +772,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             SettingsActionTile(
               title: AppLocalizations.of(context)!.autoRefreshInterval,
-              subtitle: AppLocalizations.of(context)!.refreshEveryHours(_epgCacheDuration),
+              subtitle: AppLocalizations.of(context)!
+                  .refreshEveryHours(_epgCacheDuration),
               icon: Icons.timer,
               trailing: Row(
                 children: [
@@ -776,7 +789,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             SettingsActionTile(
               title: AppLocalizations.of(context)!.dataRetention,
-              subtitle: AppLocalizations.of(context)!.keepDataForDays(_epgRetentionDays),
+              subtitle: AppLocalizations.of(context)!
+                  .keepDataForDays(_epgRetentionDays),
               icon: Icons.calendar_today,
               trailing: Row(
                 children: [
@@ -864,13 +878,15 @@ class _SettingsScreenState extends State<SettingsScreen>
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         SettingsSectionHeader(
-            title: AppLocalizations.of(context)!.playback, subtitle: AppLocalizations.of(context)!.videoPlayerConfiguration),
+            title: AppLocalizations.of(context)!.playback,
+            subtitle: AppLocalizations.of(context)!.videoPlayerConfiguration),
         SettingsGroup(
           title: AppLocalizations.of(context)!.performance,
           children: [
             SettingsSwitchTile(
               title: AppLocalizations.of(context)!.hardwareAcceleration,
-              subtitle: AppLocalizations.of(context)!.useGpuForBetterPerformance,
+              subtitle:
+                  AppLocalizations.of(context)!.useGpuForBetterPerformance,
               value: _hardwareAcceleration,
               onChanged: (v) =>
                   _handleSwitchTileChange('Hardware Acceleration', v),
@@ -914,8 +930,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             SettingsSwitchTile(
               title: AppLocalizations.of(context)!.rememberPosition,
               value: _rememberPlaybackPosition,
-              onChanged: (v) =>
-                  _handleSwitchTileChange('Remember Position', v),
+              onChanged: (v) => _handleSwitchTileChange('Remember Position', v),
             ),
           ],
         ),
@@ -930,7 +945,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       children: [
         SettingsSectionHeader(
             title: AppLocalizations.of(context)!.aiFeatures,
-            subtitle: AppLocalizations.of(context)!.transcriptionTranslationSubtitles),
+            subtitle: AppLocalizations.of(context)!
+                .transcriptionTranslationSubtitles),
         SettingsGroup(
           title: AppLocalizations.of(context)!.liveServices,
           children: [
@@ -971,7 +987,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         SettingsSectionHeader(
-            title: AppLocalizations.of(context)!.recordings, subtitle: AppLocalizations.of(context)!.manageDvrStorage),
+            title: AppLocalizations.of(context)!.recordings,
+            subtitle: AppLocalizations.of(context)!.manageDvrStorage),
         SettingsGroup(
           children: [
             FutureBuilder<String>(
@@ -979,7 +996,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               builder: (context, snapshot) {
                 return SettingsActionTile(
                   title: AppLocalizations.of(context)!.storagePath,
-                  subtitle: snapshot.data ?? AppLocalizations.of(context)!.loading,
+                  subtitle:
+                      snapshot.data ?? AppLocalizations.of(context)!.loading,
                   icon: Icons.folder,
                   trailing: const Icon(Icons.edit, color: Colors.white54),
                   focusNode: _browseStorageButtonFocusNode,
@@ -1115,13 +1133,12 @@ class _SettingsScreenState extends State<SettingsScreen>
         final cleaned = server.trim();
         final epgBase = Uri.parse(cleaned);
         final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
-            ? Uri.parse(
-                'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}')
+            ? Uri.parse('https://${cleaned.replaceAll(_httpPrefixRe, '')}')
             : epgBase;
         final epgUri = base.replace(
           path: (base.path.trim().isEmpty)
               ? 'xmltv.php'
-              : '${base.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+              : '${base.path.replaceAll(_leadingSlashRe, '')}/xmltv.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
@@ -1132,10 +1149,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           await prefs.setString('epg_url', epgUri.toString());
         }
       } catch (e) {
-        debugLog('Settings: Xtream EPG URL construction failed (credentials not logged)');
+        debugLog(
+            'Settings: Xtream EPG URL construction failed (credentials not logged)');
       }
     } catch (e) {
-      debugLog('Settings: Xtream EPG URL outer block failed (credentials not logged)');
+      debugLog(
+          'Settings: Xtream EPG URL outer block failed (credentials not logged)');
     }
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
@@ -1143,13 +1162,13 @@ class _SettingsScreenState extends State<SettingsScreen>
         final cleaned = server.trim();
         Uri baseUri = Uri.parse(cleaned);
         if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse(
-              'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+          baseUri =
+              Uri.parse('https://${cleaned.replaceAll(_httpPrefixRe, '')}');
         }
         final playlistUri = baseUri.replace(
           path: (baseUri.path.trim().isEmpty)
               ? 'get.php'
-              : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
+              : '${baseUri.path.replaceAll(_leadingSlashRe, '')}/get.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
@@ -1163,8 +1182,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus';
         await provider.loadPlaylistFromUrl(playlistUrlUsed);
       }
-      final hasContent = provider.channelCount > 0 ||
-          provider.channelCount > 0;
+      final hasContent = provider.channelCount > 0 || provider.channelCount > 0;
       final error = provider.errorMessage;
       final responsePreview = provider.lastM3UContent;
       if (error != null && error.trim().isNotEmpty) {
@@ -1394,12 +1412,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     final existingJson = prefs.getString('saved_playlists');
     List<SavedPlaylist> list = [];
     if (existingJson != null && existingJson.trim().isNotEmpty) {
-        try {
-        final decoded = await compute(jsonDecode, existingJson) as List<dynamic>;
+      try {
+        final decoded =
+            await compute(jsonDecode, existingJson) as List<dynamic>;
         list = decoded
             .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
             .toList();
-      } catch (e) { debugLog('Settings: saved_playlists JSON parse failed: $e'); }
+      } catch (e) {
+        debugLog('Settings: saved_playlists JSON parse failed: $e');
+      }
     }
 
     int existingIndex = -1;

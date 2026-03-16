@@ -164,6 +164,11 @@ Future<void> clearPlaylistCache() async {
 }
 
 class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
+  static final RegExp _httpPrefixRe = RegExp(r'^https?://');
+  static final RegExp _leadingSlashRe = RegExp(r'^/');
+  static final RegExp _trailingSlashRe = RegExp(r'/$');
+  static final RegExp _leadingSlashesRe = RegExp(r'^/+');
+
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
   static const int _playlistCacheVersion = 3;
@@ -594,7 +599,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       // Prime count if DB already has data
       try {
         _channelCountDb = await _db.channelCount();
-      } catch (e) { debugLog('ChannelProvider: DB channelCount query failed: $e'); }
+      } catch (e) {
+        debugLog('ChannelProvider: DB channelCount query failed: $e');
+      }
     } catch (e) {
       _dbReady = false;
       debugLog('ChannelProvider: DB init failed: $e');
@@ -871,7 +878,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         'byName': byName,
       });
       await file.writeAsString(payload);
-    } catch (e) { debugLog('ChannelProvider: saveXtreamEpgMap failed: $e'); }
+    } catch (e) {
+      debugLog('ChannelProvider: saveXtreamEpgMap failed: $e');
+    }
   }
 
   Future<int> _applyXtreamEpgMapFromCache() async {
@@ -1035,8 +1044,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         final cleaned = server.trim();
         Uri baseUri = Uri.parse(cleaned);
         if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse(
-              'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+          baseUri =
+              Uri.parse('https://${cleaned.replaceAll(_httpPrefixRe, '')}');
         }
         serverUrl = _buildXtreamServerUrl(baseUri);
         username ??= storedUser;
@@ -1077,7 +1086,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         final epgUri = parsedServerUri.replace(
           path: (parsedServerUri.path.trim().isEmpty)
               ? 'xmltv.php'
-              : '${parsedServerUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+              : '${parsedServerUri.path.replaceAll(_leadingSlashRe, '')}/xmltv.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
@@ -1128,7 +1137,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             final name = (c['category_name'] ?? '').toString();
             if (id.isNotEmpty) categoryNameById[id] = name;
           }
-        } catch (e) { debugLog('ChannelProvider: fetching live categories failed: $e'); }
+        } catch (e) {
+          debugLog('ChannelProvider: fetching live categories failed: $e');
+        }
 
         final preview = <Map<String, dynamic>>[];
         for (final s in liveStreams.take(previewLimit)) {
@@ -1142,7 +1153,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
 
           final url =
-              '${serverUrl.replaceAll(RegExp(r'/$'), '')}/live/$username/$password/$streamId.ts';
+              '${serverUrl.replaceAll(_trailingSlashRe, '')}/live/$username/$password/$streamId.ts';
           preview.add({
             'id': streamId,
             'name': name.isNotEmpty ? name : streamId,
@@ -1213,9 +1224,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               epgCandidate.contains('.php')) {
             try {
               final resolved =
-                  '${serverUrl.replaceAll(RegExp(r'/$'), '')}/${epgCandidate.replaceAll(RegExp(r'^/+'), '')}';
+                  '${serverUrl.replaceAll(_trailingSlashRe, '')}/${epgCandidate.replaceAll(_leadingSlashesRe, '')}';
               epgUrls.add(resolved);
-            } catch (e) { debugLog('ChannelProvider: EPG URL resolve failed: $e'); }
+            } catch (e) {
+              debugLog('ChannelProvider: EPG URL resolve failed: $e');
+            }
           } else {
             if (streamId.isNotEmpty) {
               streamIdToEpgId[streamId] = epgCandidate;
@@ -1271,7 +1284,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 break;
               }
             }
-          } catch (e) { debugLog('ChannelProvider: EPG URL probe failed: $e'); }
+          } catch (e) {
+            debugLog('ChannelProvider: EPG URL probe failed: $e');
+          }
         }
         client.close();
       }
@@ -1344,12 +1359,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         await sharedPrefs.setString('custom_epg_url', accepted);
         try {
           await sharedPrefs.setString('epg_url', accepted);
-        } catch (e) { debugLog('ChannelProvider: set epg_url failed: $e'); }
+        } catch (e) {
+          debugLog('ChannelProvider: set epg_url failed: $e');
+        }
         try {
           final enc = base64Url.encode(utf8.encode(m3uUrl));
           await sharedPrefs.setString('xtream_epg_url_$enc', accepted);
           await sharedPrefs.setString('xtream_epg_url_$serverUrl', accepted);
-        } catch (e) { debugLog('ChannelProvider: save per-playlist EPG URL failed: $e'); }
+        } catch (e) {
+          debugLog('ChannelProvider: save per-playlist EPG URL failed: $e');
+        }
         try {
           await _epgService?.initialize(forceRefresh: true);
           debugLog(
@@ -1476,11 +1495,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
       final id = (map['id'] as String?)?.trim() ?? '';
       final url = (map['url'] as String?)?.trim() ?? '';
-      final channelId =
-        tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
+      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
       final channelNameForLookup =
           (_extractTvgNameFromAttributes(map['attributes']) ??
-                  (map['name'] as String?) ?? '')
+                  (map['name'] as String?) ??
+                  '')
               .trim();
       if (channelId.isEmpty) continue;
 
@@ -1666,7 +1685,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           buffer.write(stat.size);
           buffer.write('|');
           buffer.write(stat.modified.millisecondsSinceEpoch);
-        } catch (e) { debugLog('ChannelProvider: file stat for signature failed: $e'); }
+        } catch (e) {
+          debugLog('ChannelProvider: file stat for signature failed: $e');
+        }
       }
     }
     return buffer.toString();
@@ -1676,7 +1697,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   void cancelPlaylistLoad() {
     try {
       _playlistLoader.cancelCurrent();
-    } catch (e) { debugLog('ChannelProvider: cancelPlaylistLoad failed: $e'); }
+    } catch (e) {
+      debugLog('ChannelProvider: cancelPlaylistLoad failed: $e');
+    }
     _loadingStatus = 'Cancelled';
     _loadingProgress = 0.0;
     _isLoading = false;
@@ -1694,7 +1717,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (!_dbReady && !_dbDisabled) {
       try {
         await _ensureDb();
-      } catch (e) { debugLog('ChannelProvider: ensureDb in getChannelCountAsync failed: $e'); }
+      } catch (e) {
+        debugLog(
+            'ChannelProvider: ensureDb in getChannelCountAsync failed: $e');
+      }
     }
     if (_dbReady) {
       try {
@@ -2305,19 +2331,24 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             final parseStart = DateTime.now();
             final List<Map<String, dynamic>> allChannels = [];
             String? epgUrlFromCache; // Legacy M3U cache extracted EPG URL
-            
+
             try {
               final randomAccessFile = await file.open();
               final firstByte = await randomAccessFile.readByte();
               await randomAccessFile.close();
-              
-              if (firstByte == 91) { // '[' character indicates JSON array
-                debugLog('ChannelProvider: Cache file is JSON array, parsing via compute...');
+
+              if (firstByte == 91) {
+                // '[' character indicates JSON array
+                debugLog(
+                    'ChannelProvider: Cache file is JSON array, parsing via compute...');
                 final jsonString = await file.readAsString();
-                final List<dynamic> decoded = await compute(jsonDecode, jsonString) as List<dynamic>;
-                allChannels.addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
+                final List<dynamic> decoded =
+                    await compute(jsonDecode, jsonString) as List<dynamic>;
+                allChannels
+                    .addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
               } else {
-                debugLog('ChannelProvider: Cache file is M3U, parsing via Streaming Parser...');
+                debugLog(
+                    'ChannelProvider: Cache file is M3U, parsing via Streaming Parser...');
                 DateTime lastCacheUiUpdate = DateTime.now();
                 final parsed = await parsePlaylistCancelable(
                   filePath: cacheFilePath,
@@ -2325,7 +2356,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                     _loadingStatus = 'Parsing cached playlist: $count channels';
                     _loadingProgress = 0.3 + (count / 20000).clamp(0.0, 0.6);
                     final now = DateTime.now();
-                    if (now.difference(lastCacheUiUpdate).inMilliseconds > 500) {
+                    if (now.difference(lastCacheUiUpdate).inMilliseconds >
+                        500) {
                       lastCacheUiUpdate = now;
                       notifyListeners();
                     }
@@ -2343,7 +2375,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
                 'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms. Found ${allChannels.length} channels.');
 
             // Extract and save EPG URL from cache if found
-            final epgUrl = epgUrlFromCache; // Only M3U parsing used to return this. Json doesn't cache it inside the file.
+            final epgUrl =
+                epgUrlFromCache; // Only M3U parsing used to return this. Json doesn't cache it inside the file.
             if (epgUrl != null && epgUrl.isNotEmpty) {
               final prefs = await SharedPreferences.getInstance();
               final oldUrl = prefs.getString('epg_url');
@@ -2464,13 +2497,13 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               Uri baseUri = Uri.parse(cleaned);
               if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
                 baseUri = Uri.parse(
-                    'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+                    'https://${cleaned.replaceAll(_httpPrefixRe, '')}');
               }
 
               final playlistUri = baseUri.replace(
                 path: (baseUri.path.trim().isEmpty)
                     ? 'get.php'
-                    : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
+                    : '${baseUri.path.replaceAll(_leadingSlashRe, '')}/get.php',
                 queryParameters: {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
@@ -2483,7 +2516,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
               final epgUri = baseUri.replace(
                 path: (baseUri.path.trim().isEmpty)
                     ? 'xmltv.php'
-                    : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+                    : '${baseUri.path.replaceAll(_leadingSlashRe, '')}/xmltv.php',
                 queryParameters: {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
@@ -2751,7 +2784,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         try {
           final playlistJson = json.encode(loadingTarget);
           await prefs.setString('flutter.cached_playlist', playlistJson);
-        } catch (e) { debugLog('ChannelProvider: SharedPreferences playlist cache write failed: $e'); }
+        } catch (e) {
+          debugLog(
+              'ChannelProvider: SharedPreferences playlist cache write failed: $e');
+        }
       } else {
         debugLog(
             'ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
@@ -2782,7 +2818,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final dir = await getApplicationDocumentsDirectory();
       final now = DateTime.now().millisecondsSinceEpoch;
       final cacheFile = File('${dir.path}/$_playlistCacheFileName');
-      
+
       // Write to the cache file immediately so future cold starts can use it
       if (loadingTarget.isNotEmpty) {
         try {
@@ -3363,7 +3399,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       await sourceFile.copy(target.path);
       try {
         await sourceFile.delete();
-      } catch (e) { debugLog('ChannelProvider: cleanup source file failed: $e'); }
+      } catch (e) {
+        debugLog('ChannelProvider: cleanup source file failed: $e');
+      }
     }
     return target.path;
   }
@@ -3383,7 +3421,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           list = decoded
               .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
               .toList();
-        } catch (e) { debugLog('ChannelProvider: decode saved playlists failed: $e'); }
+        } catch (e) {
+          debugLog('ChannelProvider: decode saved playlists failed: $e');
+        }
       }
 
       String? name;
@@ -3842,17 +3882,18 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
       final id = (map['id'] as String?)?.trim() ?? '';
       final url = (map['url'] as String?)?.trim() ?? '';
-      final channelId =
-        tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
+      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
       final channelNameForLookup =
           (_extractTvgNameFromAttributes(map['attributes']) ??
-                  (map['name'] as String?) ?? '')
+                  (map['name'] as String?) ??
+                  '')
               .trim();
 
       if (channelId.isNotEmpty &&
           epgService.hasEpgMatch(channelId,
-              channelName:
-                  channelNameForLookup.isNotEmpty ? channelNameForLookup : null)) {
+              channelName: channelNameForLookup.isNotEmpty
+                  ? channelNameForLookup
+                  : null)) {
         matched++;
       }
 
