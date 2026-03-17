@@ -186,9 +186,16 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final matchedCount = _getSortedMappingEntries
-        .where((e) => e.hasEpgData || e.currentMapping != null)
-        .length;
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .where(...).length with a direct for loop to prevent allocating
+    // an intermediate Iterable that is immediately discarded during UI builds.
+    int matchedCount = 0;
+    for (final e in _getSortedMappingEntries) {
+      if (e.hasEpgData || e.currentMapping != null) {
+        matchedCount++;
+      }
+    }
+
     final totalCount = _getSortedMappingEntries.length;
 
     return AppBar(
