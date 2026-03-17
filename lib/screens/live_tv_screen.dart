@@ -234,7 +234,6 @@ class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
   }
 }
 
-
 class _EpgCardData {
   final Program? program;
   final bool hasUsableData;
@@ -261,6 +260,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         AutomaticKeepAliveClientMixin<LiveTVScreen>,
         ContentFocusRegistrant<LiveTVScreen>,
         WidgetsBindingObserver {
+  static final RegExp _epgRe = RegExp(r'\bEPG\b', caseSensitive: false);
+  static final RegExp _trailingSlashRe = RegExp(r'/+$');
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^A-Za-z0-9]+');
+  static final RegExp _whitespaceRe = RegExp(r'\s+');
+  static final RegExp _articlesRe = RegExp(r'^(the|a|an)\s+');
+  static final RegExp _nonAlphanumericSpaceRe = RegExp(r'[^a-z0-9\s]');
+
   int _featuredIndex = 0;
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
@@ -422,6 +428,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       },
     );
   }
+
   bool _isSkeletonVisible = false;
   bool _recoveryInFlight = false;
   bool _hasShownContent =
@@ -454,7 +461,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // fetch completing) would otherwise drive ValueListenableBuilder at unbounded rate.
         if (_heroArtworkDebounce?.isActive != true) {
           _heroArtworkVersion.value++;
-          _heroArtworkDebounce = Timer(const Duration(milliseconds: 100), () {});
+          _heroArtworkDebounce =
+              Timer(const Duration(milliseconds: 100), () {});
         }
         // Debounce a full setState for card row artwork updates (more expensive).
         if (_artworkRebuildDebounce?.isActive == true) return;
@@ -506,9 +514,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Helper: replace the word 'EPG' with 'data' in the status (second) line.
   String? _replaceEpgWithData(String? s) {
     if (s == null) return null;
-    return s
-        .replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data')
-        .trim();
+    return s.replaceAll(_epgRe, 'data').trim();
   }
 
   Future<String?> _readPlaylistIdentity() async {
@@ -1618,8 +1624,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         decoration: const BoxDecoration(
           color: AppColors.background,
         ),
-        child: Selector<ChannelProvider,
-            ({bool hasChannels, int channelCount, bool noPlaylistConfigured, String? errorMessage, bool isLoading, bool isColdStartLoad, double loadingProgress, String loadingStatus})>(
+        child: Selector<
+            ChannelProvider,
+            ({
+              bool hasChannels,
+              int channelCount,
+              bool noPlaylistConfigured,
+              String? errorMessage,
+              bool isLoading,
+              bool isColdStartLoad,
+              double loadingProgress,
+              String loadingStatus
+            })>(
           selector: (context, provider) => (
             hasChannels: provider.hasChannels,
             channelCount: provider.channelCount,
@@ -1741,7 +1757,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 epgLoadingState.isParsing ||
                 epgLoadingState.isLoading ||
                 categoriesNotReady;
-            final showStartupOverlay = false; // Disabled by user request, use skeleton loaders instead
+            final showStartupOverlay =
+                false; // Disabled by user request, use skeleton loaders instead
 
             final epgStatus = epgLoadingState.isDownloading
                 ? 'Downloading EPG data...'
@@ -1846,8 +1863,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 }
 
                 // CRITICAL: Wrap Hero in Selector so it reacts to background EPG flow but ignores progress ticks
-                return wrapWithOverlay(Selector<IncrementalEpgService,
-                    ({bool hasPrograms, bool isLoading, bool isParsing, bool isDownloading, bool isBatchLoading, bool hasUrl, String? error, bool hasUsableData})>(
+                return wrapWithOverlay(Selector<
+                    IncrementalEpgService,
+                    ({
+                      bool hasPrograms,
+                      bool isLoading,
+                      bool isParsing,
+                      bool isDownloading,
+                      bool isBatchLoading,
+                      bool hasUrl,
+                      String? error,
+                      bool hasUsableData
+                    })>(
                   selector: (context, epg) => (
                     hasPrograms: epg.hasLoadedPrograms,
                     isLoading: epg.isLoading,
@@ -2194,7 +2221,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Return cached widget if EPG hasn't changed since last build.
     // EPG lookups here (60 channels × 10 rows = 600 getCurrentProgram calls) are the
     // main source of 110ms build frames when artwork setState fires.
-    if (_programTypeRowCacheValid && _cachedProgramTypeRows.containsKey(title)) {
+    if (_programTypeRowCacheValid &&
+        _cachedProgramTypeRows.containsKey(title)) {
       return _cachedProgramTypeRows[title]!;
     }
 
@@ -3060,7 +3088,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cachedUrl = _normalizeArtworkUrl(cached, isHero: false);
     if (cachedUrl != null && cachedUrl.isNotEmpty) {
       if (_isValidProgramArtwork(cachedUrl, channel,
-            programTitle: program.title, source: 'cached', forCard: true)) {
+          programTitle: program.title, source: 'cached', forCard: true)) {
         final normalized = normalizeImageUrl(cachedUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
@@ -3077,7 +3105,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final byTitleUrl = _normalizeArtworkUrl(byTitle, isHero: false);
     if (byTitleUrl != null && byTitleUrl.isNotEmpty) {
       if (_isValidProgramArtwork(byTitleUrl, channel,
-            programTitle: program.title, source: 'title_cache', forCard: true)) {
+          programTitle: program.title, source: 'title_cache', forCard: true)) {
         final normalized = normalizeImageUrl(byTitleUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
@@ -3100,7 +3128,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final epgUrl = _normalizeArtworkUrl(program.imageUrl, isHero: false);
     if (epgUrl != null && epgUrl.isNotEmpty) {
       if (_isValidProgramArtwork(epgUrl, channel,
-            programTitle: program.title, source: 'card_epg', forCard: true, isEpgFallback: true)) {
+          programTitle: program.title,
+          source: 'card_epg',
+          forCard: true,
+          isEpgFallback: true)) {
         final normalized = normalizeImageUrl(epgUrl);
         _logArtworkDecision(
           'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
@@ -3117,11 +3148,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  bool _isLikelyPosterUrl(String url) => ArtworkValidator.isLikelyPosterUrl(url);
+  bool _isLikelyPosterUrl(String url) =>
+      ArtworkValidator.isLikelyPosterUrl(url);
 
-  bool _isLikelyLandscapeUrl(String url) => ArtworkValidator.isLikelyLandscapeUrl(url);
+  bool _isLikelyLandscapeUrl(String url) =>
+      ArtworkValidator.isLikelyLandscapeUrl(url);
 
-  bool _isLikelyChannelLogoUrl(String url) => ArtworkValidator.isLikelyChannelLogoUrl(url);
+  bool _isLikelyChannelLogoUrl(String url) =>
+      ArtworkValidator.isLikelyChannelLogoUrl(url);
 
   bool _isValidProgramArtwork(
     String? url,
@@ -3144,7 +3178,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     // Always reject poster URLs — landscape-only cards & hero, even for EPG fallbacks.
     if (_isLikelyPosterUrl(url)) {
       _logArtworkDecision(
@@ -3152,7 +3186,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     // Cards bypass the strict landscape check, and EPG fallbacks bypass it everywhere.
     if (!forCard && !isEpgFallback && !_isLikelyLandscapeUrl(url)) {
       _logArtworkDecision(
@@ -3160,7 +3194,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     // Avoid title logos (clearart) for backgrounds.
     if (_isLikelyTitleLogoUrl(url)) {
       _logArtworkDecision(
@@ -3168,7 +3202,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     final channelLogo = channel.logoUrl;
     if (channelLogo != null && channelLogo == url) {
       _logArtworkDecision(
@@ -3182,7 +3216,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     // Block small images that would look bad when scaled up, UNLESS it's an EPG fallback
     if (!isEpgFallback && _isLikelySmallImage(url)) {
       _logArtworkDecision(
@@ -3190,7 +3224,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
       return false;
     }
-    
+
     return true;
   }
 
@@ -3206,9 +3240,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return true;
   }
 
-  bool _isLikelyTitleLogoUrl(String url) => ArtworkValidator.isLikelyTitleLogoUrl(url);
+  bool _isLikelyTitleLogoUrl(String url) =>
+      ArtworkValidator.isLikelyTitleLogoUrl(url);
 
-  bool _isLikelySmallImage(String url) => ArtworkValidator.isLikelySmallImage(url);
+  bool _isLikelySmallImage(String url) =>
+      ArtworkValidator.isLikelySmallImage(url);
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
@@ -3250,7 +3286,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     try {
       final uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
-      final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
+      final path = uri.path.replaceAll(_trailingSlashRe, '').toLowerCase();
       if (host.isEmpty) return path;
       return '$host$path';
     } catch (e) {
@@ -3258,8 +3294,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return url.toLowerCase();
     }
   }
-
-
 
   String _applyTmdbSize(String url, String size) {
     try {
@@ -3270,7 +3304,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         segments[2] = size;
         return uri.replace(pathSegments: segments).toString();
       }
-    } catch (e) { debugLog('LiveTvScreen: applyTmdbSize failed: $e'); }
+    } catch (e) {
+      debugLog('LiveTvScreen: applyTmdbSize failed: $e');
+    }
     return url;
   }
 
@@ -3332,7 +3368,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channels.isEmpty) return [];
 
     // Use cached result if valid — avoids iterating 60 channels on every artwork setState
-    if (!forceRefresh && _heroCandidatesCacheValid && _cachedHeroCandidates != null) {
+    if (!forceRefresh &&
+        _heroCandidatesCacheValid &&
+        _cachedHeroCandidates != null) {
       return _cachedHeroCandidates!;
     }
 
@@ -3847,7 +3885,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 15}) {
+  void _prefetchRowArtworkForChannels(List<Channel> channels,
+      {int limit = 15}) {
     if (channels.isEmpty) return;
     final epgService =
         Provider.of<IncrementalEpgService>(context, listen: false);
@@ -4369,7 +4408,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (rawGroup.isEmpty) {
       return 'LIVE TV';
     }
-    final cleaned = rawGroup.replaceAll(RegExp(r'[^A-Za-z0-9]+'), ' ').trim();
+    final cleaned = rawGroup.replaceAll(_nonAlphaNumRe, ' ').trim();
     if (cleaned.isEmpty) {
       return 'LIVE TV';
     }
@@ -4383,7 +4422,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'uk',
       'ca',
     };
-    final tokens = cleaned.split(RegExp(r'\s+'));
+    final tokens = cleaned.split(_whitespaceRe);
     String? pick;
     for (final token in tokens) {
       final lower = token.toLowerCase();
@@ -4581,9 +4620,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // strip non-alphanumeric characters, collapse whitespace.
     if (title.isEmpty) return title;
     var s = title.toLowerCase().trim();
-    s = s.replaceAll(RegExp(r'^(the|a|an)\s+'), '');
-    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
-    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    s = s.replaceAll(_articlesRe, '');
+    s = s.replaceAll(_nonAlphanumericSpaceRe, ' ');
+    s = s.replaceAll(_whitespaceRe, ' ').trim();
     return s;
   }
 
@@ -4823,7 +4862,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Align(
                 alignment: Alignment.centerRight,
                 child: FractionallySizedBox(
-                  widthFactor: 0.85,  // Wider canvas to compensate for containment shrinking
+                  widthFactor:
+                      0.85, // Wider canvas to compensate for containment shrinking
                   heightFactor: 1.0,
                   child: ShaderMask(
                     shaderCallback: (bounds) {
@@ -4835,14 +4875,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           Colors.white,
                           Colors.white,
                         ],
-                        stops: const [0.0, 0.25, 1.0], // Smoother gradient for contained images
+                        stops: const [
+                          0.0,
+                          0.25,
+                          1.0
+                        ], // Smoother gradient for contained images
                       ).createShader(bounds);
                     },
                     blendMode: BlendMode.dstIn,
                     child: CachedNetworkImage(
                       imageUrl: normalizedHeroUrl,
                       httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.contain, // Prevent vertical cropping on extreme landscape posters
+                      fit: BoxFit
+                          .contain, // Prevent vertical cropping on extreme landscape posters
                       alignment: Alignment.centerRight,
                       filterQuality: FilterQuality.high,
                       memCacheWidth: cacheWidth,
