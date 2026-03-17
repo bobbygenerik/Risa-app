@@ -12,51 +12,70 @@ class EPGMatchingUtils {
       2; // Reduced to 2 to catch "UK", "US", "BBC 1" -> "1"
 
   // --- Normalization Regexes ---
-  static final RegExp invalidXmlCharRe =
-      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]');
-  static final RegExp unbrokenEntityRe =
-      RegExp(r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)');
-  static final RegExp timeParseRe =
-      RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp invalidXmlCharRe = RegExp(
+    r'[\x00-\x08\x0B\x0C\x0E-\x1F]',
+  );
+  static final RegExp unbrokenEntityRe = RegExp(
+    r'&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)',
+  );
+  static final RegExp timeParseRe = RegExp(
+    r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?',
+  );
 
   // Specific noise words to strip for channel matching
   static final RegExp _noiseTokensRe = RegExp(
-      r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b|\bpaid\s+programming\b|\bhome\s+shopping\b|\bhomeshopping\b|\binfomercial\b|\bsponsored\b|\bpromotion\b|\bcommercial\b|\badvertisement\b)',
-      caseSensitive: false);
+    r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b|\bpaid\s+programming\b|\bhome\s+shopping\b|\bhomeshopping\b|\binfomercial\b|\bsponsored\b|\bpromotion\b|\bcommercial\b|\badvertisement\b)',
+    caseSensitive: false,
+  );
 
   // Tech labels (resolution, codec)
   static final RegExp _techLabelsRe = RegExp(
-      r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\b50fps\b|\b60fps\b)',
-      caseSensitive: false);
+    r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\bac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\b50fps\b|\b60fps\b)',
+    caseSensitive: false,
+  );
 
   // Region prefixes/suffixes to strip (e.g., "UK:", "PL:", "(US)")
-  static final RegExp _regionPrefixRe =
-      RegExp(r'^([A-Z]{2,3})[:|]\s*', caseSensitive: false);
+  static final RegExp _regionPrefixRe = RegExp(
+    r'^([A-Z]{2,3})[:|]\s*',
+    caseSensitive: false,
+  );
   static final RegExp _regionSuffixRe = RegExp(
-      r'[\s(\[]+(UK|US|USA|CA|AU|PL|DE|IT|FR|ES|AR|TR|SE|NO|DK|FI|NL|BE|CH)[:|\])]*$',
-      caseSensitive: false);
+    r'[\s(\[]+(UK|US|USA|CA|AU|PL|DE|IT|FR|ES|AR|TR|SE|NO|DK|FI|NL|BE|CH)[:|\])]*$',
+    caseSensitive: false,
+  );
 
   // Common numbering variants
-  static final RegExp _plusOneRe =
-      RegExp(r'(\bplus\s*1\b|\+1\b)', caseSensitive: false);
-  static final RegExp _commonConnectorsRe =
-      RegExp(r'\b(and|&|en|y|et|und)\b', caseSensitive: false);
+  static final RegExp _plusOneRe = RegExp(
+    r'(\bplus\s*1\b|\+1\b)',
+    caseSensitive: false,
+  );
+  static final RegExp _commonConnectorsRe = RegExp(
+    r'\b(and|&|en|y|et|und)\b',
+    caseSensitive: false,
+  );
 
   // Punctuation/Brackets to strip
   static final RegExp _bracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
 
   // --- Normalization for Artwork/Programs (Retained from previous version) ---
   static final RegExp _dashColonRe = RegExp(r'\s*[-:]\s*');
-  static final RegExp _seasonEpisodeRe =
-      RegExp(r'\bs\d{1,2}e\d{1,2}\b', caseSensitive: false);
-  static final RegExp _seasonRe =
-      RegExp(r'\bseason\s+\d+\b', caseSensitive: false);
-  static final RegExp _episodeRe =
-      RegExp(r'\bepisode\s+\d+\b', caseSensitive: false);
+  static final RegExp _seasonEpisodeRe = RegExp(
+    r'\bs\d{1,2}e\d{1,2}\b',
+    caseSensitive: false,
+  );
+  static final RegExp _seasonRe = RegExp(
+    r'\bseason\s+\d+\b',
+    caseSensitive: false,
+  );
+  static final RegExp _episodeRe = RegExp(
+    r'\bepisode\s+\d+\b',
+    caseSensitive: false,
+  );
   static final RegExp _partRe = RegExp(r'\bpart\s+\d+\b', caseSensitive: false);
   static final RegExp _yearSuffixRe = RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$');
-  static final RegExp _yearParenRe =
-      RegExp(r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$');
+  static final RegExp _yearParenRe = RegExp(
+    r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$',
+  );
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
 
   static const Map<String, String> _numberWordMap = {
@@ -71,14 +90,14 @@ class EPGMatchingUtils {
     'nine': '9',
     'ten': '10',
     'uno': '1',
-    'primero': '1'
+    'primero': '1',
   };
 
   static const Map<String, String> _commonAbbrevMap = {
     'nat': 'national', 'geo': 'geographic', 'int': 'international',
     'intl': 'international', 'sport': 'sports',
     // Common regional abbreviations
-    'us': 'usa', 'uk': 'united kingdom', 'de': 'germany', 'fr': 'france'
+    'us': 'usa', 'uk': 'united kingdom', 'de': 'germany', 'fr': 'france',
   };
 
   static const Map<String, String> _commonTranslationMap = {
@@ -100,12 +119,15 @@ class EPGMatchingUtils {
     'infantil': 'kids',
   };
 
-  static final RegExp _commonAbbrevRe =
-      RegExp(r'\b(' + _commonAbbrevMap.keys.join('|') + r')\b');
-  static final RegExp _numberWordRe =
-      RegExp(r'\b(' + _numberWordMap.keys.join('|') + r')\b');
-  static final RegExp _commonTranslationRe =
-      RegExp(r'\b(' + _commonTranslationMap.keys.join('|') + r')\b');
+  static final RegExp _commonAbbrevRe = RegExp(
+    r'\b(' + _commonAbbrevMap.keys.join('|') + r')\b',
+  );
+  static final RegExp _numberWordRe = RegExp(
+    r'\b(' + _numberWordMap.keys.join('|') + r')\b',
+  );
+  static final RegExp _commonTranslationRe = RegExp(
+    r'\b(' + _commonTranslationMap.keys.join('|') + r')\b',
+  );
 
   /// Cleans the channel name but preserves word structure (for tokenization).
   static String cleanChannelName(String input) {
@@ -134,16 +156,22 @@ class EPGMatchingUtils {
     s = s.replaceAll(_commonConnectorsRe, ' and ');
 
     // 8. Expand abbreviations (Optimized)
-    s = s.replaceAllMapped(_commonAbbrevRe,
-        (match) => _commonAbbrevMap[match.group(0)!] ?? match.group(0)!);
+    s = s.replaceAllMapped(
+      _commonAbbrevRe,
+      (match) => _commonAbbrevMap[match.group(0)!] ?? match.group(0)!,
+    );
 
     // 9. Convert number words (Optimized)
-    s = s.replaceAllMapped(_numberWordRe,
-        (match) => _numberWordMap[match.group(0)!] ?? match.group(0)!);
+    s = s.replaceAllMapped(
+      _numberWordRe,
+      (match) => _numberWordMap[match.group(0)!] ?? match.group(0)!,
+    );
 
     // 10. Translate common words (Added from PR #9)
-    s = s.replaceAllMapped(_commonTranslationRe,
-        (match) => _commonTranslationMap[match.group(0)!] ?? match.group(0)!);
+    s = s.replaceAllMapped(
+      _commonTranslationRe,
+      (match) => _commonTranslationMap[match.group(0)!] ?? match.group(0)!,
+    );
 
     return s.trim();
   }
@@ -156,9 +184,10 @@ class EPGMatchingUtils {
     final codes = <int>[];
     for (int i = 0; i < s.length; i++) {
       final code = s.codeUnitAt(i);
-      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
-                             (code >= 65 && code <= 90) ||  // A-Z
-                             (code >= 48 && code <= 57);    // 0-9
+      final isAlphanumeric =
+          (code >= 97 && code <= 122) || // a-z
+          (code >= 65 && code <= 90) || // A-Z
+          (code >= 48 && code <= 57); // 0-9
       if (isAlphanumeric) {
         codes.add(code);
       }
@@ -187,9 +216,10 @@ class EPGMatchingUtils {
     int startIdx = 0;
     for (int i = 0; i < cleaned.length; i++) {
       final code = cleaned.codeUnitAt(i);
-      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
-                             (code >= 65 && code <= 90) ||  // A-Z
-                             (code >= 48 && code <= 57);    // 0-9
+      final isAlphanumeric =
+          (code >= 97 && code <= 122) || // a-z
+          (code >= 65 && code <= 90) || // A-Z
+          (code >= 48 && code <= 57); // 0-9
       if (!isAlphanumeric) {
         if (i > startIdx) {
           final t = cleaned.substring(startIdx, i);
@@ -231,10 +261,12 @@ class EPGMatchingUtils {
 
     // Manual intersection calculation to avoid creating new Set objects
     // Iterate over the smaller set for efficiency
-    final smaller =
-        plTokens.length < candidate.tokens.length ? plTokens : candidate.tokens;
-    final larger =
-        plTokens.length < candidate.tokens.length ? candidate.tokens : plTokens;
+    final smaller = plTokens.length < candidate.tokens.length
+        ? plTokens
+        : candidate.tokens;
+    final larger = plTokens.length < candidate.tokens.length
+        ? candidate.tokens
+        : plTokens;
     int intersectionCount = 0;
     for (final token in smaller) {
       if (larger.contains(token)) intersectionCount++;
@@ -366,22 +398,25 @@ class EPGMatchingUtils {
 
   // --- Restored Legacy Methods for Build Compatibility ---
 
+  static final RegExp _newsTitleRe = RegExp(
+    r'(news|report|briefing|update|live coverage|bulletin|weather|sport|journal)',
+    caseSensitive: false,
+  );
+
+  static final RegExp _genericTitleRe = RegExp(
+    r'(news|sports|^episode |^series |^movie$|^film$|^to be announced$|^tba$)',
+    caseSensitive: false,
+  );
+
   static bool isLikelyNewsTitle(String title) {
     if (title.isEmpty) return false;
-    final lower = title.toLowerCase();
-    return lower.contains('news') ||
-        lower.contains('report') ||
-        lower.contains('briefing') ||
-        lower.contains('update') ||
-        lower.contains('live coverage') ||
-        lower.contains('bulletin') ||
-        lower.contains('weather') ||
-        lower.contains('sport') ||
-        lower.contains('journal');
+    return _newsTitleRe.hasMatch(title);
   }
 
-  static String normalizeForDisplayTitle(String title,
-      {bool stripEpisodeSubtitle = false}) {
+  static String normalizeForDisplayTitle(
+    String title, {
+    bool stripEpisodeSubtitle = false,
+  }) {
     final trimmed = title.trim();
     if (trimmed.isEmpty) return title;
     if (stripEpisodeSubtitle) {
@@ -409,7 +444,11 @@ class EPGMatchingUtils {
   }
 
   static double scoreFuzzyMatch(
-      String titleA, String titleB, Set<String> tokensA, Set<String> tokensB) {
+    String titleA,
+    String titleB,
+    Set<String> tokensA,
+    Set<String> tokensB,
+  ) {
     // Simple Jaccard
     final intersection = tokensA.intersection(tokensB).length;
     final union = tokensA.union(tokensB).length;
@@ -420,23 +459,17 @@ class EPGMatchingUtils {
 
   static bool isGenericTitle(String title) {
     if (title.isEmpty) return true;
-    final lower = title.toLowerCase();
-    return lower.contains('news') ||
-        lower.contains('sports') ||
-        lower.startsWith('episode ') ||
-        lower.startsWith('series ') ||
-        lower == 'movie' ||
-        lower == 'film' ||
-        lower == 'to be announced' ||
-        lower == 'tba';
+    return _genericTitleRe.hasMatch(title);
   }
 
   static String normalizeArtworkVariant(String title) {
     return normalizeForArtwork(title);
   }
 
-  static String normalizeTitleForLookup(String title,
-      {bool aggressiveForNews = false}) {
+  static String normalizeTitleForLookup(
+    String title, {
+    bool aggressiveForNews = false,
+  }) {
     // Shim for existing calls
     return normalizeForArtwork(title);
   }
@@ -453,9 +486,9 @@ class EpgMatchCandidate {
     required this.id,
     required this.displayName,
     String? normalized,
-  })  : normalizedName =
-            normalized ?? EPGMatchingUtils.normalizeChannelName(displayName),
-        tokens = EPGMatchingUtils.tokenize(displayName);
+  }) : normalizedName =
+           normalized ?? EPGMatchingUtils.normalizeChannelName(displayName),
+       tokens = EPGMatchingUtils.tokenize(displayName);
 
   @override
   String toString() => 'Candidate($id, "$displayName")';

@@ -40,3 +40,7 @@
 ## 2026-03-16 - [RegExp Overhead in replaceAll calls]
 **Learning:** Compiling RegExp inside .replaceAll() and .split() calls within frequent loops or string manipulations (like filtering channels or parsing URLs) causes measurable performance overhead. Pre-compiling static RegExp objects for these operations reduced execution time by roughly ~40% in micro-benchmarks.
 **Action:** Always define frequently used `RegExp` expressions as `static final` class constants, particularly for string replacements in `ChannelProvider` URL generation, `LiveTvScreen` title normalization, and `SettingsScreen`.
+
+## 2026-03-26 - [Replace `.toLowerCase().contains()` chains with cached `RegExp` in hot paths]
+**Learning:** In classification algorithms parsing thousands of items (like `SportsClassifier` and `EPGMatchingUtils`), chains of `.toLowerCase().contains('keyword')` or manual loops over string lists (`['keyword1', 'keyword2']`) generate massive amounts of intermediate String allocations because `.toLowerCase()` is invoked for every parsed string. A single cached `RegExp(r'(keyword1|keyword2)', caseSensitive: false)` evaluated with `.hasMatch(string)` completely avoids allocating a lowercased copy of the string and evaluates substantially faster natively.
+**Action:** For simple classification lists checking for keyword inclusion, compile them into a single `static final RegExp(r'(kw1|kw2)', caseSensitive: false)` instead of doing manual substring searches.
