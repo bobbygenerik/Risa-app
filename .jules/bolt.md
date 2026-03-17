@@ -33,3 +33,7 @@
 ## 2025-05-23 - [Intermediate Iterable Allocations in Hot Paths]
 **Learning:** Chained operations like `.where(...).map(...).toList()`, `.where(...).length`, or uses of `.fold(...)` create multiple intermediate `Iterable` instances, closures, and invoke function calls repeatedly. In frequent UI paths (like filtering EPG mappings) or utility metrics (like cache sizing), this induces measurable overhead and GC pressure.
 **Action:** Replace functional array methods (`where`, `map`, `fold`) with manual `for` loops in hot, frequently-rebuilt UI paths and loops. A manual `for` loop with local variables avoids intermediate instantiations and function closure overhead entirely.
+
+## 2025-06-05 - [Avoid Chained Iterable Operations in Live TV Screen Render Paths]
+**Learning:** Chained operations like `.where(...).toList()`, `.map(...).toList()`, and `.take(...).toList()` inside the UI building and background loading functions of `LiveTVScreen` (e.g., `_buildContinueWatchingRow`, `_snapshotProgramsForChannel` handling, `_buildHeroCandidates`) cause unnecessary allocations of iterators and short-lived lists during scrolling and periodic refreshes. This increases garbage collection pressure, leading to UI stutters on lower-end devices when displaying many channels.
+**Action:** Use standard `for` loops and manually add items to pre-initialized lists when building UI collections or mapping data in rendering paths to avoid intermediate allocations.

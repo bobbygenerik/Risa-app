@@ -616,14 +616,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _categoryChannelCache
         ..clear()
         ..addAll(cache);
-      _categoryOffsets
-        ..clear()
-        ..addEntries(cache.entries
-            .map((entry) => MapEntry(entry.key, entry.value.length)));
-      _categoryHasMore
-        ..clear()
-        ..addEntries(cache.entries.map((entry) => MapEntry(
-            entry.key, entry.value.length >= _liveTvSnapshotRowLimit)));
+      // OPTIMIZATION: Manually map entries to dictionaries directly instead of
+      // creating intermediate `MapEntry` collections via chained iterables,
+      // thereby reducing short-lived object allocations during snapshot re-renders.
+      _categoryOffsets.clear();
+      _categoryHasMore.clear();
+      for (final entry in cache.entries) {
+        _categoryOffsets[entry.key] = entry.value.length;
+        _categoryHasMore[entry.key] = entry.value.length >= _liveTvSnapshotRowLimit;
+      }
       // Show all snapshot categories, not limited to _liveTvSnapshotCategoryLimit
       _visibleCategoryCount = _categoryNames.length;
 
@@ -719,22 +720,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           in _categoryNames.take(_liveTvSnapshotCategoryLimit)) {
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) continue;
+        final prefetchChannels = <Channel>[];
+        final prefetchLimit = channels.length < _liveTvSnapshotRowLimit ? channels.length : _liveTvSnapshotRowLimit;
+        for (var i = 0; i < prefetchLimit; i++) {
+          prefetchChannels.add(channels[i]);
+        }
         _prefetchRowArtworkForChannels(
-          channels.take(_liveTvSnapshotRowLimit).toList(),
+          prefetchChannels,
           limit: 15,
         );
         final payload = <Map<String, dynamic>>[];
         for (final channel in channels.take(_liveTvSnapshotRowLimit)) {
           final programs = _snapshotProgramsForChannel(channel, epgService);
-          final programPayload = programs
-              .map((program) => {
-                    'startTs': program.startTime.millisecondsSinceEpoch,
-                    'endTs': program.endTime.millisecondsSinceEpoch,
-                    'title': program.title,
-                    'description': program.description,
-                    'imageUrl': program.imageUrl,
-                  })
-              .toList();
+          final programPayload = <Map<String, dynamic>>[];
+          for (final program in programs) {
+            programPayload.add({
+              'startTs': program.startTime.millisecondsSinceEpoch,
+              'endTs': program.endTime.millisecondsSinceEpoch,
+              'title': program.title,
+              'description': program.description,
+              'imageUrl': program.imageUrl,
+            });
+          }
           payload.add({
             'id': channel.id,
             'name': channel.name,
@@ -1250,7 +1257,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _prefetchInitialCategoryRows() async {
     if (_categoryNames.isEmpty) return;
     final end = math.min(_initialCategoryPrefetchCount, _categoryNames.length);
-    final categories = _categoryNames.take(end).toList();
+
+    // OPTIMIZATION: Use manual loop to avoid intermediate iterable allocations
+    // from `.take().toList()`, reducing GC pressure during initial load.
+    final categories = <String>[];
+    for (var i = 0; i < end; i++) {
+      categories.add(_categoryNames[i]);
+    }
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
     try {
@@ -2034,9 +2047,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // Fill remaining slots with random channels for variety
-    final availableChannels = fallbackChannels
-        .where((channel) => !addedChannelIds.contains(channel.epgLookupId))
-        .toList();
+    // OPTIMIZATION: Replacing `.where().toList()` filter chain directly avoids
+    // an allocation block when calculating random features.
+    final availableChannels = <Channel>[];
+    for (final channel in fallbackChannels) {
+      if (!addedChannelIds.contains(channel.epgLookupId)) {
+        availableChannels.add(channel);
+      }
+    }
 
     // Shuffle for randomness
     availableChannels.shuffle(math.Random());
@@ -2147,7 +2165,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       BuildContext context, List<Channel> allChannels) {
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
-    final recentChannels = channelProvider.mostWatchedChannels.take(8).toList();
+
+    // OPTIMIZATION: Manual slice via loop replaces `.take().toList()`, averting
+    // creation of temporary Iterables when rebuilding the UI row components.
+    final recentChannels = <Channel>[];
+    final maxLimit = channelProvider.mostWatchedChannels.length < 8 ? channelProvider.mostWatchedChannels.length : 8;
+    for (var i = 0; i < maxLimit; i++) {
+      recentChannels.add(channelProvider.mostWatchedChannels[i]);
+    }
 
     if (recentChannels.isEmpty) return const SizedBox.shrink();
 
@@ -2237,8 +2262,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final epgService = context.read<IncrementalEpgService>();
     final heroCandidates = _buildHeroCandidates(allChannels, epgService);
-    final epgHeroCandidates =
-        heroCandidates.where((candidate) => candidate.program != null).toList();
+    final epgHeroCandidates = <_HeroCandidate>[];
+    for (final candidate in heroCandidates) {
+      if (candidate.program != null) {
+        epgHeroCandidates.add(candidate);
+      }
+    }
     // FIX: Don't block the entire screen just because EPG isn't loaded!
     // If no EPG data, just show the first channel as "hero" with a placeholder.
     // The user can still navigate and watch channels.
@@ -2257,8 +2286,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ];
     _lastHeroCandidateCount = selectionPool.length;
     _prefetchTitleLogosForCandidates(selectionPool);
+    final selectionPoolChannels = <Channel>[];
+    for (final candidate in selectionPool) {
+      selectionPoolChannels.add(candidate.channel);
+    }
     _prefetchRowArtworkForChannels(
-      selectionPool.map((candidate) => candidate.channel).toList(),
+      selectionPoolChannels,
       limit: 15,
     );
     // Removed state mutation of _featuredIndex from build method to avoid infinite loops
@@ -3341,7 +3374,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
 
     // Limit to top 15 after sorting
-    final result = candidates.take(15).toList();
+    final result = <_HeroCandidate>[];
+    final maxLimit = candidates.length < 15 ? candidates.length : 15;
+    for (var i = 0; i < maxLimit; i++) {
+      result.add(candidates[i]);
+    }
     _cachedHeroCandidates = result;
     _heroCandidatesCacheValid = true;
     return result;
@@ -3742,13 +3779,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (!mounted) return;
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
-
       // ⚡ Bolt: Performance Optimization
       // Fused chained iterable operations (.map().where().toList()) into a single
       // manual loop to prevent intermediate object allocations during post-frame callbacks.
-      final List<String> channelIds = [];
-      final List<String> channelNames = [];
-
+      final channelIds = <String>[];
+      final channelNames = <String>[];
       for (final c in channels) {
         final id = c.epgLookupId;
         if (id.isNotEmpty) {
