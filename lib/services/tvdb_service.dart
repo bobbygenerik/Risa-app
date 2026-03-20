@@ -327,22 +327,27 @@ class TvdbService {
       return null;
     }
     
+    // OPTIMIZATION: Replaced chained `.where(...).toList()` with manual `for` loops
+    // to avoid intermediate `Iterable` allocations and reduce GC pressure.
     // First try preferred hero types (backgrounds)
-    final backgrounds = artworks.where((art) {
-      if (art is! Map<String, dynamic>) return false;
+    final backgrounds = <Map<String, dynamic>>[];
+    for (final art in artworks) {
+      if (art is! Map<String, dynamic>) continue;
       final type = getTypeId(art);
-      return type != null && _kPreferredHeroTypes.contains(type);
-    }).toList();
+      if (type != null && _kPreferredHeroTypes.contains(type)) {
+        backgrounds.add(art);
+      }
+    }
 
     if (backgrounds.isNotEmpty) {
       // Sort by score desc
       backgrounds.sort((a, b) {
-        final aScore = ((a as Map)['score'] as num?)?.toDouble() ?? 0.0;
-        final bScore = ((b as Map)['score'] as num?)?.toDouble() ?? 0.0;
+        final aScore = (a['score'] as num?)?.toDouble() ?? 0.0;
+        final bScore = (b['score'] as num?)?.toDouble() ?? 0.0;
         return bScore.compareTo(aScore);
       });
 
-      final best = backgrounds.first as Map<String, dynamic>;
+      final best = backgrounds.first;
       final image = best['image'] as String?;
       if (image != null && image.isNotEmpty && !_isMissingArtwork(image)) {
         debugLog('TVDB: Found background artwork type ${getTypeId(best)}');
@@ -351,20 +356,23 @@ class TvdbService {
     }
     
     // Fallback to banner types (still landscape-oriented)
-    final banners = artworks.where((art) {
-      if (art is! Map<String, dynamic>) return false;
+    final banners = <Map<String, dynamic>>[];
+    for (final art in artworks) {
+      if (art is! Map<String, dynamic>) continue;
       final type = getTypeId(art);
-      return type != null && _kFallbackLandscapeTypes.contains(type);
-    }).toList();
+      if (type != null && _kFallbackLandscapeTypes.contains(type)) {
+        banners.add(art);
+      }
+    }
     
     if (banners.isNotEmpty) {
       banners.sort((a, b) {
-        final aScore = ((a as Map)['score'] as num?)?.toDouble() ?? 0.0;
-        final bScore = ((b as Map)['score'] as num?)?.toDouble() ?? 0.0;
+        final aScore = (a['score'] as num?)?.toDouble() ?? 0.0;
+        final bScore = (b['score'] as num?)?.toDouble() ?? 0.0;
         return bScore.compareTo(aScore);
       });
       
-      final best = banners.first as Map<String, dynamic>;
+      final best = banners.first;
       final image = best['image'] as String?;
       if (image != null && image.isNotEmpty && !_isMissingArtwork(image)) {
         debugLog('TVDB: Falling back to banner artwork type ${getTypeId(best)}');
