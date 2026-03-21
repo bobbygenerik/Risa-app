@@ -4729,10 +4729,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       );
     }
 
-    // Removed: skeleton inside hero content caused z-order bug (loading animation
-    // rendered BEHIND the hero gradient). The parent build() already gates on EPG
-    // readiness and shows a proper full-screen skeleton when needed.
-
     return SizedBox.expand(
       child: DecoratedBox(
         decoration: heroGradient,
