@@ -790,7 +790,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // FIX: Don't steal focus if the user is already focused on something else (like the Sidebar),
+      // Don't steal focus if the user is already focused on something else (like the Sidebar),
       // unless this is a fresh cold start of the app.
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
@@ -3821,7 +3821,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // Fused chained iterable operations (.map().where().toList()) into a single
       // manual loop to prevent intermediate object allocations during post-frame callbacks.
       final channelIds = <String>[];
-      final channelNames = <String>[];
+      final channelNames = <String?>[];
       for (final c in channels) {
         final id = c.epgLookupId;
         if (id.isNotEmpty) {
