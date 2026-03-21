@@ -2709,7 +2709,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             _channelCountDb = loadingTarget.length;
             _invalidateCategoryCaches();
             lastUiUpdate = now;
-            // FIX: Use safe notify to avoid "Build scheduled during frame"
             _notifyListenersSafe();
           } else {
             // For background, we don't update UI progressively to avoid jank/flash
