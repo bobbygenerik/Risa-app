@@ -5,12 +5,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/performance_monitor.dart';
 import 'package:iptv_player/utils/hash_utils.dart';
+import 'package:flutter/scheduler.dart';
 import '../models/channel.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
 // M3U parsing is handled via `playlist_isolate.dart` (streaming/isolate helpers).
@@ -2709,7 +2709,6 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
             _channelCountDb = loadingTarget.length;
             _invalidateCategoryCaches();
             lastUiUpdate = now;
-            // FIX: Use safe notify to avoid "Build scheduled during frame"
             _notifyListenersSafe();
           } else {
             // For background, we don't update UI progressively to avoid jank/flash
