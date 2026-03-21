@@ -5,11 +5,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
 /// Hive-based storage service for efficient large data storage.
-/// 
+///
 /// This service provides a high-performance alternative to SharedPreferences
 /// for storing large amounts of structured data like playlists, EPG mappings,
 /// and channel information.
-/// 
+///
 /// Benefits over SharedPreferences:
 /// - Binary storage format (faster read/write)
 /// - Lazy loading (only loads data when accessed)
@@ -84,16 +84,18 @@ class HiveStorageService {
   // ==================== PLAYLIST OPERATIONS ====================
 
   /// Save playlist data efficiently
-  Future<void> savePlaylist(String playlistId, Map<String, dynamic> data) async {
+  Future<void> savePlaylist(
+      String playlistId, Map<String, dynamic> data) async {
     final box = _getBox(_playlistsBox);
     if (box == null) throw StateError('Hive not initialized');
 
     // Store as JSON string for compatibility
     final jsonString = jsonEncode(data);
     await box.put(playlistId, jsonString);
-    
+
     // Update metadata
-    await _updateMetadata('last_playlist_update', DateTime.now().millisecondsSinceEpoch);
+    await _updateMetadata(
+        'last_playlist_update', DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Load playlist data
@@ -194,7 +196,7 @@ class HiveStorageService {
   // ==================== CHANNEL CACHE OPERATIONS ====================
 
   /// Save channel data with TTL (time-to-live)
-  Future<void> saveChannelCache(String channelId, Map<String, dynamic> data, 
+  Future<void> saveChannelCache(String channelId, Map<String, dynamic> data,
       {Duration? ttl}) async {
     final box = _getBox(_channelCacheBox);
     if (box == null) throw StateError('Hive not initialized');
@@ -233,7 +235,8 @@ class HiveStorageService {
 
       return cacheEntry['data'] as Map<String, dynamic>;
     } catch (e) {
-      debugLog('HiveStorageService: Failed to decode channel cache $channelId: $e');
+      debugLog(
+          'HiveStorageService: Failed to decode channel cache $channelId: $e');
       return null;
     }
   }
@@ -243,32 +246,34 @@ class HiveStorageService {
     final box = _getBox(_channelCacheBox);
     if (box == null) return 0;
 
-    int cleared = 0;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final keysToDelete = <dynamic>[];
 
-    for (final key in box.keys.toList()) {
+    for (final key in box.keys) {
       final data = box.get(key);
       if (data == null) continue;
 
       try {
         final cacheEntry = jsonDecode(data as String) as Map<String, dynamic>;
         final ttl = cacheEntry['ttl'] as int?;
-        
+
         if (ttl != null) {
           final timestamp = cacheEntry['timestamp'] as int;
           if (now - timestamp > ttl) {
-            await box.delete(key);
-            cleared++;
+            keysToDelete.add(key);
           }
         }
       } catch (e) {
         // Invalid entry, delete it
-        await box.delete(key);
-        cleared++;
+        keysToDelete.add(key);
       }
     }
 
-    return cleared;
+    if (keysToDelete.isNotEmpty) {
+      await box.deleteAll(keysToDelete);
+    }
+
+    return keysToDelete.length;
   }
 
   // ==================== SETTINGS OPERATIONS ====================
@@ -288,7 +293,7 @@ class HiveStorageService {
 
     final value = box.get(key);
     if (value == null) return defaultValue;
-    
+
     if (value is T) return value;
     return defaultValue;
   }
@@ -338,7 +343,7 @@ class HiveStorageService {
   /// Get storage statistics
   Map<String, dynamic> getStorageStats() {
     final stats = <String, dynamic>{};
-    
+
     for (final entry in _boxes.entries) {
       final box = entry.value;
       stats[entry.key] = {
@@ -388,7 +393,7 @@ extension HiveJsonExtension on Box<dynamic> {
   Map<String, dynamic>? getJson(String key) {
     final data = get(key);
     if (data == null) return null;
-    
+
     try {
       return jsonDecode(data as String) as Map<String, dynamic>;
     } catch (e) {
