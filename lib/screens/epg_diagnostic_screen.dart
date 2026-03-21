@@ -357,7 +357,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _writeDebugMarker('epg_diagnostic_build');
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -479,7 +478,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                 final messenger =
                                     ScaffoldMessenger.maybeOf(context);
                                 try {
-                                  await _writeDebugMarker('epg_reload_requested');
                                   debugLog(
                                       'EPG: Force reload initiated from diagnostic screen');
 
@@ -493,7 +491,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                   await epgService.initialize(forceRefresh: true);
                                   debugLog('EPG: Reload completed');
 
-                                  await _writeDebugMarker('epg_reload_completed');
                                   if (!mounted) return;
                                   _refreshStats();
                                   if (!mounted) return;
@@ -503,7 +500,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                         content: Text('EPG reload completed')),
                                   );
                                 } catch (e) {
-                                  await _writeDebugMarker('epg_reload_failed');
+                                  debugLog('EPG: Reload failed: $e');
                                   if (!mounted) return;
                                   _deliverSnackBar(
                                     messenger,
@@ -859,16 +856,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   void _deliverSnackBar(ScaffoldMessengerState? messenger, SnackBar snackBar) {
     final target = messenger ?? rootScaffoldMessengerKey.currentState;
     target?.showSnackBar(snackBar);
-  }
-
-  Future<void> _writeDebugMarker(String name) async {
-    // Disable writing marker files to Downloads by default — this was causing
-    // noisy marker files on user devices. Keep a local debug log instead.
-    try {
-      debugLog('Debug marker: $name');
-    } catch (e) {
-      // Swallow errors to avoid affecting diagnostics UI
-    }
   }
 
   Widget _buildDiagnosticCard({required Widget child}) {
