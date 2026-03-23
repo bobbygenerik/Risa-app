@@ -384,10 +384,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<Map<String, dynamic>> getChannelSampleMaps(int limit) {
     if (_channelMaps.isEmpty || limit <= 0) return const [];
     final count = limit.clamp(0, _channelMaps.length);
-    return _channelMaps
-        .take(count)
-        .map((m) => Map<String, dynamic>.from(m))
-        .toList();
+    // ⚡ Bolt: Use pre-sized List.generate instead of .take().map().toList()
+    // to eliminate intermediate iterable allocations and GC overhead.
+    final result = List<Map<String, dynamic>>.generate(
+      count,
+      (i) => Map<String, dynamic>.from(_channelMaps[i]),
+      growable: false,
+    );
+    return result;
   }
 
   List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
@@ -1756,8 +1760,15 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
           return rows.map((m) => Channel.fromMap(m)).toList();
         }
         if (_channelMaps.isNotEmpty) {
-          final slice = _channelMaps.skip(offset).take(limit).toList();
-          return slice.map((m) => Channel.fromMap(m)).toList();
+          // ⚡ Bolt: Direct indexing via List.generate bypasses multiple intermediate
+          // iterable creations (.skip().take().map().toList()), speeding up rendering.
+          final count = math.min(limit, _channelMaps.length - offset);
+          if (count <= 0) return const [];
+          return List<Channel>.generate(
+            count,
+            (i) => Channel.fromMap(_channelMaps[offset + i]),
+            growable: false,
+          );
         }
         return const [];
       } catch (e) {
@@ -1766,8 +1777,15 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       }
     }
 
-    final slice = _channelMaps.skip(offset).take(limit).toList();
-    return slice.map((m) => Channel.fromMap(m)).toList();
+    // ⚡ Bolt: Direct indexing via List.generate bypasses multiple intermediate
+    // iterable creations (.skip().take().map().toList()), speeding up rendering.
+    final count = math.min(limit, _channelMaps.length - offset);
+    if (count <= 0) return const [];
+    return List<Channel>.generate(
+      count,
+      (i) => Channel.fromMap(_channelMaps[offset + i]),
+      growable: false,
+    );
   }
 
   Future<Map<String, List<Channel>>> getGroupedChannelsAsync(
@@ -1830,7 +1848,9 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<Map<String, dynamic>> getChannelMapsForUI({int limit = 50}) {
     final actualLimit =
         _channelMaps.length < limit ? _channelMaps.length : limit;
-    return _channelMaps.take(actualLimit).toList();
+    // ⚡ Bolt: sublist is faster than .take().toList() as it uses
+    // an optimized internal array copy instead of iterating one-by-one.
+    return _channelMaps.sublist(0, actualLimit);
   }
 
   /// Get channel maps for category (virtual scrolling)
