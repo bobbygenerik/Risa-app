@@ -355,26 +355,36 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (url.isEmpty) return null;
     try {
       final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+      final segments = uri.pathSegments;
+      // OPTIMIZATION: Replaced `.where((s) => s.isNotEmpty).toList().last`
+      // with a reverse loop to avoid intermediate iterable and list allocations.
+      for (int i = segments.length - 1; i >= 0; i--) {
+        var segment = segments[i];
+        if (segment.isNotEmpty) {
+          final dotIndex = segment.indexOf('.');
+          if (dotIndex > 0) {
+            segment = segment.substring(0, dotIndex);
+          }
+          return segment.isNotEmpty ? segment : null;
+        }
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final clean = url.split('?').first;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+      final queryIndex = url.indexOf('?');
+      final clean = queryIndex >= 0 ? url.substring(0, queryIndex) : url;
+      final parts = clean.split('/');
+      for (int i = parts.length - 1; i >= 0; i--) {
+        var p = parts[i];
+        if (p.isNotEmpty) {
+          final dotIndex = p.indexOf('.');
+          if (dotIndex > 0) {
+            p = p.substring(0, dotIndex);
+          }
+          return p.isNotEmpty ? p : null;
+        }
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     }
   }
 
