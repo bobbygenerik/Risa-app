@@ -221,10 +221,12 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       actions: [
         IconButton(
           icon: Icon(Icons.analytics, color: Colors.white),
+          tooltip: 'View Analytics',
           onPressed: _showAnalyticsDialog,
         ),
         IconButton(
           icon: Icon(Icons.refresh, color: Colors.white),
+          tooltip: 'Refresh Mapping',
           onPressed: _initializeMapping,
         ),
       ],
