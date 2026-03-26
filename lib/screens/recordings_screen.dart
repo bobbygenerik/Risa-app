@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/models/download_item.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 
 class RecordingsScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class RecordingsScreen extends StatefulWidget {
 
 class _RecordingsScreenState extends State<RecordingsScreen> {
   String? _storagePath;
-  List<FileSystemEntity> _recordings = [];
+  List<DownloadItem> _recordings = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -64,28 +65,35 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       }
 
       // Get all video files
-      final files = await dir.list().where((entity) => entity is File).where((
-        file,
-      ) {
-        final ext = path.extension(file.path).toLowerCase();
-        return [
-          '.mp4',
-          '.mkv',
-          '.ts',
-          '.m2ts',
-          '.avi',
-          '.mov',
-          '.flv',
-          '.webm',
-        ].contains(ext);
-      }).toList();
+      // OPTIMIZATION: Replaced chained `.where().toList()` iterables with a single
+      // `await for` loop and a constant O(1) Set lookup for valid extensions.
+      // Additionally, asynchronous `await entity.stat()` is cached into `DownloadItem`
+      // here to prevent blocking the main UI thread with synchronous `statSync()`
+      // calls during sorting and inside the ListView.builder.
+      final files = <DownloadItem>[];
+      const validExtensions = {
+        '.mp4',
+        '.mkv',
+        '.ts',
+        '.m2ts',
+        '.avi',
+        '.mov',
+        '.flv',
+        '.webm',
+      };
+
+      await for (final entity in dir.list()) {
+        if (entity is File) {
+          final ext = path.extension(entity.path).toLowerCase();
+          if (validExtensions.contains(ext)) {
+            final stat = await entity.stat();
+            files.add(DownloadItem(file: entity, stat: stat));
+          }
+        }
+      }
 
       // Sort by modified date (newest first)
-      files.sort((a, b) {
-        final aStat = a.statSync();
-        final bStat = b.statSync();
-        return bStat.modified.compareTo(aStat.modified);
-      });
+      files.sort((a, b) => b.stat.modified.compareTo(a.stat.modified));
 
       setState(() {
         _recordings = files;
@@ -188,16 +196,15 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
-          ),
+          decoration: const BoxDecoration(color: AppTheme.darkBackground),
           child: Column(
             children: [
               _buildGlassAppBar(),
               Divider(
-                  height: context.tvSpacing(1),
-                  color: AppTheme.darkBackgroundOpacity(0.12),
-                  thickness: context.tvSpacing(2)),
+                height: context.tvSpacing(1),
+                color: AppTheme.darkBackgroundOpacity(0.12),
+                thickness: context.tvSpacing(2),
+              ),
               Expanded(child: _buildContent()),
             ],
           ),
@@ -210,19 +217,25 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return Container(
       height: context.tvSpacing(64), // AppSizes.appBarHeight assumed 64
       padding: EdgeInsets.symmetric(
-          horizontal: context.tvSpacing(32),
-          vertical: context.tvSpacing(20)), // AppSizes.lg=32, md=20
+        horizontal: context.tvSpacing(32),
+        vertical: context.tvSpacing(20),
+      ), // AppSizes.lg=32, md=20
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
-          bottom:
-              BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
+          bottom: BorderSide(
+            color: AppTheme.darkBackgroundOpacity(0.12),
+            width: 2,
+          ),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.fiber_manual_record,
-              color: AppTheme.accentRed, size: context.tvIconSize(24)),
+          Icon(
+            Icons.fiber_manual_record,
+            color: AppTheme.accentRed,
+            size: context.tvIconSize(24),
+          ),
           SizedBox(width: context.tvSpacing(20)), // AppSizes.md assumed 20
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,9 +243,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             children: [
               Text(
                 'Recordings',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               if (_storagePath != null)
                 Text(
@@ -246,8 +259,11 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.refresh,
-                color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
+            icon: Icon(
+              Icons.refresh,
+              color: AppTheme.primaryBlue,
+              size: context.tvIconSize(24),
+            ),
             onPressed: _loadRecordings,
           ),
         ],
@@ -300,13 +316,15 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       border: hasFocus
                           ? Border.all(
                               color: AppTheme.primaryBlue,
-                              width: context.tvSpacing(3))
+                              width: context.tvSpacing(3),
+                            )
                           : null,
                       boxShadow: hasFocus
                           ? [
                               BoxShadow(
-                                color: AppTheme.primaryBlue
-                                    .withAlpha((0.5 * 255).round()),
+                                color: AppTheme.primaryBlue.withAlpha(
+                                  (0.5 * 255).round(),
+                                ),
                                 blurRadius: context.tvSpacing(12),
                                 spreadRadius: context.tvSpacing(2),
                               ),
@@ -318,8 +336,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                         context.go('/settings');
                       },
                       icon: Icon(Icons.settings, size: context.tvIconSize(24)),
-                      label: Text('Go to Settings',
-                          style: TextStyle(fontSize: context.tvTextSize(16))),
+                      label: Text(
+                        'Go to Settings',
+                        style: TextStyle(fontSize: context.tvTextSize(16)),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
                       ),
@@ -335,8 +355,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                 'Configure your recording storage location in Settings > EPG & Recordings',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: context.tvTextSize(12),
-                    color: AppTheme.textTertiary),
+                  fontSize: context.tvTextSize(12),
+                  color: AppTheme.textTertiary,
+                ),
               ),
             ),
           ],
@@ -358,15 +379,17 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             Text(
               'No recordings found',
               style: TextStyle(
-                  fontSize: context.tvTextSize(16),
-                  color: AppTheme.textSecondary),
+                fontSize: context.tvTextSize(16),
+                color: AppTheme.textSecondary,
+              ),
             ),
             SizedBox(height: context.tvSpacing(8)),
             Text(
               'Recordings will appear here once you record from the EPG',
               style: TextStyle(
-                  fontSize: context.tvTextSize(12),
-                  color: AppTheme.textTertiary),
+                fontSize: context.tvTextSize(12),
+                color: AppTheme.textTertiary,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -380,9 +403,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         padding: EdgeInsets.all(context.tvSpacing(16)),
         itemCount: _recordings.length,
         itemBuilder: (context, index) {
-          final file = _recordings[index];
+          final item = _recordings[index];
+          final file = item.file;
           final fileName = path.basename(file.path);
-          final stat = file.statSync();
+          final stat = item.stat;
           final fileSize = _formatFileSize(stat.size);
           final modifiedDate = stat.modified;
 
@@ -443,8 +467,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               title: Text(
                 fileName,
                 style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: context.tvTextSize(16)),
+                  fontWeight: FontWeight.w600,
+                  fontSize: context.tvTextSize(16),
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -510,11 +535,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             ),
             child: IconButton(
               tooltip: tooltip,
-              icon: Icon(
-                icon,
-                color: color,
-                size: context.tvIconSize(24),
-              ),
+              icon: Icon(icon, color: color, size: context.tvIconSize(24)),
               onPressed: onPressed,
             ),
           );
@@ -524,11 +545,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   }
 
   void _playRecording(FileSystemEntity file, String fileName) {
-    context.push('/player', extra: {
-      'videoUrl': file.path,
-      'title': fileName,
-      'isLive': false,
-    });
+    context.push(
+      '/player',
+      extra: {'videoUrl': file.path, 'title': fileName, 'isLive': false},
+    );
     showAppSnackBar(
       context,
       const SnackBar(content: Text('Playing recording...')),
