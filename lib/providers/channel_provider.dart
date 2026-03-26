@@ -366,7 +366,8 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       return last.isNotEmpty ? last : null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final clean = url.split('?').first;
+      final qIndex = url.indexOf('?');
+      final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
       final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
       if (parts.isEmpty) return null;
       var last = parts.last;

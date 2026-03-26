@@ -1159,7 +1159,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       final isGzipHeader = encHeader.contains('gzip');
       final isDeflateHeader =
           encHeader.contains('deflate') || encHeader.contains('zlib');
-      final isGzipExt = _epgUrl!.toLowerCase().split('?').first.endsWith('.gz');
+      final lowerUrl = _epgUrl!.toLowerCase();
+      final qIndex = lowerUrl.indexOf('?');
+      final isGzipExt = (qIndex != -1 ? lowerUrl.substring(0, qIndex) : lowerUrl).endsWith('.gz');
 
       debugLog(
           'EPG: Downloading content (Content-Encoding: $encHeader, Ext GZIP: $isGzipExt)...');
