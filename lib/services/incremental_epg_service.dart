@@ -224,7 +224,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _epgProgressLabel.isNotEmpty ? _epgProgressLabel : null;
 
   // LRU cache for normalized strings using LinkedHashMap for O(1) access-ordered eviction
-  static final LinkedHashMap<String, String> _normalizeCache = LinkedHashMap<String, String>();
+  static final LinkedHashMap<String, String> _normalizeCache =
+      LinkedHashMap<String, String>();
   static const int _maxNormalizeCacheSize = 5000;
 
   static String normalizeForFilter(String input) {
@@ -300,7 +301,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       _programsByChannel.remove(id);
     }
     if (emptyChannels.isNotEmpty) {
-      debugLog('EPG: Cleared ${emptyChannels.length} empty-placeholder channels for retry');
+      debugLog(
+          'EPG: Cleared ${emptyChannels.length} empty-placeholder channels for retry');
       // Add empty channels to deferred set so they get flushed below
       _deferredChannelRequests.addAll(emptyChannels);
     }
@@ -313,7 +315,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     if (_deferredChannelRequests.isEmpty) return;
     final ids = _deferredChannelRequests.toList();
     _deferredChannelRequests.clear();
-    debugLog('EPG: flushing ${ids.length} deferred channel requests after parse finished');
+    debugLog(
+        'EPG: flushing ${ids.length} deferred channel requests after parse finished');
     // Schedule async so it runs after notifyListeners flow settles
     Future.microtask(() {
       ensureChannelsLoadedBatch(ids);
@@ -957,13 +960,17 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       if (await cacheFile.exists()) {
         await cacheFile.delete();
       }
-    } catch (e) { debugLog('EPG: cache file purge failed: $e'); }
+    } catch (e) {
+      debugLog('EPG: cache file purge failed: $e');
+    }
     try {
       final backupFile = await _getCacheBackupFile();
       if (await backupFile.exists()) {
         await backupFile.delete();
       }
-    } catch (e) { debugLog('EPG: backup file purge failed: $e'); }
+    } catch (e) {
+      debugLog('EPG: backup file purge failed: $e');
+    }
   }
 
   Future<void> _restoreCacheFromBackupIfMissing() async {
@@ -1036,7 +1043,6 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
       return;
     }
-
 
     await _restoreCacheFromBackupIfMissing();
 
@@ -1215,7 +1221,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                   // cleanup
                   try {
                     if (file.existsSync()) file.deleteSync();
-                  } catch (e) { debugLog('EPG: cleanup after empty body failed: $e'); }
+                  } catch (e) {
+                    debugLog('EPG: cleanup after empty body failed: $e');
+                  }
                   return;
                 }
 
@@ -1226,7 +1234,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                   sink.close();
                   try {
                     if (file.existsSync()) file.deleteSync();
-                  } catch (e) { debugLog('EPG: cleanup after non-XML failed: $e'); }
+                  } catch (e) {
+                    debugLog('EPG: cleanup after non-XML failed: $e');
+                  }
                   return;
                 }
 
@@ -1238,7 +1248,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
                   sink.close();
                   try {
                     if (file.existsSync()) file.deleteSync();
-                  } catch (e) { debugLog('EPG: cleanup after HTML response failed: $e'); }
+                  } catch (e) {
+                    debugLog('EPG: cleanup after HTML response failed: $e');
+                  }
                   return;
                 }
 
@@ -1273,10 +1285,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
             debugLog('EPG: Stream chunk handling error: $e');
             try {
               sink.close();
-            } catch (e) { debugLog('EPG: sink close on chunk error failed: $e'); }
+            } catch (e) {
+              debugLog('EPG: sink close on chunk error failed: $e');
+            }
             try {
               if (file.existsSync()) file.deleteSync();
-            } catch (e) { debugLog('EPG: file cleanup on chunk error failed: $e'); }
+            } catch (e) {
+              debugLog('EPG: file cleanup on chunk error failed: $e');
+            }
             return;
           }
         }, onDone: () async {
@@ -1303,7 +1319,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               await sink.close();
               try {
                 if (file.existsSync()) await file.delete();
-              } catch (e) { debugLog('EPG: cleanup after empty onDone body failed: $e'); }
+              } catch (e) {
+                debugLog('EPG: cleanup after empty onDone body failed: $e');
+              }
               return;
             }
 
@@ -1313,7 +1331,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               await sink.close();
               try {
                 if (file.existsSync()) await file.delete();
-              } catch (e) { debugLog('EPG: cleanup after non-XML onDone failed: $e'); }
+              } catch (e) {
+                debugLog('EPG: cleanup after non-XML onDone failed: $e');
+              }
               return;
             }
 
@@ -1324,7 +1344,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               await sink.close();
               try {
                 if (file.existsSync()) await file.delete();
-              } catch (e) { debugLog('EPG: cleanup after HTML onDone failed: $e'); }
+              } catch (e) {
+                debugLog('EPG: cleanup after HTML onDone failed: $e');
+              }
               return;
             }
 
@@ -1347,7 +1369,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         debugLog('EPG: Error during download/decompression/check: $e');
         try {
           if (await file.exists()) await file.delete();
-        } catch (e) { debugLog('EPG: cleanup after download error failed: $e'); }
+        } catch (e) {
+          debugLog('EPG: cleanup after download error failed: $e');
+        }
         _error = 'EPG download failed: $e';
         return;
       }
@@ -1364,7 +1388,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         debugLog('EPG: $_error');
         try {
           if (await file.exists()) await file.delete();
-        } catch (e) { debugLog('EPG: cleanup after small file check failed: $e'); }
+        } catch (e) {
+          debugLog('EPG: cleanup after small file check failed: $e');
+        }
         return;
       }
 
@@ -1376,7 +1402,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           debugLog('EPG: $_error');
           try {
             if (await file.exists()) await file.delete();
-          } catch (e) { debugLog('EPG: cleanup after prefix non-XML failed: $e'); }
+          } catch (e) {
+            debugLog('EPG: cleanup after prefix non-XML failed: $e');
+          }
           return;
         }
         if (prefix.startsWith('<!doctype html') || prefix.startsWith('<html')) {
@@ -1384,7 +1412,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           debugLog('EPG: Provider returned HTML error page');
           try {
             if (await file.exists()) await file.delete();
-          } catch (e) { debugLog('EPG: cleanup after HTML prefix failed: $e'); }
+          } catch (e) {
+            debugLog('EPG: cleanup after HTML prefix failed: $e');
+          }
           return;
         }
         if (!prefix.contains('<tv')) {
@@ -1392,7 +1422,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           debugLog('EPG: $_error');
           try {
             if (await file.exists()) await file.delete();
-          } catch (e) { debugLog('EPG: cleanup after missing <tv> tag failed: $e'); }
+          } catch (e) {
+            debugLog('EPG: cleanup after missing <tv> tag failed: $e');
+          }
           return;
         }
         // Download completed and validated successfully
@@ -1401,7 +1433,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         debugLog('EPG: Post-download content check failed: $e');
         try {
           if (await file.exists()) await file.delete();
-        } catch (e) { debugLog('EPG: cleanup after validation failure: $e'); }
+        } catch (e) {
+          debugLog('EPG: cleanup after validation failure: $e');
+        }
         _error = 'EPG content validation failed';
         return;
       }
@@ -1411,7 +1445,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       try {
         final f = await _getCacheFile();
         if (await f.exists()) await f.delete();
-      } catch (e) { debugLog('EPG: final cache file cleanup failed: $e'); }
+      } catch (e) {
+        debugLog('EPG: final cache file cleanup failed: $e');
+      }
       return;
     } finally {
       debugLog(
@@ -1776,7 +1812,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               debugLog(
                   'EPG: Program temp file size ${(tempSize / (1024 * 1024)).toStringAsFixed(2)}MB (programs=$parsedProgramCount)');
             }
-          } catch (e) { debugLog('EPG: temp file stat failed: $e'); }
+          } catch (e) {
+            debugLog('EPG: temp file stat failed: $e');
+          }
         }
 
         if (programFilePath == null ||
@@ -1832,7 +1870,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
               if (await tempFile.exists()) {
                 await tempFile.delete();
               }
-            } catch (e) { debugLog('EPG: temp file cleanup after no programs failed: $e'); }
+            } catch (e) {
+              debugLog('EPG: temp file cleanup after no programs failed: $e');
+            }
           }
           break;
         }
@@ -2374,8 +2414,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         await for (final chunk in eventStream) {
           for (final event in chunk) {
             if (event is XmlStartElementEvent) {
-              final isTopLevel =
-                  event.localName == 'channel' || event.localName == 'programme';
+              final isTopLevel = event.localName == 'channel' ||
+                  event.localName == 'programme';
 
               // Defensive auto-close if we hit a new top-level tag while inside one at depth 1
               if (isTopLevel && (inChannel || inProgramme) && depth == 1) {
@@ -2415,7 +2455,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       } catch (e) {
         // Gzip decoder or XML parser may throw mid-stream (e.g. corrupt .gz trailing data).
         // Keep whatever programs were successfully parsed before the error.
-        debugLog('EPG: Stream error during parse (keeping $programCount programs): $e');
+        debugLog(
+            'EPG: Stream error during parse (keeping $programCount programs): $e');
         hadXmlErrors = true;
       } finally {
         // CRITICAL: Always flush+close the sink so buffered JSONL lines reach disk.
@@ -2610,8 +2651,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         (programCount == 0 || (hadXmlErrors && programCount < 1000))) {
       // Enhanced logging: Dump file header to see what we actually got
       try {
-        final sample = await file.openRead(0, 512).transform(utf8.decoder).first;
-        debugLog('EPG: Parse failed/empty. File header preview:\n$sample\n(End of preview)');
+        final sample =
+            await file.openRead(0, 512).transform(utf8.decoder).first;
+        debugLog(
+            'EPG: Parse failed/empty. File header preview:\n$sample\n(End of preview)');
       } catch (e) {
         debugLog('EPG: Computed file header preview failed: $e');
       }
@@ -3130,7 +3173,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       if (_normalizedAvailableChannels != null) {
-        final normSearchName = EPGMatchingUtils.normalizeChannelName(searchName);
+        final normSearchName =
+            EPGMatchingUtils.normalizeChannelName(searchName);
         if (normSearchName.isNotEmpty &&
             _normalizedAvailableChannels!.containsKey(normSearchName)) {
           return _cacheResolvedMapping(
@@ -3863,10 +3907,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _internalToEpgIdMapping[channelId] = epgChannelId;
     _queueMappingPersist(channelId, epgChannelId);
     await _saveManualMappings();
-    
+
     // Ensure data is loaded for the new mapping so UI doesn't hide the channel
     await ensureChannelLoaded(channelId);
-    
+
     notifyListeners();
   }
 
@@ -4051,8 +4095,15 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         try {
           final dbTimer = Stopwatch()..start();
           // Check if any entries need clearing
-          final keysToClear =
-              buffer.keys.where((k) => cleared[k] != false).toList();
+          // ⚡ Bolt: Performance Optimization
+          // Replaced chained iterable operations (.where.toList) with a manual loop
+          // to avoid creating intermediate iterators, closures, and short-lived lists in the EPG ingest hot path.
+          final keysToClear = <String>[];
+          for (final k in buffer.keys) {
+            if (cleared[k] != false) {
+              keysToClear.add(k);
+            }
+          }
           if (keysToClear.isNotEmpty) {
             await _db.deleteProgramsForEpgIds(keysToClear);
           }
@@ -4077,7 +4128,9 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     } finally {
       try {
         await file.delete();
-      } catch (e) { debugLog('EPG: temp program file cleanup failed: $e'); }
+      } catch (e) {
+        debugLog('EPG: temp program file cleanup failed: $e');
+      }
     }
   }
 
