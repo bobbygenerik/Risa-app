@@ -281,7 +281,9 @@ class ChannelLogoService {
     }
   }
 
-  static final RegExp _qualityRegex = RegExp(r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*', caseSensitive: false);
+  static final RegExp _qualityRegex = RegExp(
+      r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*',
+      caseSensitive: false);
   static final RegExp _bracketsRegex = RegExp(r'[\(\)\[\]\{\}]');
   static final RegExp _whitespaceRegex = RegExp(r'\s+');
 
@@ -320,14 +322,27 @@ class ChannelLogoService {
     // Fuzzy match: Check if channel name contains a known logo key
     // Iterating sorted entries ensures longer (more specific) keys are checked first.
     final entries = _sortedKnownLogos ?? _knownLogos.entries;
+    final candidates = <String>[];
+
     for (final entry in entries) {
       if (normalized.contains(entry.key) || entry.key.contains(normalized)) {
-        final url = entry.value;
-        // Verify the URL works
-        if (await _verifyUrl(url)) {
-          _logoCache[normalized] = url;
+        candidates.add(entry.value);
+      }
+    }
+
+    if (candidates.isNotEmpty) {
+      // Verify all candidate URLs in parallel
+      final verificationResults = await Future.wait(
+        candidates.map((url) => _verifyUrl(url)),
+      );
+
+      // Return the first valid candidate to preserve specific-match priority
+      for (int i = 0; i < candidates.length; i++) {
+        if (verificationResults[i]) {
+          final validUrl = candidates[i];
+          _logoCache[normalized] = validUrl;
           unawaited(_saveCache());
-          return url;
+          return validUrl;
         }
       }
     }
