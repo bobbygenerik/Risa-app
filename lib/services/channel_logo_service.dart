@@ -378,12 +378,12 @@ class ChannelLogoService {
   static Future<Map<String, String?>> enrichBatch(
       List<String> channelNames) async {
     await init();
-    final results = <String, String?>{};
 
-    for (final name in channelNames) {
-      results[name] = await getLogoUrl(name);
-    }
+    final futures = channelNames.map((name) async {
+      return MapEntry(name, await getLogoUrl(name));
+    });
 
-    return results;
+    final entries = await Future.wait(futures);
+    return Map.fromEntries(entries);
   }
 }
