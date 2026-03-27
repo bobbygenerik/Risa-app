@@ -8,10 +8,11 @@ import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 /// Callback for when an EPG mapping is set or removed.
-typedef OnEpgMappingChanged = void Function(Channel channel, String? epgChannelId);
+typedef OnEpgMappingChanged = void Function(
+    Channel channel, String? epgChannelId);
 
 /// Shows the EPG channel selector dialog.
-/// 
+///
 /// Returns the selected EPG channel ID, or null if cancelled.
 /// If the user removes a mapping, returns an empty string.
 Future<String?> showEpgChannelSelector({
@@ -25,7 +26,8 @@ Future<String?> showEpgChannelSelector({
   if (epgChannelIds.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('No EPG data loaded. Please configure EPG URL in Settings.'),
+        content:
+            Text('No EPG data loaded. Please configure EPG URL in Settings.'),
         backgroundColor: AppTheme.accentRed,
       ),
     );
@@ -56,7 +58,8 @@ class EpgChannelSelectorDialog extends StatefulWidget {
   final List<String> epgChannelIds;
 
   @override
-  State<EpgChannelSelectorDialog> createState() => _EpgChannelSelectorDialogState();
+  State<EpgChannelSelectorDialog> createState() =>
+      _EpgChannelSelectorDialogState();
 }
 
 class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
@@ -85,7 +88,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
 
   List<String> get _filteredIds {
     final showingSuggestions = _searchQuery.isEmpty;
-    
+
     if (showingSuggestions) {
       // Avoid .map().toSet() and .where().toList() chained iterables.
       final suggestedIds = <String>{};
@@ -101,7 +104,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
       }
       return result;
     }
-    
+
     // Hoist toLowerCase() to avoid redundant string allocations in the loop.
     final queryLower = _searchQuery.toLowerCase();
     final result = <String>[];
@@ -161,7 +164,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
           style: const TextStyle(color: Colors.white),
           onTap: () {
             final text = _searchController.text;
-            _searchController.selection = TextSelection.collapsed(offset: text.length);
+            _searchController.selection =
+                TextSelection.collapsed(offset: text.length);
           },
           decoration: InputDecoration(
             hintText: 'Search EPG channels...',
@@ -171,7 +175,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
             border: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              borderSide:
+                  BorderSide(color: Colors.white.withValues(alpha: 0.2)),
             ),
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
@@ -200,7 +205,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
 
   Widget _buildChannelList(List<String> filteredIds, bool showingSuggestions) {
     final hasHeader = showingSuggestions && _suggestions.isNotEmpty;
-    
+
     return ListView.builder(
       itemCount: filteredIds.length + (hasHeader ? 1 : 0),
       itemBuilder: (context, index) {
@@ -214,7 +219,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
         }
 
         final epgId = filteredIds[adjustedIndex];
-        final isSuggested = showingSuggestions && adjustedIndex < _suggestions.length;
+        final isSuggested =
+            showingSuggestions && adjustedIndex < _suggestions.length;
         final showDivider = showingSuggestions &&
             _suggestions.isNotEmpty &&
             adjustedIndex == _suggestions.length - 1;
@@ -249,11 +255,13 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
     );
   }
 
-  Widget _buildChannelTile(String epgId, bool isSuggested, int suggestionIndex) {
+  Widget _buildChannelTile(
+      String epgId, bool isSuggested, int suggestionIndex) {
     final preview = widget.epgService.getChannelPreview(epgId);
     final currentMapping = widget.epgService.getManualMapping(_channelId);
     final isCurrentlyMapped = currentMapping == epgId;
-    final suggestionScore = isSuggested ? _suggestions[suggestionIndex].value : 0.0;
+    final suggestionScore =
+        isSuggested ? _suggestions[suggestionIndex].value : 0.0;
 
     return FocusableActionDetector(
       actions: <Type, Action<Intent>>{
@@ -271,7 +279,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
             dense: true,
             selected: isFocused,
             selectedTileColor: AppTheme.primaryBlue.withValues(alpha: 0.16),
-            leading: _buildLeadingIcon(isCurrentlyMapped, isSuggested, suggestionScore),
+            leading: _buildLeadingIcon(
+                isCurrentlyMapped, isSuggested, suggestionScore),
             title: Text(
               _getDisplayNameForEpgId(epgId),
               style: TextStyle(
@@ -291,7 +300,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
     );
   }
 
-  Widget _buildLeadingIcon(bool isCurrentlyMapped, bool isSuggested, double score) {
+  Widget _buildLeadingIcon(
+      bool isCurrentlyMapped, bool isSuggested, double score) {
     if (isCurrentlyMapped) {
       return const Icon(Icons.check_circle, color: AppTheme.accentGreen);
     }
@@ -310,7 +320,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
 
   Widget? _buildSubtitle(String? preview, bool isSuggested, double score) {
     if (preview == null && !isSuggested) return null;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,7 +336,8 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
             'Match: ${(score * 100).toInt()}%',
             style: TextStyle(
               fontSize: 12,
-              color: score > 0.7 ? AppTheme.accentGreen : AppTheme.textSecondary,
+              color:
+                  score > 0.7 ? AppTheme.accentGreen : AppTheme.textSecondary,
             ),
           ),
       ],
@@ -354,7 +365,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
 
   List<Widget> _buildActions() {
     final hasMapping = widget.epgService.hasManualMapping(_channelId);
-    
+
     return [
       if (hasMapping)
         BrandSecondaryButton(
@@ -370,13 +381,18 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
 
   /// Converts an EPG channel ID to a human-readable display name.
   String _getDisplayNameForEpgId(String epgId) {
-    String name = epgId.split('.').first;
-    
+    int dotIdx = epgId.indexOf('.');
+    String name = dotIdx != -1 ? epgId.substring(0, dotIdx) : epgId;
+
     final patterns = {
-      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) => 'BBC ${m.group(1)}',
-      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) => 'ITV${m.group(1) ?? ''}',
-      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) => 'Channel ${m.group(1)}',
-      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) => 'Sky ${m.group(1)!.toUpperCase()}',
+      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) =>
+          'BBC ${m.group(1)}',
+      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) =>
+          'ITV${m.group(1) ?? ''}',
+      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) =>
+          'Channel ${m.group(1)}',
+      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) =>
+          'Sky ${m.group(1)!.toUpperCase()}',
       RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) =>
           'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
       RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) =>

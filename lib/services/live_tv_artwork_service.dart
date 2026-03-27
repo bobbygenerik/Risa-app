@@ -511,7 +511,8 @@ class LiveTvArtworkService {
         ? const Duration(milliseconds: 500)
         : const Duration(milliseconds: 100);
     _artworkThrottle ??= Timer(interval, _drainArtworkQueue);
-    debugLog('LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
+    debugLog(
+        'LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -1469,8 +1470,10 @@ class LiveTvArtworkService {
   static final RegExp _nonWordWhitespaceRe = RegExp(r'[^\w\s]');
   static final RegExp _whitespaceRe = RegExp(r'\s+');
   static final RegExp _channelSeparatorsRe = RegExp(r'\s*[-:|]\s*');
-  static final RegExp _qualityKeywordsRe = RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false);
-  static final RegExp _networkKeywordsRe = RegExp(r'\b(tv|channel|network)\b', caseSensitive: false);
+  static final RegExp _qualityKeywordsRe =
+      RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false);
+  static final RegExp _networkKeywordsRe =
+      RegExp(r'\b(tv|channel|network)\b', caseSensitive: false);
 
   String _normalizeForFilter(String title) {
     return title
@@ -1521,8 +1524,9 @@ class LiveTvArtworkService {
       if (normalized.isNotEmpty && normalized != value) {
         add(normalized);
       }
-      if (value.contains(':')) {
-        final primary = value.split(':').first.trim();
+      int colonIdx = value.indexOf(':');
+      if (colonIdx != -1) {
+        final primary = value.substring(0, colonIdx).trim();
         if (primary.isNotEmpty && primary != value) {
           add(primary);
           final normalizedPrimary = _normalizeArtworkVariant(primary);
@@ -1611,15 +1615,15 @@ class LiveTvArtworkService {
   }) {
     if (url == null || url.isEmpty) return false;
     if (ImageValidationService.isKnownInvalid(url)) return false;
-    
+
     // Always reject posters, even for EPG fallback
     if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
-    
+
     // For EPG fallback, we are more permissive with small images.
     if (!isEpgFallback) {
       if (ArtworkValidator.isLikelySmallImage(url)) return false;
     }
-    
+
     if (ArtworkValidator.isLikelyChannelLogoUrl(url)) return false;
     if (ArtworkValidator.isLikelyTitleLogoUrl(url)) return false;
     final channelLogo = channel.logoUrl;

@@ -184,8 +184,7 @@ class EPGMatchingUtils {
     final codes = <int>[];
     for (int i = 0; i < s.length; i++) {
       final code = s.codeUnitAt(i);
-      final isAlphanumeric =
-          (code >= 97 && code <= 122) || // a-z
+      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
           (code >= 65 && code <= 90) || // A-Z
           (code >= 48 && code <= 57); // 0-9
       if (isAlphanumeric) {
@@ -216,8 +215,7 @@ class EPGMatchingUtils {
     int startIdx = 0;
     for (int i = 0; i < cleaned.length; i++) {
       final code = cleaned.codeUnitAt(i);
-      final isAlphanumeric =
-          (code >= 97 && code <= 122) || // a-z
+      final isAlphanumeric = (code >= 97 && code <= 122) || // a-z
           (code >= 65 && code <= 90) || // A-Z
           (code >= 48 && code <= 57); // 0-9
       if (!isAlphanumeric) {
@@ -261,12 +259,10 @@ class EPGMatchingUtils {
 
     // Manual intersection calculation to avoid creating new Set objects
     // Iterate over the smaller set for efficiency
-    final smaller = plTokens.length < candidate.tokens.length
-        ? plTokens
-        : candidate.tokens;
-    final larger = plTokens.length < candidate.tokens.length
-        ? candidate.tokens
-        : plTokens;
+    final smaller =
+        plTokens.length < candidate.tokens.length ? plTokens : candidate.tokens;
+    final larger =
+        plTokens.length < candidate.tokens.length ? candidate.tokens : plTokens;
     int intersectionCount = 0;
     for (final token in smaller) {
       if (larger.contains(token)) intersectionCount++;
@@ -429,12 +425,14 @@ class EPGMatchingUtils {
     // Basic implementation to strip common subtitle separators
     var s = title;
     // "Show Name: Episode Name" -> "Show Name"
-    if (s.contains(':')) {
-      s = s.split(':').first;
+    int colonIdx = s.indexOf(':');
+    if (colonIdx != -1) {
+      s = s.substring(0, colonIdx);
     }
     // "Show Name - Episode Name" -> "Show Name"
-    if (s.contains(' - ')) {
-      s = s.split(' - ').first;
+    int dashIdx = s.indexOf(' - ');
+    if (dashIdx != -1) {
+      s = s.substring(0, dashIdx);
     }
     return s.trim();
   }
@@ -486,9 +484,9 @@ class EpgMatchCandidate {
     required this.id,
     required this.displayName,
     String? normalized,
-  }) : normalizedName =
-           normalized ?? EPGMatchingUtils.normalizeChannelName(displayName),
-       tokens = EPGMatchingUtils.tokenize(displayName);
+  })  : normalizedName =
+            normalized ?? EPGMatchingUtils.normalizeChannelName(displayName),
+        tokens = EPGMatchingUtils.tokenize(displayName);
 
   @override
   String toString() => 'Candidate($id, "$displayName")';

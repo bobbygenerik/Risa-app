@@ -29,6 +29,7 @@
 ## 2025-05-23 - [Avoid Chained Iterable Operations in Dialog Filters]
 **Learning:** In the `epg_screen.dart` and `epg_channel_selector_dialog.dart`, chained operations like `.where(...).toList()` and `suggestions.map(...).toSet()` were used inside computed properties (`get _filteredIds`) that re-evaluate on every keystroke. This causes excessive allocation of short-lived iterators, lists, and sets. Furthermore, `searchQuery.toLowerCase()` was repeatedly invoked inside the `.where` callback for every item in lists containing thousands of channels, resulting in O(N) string allocations.
 **Action:** Replace chained iterables with explicit, manual `for` loops to pre-allocate size where possible and avoid intermediate object creation. Always hoist invariant computations, such as `query.toLowerCase()`, outside of filtering loops.
+
 ## 2025-05-23 - [Intermediate Iterable Allocations in Hot Paths]
 **Learning:** Chained operations like `.where(...).map(...).toList()`, `.where(...).length`, or uses of `.fold(...)` create multiple intermediate `Iterable` instances, closures, and invoke function calls repeatedly. In frequent UI paths (like filtering EPG mappings) or utility metrics (like cache sizing), this induces measurable overhead and GC pressure.
 **Action:** Replace functional array methods (`where`, `map`, `fold`) with manual `for` loops in hot, frequently-rebuilt UI paths and loops. A manual `for` loop with local variables avoids intermediate instantiations and function closure overhead entirely.
@@ -48,3 +49,7 @@
 ## 2024-05-19 - Dart List Iteration & Slicing Optimization
 **Learning:** Chained Dart lazy iterable methods (`.skip().take().map().toList()`) have substantial overhead due to intermediate iterable allocations and individual element iteration. Using `List.sublist()` combined with direct array indexing via `List.generate(growable: false)` relies on optimized underlying array copies (like C's `memmove`) and avoids multiple intermediate objects and function calls. In a benchmark, `sublist()` was up to 20x faster than `.take().toList()`, and `List.generate` was around 40% faster than `.map().toList()`.
 **Action:** When implementing pagination or UI virtualization methods that slice arrays (e.g. `getChannelsPage`), use `List.sublist(start, end)` or `List.generate` rather than chaining lazy iterable operators (`skip`, `take`, `map`).
+
+## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
+**Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
