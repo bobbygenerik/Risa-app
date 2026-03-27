@@ -139,7 +139,7 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
-      
+
       // Ensure we have focus
       _firstChannelFocus.requestFocus();
     });
@@ -164,7 +164,8 @@ class _EPGScreenState extends State<EPGScreen>
         final loadedCount = epgService.loadedProgramChannelCount;
         final availableCount = epgService.availableChannels.length;
         if (loadedCount < 50 && availableCount > 100) {
-          debugLog('EPG Screen: Data sparse ($loadedCount/$availableCount loaded) - forcing refresh');
+          debugLog(
+              'EPG Screen: Data sparse ($loadedCount/$availableCount loaded) - forcing refresh');
           unawaited(epgService.forceRefresh());
         } else {
           unawaited(epgService.initialize());
@@ -824,8 +825,8 @@ class _EPGScreenState extends State<EPGScreen>
                                   ),
                                   SizedBox(
                                     width: context.channelSidebarWidth(),
-                                    child:
-                                        _buildChannelColumn(filteredChannels, categoryNames, hasMore),
+                                    child: _buildChannelColumn(filteredChannels,
+                                        categoryNames, hasMore),
                                   ),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
@@ -1007,7 +1008,7 @@ class _EPGScreenState extends State<EPGScreen>
                         ? null
                         : () {
                             // Clear image failure cache to retry blocked logos
-                            ImageFailureCache.clear(); 
+                            ImageFailureCache.clear();
                             unawaited(_triggerEpgRefresh());
                           },
                     icon: AnimatedBuilder(
@@ -1312,7 +1313,8 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildChannelColumn(List<Channel> channels, List<String> categories, bool hasMore) {
+  Widget _buildChannelColumn(
+      List<Channel> channels, List<String> categories, bool hasMore) {
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     return Column(
@@ -1358,21 +1360,23 @@ class _EPGScreenState extends State<EPGScreen>
                 _showChannelContextMenu(context, channel),
             firstChannelFocusNode: _firstChannelFocus,
             onFocusCategories: () {
-                // Return to selected category, or first if none/lost
-               final selected = _epgState.selectedCategory ?? 'All Channels';
-               final idx = categories.indexOf(selected);
-               if (idx >= 0) {
-                   _categoryFocusNodeForIndex(idx).requestFocus();
-               } else {
-                   _firstCategoryFocus.requestFocus();
-               }
+              // Return to selected category, or first if none/lost
+              final selected = _epgState.selectedCategory ?? 'All Channels';
+              final idx = categories.indexOf(selected);
+              if (idx >= 0) {
+                _categoryFocusNodeForIndex(idx).requestFocus();
+              } else {
+                _firstCategoryFocus.requestFocus();
+              }
             },
             onFocusCategoryAtIndex: null, // Disable direct index mapping
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
             onFocusProgramForChannel: (channel) =>
-                _programFocusNodeForChannel(channel).requestFocus(), // Removed index passing
-            channelFocusNodeForChannel: (channel, index) => _channelFocusNodeForChannel(channel, index),
+                _programFocusNodeForChannel(channel)
+                    .requestFocus(), // Removed index passing
+            channelFocusNodeForChannel: (channel, index) =>
+                _channelFocusNodeForChannel(channel, index),
             controller: _sidebarController,
           ),
         ),
@@ -2060,7 +2064,8 @@ class _EPGScreenState extends State<EPGScreen>
   /// Convert EPG ID to readable display name
   String _getDisplayNameForEpgId(String epgId) {
     // Remove domain suffixes
-    String name = epgId.split('.').first;
+    int dotIdx = epgId.indexOf('.');
+    String name = dotIdx != -1 ? epgId.substring(0, dotIdx) : epgId;
 
     // Convert common patterns to readable names
     final patterns = {
