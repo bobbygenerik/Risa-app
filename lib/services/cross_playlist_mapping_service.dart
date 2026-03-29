@@ -110,6 +110,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
     double minConfidence = 0.7,
   }) async {
     final results = <ImportedMappingResult>[];
+    int successCount = 0; // ⚡ Bolt: Counter to avoid .where().length later
 
     try {
       final sourceMappings = _getMappingsForPlaylist(sourcePlaylistId);
@@ -158,6 +159,7 @@ class CrossPlaylistMappingService extends ChangeNotifier {
             confidence: mapping.confidence,
           ),
         );
+        successCount++;
 
         // Update usage statistics
         mapping.usageCount++;
@@ -167,8 +169,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
       await _saveSharedMappings();
 
+      // ⚡ Bolt: Avoided .where().length intermediate iterable allocation
       debugLog(
-        'Imported ${results.where((r) => r.success).length} mappings from playlist: $sourcePlaylistId',
+        'Imported $successCount mappings from playlist: $sourcePlaylistId',
       );
       notifyListeners();
     } catch (e) {
@@ -268,13 +271,20 @@ class CrossPlaylistMappingService extends ChangeNotifier {
         }
       }
 
-      // Filter by minimum confidence and sort
-      final filtered = compatible
-          .where((c) => c.confidence >= minConfidence)
-          .toList()
-        ..sort((a, b) => b.confidence.compareTo(a.confidence));
+      // ⚡ Bolt: Avoided chained .where().toList()
+      final filtered = <CompatibleMapping>[];
+      for (final c in compatible) {
+        if (c.confidence >= minConfidence) {
+          filtered.add(c);
+        }
+      }
+      filtered.sort((a, b) => b.confidence.compareTo(a.confidence));
 
-      return filtered.take(maxResults).toList();
+      // Use take and sublist appropriately
+      if (filtered.length <= maxResults) {
+        return filtered;
+      }
+      return filtered.sublist(0, maxResults);
     } catch (e) {
       debugLog('Error finding compatible mappings: $e');
       return compatible;
@@ -494,9 +504,14 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   List<SharedMapping> _getMappingsForPlaylist(String playlistId) {
-    return _sharedMappings.values
-        .where((mapping) => mapping.sourcePlaylistId == playlistId)
-        .toList();
+    // ⚡ Bolt: Use manual for loop instead of .where().toList()
+    final results = <SharedMapping>[];
+    for (final mapping in _sharedMappings.values) {
+      if (mapping.sourcePlaylistId == playlistId) {
+        results.add(mapping);
+      }
+    }
+    return results;
   }
 
   CrossPlaylistMapping? _findExistingMapping(String channelId) {
@@ -620,12 +635,20 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   Map<String, dynamic> _getExportStatistics() {
+    // ⚡ Bolt: Fused .where().length and .map().fold() into a single manual loop
+    int publicMappings = 0;
+    int totalUsage = 0;
+    for (final m in _sharedMappings.values) {
+      if (m.isPublic) {
+        publicMappings++;
+      }
+      totalUsage += m.usageCount;
+    }
+
     return {
       'totalMappings': _sharedMappings.length,
-      'publicMappings': _sharedMappings.values.where((m) => m.isPublic).length,
-      'totalUsage': _sharedMappings.values
-          .map((m) => m.usageCount)
-          .fold(0, (sum, count) => sum + count),
+      'publicMappings': publicMappings,
+      'totalUsage': totalUsage,
       'exportDate': DateTime.now().toIso8601String(),
     };
   }

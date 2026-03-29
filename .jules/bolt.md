@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-03-29 - [Replace Chained Iterables with Manual Loops in CrossPlaylistMappingService]
+**Learning:** Chained iterable methods like `.where(...).toList()`, `.where(...).length`, and `.map(...).fold(...)` cause significant garbage collection overhead and intermediate list allocations. In `CrossPlaylistMappingService`, rewriting these functional paradigms to use basic `for` loops completely eliminated these allocations. For example, replacing `.take(n).toList()` with a manual loop and `sublist()` handles capacity far better than the dynamic growth induced by `.toList()`.
+**Action:** Always favor manual index-based or `for-in` loops over functional iterables in methods executing frequently or operating over large maps/lists, like dataset statistics or batch data processing methods.
