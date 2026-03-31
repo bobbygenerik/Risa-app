@@ -167,8 +167,14 @@ class CrossPlaylistMappingService extends ChangeNotifier {
 
       await _saveSharedMappings();
 
+      // ⚡ Bolt: Replace `.where((r) => r.success).length` with manual loop
+      int successCount = 0;
+      for (final r in results) {
+        if (r.success) successCount++;
+      }
+
       debugLog(
-        'Imported ${results.where((r) => r.success).length} mappings from playlist: $sourcePlaylistId',
+        'Imported $successCount mappings from playlist: $sourcePlaylistId',
       );
       notifyListeners();
     } catch (e) {
@@ -620,12 +626,20 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   Map<String, dynamic> _getExportStatistics() {
+    // ⚡ Bolt: Replace multiple O(n) iterable operations (.where, .map, .fold)
+    // with a single manual `for` loop to avoid intermediate iterables and closures.
+    int publicMappings = 0;
+    int totalUsage = 0;
+
+    for (final m in _sharedMappings.values) {
+      if (m.isPublic) publicMappings++;
+      totalUsage += m.usageCount;
+    }
+
     return {
       'totalMappings': _sharedMappings.length,
-      'publicMappings': _sharedMappings.values.where((m) => m.isPublic).length,
-      'totalUsage': _sharedMappings.values
-          .map((m) => m.usageCount)
-          .fold(0, (sum, count) => sum + count),
+      'publicMappings': publicMappings,
+      'totalUsage': totalUsage,
       'exportDate': DateTime.now().toIso8601String(),
     };
   }

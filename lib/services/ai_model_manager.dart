@@ -385,12 +385,26 @@ class AIModel {
 
   /// Get models by category
   static List<AIModel> byCategory(ModelCategory category) {
-    return allModels.where((m) => m.category == category).toList();
+    // ⚡ Bolt: Replace `.where().toList()` with manual loop to avoid intermediate iterable.
+    final result = <AIModel>[];
+    for (final m in allModels) {
+      if (m.category == category) {
+        result.add(m);
+      }
+    }
+    return result;
   }
 
   /// Get models used by a specific service
   static List<AIModel> forService(String serviceName) {
-    return allModels.where((m) => m.usedBy.contains(serviceName)).toList();
+    // ⚡ Bolt: Replace `.where().toList()` with manual loop to avoid intermediate iterable.
+    final result = <AIModel>[];
+    for (final m in allModels) {
+      if (m.usedBy.contains(serviceName)) {
+        result.add(m);
+      }
+    }
+    return result;
   }
 }
 

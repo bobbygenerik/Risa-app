@@ -309,14 +309,22 @@ class ProviderOptimizationService extends ChangeNotifier {
 
   /// Get provider statistics
   Map<String, dynamic> getProviderStatistics() {
+    // ⚡ Bolt: Replace separate `.values.where().length` calls
+    // with a single loop to avoid multiple passes and intermediate iterables.
+    int knownProviders = 0;
+    int customProviders = 0;
+
+    for (final config in _providerConfigs.values) {
+      if (config.isKnown) knownProviders++;
+      if (config.customConfiguration) customProviders++;
+    }
+
     return {
       'totalProviders': _providerConfigs.length,
-      'knownProviders': _providerConfigs.values.where((c) => c.isKnown).length,
-      'customProviders':
-          _providerConfigs.values.where((c) => c.customConfiguration).length,
-      'averageConfidence': _providerConfigs.isNotEmpty
-          ? _calculateAverageConfidence()
-          : 0.0,
+      'knownProviders': knownProviders,
+      'customProviders': customProviders,
+      'averageConfidence':
+          _providerConfigs.isNotEmpty ? _calculateAverageConfidence() : 0.0,
       'supportedProviderTypes': _knownProviders.keys.toList(),
     };
   }

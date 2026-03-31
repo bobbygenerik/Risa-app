@@ -47,16 +47,29 @@ class ServiceValidator {
   /// Get setup completion percentage
   static double getSetupCompletion() {
     final status = getServiceStatus();
-    final available = status.values.where((v) => v).length;
+
+    // ⚡ Bolt: Use a manual loop instead of `.values.where((v) => v).length`
+    // to avoid creating intermediate iterables and closures in a frequent UI check.
+    int available = 0;
+    for (final v in status.values) {
+      if (v) available++;
+    }
+
     return available / status.length;
   }
 
   /// Get missing services list
   static List<String> getMissingServices() {
     final status = getServiceStatus();
-    return status.entries
-        .where((entry) => !entry.value)
-        .map((entry) => entry.key)
-        .toList();
+
+    // ⚡ Bolt: Replace `.entries.where().map().toList()` with a direct loop
+    // to prevent allocating intermediate lists and iterables.
+    final missing = <String>[];
+    for (final entry in status.entries) {
+      if (!entry.value) {
+        missing.add(entry.key);
+      }
+    }
+    return missing;
   }
 }
