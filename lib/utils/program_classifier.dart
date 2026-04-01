@@ -75,21 +75,20 @@ class ProgramClassifier {
 
   /// Check if a program is news-related.
   static bool isNewsProgram(Program? program, Channel channel) {
-    final title = program?.title ?? '';
-    final category = program?.category ?? '';
-    final description = program?.description ?? '';
-    final channelName = channel.name;
-    final groupTitle = channel.groupTitle ?? '';
-    
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
-      return true;
+    if (program != null) {
+      if (_newsKeywords.hasMatch(program.title) ||
+          (program.category != null && _newsKeywords.hasMatch(program.category!)) ||
+          (program.description != null && _newsKeywords.hasMatch(program.description!))) {
+        return true;
+      }
     }
 
-    final channelInfo = '$channelName $groupTitle';
-    if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
-      return true;
+    final title = program?.title;
+    if (title == null || title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) {
+      if (_newsKeywords.hasMatch(channel.name) ||
+          (channel.groupTitle != null && _newsKeywords.hasMatch(channel.groupTitle!))) {
+        return true;
+      }
     }
 
     return false;
@@ -167,15 +166,22 @@ class ProgramClassifier {
     Channel channel,
     RegExp pattern,
   ) {
-    final title = program?.title ?? '';
-    final category = program?.category ?? '';
-    final description = program?.description ?? '';
-    final channelName = channel.name;
-    final groupTitle = channel.groupTitle ?? '';
+    // ⚡ Bolt: Avoid string interpolation/concatenation ('$title $category $description')
+    // and rely on short-circuiting regex matching on individual fields instead
+    // to reduce memory allocation and GC overhead in hot loops.
+    if (program != null) {
+      if (pattern.hasMatch(program.title) ||
+          (program.category != null && pattern.hasMatch(program.category!)) ||
+          (program.description != null && pattern.hasMatch(program.description!))) {
+        return true;
+      }
+    }
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
+    if (pattern.hasMatch(channel.name) ||
+        (channel.groupTitle != null && pattern.hasMatch(channel.groupTitle!))) {
+      return true;
+    }
 
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    return false;
   }
 }
