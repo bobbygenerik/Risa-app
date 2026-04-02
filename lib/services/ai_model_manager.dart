@@ -153,8 +153,9 @@ class AIModelManager extends ChangeNotifier {
         await for (final chunk in response.stream) {
           downloadedBytes += chunk.length;
           sink.add(chunk);
-          _downloadProgress[model.id] =
-              contentLength > 0 ? downloadedBytes / contentLength : 0.0;
+          _downloadProgress[model.id] = contentLength > 0
+              ? downloadedBytes / contentLength
+              : 0.0;
           notifyListeners();
         }
 
@@ -190,7 +191,8 @@ class AIModelManager extends ChangeNotifier {
 
       final response = await client.send(request);
 
-      final isRedirect = response.statusCode == 301 ||
+      final isRedirect =
+          response.statusCode == 301 ||
           response.statusCode == 302 ||
           response.statusCode == 303 ||
           response.statusCode == 307 ||
@@ -282,9 +284,15 @@ class AIModelManager extends ChangeNotifier {
 
   /// Get list of downloaded models
   List<AIModel> getDownloadedModels() {
-    return AIModel.allModels.where((model) {
-      return _modelStatus[model.id] == ModelDownloadStatus.downloaded;
-    }).toList();
+    // ⚡ Bolt: Replaced chained .where(...).toList() with a manual loop to eliminate intermediate allocations
+    final List<AIModel> result = [];
+    for (int i = 0; i < AIModel.allModels.length; i++) {
+      final model = AIModel.allModels[i];
+      if (_modelStatus[model.id] == ModelDownloadStatus.downloaded) {
+        result.add(model);
+      }
+    }
+    return result;
   }
 }
 
@@ -385,12 +393,28 @@ class AIModel {
 
   /// Get models by category
   static List<AIModel> byCategory(ModelCategory category) {
-    return allModels.where((m) => m.category == category).toList();
+    // ⚡ Bolt: Replaced chained .where(...).toList() with a manual loop
+    final result = <AIModel>[];
+    for (int i = 0; i < allModels.length; i++) {
+      final m = allModels[i];
+      if (m.category == category) {
+        result.add(m);
+      }
+    }
+    return result;
   }
 
   /// Get models used by a specific service
   static List<AIModel> forService(String serviceName) {
-    return allModels.where((m) => m.usedBy.contains(serviceName)).toList();
+    // ⚡ Bolt: Replaced chained .where(...).toList() with a manual loop
+    final result = <AIModel>[];
+    for (int i = 0; i < allModels.length; i++) {
+      final m = allModels[i];
+      if (m.usedBy.contains(serviceName)) {
+        result.add(m);
+      }
+    }
+    return result;
   }
 }
 

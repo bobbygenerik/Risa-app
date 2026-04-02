@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-04-02 - [AIModelManager Chained Iterables Refactoring]
+**Learning:** Replaced chained iterables (`.where(...).toList()`) with manual `for` loops in `AIModelManager`, but received a 'mostly correct' code review score. The review noted that this technically eliminates the allocation of intermediate lazy Iterable objects and iterators, however, because `AIModel.allModels` is a very small list, the performance gain is unmeasurable and not worth the added verbosity, thereby violating the directive to not sacrifice readability for micro-optimizations.
+**Action:** Next time, avoid refactoring chained iterables into manual loops unless there is a proven hot path or a large collection size where the optimization yields a measurable and significant improvement. For small configuration lists, the readability cost outweighs the negligible performance gain.
