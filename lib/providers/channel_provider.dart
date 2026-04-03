@@ -353,30 +353,37 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   final LocalDbService _db = LocalDbService.instance;
   String? _extractStreamIdFromUrl(String url) {
     if (url.isEmpty) return null;
-    try {
-      final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
-    } catch (e) {
-      debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final qIndex = url.indexOf('?');
-      final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
+
+    final qIndex = url.indexOf('?');
+    int end = qIndex != -1 ? qIndex : url.length;
+
+    while (end > 0 && url.codeUnitAt(end - 1) == 47 /* '/' */) {
+      end--;
     }
+
+    // Check if it's a root URL without path (e.g. http://example.com/)
+    // We check for "://" and see if the remaining string contains any slash
+    int schemeIdx = url.indexOf("://");
+    if (schemeIdx != -1) {
+      // Find the end of the domain. It starts after "://" (schemeIdx + 3).
+      int domainEnd = url.indexOf('/', schemeIdx + 3);
+      if (domainEnd == -1 || domainEnd >= end) {
+        // No path segments exist after domain.
+        return null;
+      }
+    }
+
+    if (end == 0) return null;
+
+    int start = url.lastIndexOf('/', end - 1);
+    start = start == -1 ? 0 : start + 1;
+
+    String lastSegment = url.substring(start, end);
+    final dotIndex = lastSegment.indexOf('.');
+    if (dotIndex > 0) {
+      lastSegment = lastSegment.substring(0, dotIndex);
+    }
+    return lastSegment.isNotEmpty ? lastSegment : null;
   }
 
   // TMDB enrichment service for background genre enrichment
