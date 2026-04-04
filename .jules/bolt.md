@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2026-03-30 - [Manual URL Parsing Needs Decoding]
+**Learning:** When optimizing URL parsing in hot paths (like `_extractStreamIdFromUrl`) by replacing `Uri.parse()` with manual string manipulation (`indexOf`, `substring`), failing to account for URL decoding (e.g., `%20` to space) and schema parts (e.g., `http://`) can introduce functional regressions.
+**Action:** Always explicitly decode the final extracted segment if needed (e.g., using `Uri.decodeComponent`) and safely strip URL prefixes when manually parsing URLs to maintain correctness while still achieving performance gains.

@@ -353,30 +353,52 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   final LocalDbService _db = LocalDbService.instance;
   String? _extractStreamIdFromUrl(String url) {
     if (url.isEmpty) return null;
-    try {
-      final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
-    } catch (e) {
-      debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final qIndex = url.indexOf('?');
-      final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
+
+    int qIndex = url.indexOf('?');
+    String path = qIndex != -1 ? url.substring(0, qIndex) : url;
+
+    int hashIndex = path.indexOf('#');
+    if (hashIndex != -1) {
+      path = path.substring(0, hashIndex);
     }
+
+    // Strip scheme if present (e.g. http://)
+    int schemeIndex = path.indexOf('://');
+    if (schemeIndex != -1) {
+      path = path.substring(schemeIndex + 3);
+    }
+
+    // Check if we only have a domain left (no path)
+    int firstSlash = path.indexOf('/');
+    if (firstSlash == -1) return null; // Only domain (e.g. example.com)
+
+    // Start scanning from the first slash to avoid domain name
+    path = path.substring(firstSlash);
+
+    int end = path.length;
+    while (end > 0 && path.codeUnitAt(end - 1) == 47) { // 47 is '/'
+      end--;
+    }
+    if (end == 0) return null;
+
+    int start = path.lastIndexOf('/', end - 1);
+    start = start == -1 ? 0 : start + 1;
+
+    String last = path.substring(start, end);
+
+    // Decode URL
+    try {
+      last = Uri.decodeComponent(last);
+    } catch (_) {
+      // Ignore decoding errors
+    }
+
+    int dotIndex = last.indexOf('.');
+    if (dotIndex > 0) {
+      last = last.substring(0, dotIndex);
+    }
+
+    return last.isNotEmpty ? last : null;
   }
 
   // TMDB enrichment service for background genre enrichment
