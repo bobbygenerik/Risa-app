@@ -1,3 +1,7 @@
+// ⚡ Bolt: Define static RegExp at the top level to avoid expensive recompilation
+// inside normalizeImageUrl, which is a hot path called for every channel logo.
+final RegExp _domainPathRe = RegExp(r'^[^/\s]+\.[^/\s]+(/|$)');
+
 String normalizeImageUrl(String url) {
   final trimmed = url.trim();
   if (trimmed.isEmpty) return trimmed;
@@ -18,7 +22,7 @@ String normalizeImageUrl(String url) {
     return trimmed;
   }
 
-  if (RegExp(r'^[^/\s]+\.[^/\s]+(/|$)').hasMatch(candidate)) {
+  if (_domainPathRe.hasMatch(candidate)) {
     final parsed = Uri.tryParse('https://$candidate');
     if (parsed != null && _shouldDowngradeToHttp(parsed)) {
       return 'http://$candidate';
