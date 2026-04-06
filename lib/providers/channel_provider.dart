@@ -353,30 +353,43 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   final LocalDbService _db = LocalDbService.instance;
   String? _extractStreamIdFromUrl(String url) {
     if (url.isEmpty) return null;
-    try {
-      final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
-    } catch (e) {
-      debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final qIndex = url.indexOf('?');
-      final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
+
+    // ⚡ Bolt: Use manual string scanning to extract the stream ID instead of Uri.parse()
+    // or chained iterable operations like `.split('/').where((p) => p.isNotEmpty).toList()`.
+    // This avoids allocations and speeds up parsing in a very hot path.
+    int end = url.length;
+    final qIndex = url.indexOf('?');
+    if (qIndex != -1) end = qIndex;
+    final hIndex = url.indexOf('#');
+    if (hIndex != -1 && hIndex < end) end = hIndex;
+
+    while (end > 0 && url.codeUnitAt(end - 1) == 47) {
+      // 47 = '/'
+      end--;
     }
+    if (end == 0) return null;
+
+    final lastSlash = url.lastIndexOf('/', end - 1);
+
+    final schemeEnd = url.indexOf('://');
+    if (schemeEnd != -1 && lastSlash <= schemeEnd + 2) {
+      return null;
+    }
+
+    final start = lastSlash + 1;
+    if (start >= end) return null;
+
+    String last = url.substring(start, end);
+    final dotIndex = last.indexOf('.');
+    if (dotIndex > 0) {
+      last = last.substring(0, dotIndex);
+    }
+
+    try {
+      last = Uri.decodeComponent(last);
+    } catch (_) {}
+
+    return last.isNotEmpty ? last : null;
   }
 
   // TMDB enrichment service for background genre enrichment
