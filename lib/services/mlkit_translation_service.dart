@@ -401,7 +401,13 @@ class MLKitTranslationService extends ChangeNotifier {
       }
     }
 
-    final shortCode = normalized.split('-').first;
+    // ⚡ Bolt: Performance optimization
+    // What: Replaced `.split('-').first` with `.indexOf('-')` and `.substring()`.
+    // Why: `.split()` iterates through the entire string and allocates a new List and Strings. `indexOf` stops early and avoids list allocation.
+    // Impact: Reduces GC pressure and string allocations in language code parsing.
+    final dashIndex = normalized.indexOf('-');
+    final shortCode =
+        dashIndex != -1 ? normalized.substring(0, dashIndex) : normalized;
     if (shortCode != normalized) {
       for (final lang in TranslateLanguage.values) {
         if (lang.bcpCode.toLowerCase() == shortCode) {
