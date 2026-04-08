@@ -120,17 +120,20 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
         entry.channel.epgLookupName,
         limit: 5,
       );
-      _matchConfidence[entry.channel.epgLookupId] =
-          suggestions.isEmpty ? 0.0 : suggestions.first.value;
+      _matchConfidence[entry.channel.epgLookupId] = suggestions.isEmpty
+          ? 0.0
+          : suggestions.first.value;
     }
   }
 
   void _applyFilters() {
     // ⚡ Bolt: Performance Optimization
     // Fused `.where(...).toList()` into a single O(n) loop to reduce allocations.
-    // Pre-calculate lowercased search query to avoid repeated allocations per entry.
+    // Pre-calculate RegExp search query to avoid repeated allocations per entry.
     final hasSearch = _searchQuery.isNotEmpty;
-    final query = hasSearch ? _searchQuery.toLowerCase() : '';
+    final searchRegex = hasSearch
+        ? RegExp(RegExp.escape(_searchQuery), caseSensitive: false)
+        : null;
     final result = <ChannelMappingEntry>[];
 
     final entries = _getSortedMappingEntries;
@@ -138,9 +141,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
       final entry = entries[i];
 
       // Apply search filter
-      if (hasSearch) {
-        if (!entry.channel.name.toLowerCase().contains(query) &&
-            !entry.channel.epgLookupId.toLowerCase().contains(query)) {
+      if (searchRegex != null) {
+        if (!searchRegex.hasMatch(entry.channel.name) &&
+            !searchRegex.hasMatch(entry.channel.epgLookupId)) {
           continue;
         }
       }

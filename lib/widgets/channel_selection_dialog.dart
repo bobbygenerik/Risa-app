@@ -52,9 +52,12 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
             final allChannels = channelProvider.channels;
 
             List<Channel> filteredChannels = [];
-            final hasCategoryFilter = _selectedCategory != null && _selectedCategory!.isNotEmpty;
+            final hasCategoryFilter =
+                _selectedCategory != null && _selectedCategory!.isNotEmpty;
             final hasSearchQuery = _searchQuery.isNotEmpty;
-            final lowerSearchQuery = hasSearchQuery ? _searchQuery.toLowerCase() : '';
+            final searchRegex = hasSearchQuery
+                ? RegExp(RegExp.escape(_searchQuery), caseSensitive: false)
+                : null;
 
             // Single pass filtering to avoid chained iterable allocations
             if (!hasCategoryFilter && !hasSearchQuery) {
@@ -65,7 +68,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 if (hasCategoryFilter && c.groupTitle != _selectedCategory) {
                   continue;
                 }
-                if (hasSearchQuery && !c.name.toLowerCase().contains(lowerSearchQuery)) {
+                if (searchRegex != null && !searchRegex.hasMatch(c.name)) {
                   continue;
                 }
                 filteredChannels.add(c);
@@ -112,12 +115,15 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                       ? TVFocusStyle.focusedShadow
                                       : null,
                                   borderRadius: BorderRadius.circular(
-                                      context.tvSpacing(4)),
+                                    context.tvSpacing(4),
+                                  ),
                                 ),
                                 child: IconButton(
-                                  icon: Icon(Icons.close,
-                                      color: Colors.white,
-                                      size: context.tvIconSize(24)),
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: context.tvIconSize(24),
+                                  ),
                                   onPressed: () => Navigator.pop(context),
                                 ),
                               ),
@@ -136,8 +142,9 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                   onFocusChange: (hasFocus) {
                     if (hasFocus) {
                       final text = _searchController.text;
-                      _searchController.selection =
-                          TextSelection.collapsed(offset: text.length);
+                      _searchController.selection = TextSelection.collapsed(
+                        offset: text.length,
+                      );
                     }
                   },
                   child: TextField(
@@ -150,19 +157,25 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Search channels...',
-                      hintStyle:
-                          TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                      prefixIcon:
-                          const Icon(Icons.search, color: Colors.white54),
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Colors.white54,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.05),
                       border: UnderlineInputBorder(
                         borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.2)),
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
                       ),
                       focusedBorder: UnderlineInputBorder(
                         borderSide: const BorderSide(
-                            color: AppTheme.primaryBlue, width: 2),
+                          color: AppTheme.primaryBlue,
+                          width: 2,
+                        ),
                       ),
                     ),
                     onChanged: (value) {
@@ -172,8 +185,9 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                     },
                     onTap: () {
                       final text = _searchController.text;
-                      _searchController.selection =
-                          TextSelection.collapsed(offset: text.length);
+                      _searchController.selection = TextSelection.collapsed(
+                        offset: text.length,
+                      );
                     },
                   ),
                 ),
@@ -187,8 +201,9 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                       scrollDirection: Axis.horizontal,
                       children: [
                         _buildCategoryChip('All', null),
-                        ...categories.map((category) =>
-                            _buildCategoryChip(category, category)),
+                        ...categories.map(
+                          (category) => _buildCategoryChip(category, category),
+                        ),
                       ],
                     ),
                   ),
@@ -201,7 +216,8 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                           child: Text(
                             'No channels found',
                             style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5)),
+                              color: Colors.white.withValues(alpha: 0.5),
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -225,8 +241,9 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                         Navigator.pop(context, channel),
                                     child: Container(
                                       color: isFocused
-                                          ? AppTheme.primaryBlue
-                                              .withValues(alpha: 0.2)
+                                          ? AppTheme.primaryBlue.withValues(
+                                              alpha: 0.2,
+                                            )
                                           : Colors.transparent,
                                       child: ListTile(
                                         leading: SizedBox(
@@ -252,13 +269,16 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                         title: Text(
                                           channel.name,
                                           style: const TextStyle(
-                                              color: Colors.white),
+                                            color: Colors.white,
+                                          ),
                                         ),
                                         subtitle: Text(
                                           channel.groupTitle ?? '',
                                           style: TextStyle(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.5)),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.5,
+                                            ),
+                                          ),
                                         ),
                                         onTap: () =>
                                             Navigator.pop(context, channel),

@@ -21,11 +21,15 @@ class ProviderOptimizationService extends ChangeNotifier {
       name: 'Xtream Codes',
       patterns: [
         ProviderPattern(
-            type: PatternType.channelId,
-            pattern: r'^(\d+)_(\d+)$',
-            weight: 0.9),
+          type: PatternType.channelId,
+          pattern: r'^(\d+)_(\d+)$',
+          weight: 0.9,
+        ),
         ProviderPattern(
-            type: PatternType.channelName, pattern: r'^ch(\d+)$', weight: 0.7),
+          type: PatternType.channelName,
+          pattern: r'^ch(\d+)$',
+          weight: 0.7,
+        ),
       ],
       optimizationHints: {
         'enableFuzzyMatching': true,
@@ -38,9 +42,15 @@ class ProviderOptimizationService extends ChangeNotifier {
       name: 'Standard M3U/M3U8',
       patterns: [
         ProviderPattern(
-            type: PatternType.channelId, pattern: r'^(\w+)$', weight: 0.8),
+          type: PatternType.channelId,
+          pattern: r'^(\w+)$',
+          weight: 0.8,
+        ),
         ProviderPattern(
-            type: PatternType.tvgId, pattern: r'^(\w+)$', weight: 0.95),
+          type: PatternType.tvgId,
+          pattern: r'^(\w+)$',
+          weight: 0.95,
+        ),
       ],
       optimizationHints: {
         'enableFuzzyMatching': true,
@@ -53,9 +63,15 @@ class ProviderOptimizationService extends ChangeNotifier {
       name: 'Stalker Portal',
       patterns: [
         ProviderPattern(
-            type: PatternType.channelId, pattern: r'^(\d+)$', weight: 0.9),
+          type: PatternType.channelId,
+          pattern: r'^(\d+)$',
+          weight: 0.9,
+        ),
         ProviderPattern(
-            type: PatternType.channelName, pattern: r'^tv(\d+)$', weight: 0.8),
+          type: PatternType.channelName,
+          pattern: r'^tv(\d+)$',
+          weight: 0.8,
+        ),
       ],
       optimizationHints: {
         'enableFuzzyMatching': false,
@@ -68,11 +84,15 @@ class ProviderOptimizationService extends ChangeNotifier {
       name: 'OTT Platforms',
       patterns: [
         ProviderPattern(
-            type: PatternType.channelId, pattern: r'^ott_(\w+)$', weight: 0.9),
+          type: PatternType.channelId,
+          pattern: r'^ott_(\w+)$',
+          weight: 0.9,
+        ),
         ProviderPattern(
-            type: PatternType.channelName,
-            pattern: r'^channel_(\w+)$',
-            weight: 0.7),
+          type: PatternType.channelName,
+          pattern: r'^channel_(\w+)$',
+          weight: 0.7,
+        ),
       ],
       optimizationHints: {
         'enableFuzzyMatching': true,
@@ -102,7 +122,8 @@ class ProviderOptimizationService extends ChangeNotifier {
       _detectKnownProviders();
 
       debugLog(
-          'Provider Optimization Service initialized with ${_providerConfigs.length} provider configs');
+        'Provider Optimization Service initialized with ${_providerConfigs.length} provider configs',
+      );
     } catch (e) {
       debugLog('Failed to initialize Provider Optimization Service: $e');
     }
@@ -119,8 +140,10 @@ class ProviderOptimizationService extends ChangeNotifier {
 
       if (matchedProvider != null) {
         final config = ProviderOptimizationConfig(
-          providerId:
-              matchedProvider.config.name.toLowerCase().replaceAll(' ', '_'),
+          providerId: matchedProvider.config.name.toLowerCase().replaceAll(
+            ' ',
+            '_',
+          ),
           providerName: matchedProvider.config.name,
           confidence: matchedProvider.matchScore,
           patterns: matchedProvider.config.patterns,
@@ -133,7 +156,8 @@ class ProviderOptimizationService extends ChangeNotifier {
         await _saveProviderConfigs();
 
         debugLog(
-            'Detected provider: ${matchedProvider.config.name} (confidence: ${matchedProvider.matchScore})');
+          'Detected provider: ${matchedProvider.config.name} (confidence: ${matchedProvider.matchScore})',
+        );
         return config.providerId;
       }
 
@@ -160,19 +184,23 @@ class ProviderOptimizationService extends ChangeNotifier {
     if (config == null) return null;
 
     // Get learning-based optimization
-    final learningStrategy =
-        _smartLearningEngine.getProviderStrategy(providerId);
+    final learningStrategy = _smartLearningEngine.getProviderStrategy(
+      providerId,
+    );
 
     // Combine configurations
     return ProviderMatchingStrategy(
       providerId: providerId,
-      confidenceThreshold: learningStrategy?.confidenceThreshold ??
+      confidenceThreshold:
+          learningStrategy?.confidenceThreshold ??
           (config.optimizationHints['confidenceThreshold'] as double?) ??
           0.7,
-      enableFuzzyMatching: learningStrategy?.enableFuzzyMatching ??
+      enableFuzzyMatching:
+          learningStrategy?.enableFuzzyMatching ??
           (config.optimizationHints['enableFuzzyMatching'] as bool?) ??
           true,
-      enableLogoMatching: learningStrategy?.enableLogoMatching ??
+      enableLogoMatching:
+          learningStrategy?.enableLogoMatching ??
           (config.optimizationHints['enableLogoMatching'] as bool?) ??
           false,
       maxRetries: config.optimizationHints['maxRetries'] as int? ?? 3,
@@ -200,8 +228,11 @@ class ProviderOptimizationService extends ChangeNotifier {
 
     try {
       // 1. Apply provider-specific pattern matching
-      final patternMatches =
-          _applyPatternMatching(strategy, channelId, channelName);
+      final patternMatches = _applyPatternMatching(
+        strategy,
+        channelId,
+        channelName,
+      );
       results.addAll(patternMatches);
 
       // 2. Apply learning-based improvements
@@ -215,13 +246,15 @@ class ProviderOptimizationService extends ChangeNotifier {
       );
 
       for (final match in learningMatches) {
-        results.add(OptimizedMatchResult(
-          epgId: match.epgId,
-          confidence: match.confidence,
-          source: MatchSource.learning,
-          reason: match.reason,
-          originalConfidence: match.originalConfidence,
-        ));
+        results.add(
+          OptimizedMatchResult(
+            epgId: match.epgId,
+            confidence: match.confidence,
+            source: MatchSource.learning,
+            reason: match.reason,
+            originalConfidence: match.originalConfidence,
+          ),
+        );
       }
 
       // 3. Apply logo-based matching if enabled
@@ -235,45 +268,51 @@ class ProviderOptimizationService extends ChangeNotifier {
         );
 
         for (final match in logoMatches) {
-          results.add(OptimizedMatchResult(
-            epgId: match.epgId,
-            confidence: match.similarity,
-            source: MatchSource.logo,
-            reason: 'Logo similarity match',
-          ));
+          results.add(
+            OptimizedMatchResult(
+              epgId: match.epgId,
+              confidence: match.similarity,
+              source: MatchSource.logo,
+              reason: 'Logo similarity match',
+            ),
+          );
         }
       }
 
       // 4. Apply cross-playlist mapping if available
-      final compatibleMappings =
-          await _crossPlaylistService.findCompatibleMappings(
-        channelId: channelId,
-        channelName: channelName,
-        providerId: providerId,
-        groupTitle: groupTitle,
-        minConfidence: strategy.confidenceThreshold * 0.8,
-      );
+      final compatibleMappings = await _crossPlaylistService
+          .findCompatibleMappings(
+            channelId: channelId,
+            channelName: channelName,
+            providerId: providerId,
+            groupTitle: groupTitle,
+            minConfidence: strategy.confidenceThreshold * 0.8,
+          );
 
       for (final mapping in compatibleMappings) {
-        results.add(OptimizedMatchResult(
-          epgId: mapping.mapping.epgId,
-          confidence: mapping.confidence,
-          source: MatchSource.crossPlaylist,
-          reason: _getMatchReasonDescription(mapping.matchReason),
-        ));
+        results.add(
+          OptimizedMatchResult(
+            epgId: mapping.mapping.epgId,
+            confidence: mapping.confidence,
+            source: MatchSource.crossPlaylist,
+            reason: _getMatchReasonDescription(mapping.matchReason),
+          ),
+        );
       }
 
       // 5. Apply confidence boosting based on provider characteristics
       final boostedResults = _applyConfidenceBoosting(results, strategy);
 
       // 6. Sort and filter results
-      final filteredResults = boostedResults
-          .where((r) => r.confidence >= strategy.confidenceThreshold)
-          .toList()
-        ..sort((a, b) => b.confidence.compareTo(a.confidence));
+      final filteredResults =
+          boostedResults
+              .where((r) => r.confidence >= strategy.confidenceThreshold)
+              .toList()
+            ..sort((a, b) => b.confidence.compareTo(a.confidence));
 
       debugLog(
-          'Found ${filteredResults.length} optimized matches for $channelName (provider: $providerId)');
+        'Found ${filteredResults.length} optimized matches for $channelName (provider: $providerId)',
+      );
       return filteredResults;
     } catch (e) {
       debugLog('Error in optimized matching for $channelName: $e');
@@ -312,8 +351,9 @@ class ProviderOptimizationService extends ChangeNotifier {
     return {
       'totalProviders': _providerConfigs.length,
       'knownProviders': _providerConfigs.values.where((c) => c.isKnown).length,
-      'customProviders':
-          _providerConfigs.values.where((c) => c.customConfiguration).length,
+      'customProviders': _providerConfigs.values
+          .where((c) => c.customConfiguration)
+          .length,
       'averageConfidence': _providerConfigs.isNotEmpty
           ? _calculateAverageConfidence()
           : 0.0,
@@ -326,8 +366,9 @@ class ProviderOptimizationService extends ChangeNotifier {
     return {
       'version': '1.0',
       'timestamp': DateTime.now().toIso8601String(),
-      'configs':
-          _providerConfigs.map((key, value) => MapEntry(key, value.toJson())),
+      'configs': _providerConfigs.map(
+        (key, value) => MapEntry(key, value.toJson()),
+      ),
       'statistics': getProviderStatistics(),
     };
   }
@@ -341,8 +382,9 @@ class ProviderOptimizationService extends ChangeNotifier {
 
       final configsData = Map<String, dynamic>.from(data['configs'] ?? {});
       for (final entry in configsData.entries) {
-        _providerConfigs[entry.key] =
-            ProviderOptimizationConfig.fromJson(entry.value);
+        _providerConfigs[entry.key] = ProviderOptimizationConfig.fromJson(
+          entry.value,
+        );
       }
 
       await _saveProviderConfigs();
@@ -374,9 +416,12 @@ class ProviderOptimizationService extends ChangeNotifier {
   // Private methods
 
   static final RegExp _digitsOnlyRe = RegExp(r'^\d+$');
+  static final RegExp _hdRe = RegExp(r'hd', caseSensitive: false);
+  static final RegExp _fourKRe = RegExp(r'4k', caseSensitive: false);
 
   PlaylistCharacteristics _analyzePlaylistCharacteristics(
-      List<Channel> channels) {
+    List<Channel> channels,
+  ) {
     final characteristics = PlaylistCharacteristics();
 
     for (final channel in channels) {
@@ -413,11 +458,11 @@ class ProviderOptimizationService extends ChangeNotifier {
       characteristics.channelNames.add(channelName);
 
       // Check for common patterns
-      if (channelName.toLowerCase().contains('hd')) {
+      if (_hdRe.hasMatch(channelName)) {
         characteristics.hdChannelsCount++;
       }
 
-      if (channelName.toLowerCase().contains('4k')) {
+      if (_fourKRe.hasMatch(channelName)) {
         characteristics.fourKChannelsCount++;
       }
 
@@ -445,13 +490,16 @@ class ProviderOptimizationService extends ChangeNotifier {
   }
 
   KnownProviderMatch? _matchKnownProvider(
-      PlaylistCharacteristics characteristics) {
+    PlaylistCharacteristics characteristics,
+  ) {
     KnownProviderMatch? bestMatch;
     double bestScore = 0.0;
 
     for (final provider in _knownProviders.entries) {
-      final score =
-          _calculateProviderMatchScore(provider.value, characteristics);
+      final score = _calculateProviderMatchScore(
+        provider.value,
+        characteristics,
+      );
 
       if (score > bestScore && score > 0.5) {
         // Minimum threshold
@@ -467,7 +515,9 @@ class ProviderOptimizationService extends ChangeNotifier {
   }
 
   double _calculateProviderMatchScore(
-      KnownProviderConfig config, PlaylistCharacteristics characteristics) {
+    KnownProviderConfig config,
+    PlaylistCharacteristics characteristics,
+  ) {
     double score = 0.0;
 
     // Check numeric ID patterns
@@ -508,7 +558,8 @@ class ProviderOptimizationService extends ChangeNotifier {
   }
 
   ProviderOptimizationConfig? _createCustomConfig(
-      PlaylistCharacteristics characteristics) {
+    PlaylistCharacteristics characteristics,
+  ) {
     // Analyze characteristics to create custom configuration
     final patterns = <ProviderPattern>[];
     final hints = <String, dynamic>{};
@@ -529,19 +580,23 @@ class ProviderOptimizationService extends ChangeNotifier {
 
     // Add patterns based on characteristics
     if (characteristics.underscorePatternRatio > 0.3) {
-      patterns.add(ProviderPattern(
-        type: PatternType.channelId,
-        pattern: r'^(\w+)_(\w+)$',
-        weight: 0.8,
-      ));
+      patterns.add(
+        ProviderPattern(
+          type: PatternType.channelId,
+          pattern: r'^(\w+)_(\w+)$',
+          weight: 0.8,
+        ),
+      );
     }
 
     if (characteristics.chPrefixRatio > 0.2) {
-      patterns.add(ProviderPattern(
-        type: PatternType.channelName,
-        pattern: r'^ch(\d+)$',
-        weight: 0.7,
-      ));
+      patterns.add(
+        ProviderPattern(
+          type: PatternType.channelName,
+          pattern: r'^ch(\d+)$',
+          weight: 0.7,
+        ),
+      );
     }
 
     // Only create config if we have meaningful patterns or hints
@@ -584,25 +639,31 @@ class ProviderOptimizationService extends ChangeNotifier {
         // Try matching against channel ID
         final idMatch = regex.firstMatch(channelId);
         if (idMatch != null) {
-          results.add(OptimizedMatchResult(
-            epgId: channelId,
-            confidence: pattern.weight,
-            source: MatchSource.pattern,
-            reason: 'Pattern match on channel ID (${pattern.type.toString()})',
-          ));
+          results.add(
+            OptimizedMatchResult(
+              epgId: channelId,
+              confidence: pattern.weight,
+              source: MatchSource.pattern,
+              reason:
+                  'Pattern match on channel ID (${pattern.type.toString()})',
+            ),
+          );
         }
 
         // Try matching against channel name
         final nameMatch = regex.firstMatch(channelName);
         if (nameMatch != null) {
-          results.add(OptimizedMatchResult(
-            epgId: channelName,
-            confidence: pattern.weight *
-                0.8, // Slightly lower confidence for name matches
-            source: MatchSource.pattern,
-            reason:
-                'Pattern match on channel name (${pattern.type.toString()})',
-          ));
+          results.add(
+            OptimizedMatchResult(
+              epgId: channelName,
+              confidence:
+                  pattern.weight *
+                  0.8, // Slightly lower confidence for name matches
+              source: MatchSource.pattern,
+              reason:
+                  'Pattern match on channel name (${pattern.type.toString()})',
+            ),
+          );
         }
       } catch (e) {
         debugLog('Error applying pattern ${pattern.pattern}: $e');
@@ -706,15 +767,15 @@ class ProviderOptimizationConfig {
   });
 
   Map<String, dynamic> toJson() => {
-        'providerId': providerId,
-        'providerName': providerName,
-        'confidence': confidence,
-        'patterns': patterns.map((p) => p.toJson()).toList(),
-        'optimizationHints': optimizationHints,
-        'isKnown': isKnown,
-        'detectedAt': detectedAt.toIso8601String(),
-        'customConfiguration': customConfiguration,
-      };
+    'providerId': providerId,
+    'providerName': providerName,
+    'confidence': confidence,
+    'patterns': patterns.map((p) => p.toJson()).toList(),
+    'optimizationHints': optimizationHints,
+    'isKnown': isKnown,
+    'detectedAt': detectedAt.toIso8601String(),
+    'customConfiguration': customConfiguration,
+  };
 
   factory ProviderOptimizationConfig.fromJson(Map<String, dynamic> json) =>
       ProviderOptimizationConfig(
@@ -724,8 +785,9 @@ class ProviderOptimizationConfig {
         patterns: (json['patterns'] as List)
             .map((p) => ProviderPattern.fromJson(p))
             .toList(),
-        optimizationHints:
-            Map<String, dynamic>.from(json['optimizationHints'] ?? {}),
+        optimizationHints: Map<String, dynamic>.from(
+          json['optimizationHints'] ?? {},
+        ),
         isKnown: json['isKnown'],
         detectedAt: DateTime.parse(json['detectedAt']),
         customConfiguration: json['customConfiguration'] ?? false,
@@ -748,10 +810,7 @@ class KnownProviderMatch {
   final KnownProviderConfig config;
   final double matchScore;
 
-  KnownProviderMatch({
-    required this.config,
-    required this.matchScore,
-  });
+  KnownProviderMatch({required this.config, required this.matchScore});
 }
 
 class ProviderPattern {
@@ -766,10 +825,10 @@ class ProviderPattern {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
-        'pattern': pattern,
-        'weight': weight,
-      };
+    'type': type.toString().split('.').last,
+    'pattern': pattern,
+    'weight': weight,
+  };
 
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
@@ -856,16 +915,6 @@ class PlaylistCharacteristics {
   double fourKChannelRatio = 0.0;
 }
 
-enum PatternType {
-  channelId,
-  tvgId,
-  channelName,
-  groupTitle,
-}
+enum PatternType { channelId, tvgId, channelName, groupTitle }
 
-enum MatchSource {
-  pattern,
-  learning,
-  logo,
-  crossPlaylist,
-}
+enum MatchSource { pattern, learning, logo, crossPlaylist }

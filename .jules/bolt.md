@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-04-08 - Pre-compiling RegExp for search filtering
+**Learning:** In Dart, using `.toLowerCase().contains(query)` inside a loop over a large list (like thousands of channels) causes significant memory churn by allocating new string objects for every item on every evaluation.
+**Action:** Always replace `.toLowerCase().contains()` in filtering loops with a pre-compiled `RegExp(RegExp.escape(query), caseSensitive: false)` defined outside the loop to avoid intermediate allocations and reduce GC pressure.
