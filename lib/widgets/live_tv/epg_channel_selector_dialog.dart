@@ -379,40 +379,32 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
     ];
   }
 
+  static final List<MapEntry<RegExp, String Function(Match)>> _epgNamePatterns = [
+    MapEntry(RegExp(r'^bbc(\d+)$', caseSensitive: false), (Match m) => 'BBC ${m.group(1)}'),
+    MapEntry(RegExp(r'^itv(\d+)?$', caseSensitive: false), (Match m) => 'ITV${m.group(1) ?? ''}'),
+    MapEntry(RegExp(r'^channel(\d+)$', caseSensitive: false), (Match m) => 'Channel ${m.group(1)}'),
+    MapEntry(RegExp(r'^sky(\w+)$', caseSensitive: false), (Match m) => 'Sky ${m.group(1)!.toUpperCase()}'),
+    MapEntry(RegExp(r'^fox(\w+)?$', caseSensitive: false), (Match m) => 'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}'),
+    MapEntry(RegExp(r'^cnn(\w+)?$', caseSensitive: false), (Match m) => 'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}'),
+    MapEntry(RegExp(r'^abc(\w+)?$', caseSensitive: false), (Match m) => 'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}'),
+    MapEntry(RegExp(r'^nbc(\w+)?$', caseSensitive: false), (Match m) => 'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}'),
+    MapEntry(RegExp(r'^cbs(\w+)?$', caseSensitive: false), (Match m) => 'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}'),
+  ];
+  static final RegExp _epgSeparatorRe = RegExp(r'[_-]');
+
   /// Converts an EPG channel ID to a human-readable display name.
   String _getDisplayNameForEpgId(String epgId) {
     int dotIdx = epgId.indexOf('.');
     String name = dotIdx != -1 ? epgId.substring(0, dotIdx) : epgId;
 
-    final patterns = {
-      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) =>
-          'BBC ${m.group(1)}',
-      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) =>
-          'ITV${m.group(1) ?? ''}',
-      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) =>
-          'Channel ${m.group(1)}',
-      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) =>
-          'Sky ${m.group(1)!.toUpperCase()}',
-      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) =>
-          'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) =>
-          'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) =>
-          'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) =>
-          'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) =>
-          'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-    };
-
-    for (final pattern in patterns.entries) {
+    for (final pattern in _epgNamePatterns) {
       final match = pattern.key.firstMatch(name);
       if (match != null) {
         return pattern.value(match);
       }
     }
 
-    name = name.replaceAll(RegExp(r'[_-]'), ' ');
+    name = name.replaceAll(_epgSeparatorRe, ' ');
     if (name.isNotEmpty) {
       name = name[0].toUpperCase() + name.substring(1).toLowerCase();
     }

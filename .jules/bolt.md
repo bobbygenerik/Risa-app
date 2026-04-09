@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2024-05-24 - Dart RegExp instantiation in hot paths
+**Learning:** Creating and compiling `RegExp` objects inside methods that are called during frequent UI build loops or list processing iterations (like `_getDisplayNameForEpgId` parsing hundreds of channels) causes significant CPU overhead and GC pressure in Dart (approx 10x slower).
+**Action:** Always cache compiled `RegExp` objects (e.g., using static properties or top-level final variables) when parsing or replacing strings in hot paths, and use `List<MapEntry>` instead of `Map` for ordered regex mapping.
