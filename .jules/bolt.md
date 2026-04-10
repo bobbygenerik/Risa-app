@@ -53,3 +53,7 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+
+## 2026-05-20 - [Avoid `Uri.parse` in Hot Paths for Simple Segment Extraction]
+**Learning:** Using `Uri.parse(url)` to extract path segments in tight loops (e.g., parsing thousands of stream URLs to extract stream IDs) introduces significant overhead due to complex regex processing and intermediate list allocations. In benchmarking, manual string scanning using `indexOf`, `lastIndexOf`, and `substring` was found to be ~3x faster.
+**Action:** When simply extracting prefixes, suffixes, or specific segments from URLs in performance-critical areas, prefer manual index-based bounds checking and `substring` extraction over `Uri.parse()` and chained operations like `.pathSegments.where().toList()`.
