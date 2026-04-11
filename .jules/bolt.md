@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2026-03-27 - [Avoid Iterables for Fixed-Size Array Transformation]
+**Learning:** In Dart, chaining `.map().toList()` to transform an existing list into a new array (such as building parallel cache arrays for `groupTitle` or `id` from a master list) incurs measurable overhead due to iterable creation, closure invocation, and dynamic list growth. When the final size is known, using `List.generate(size, (i) => ..., growable: false)` directly initializes the array without intermediate iterators, reducing execution time and GC pressure.
+**Action:** When creating fixed-size cache arrays from existing collections, prefer `List.generate(length, ..., growable: false)` over chained `.map().toList()` operations.

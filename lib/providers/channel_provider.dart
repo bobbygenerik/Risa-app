@@ -3607,8 +3607,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<String?> _getCategoryTitleCache() {
     if (_categoryTitleCache == null ||
         _categoryTitleCache!.length != _channelMaps.length) {
-      _categoryTitleCache =
-          _channelMaps.map((m) => m['groupTitle'] as String?).toList();
+      // OPTIMIZATION: Replaced chained .map().toList() with List.generate to avoid iterable allocation overhead
+      _categoryTitleCache = List.generate(
+          _channelMaps.length, (i) => _channelMaps[i]['groupTitle'] as String?,
+          growable: false);
     }
     return _categoryTitleCache ?? const [];
   }
@@ -3637,7 +3639,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<String?> _getChannelIdCache() {
     if (_channelIdCache == null ||
         _channelIdCache!.length != _channelMaps.length) {
-      _channelIdCache = _channelMaps.map((m) => m['id'] as String?).toList();
+      // OPTIMIZATION: Replaced chained .map().toList() with List.generate to avoid iterable allocation overhead
+      _channelIdCache = List.generate(
+          _channelMaps.length, (i) => _channelMaps[i]['id'] as String?,
+          growable: false);
     }
     return _channelIdCache ?? const [];
   }
@@ -3645,9 +3650,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   List<bool> _getHiddenFlagCache() {
     if (_hiddenFlagCache == null ||
         _hiddenFlagCache!.length != _channelMaps.length) {
-      _hiddenFlagCache = _channelMaps
-          .map((m) => m['isHidden'] == true)
-          .toList(growable: false);
+      // OPTIMIZATION: Replaced chained .map().toList() with List.generate to avoid iterable allocation overhead
+      _hiddenFlagCache = List.generate(
+          _channelMaps.length, (i) => _channelMaps[i]['isHidden'] == true,
+          growable: false);
     }
     return _hiddenFlagCache ?? const [];
   }
