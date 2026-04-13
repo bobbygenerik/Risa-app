@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2024-04-13 - O(N) Iterable Allocations in Stream Parsing Hot Path
+**Learning:** Chained operations like `.where(...).toList().last` or `.where(...).toList()` inside URL parsing utilities (`_extractStreamIdFromUrl`) create intermediate Iterables and Lists. When parsing playlists with tens of thousands of streams, this results in significant GC pressure. Using a reverse `for` loop to find the last matching element drops the execution time drastically (e.g. 114ms to 4ms in a 1M loop benchmark) by completely eliminating the intermediate list allocations.
+**Action:** When searching for a single element (like the last non-empty segment) in hot paths, avoid chained lazy iterables that resolve to a List. Use standard reverse iteration loops instead to guarantee O(1) allocation overhead.
