@@ -355,10 +355,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (url.isEmpty) return null;
     try {
       final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
+      final segments = uri.pathSegments;
+      String? last;
+      // OPTIMIZATION: Use reverse loop instead of `.where().toList().last` to avoid allocations
+      for (int i = segments.length - 1; i >= 0; i--) {
+        if (segments[i].isNotEmpty) {
+          last = segments[i];
+          break;
+        }
+      }
+      if (last == null) return null;
       final dotIndex = last.indexOf('.');
       if (dotIndex > 0) {
         last = last.substring(0, dotIndex);
@@ -368,9 +374,16 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
       final qIndex = url.indexOf('?');
       final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
+      final parts = clean.split('/');
+      String? last;
+      // OPTIMIZATION: Use reverse loop instead of `.where().toList().last` to avoid allocations
+      for (int i = parts.length - 1; i >= 0; i--) {
+        if (parts[i].isNotEmpty) {
+          last = parts[i];
+          break;
+        }
+      }
+      if (last == null) return null;
       final dotIndex = last.indexOf('.');
       if (dotIndex > 0) {
         last = last.substring(0, dotIndex);

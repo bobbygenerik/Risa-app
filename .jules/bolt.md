@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## $(date +%Y-%m-%d) - [Optimize URL Segment Extraction]
+**Learning:** In Dart, replacing chained `.where().toList().last` iterable operations with a reverse `for` loop on standard List properties (like `Uri.pathSegments` or the result of `String.split`) avoids allocating multiple intermediate iterables and Lists. This is particularly effective in hot paths like URL parsing (e.g., extracting a stream ID from thousands of M3U channels), leading to reduced garbage collection overhead and lower execution times.
+**Action:** Always prefer reverse `for` loops or direct array indexing over chained `.last` or `.where(...).toList()` operations when searching for elements from the end of a list in performance-critical methods.
