@@ -81,14 +81,16 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
     
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
+    // Performance optimization: Avoid string allocations for combined RegExp checks.
+    // Use independent short-circuited checks instead.
+    if (_newsKeywords.hasMatch(title) ||
+        _newsKeywords.hasMatch(category) ||
+        _newsKeywords.hasMatch(description)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
     if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
+        (_newsKeywords.hasMatch(channelName) || _newsKeywords.hasMatch(groupTitle))) {
       return true;
     }
 
@@ -173,9 +175,12 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    // Performance optimization: Avoid string allocations for combined RegExp checks.
+    // Use independent short-circuited checks instead.
+    return pattern.hasMatch(title) ||
+        pattern.hasMatch(category) ||
+        pattern.hasMatch(description) ||
+        pattern.hasMatch(channelName) ||
+        pattern.hasMatch(groupTitle);
   }
 }
