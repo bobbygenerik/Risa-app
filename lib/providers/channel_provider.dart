@@ -355,27 +355,40 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (url.isEmpty) return null;
     try {
       final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+      final segments = uri.pathSegments;
+      // Fused chained iterables into a reverse loop to avoid list allocations
+      for (int i = segments.length - 1; i >= 0; i--) {
+        if (segments[i].isNotEmpty) {
+          var last = segments[i];
+          final dotIndex = last.indexOf('.');
+          if (dotIndex > 0) {
+            last = last.substring(0, dotIndex);
+          }
+          return last.isNotEmpty ? last : null;
+        }
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
       final qIndex = url.indexOf('?');
       final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+
+      // Reverse lookup for the last non-empty segment to avoid split allocations
+      int endIndex = clean.length;
+      while (endIndex > 0) {
+        int slashIndex = clean.lastIndexOf('/', endIndex - 1);
+        if (slashIndex < endIndex - 1) {
+          // Found a non-empty segment
+          var last = clean.substring(slashIndex + 1, endIndex);
+          final dotIndex = last.indexOf('.');
+          if (dotIndex > 0) {
+            last = last.substring(0, dotIndex);
+          }
+          return last.isNotEmpty ? last : null;
+        }
+        endIndex = slashIndex;
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     }
   }
 
