@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2024-04-17 - [Optimize ProgramClassifier Regex Matches]
+**Learning:** In highly called methods like `ProgramClassifier.isNewsProgram` and `_matchesProgramOrChannel`, concatenating multiple object fields into a single string (`'$title $category $description'`) purely to evaluate a single `RegExp.hasMatch` introduces significant overhead due to intermediate string allocations and defeats short-circuit evaluation.
+**Action:** Replace string interpolation with individual `.hasMatch()` checks separated by short-circuiting logical OR operators (`||`). This avoids creating a new combined string per evaluation and exits early on the first match.
