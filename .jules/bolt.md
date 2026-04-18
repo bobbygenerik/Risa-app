@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2024-05-24 - [Avoid String Interpolation in Hot Paths]
+**Learning:** Concatenating multiple nullable or empty strings (e.g., `'$title $category $description'`) purely for a combined `RegExp.hasMatch()` check in hot paths (like `ProgramClassifier` parsing EPG data) incurs unnecessary intermediate string allocations.
+**Action:** Use independent `.hasMatch()` checks combined with short-circuiting (`||`) operators on individual strings to prevent intermediate string allocations and reduce garbage collection overhead.

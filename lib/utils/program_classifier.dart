@@ -75,21 +75,20 @@ class ProgramClassifier {
 
   /// Check if a program is news-related.
   static bool isNewsProgram(Program? program, Channel channel) {
-    final title = program?.title ?? '';
-    final category = program?.category ?? '';
-    final description = program?.description ?? '';
-    final channelName = channel.name;
-    final groupTitle = channel.groupTitle ?? '';
-    
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
-      return true;
+    if (program != null) {
+      final title = program.title;
+      if (title.isNotEmpty && _newsKeywords.hasMatch(title)) return true;
+      final category = program.category;
+      if (category != null && category.isNotEmpty && _newsKeywords.hasMatch(category)) return true;
+      final description = program.description;
+      if (description != null && description.isNotEmpty && _newsKeywords.hasMatch(description)) return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
-    if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
-      return true;
+    final title = program?.title ?? '';
+    if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title))) {
+      if (_newsKeywords.hasMatch(channel.name)) return true;
+      final groupTitle = channel.groupTitle;
+      if (groupTitle != null && groupTitle.isNotEmpty && _newsKeywords.hasMatch(groupTitle)) return true;
     }
 
     return false;
@@ -167,15 +166,19 @@ class ProgramClassifier {
     Channel channel,
     RegExp pattern,
   ) {
-    final title = program?.title ?? '';
-    final category = program?.category ?? '';
-    final description = program?.description ?? '';
-    final channelName = channel.name;
-    final groupTitle = channel.groupTitle ?? '';
+    if (program != null) {
+      final title = program.title;
+      if (title.isNotEmpty && pattern.hasMatch(title)) return true;
+      final category = program.category;
+      if (category != null && category.isNotEmpty && pattern.hasMatch(category)) return true;
+      final description = program.description;
+      if (description != null && description.isNotEmpty && pattern.hasMatch(description)) return true;
+    }
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
+    if (pattern.hasMatch(channel.name)) return true;
+    final groupTitle = channel.groupTitle;
+    if (groupTitle != null && groupTitle.isNotEmpty && pattern.hasMatch(groupTitle)) return true;
 
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    return false;
   }
 }
