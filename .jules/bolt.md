@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-04-20 - [Pre-calculate loop invariant values]
+**Learning:** Computing loop invariant values such as `_searchQuery.toLowerCase()` inside filter iterations (`.where()`) on datasets causes unnecessary repeated evaluation and string allocations for each item.
+**Action:** Hoist the computation of loop invariant values outside of loops/iterators and avoid using chained iterables (`.where().toList()`) inside tight UI operations.

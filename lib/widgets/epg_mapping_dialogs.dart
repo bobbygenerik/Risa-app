@@ -217,13 +217,22 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
   }
 
   Widget _buildSuggestionsList() {
-    final filteredSuggestions = _searchQuery.isEmpty
-        ? _suggestions
-        : _suggestions.where((suggestion) {
-            return suggestion.key.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                );
-          }).toList();
+    List<MapEntry<String, double>> filteredSuggestions;
+
+    if (_searchQuery.isEmpty) {
+      filteredSuggestions = _suggestions;
+    } else {
+      // ⚡ Bolt: Cache lowercase search query and use manual loop
+      // to prevent redundant allocations and intermediate iterables.
+      final lowerSearchQuery = _searchQuery.toLowerCase();
+      filteredSuggestions = [];
+      for (int i = 0; i < _suggestions.length; i++) {
+        final suggestion = _suggestions[i];
+        if (suggestion.key.toLowerCase().contains(lowerSearchQuery)) {
+          filteredSuggestions.add(suggestion);
+        }
+      }
+    }
 
     if (filteredSuggestions.isEmpty) {
       return Center(
