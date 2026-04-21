@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2025-05-23 - [Avoid Concatenated String RegExp Checks in Hot Paths]
+**Learning:** In hot paths like `ProgramClassifier` where `RegExp.hasMatch()` is used to categorize thousands of items, concatenating fields (e.g., `'$title $category $description'`) before checking creates significant memory allocation and garbage collection overhead.
+**Action:** Use independent `.hasMatch()` checks for each field with short-circuiting operators (`||` or explicit `if` returns) to avoid creating intermediate strings and to allow the match to return early.

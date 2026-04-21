@@ -80,16 +80,27 @@ class ProgramClassifier {
     final description = program?.description ?? '';
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
-    
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
+
+    // ⚡ Bolt Optimization: Replace slow concatenated string checking
+    // `$title $category $description` with fast independent checks to avoid
+    // unnecessary string allocation and reduce GC overhead.
+    if (title.isNotEmpty && _newsKeywords.hasMatch(title)) {
+      return true;
+    }
+    if (category.isNotEmpty && _newsKeywords.hasMatch(category)) {
+      return true;
+    }
+    if (description.isNotEmpty && _newsKeywords.hasMatch(description)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
-    if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
-      return true;
+    if (title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) {
+      if (channelName.isNotEmpty && _newsKeywords.hasMatch(channelName)) {
+        return true;
+      }
+      if (groupTitle.isNotEmpty && _newsKeywords.hasMatch(groupTitle)) {
+        return true;
+      }
     }
 
     return false;
@@ -101,7 +112,8 @@ class ProgramClassifier {
     final channelName = channel.name;
 
     // Check for excluded adult animated shows
-    if (_kidsExcludedShows.hasMatch(title) || _kidsExcludedShows.hasMatch(channelName)) {
+    if (_kidsExcludedShows.hasMatch(title) ||
+        _kidsExcludedShows.hasMatch(channelName)) {
       return false;
     }
 
@@ -173,9 +185,23 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
+    // ⚡ Bolt Optimization: Prevent `$title $category $description` intermediate string creation.
+    if (title.isNotEmpty && pattern.hasMatch(title)) {
+      return true;
+    }
+    if (category.isNotEmpty && pattern.hasMatch(category)) {
+      return true;
+    }
+    if (description.isNotEmpty && pattern.hasMatch(description)) {
+      return true;
+    }
+    if (channelName.isNotEmpty && pattern.hasMatch(channelName)) {
+      return true;
+    }
+    if (groupTitle.isNotEmpty && pattern.hasMatch(groupTitle)) {
+      return true;
+    }
 
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    return false;
   }
 }
