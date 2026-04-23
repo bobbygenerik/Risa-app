@@ -63,6 +63,8 @@ class EpgChannelSelectorDialog extends StatefulWidget {
 }
 
 class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
+  static final RegExp _separatorRe = RegExp(r'[_-]');
+
   String _searchQuery = '';
   late final TextEditingController _searchController;
   late final List<MapEntry<String, double>> _suggestions;
@@ -412,7 +414,7 @@ class _EpgChannelSelectorDialogState extends State<EpgChannelSelectorDialog> {
       }
     }
 
-    name = name.replaceAll(RegExp(r'[_-]'), ' ');
+    name = name.replaceAll(_separatorRe, ' ');
     if (name.isNotEmpty) {
       name = name[0].toUpperCase() + name.substring(1).toLowerCase();
     }

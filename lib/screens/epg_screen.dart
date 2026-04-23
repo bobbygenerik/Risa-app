@@ -49,6 +49,8 @@ class EPGScreen extends StatefulWidget {
 
 class _EPGScreenState extends State<EPGScreen>
     with SingleTickerProviderStateMixin, ContentFocusRegistrant {
+  static final RegExp _separatorRe = RegExp(r'[_-]');
+
   late final EPGScreenState _epgState;
   late AnimationController _refreshAnimationController;
 
@@ -2097,7 +2099,7 @@ class _EPGScreenState extends State<EPGScreen>
     }
 
     // Capitalize first letter and replace underscores/hyphens with spaces
-    name = name.replaceAll(RegExp(r'[_-]'), ' ');
+    name = name.replaceAll(_separatorRe, ' ');
     if (name.isNotEmpty) {
       name = name[0].toUpperCase() + name.substring(1).toLowerCase();
     }
