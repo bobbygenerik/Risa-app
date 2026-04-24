@@ -217,13 +217,22 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
   }
 
   Widget _buildSuggestionsList() {
-    final filteredSuggestions = _searchQuery.isEmpty
-        ? _suggestions
-        : _suggestions.where((suggestion) {
-            return suggestion.key.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                );
-          }).toList();
+    List<MapEntry<String, double>> filteredSuggestions;
+    if (_searchQuery.isEmpty) {
+      filteredSuggestions = _suggestions;
+    } else {
+      // ⚡ Bolt: Performance Optimization
+      // Hoisted `_searchQuery.toLowerCase()` outside the loop to avoid redundant string allocations.
+      // Replaced chained `.where(...).toList()` with a manual `for` loop to eliminate intermediate iterable allocations.
+      // Expected impact: Significant reduction in CPU overhead and GC pressure during UI filtering, especially for large suggestion lists.
+      final queryLower = _searchQuery.toLowerCase();
+      filteredSuggestions = [];
+      for (final suggestion in _suggestions) {
+        if (suggestion.key.toLowerCase().contains(queryLower)) {
+          filteredSuggestions.add(suggestion);
+        }
+      }
+    }
 
     if (filteredSuggestions.isEmpty) {
       return Center(

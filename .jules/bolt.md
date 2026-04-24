@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2026-03-27 - [Avoid Chained Iterable Operations in Dialog Filters]
+**Learning:** In the `epg_mapping_dialogs.dart`, `_buildSuggestionsList` used a `.where().toList()` chain that recalculated `_searchQuery.toLowerCase()` on every single iteration for all elements in `_suggestions`. This O(n) string allocation and transformation scales poorly.
+**Action:** Replace chained iterables with explicit `for` loops in hot rendering/filtering paths. Always hoist loop-invariant computations, such as `query.toLowerCase()`, completely outside of the loop.
