@@ -355,27 +355,32 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (url.isEmpty) return null;
     try {
       final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+      final segments = uri.pathSegments;
       if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+
+      for (int i = segments.length - 1; i >= 0; i--) {
+        final segment = segments[i];
+        if (segment.isNotEmpty) {
+          final dotIndex = segment.indexOf('.');
+          return dotIndex > 0 ? segment.substring(0, dotIndex) : segment;
+        }
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
       final qIndex = url.indexOf('?');
       final clean = qIndex != -1 ? url.substring(0, qIndex) : url;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
+      final parts = clean.split('/');
       if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+
+      for (int i = parts.length - 1; i >= 0; i--) {
+        final part = parts[i];
+        if (part.isNotEmpty) {
+          final dotIndex = part.indexOf('.');
+          return dotIndex > 0 ? part.substring(0, dotIndex) : part;
+        }
       }
-      return last.isNotEmpty ? last : null;
+      return null;
     }
   }
 
