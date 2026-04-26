@@ -620,12 +620,24 @@ class CrossPlaylistMappingService extends ChangeNotifier {
   }
 
   Map<String, dynamic> _getExportStatistics() {
+    // ⚡ Bolt: Performance Optimization
+    // Replaced multiple O(n) iterable operations (.where, .map, .fold)
+    // with a single manual `for` loop to prevent intermediate allocations
+    // and reduce GC overhead.
+    int publicMappings = 0;
+    int totalUsage = 0;
+
+    for (final mapping in _sharedMappings.values) {
+      if (mapping.isPublic) {
+        publicMappings++;
+      }
+      totalUsage += mapping.usageCount;
+    }
+
     return {
       'totalMappings': _sharedMappings.length,
-      'publicMappings': _sharedMappings.values.where((m) => m.isPublic).length,
-      'totalUsage': _sharedMappings.values
-          .map((m) => m.usageCount)
-          .fold(0, (sum, count) => sum + count),
+      'publicMappings': publicMappings,
+      'totalUsage': totalUsage,
       'exportDate': DateTime.now().toIso8601String(),
     };
   }
