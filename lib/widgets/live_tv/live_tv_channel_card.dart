@@ -459,6 +459,8 @@ class ChannelLogoWidget extends StatelessWidget {
   final int cacheWidth;
   final int cacheHeight;
 
+  static final RegExp _svgRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   @override
   Widget build(BuildContext context) {
     if (channel.logoUrl == null || channel.logoUrl!.isEmpty) {
@@ -470,8 +472,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = _svgRe.hasMatch(url);
 
     if (isSvg) {
       return Padding(

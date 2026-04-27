@@ -128,9 +128,9 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
   void _applyFilters() {
     // ⚡ Bolt: Performance Optimization
     // Fused `.where(...).toList()` into a single O(n) loop to reduce allocations.
-    // Pre-calculate lowercased search query to avoid repeated allocations per entry.
+    // Pre-calculate RegExp search query to avoid repeated String allocations per entry.
     final hasSearch = _searchQuery.isNotEmpty;
-    final query = hasSearch ? _searchQuery.toLowerCase() : '';
+    final searchRe = hasSearch ? RegExp(RegExp.escape(_searchQuery), caseSensitive: false) : null;
     final result = <ChannelMappingEntry>[];
 
     final entries = _getSortedMappingEntries;
@@ -139,8 +139,8 @@ class _EpgMappingScreenState extends State<EpgMappingScreen> {
 
       // Apply search filter
       if (hasSearch) {
-        if (!entry.channel.name.toLowerCase().contains(query) &&
-            !entry.channel.epgLookupId.toLowerCase().contains(query)) {
+        if (!searchRe!.hasMatch(entry.channel.name) &&
+            !searchRe.hasMatch(entry.channel.epgLookupId)) {
           continue;
         }
       }

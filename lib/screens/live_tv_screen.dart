@@ -4310,10 +4310,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  static final RegExp _svgRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   Widget _buildLogoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    final isSvg = _svgRe.hasMatch(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(

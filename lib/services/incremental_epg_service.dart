@@ -3343,9 +3343,11 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     return (_channelFailureCounts[channelId] ?? 0) >= _channelFailureThreshold;
   }
 
+  static final RegExp _unknownRe = RegExp(r'unknown', caseSensitive: false);
+
   bool _isUnknownChannelName(String? channelName) {
     if (channelName == null || channelName.trim().isEmpty) return false;
-    return channelName.toLowerCase().contains('unknown');
+    return _unknownRe.hasMatch(channelName);
   }
 
   void _maybeLogMissingEpgId(String channelId, String? channelName) {

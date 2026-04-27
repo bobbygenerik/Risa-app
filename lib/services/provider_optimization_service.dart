@@ -374,6 +374,8 @@ class ProviderOptimizationService extends ChangeNotifier {
   // Private methods
 
   static final RegExp _digitsOnlyRe = RegExp(r'^\d+$');
+  static final RegExp _hdRe = RegExp(r'hd', caseSensitive: false);
+  static final RegExp _fourKRe = RegExp(r'4k', caseSensitive: false);
 
   PlaylistCharacteristics _analyzePlaylistCharacteristics(
       List<Channel> channels) {
@@ -413,11 +415,11 @@ class ProviderOptimizationService extends ChangeNotifier {
       characteristics.channelNames.add(channelName);
 
       // Check for common patterns
-      if (channelName.toLowerCase().contains('hd')) {
+      if (_hdRe.hasMatch(channelName)) {
         characteristics.hdChannelsCount++;
       }
 
-      if (channelName.toLowerCase().contains('4k')) {
+      if (_fourKRe.hasMatch(channelName)) {
         characteristics.fourKChannelsCount++;
       }
 

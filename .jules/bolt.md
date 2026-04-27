@@ -52,4 +52,9 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-04-27 - [Avoid .toLowerCase().contains() in hot paths]
+**Learning:** Calling `.toLowerCase().contains()` and `.toLowerCase().endsWith()` repeatedly inside UI  methods and filtering loops allocates massive numbers of short-lived strings, increasing GC pressure.
+**Action:** Always extract static substrings into pre-compiled `RegExp` constants (e.g., `static final _svgRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);`) to prevent string allocation per evaluation.
+## 2026-04-27 - [Avoid .toLowerCase().contains() in hot paths]
+**Learning:** Calling .toLowerCase().contains() and .toLowerCase().endsWith() repeatedly inside UI build methods and filtering loops allocates massive numbers of short-lived strings, increasing GC pressure.
+**Action:** Always extract static substrings into pre-compiled RegExp constants (e.g., RegExp(r'\.svg(\?|$)', caseSensitive: false)) to prevent string allocation per evaluation.

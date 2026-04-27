@@ -217,13 +217,14 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
   }
 
   Widget _buildSuggestionsList() {
-    final filteredSuggestions = _searchQuery.isEmpty
-        ? _suggestions
-        : _suggestions.where((suggestion) {
-            return suggestion.key.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                );
-          }).toList();
+    if (_searchQuery.isEmpty) {
+      return _buildList(_suggestions);
+    }
+
+    final searchRe = RegExp(RegExp.escape(_searchQuery), caseSensitive: false);
+    final filteredSuggestions = _suggestions.where((suggestion) {
+      return searchRe.hasMatch(suggestion.key);
+    }).toList();
 
     if (filteredSuggestions.isEmpty) {
       return Center(
@@ -245,11 +246,15 @@ class _ChannelMappingDialogState extends State<ChannelMappingDialog> {
       );
     }
 
+    return _buildList(filteredSuggestions);
+  }
+
+  Widget _buildList(List<MapEntry<String, double>> items) {
     return ListView.separated(
-      itemCount: filteredSuggestions.length,
+      itemCount: items.length,
       separatorBuilder: (context, index) => SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final suggestion = filteredSuggestions[index];
+        final suggestion = items[index];
         final isSelected = _selectedEpgId == suggestion.key;
 
         return InkWell(
