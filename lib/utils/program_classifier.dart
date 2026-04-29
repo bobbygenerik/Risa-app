@@ -80,15 +80,16 @@ class ProgramClassifier {
     final description = program?.description ?? '';
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
-    
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
+
+    if (_newsKeywords.hasMatch(title) ||
+        _newsKeywords.hasMatch(category) ||
+        _newsKeywords.hasMatch(description)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
     if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
+        (_newsKeywords.hasMatch(channelName) ||
+            _newsKeywords.hasMatch(groupTitle))) {
       return true;
     }
 
@@ -101,7 +102,8 @@ class ProgramClassifier {
     final channelName = channel.name;
 
     // Check for excluded adult animated shows
-    if (_kidsExcludedShows.hasMatch(title) || _kidsExcludedShows.hasMatch(channelName)) {
+    if (_kidsExcludedShows.hasMatch(title) ||
+        _kidsExcludedShows.hasMatch(channelName)) {
       return false;
     }
 
@@ -173,9 +175,10 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    return pattern.hasMatch(title) ||
+        pattern.hasMatch(category) ||
+        pattern.hasMatch(description) ||
+        pattern.hasMatch(channelName) ||
+        pattern.hasMatch(groupTitle);
   }
 }
