@@ -245,7 +245,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
               CompatibleMapping(
                 mapping: mapping,
                 matchReason: MatchReason.sameProvider,
-                confidence: mapping.confidence *
+                confidence:
+                    mapping.confidence *
                     0.8, // Slight penalty for indirect match
               ),
             );
@@ -261,7 +262,8 @@ class CrossPlaylistMappingService extends ChangeNotifier {
             CompatibleMapping(
               mapping: mapping,
               matchReason: MatchReason.keywordMatch,
-              confidence: mapping.confidence *
+              confidence:
+                  mapping.confidence *
                   0.7, // Lower confidence for keyword matches
             ),
           );
@@ -269,10 +271,9 @@ class CrossPlaylistMappingService extends ChangeNotifier {
       }
 
       // Filter by minimum confidence and sort
-      final filtered = compatible
-          .where((c) => c.confidence >= minConfidence)
-          .toList()
-        ..sort((a, b) => b.confidence.compareTo(a.confidence));
+      final filtered =
+          compatible.where((c) => c.confidence >= minConfidence).toList()
+            ..sort((a, b) => b.confidence.compareTo(a.confidence));
 
       return filtered.take(maxResults).toList();
     } catch (e) {
@@ -712,13 +713,13 @@ class CrossPlaylistMapping {
   });
 
   Map<String, dynamic> toJson() => {
-        'playlistId': playlistId,
-        'channelId': channelId,
-        'epgId': epgId,
-        'sourceMappingId': sourceMappingId,
-        'appliedAt': appliedAt.toIso8601String(),
-        'confidence': confidence,
-      };
+    'playlistId': playlistId,
+    'channelId': channelId,
+    'epgId': epgId,
+    'sourceMappingId': sourceMappingId,
+    'appliedAt': appliedAt.toIso8601String(),
+    'confidence': confidence,
+  };
 
   factory CrossPlaylistMapping.fromJson(Map<String, dynamic> json) =>
       CrossPlaylistMapping(
@@ -763,36 +764,36 @@ class SharedMapping {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'sourceChannelId': sourceChannelId,
-        'sourceChannelName': sourceChannelName,
-        'sourcePlaylistId': sourcePlaylistId,
-        'epgId': epgId,
-        'providerId': providerId,
-        'createdAt': createdAt.toIso8601String(),
-        'lastUsed': lastUsed.toIso8601String(),
-        'usageCount': usageCount,
-        'isPublic': isPublic,
-        'description': description,
-        'confidence': confidence,
-        'tags': tags,
-      };
+    'id': id,
+    'sourceChannelId': sourceChannelId,
+    'sourceChannelName': sourceChannelName,
+    'sourcePlaylistId': sourcePlaylistId,
+    'epgId': epgId,
+    'providerId': providerId,
+    'createdAt': createdAt.toIso8601String(),
+    'lastUsed': lastUsed.toIso8601String(),
+    'usageCount': usageCount,
+    'isPublic': isPublic,
+    'description': description,
+    'confidence': confidence,
+    'tags': tags,
+  };
 
   factory SharedMapping.fromJson(Map<String, dynamic> json) => SharedMapping(
-        id: json['id'],
-        sourceChannelId: json['sourceChannelId'],
-        sourceChannelName: json['sourceChannelName'],
-        sourcePlaylistId: json['sourcePlaylistId'],
-        epgId: json['epgId'],
-        providerId: json['providerId'],
-        createdAt: DateTime.parse(json['createdAt']),
-        lastUsed: DateTime.parse(json['lastUsed']),
-        usageCount: json['usageCount'],
-        isPublic: json['isPublic'],
-        description: json['description'],
-        confidence: json['confidence'],
-        tags: List<String>.from(json['tags'] ?? []),
-      );
+    id: json['id'],
+    sourceChannelId: json['sourceChannelId'],
+    sourceChannelName: json['sourceChannelName'],
+    sourcePlaylistId: json['sourcePlaylistId'],
+    epgId: json['epgId'],
+    providerId: json['providerId'],
+    createdAt: DateTime.parse(json['createdAt']),
+    lastUsed: DateTime.parse(json['lastUsed']),
+    usageCount: json['usageCount'],
+    isPublic: json['isPublic'],
+    description: json['description'],
+    confidence: json['confidence'],
+    tags: List<String>.from(json['tags'] ?? []),
+  );
 }
 
 class MappingHistoryEntry {
@@ -813,18 +814,18 @@ class MappingHistoryEntry {
   });
 
   Map<String, dynamic> toJson() => {
-        'action': action.toString().split('.').last,
-        'timestamp': timestamp.toIso8601String(),
-        'sourceChannelId': sourceChannelId,
-        'sourcePlaylistId': sourcePlaylistId,
-        'epgId': epgId,
-        'details': details,
-      };
+    'action': action.name,
+    'timestamp': timestamp.toIso8601String(),
+    'sourceChannelId': sourceChannelId,
+    'sourcePlaylistId': sourcePlaylistId,
+    'epgId': epgId,
+    'details': details,
+  };
 
   factory MappingHistoryEntry.fromJson(Map<String, dynamic> json) =>
       MappingHistoryEntry(
         action: MappingAction.values.firstWhere(
-          (e) => e.toString().split('.').last == json['action'],
+          (e) => e.name == json['action'],
           orElse: () => MappingAction.shared,
         ),
         timestamp: DateTime.parse(json['timestamp']),
