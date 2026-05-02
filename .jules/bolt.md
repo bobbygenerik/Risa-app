@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## $(date +%Y-%m-%d) - [Replace `where(...).toList().last` with reverse for loop]
+**Learning:** Chained iterable operations like `.where((p) => p.isNotEmpty).toList().last` to extract the last valid element of a list force the engine to iterate the entire list, allocate a new iterator, allocate a new list, and then grab the last element. This causes measurable GC pressure in hot paths (like parsing URL segments for thousands of channels).
+**Action:** Replace `.where(...).toList().last` with a manual reverse `for` loop (e.g., `for (int i = list.length - 1; i >= 0; i--)`). This short-circuits as soon as the last valid element is found and allocates zero intermediate objects.
