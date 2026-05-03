@@ -906,7 +906,10 @@ class TMDBService {
     if (uncached.isNotEmpty) {
       const chunkSize = 3; // Reduced from 5 for better Live TV performance
       for (var i = 0; i < uncached.length; i += chunkSize) {
-        final chunk = uncached.skip(i).take(chunkSize).toList();
+        // ⚡ Bolt: Use sublist for O(1) slicing instead of creating multiple
+        // intermediate iterables via skip().take().toList().
+        final end = math.min(i + chunkSize, uncached.length);
+        final chunk = uncached.sublist(i, end);
         final futures =
             chunk.map((title) => getBestBackdrop(title, year: year));
         final chunkResults = await Future.wait(futures);

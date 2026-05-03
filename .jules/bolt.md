@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2024-05-19 - O(1) List Slicing Replaces Lazy Iterables
+**Learning:** In Dart, chaining lazy iterables (`list.skip(i).take(chunkSize).toList()`) creates multiple intermediate objects and incurs O(N) allocation overhead per chunk due to `.toList()` not knowing the final size.
+**Action:** For list slicing and pagination, always prefer `list.sublist(start, end)`. It allocates exactly the required length directly from the underlying array, operating in O(1) time and significantly reducing GC pressure. Ensure boundary checks with `math.min(start + count, list.length)` to prevent RangeErrors.
