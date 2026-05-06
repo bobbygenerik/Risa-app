@@ -355,15 +355,24 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     if (url.isEmpty) return null;
     try {
       final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
+      final segments = uri.pathSegments;
+      String? last;
+      // ⚡ Bolt: Iterate backward to avoid allocating new lists from .where().toList()
+      for (int i = segments.length - 1; i >= 0; i--) {
+        if (segments[i].isNotEmpty) {
+          last = segments[i];
+          break;
+        }
       }
-      return last.isNotEmpty ? last : null;
+
+      if (last != null) {
+        final dotIndex = last.indexOf('.');
+        if (dotIndex > 0) {
+          last = last.substring(0, dotIndex);
+        }
+        return last.isNotEmpty ? last : null;
+      }
+      return null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
       final qIndex = url.indexOf('?');
