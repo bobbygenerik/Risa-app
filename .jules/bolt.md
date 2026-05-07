@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2024-05-19 - Replace split('.').last with .name for Enums
+**Learning:** In Dart >= 2.15, extracting an enum's string representation using `enum.toString().split('.').last` is an anti-pattern that creates unnecessary string allocations, intermediate lists, and array accesses. This is particularly problematic in hot paths like `fromJson`/`toJson` serialization logic.
+**Action:** Always use the built-in `enum.name` property, which is highly optimized and evaluates at compile-time when possible, completely eliminating the runtime overhead of string manipulation.
