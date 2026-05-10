@@ -9,6 +9,7 @@ class ArtworkValidator {
 
   // Pre-compiled regex constants — compiled once, reused on every call
   static final RegExp _dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
+  static final RegExp _svgRegExp = RegExp(r'\.svg(\?|$)', caseSensitive: false);
 
   /// Returns true if the URL points to a poster/portrait image.
   static bool isLikelyPosterUrl(String url) {
@@ -153,7 +154,7 @@ class ArtworkValidator {
       return true;
     }
 
-    return lower.endsWith('.svg');
+    return _svgRegExp.hasMatch(url);
   }
 
   /// Returns true if the URL points to a small/thumbnail image that would

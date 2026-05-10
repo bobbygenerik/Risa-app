@@ -52,6 +52,8 @@ typedef BuildAdaptiveImageCallback = Widget Function(
 /// A reusable channel card widget for Live TV.
 /// Extracted from LiveTVScreen to improve maintainability.
 class LiveTvChannelCard extends StatelessWidget {
+  static final RegExp _svgRegExp = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   const LiveTvChannelCard({
     super.key,
     required this.channel,
@@ -470,8 +472,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = LiveTvChannelCard._svgRegExp.hasMatch(url);
 
     if (isSvg) {
       return Padding(
