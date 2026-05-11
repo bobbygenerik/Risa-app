@@ -343,8 +343,7 @@ class M3UParserService {
 
       int urlEnd = k;
       if (urlEnd > afterSchemeIdx) {
-        return _SimpleMatch(
-            schemeStart, urlEnd, line, line.substring(schemeStart, urlEnd));
+        return _SimpleMatch(schemeStart, urlEnd, line);
       } else {
         searchEnd = idx;
         continue;
@@ -614,7 +613,15 @@ class M3UParserService {
     // Channel name is usually after the last comma
     final lastComma = info.lastIndexOf(',');
     if (lastComma != -1) {
-      return info.substring(lastComma + 1).trim();
+      int start = lastComma + 1;
+      int end = info.length;
+      while (start < end && info.codeUnitAt(start) <= 32) {
+        start++;
+      }
+      while (end > start && info.codeUnitAt(end - 1) <= 32) {
+        end--;
+      }
+      return info.substring(start, end);
     }
     return 'Unknown Channel';
   }
@@ -727,16 +734,17 @@ bool _isWhitespace(int code) {
   return code == 32 || (code >= 9 && code <= 13);
 }
 
+// BOLT OPTIMIZATION: Removed eager allocation of `_match` string during parsing to reduce intermediate string creations.
+// We only slice the string lazily if and when the group is actually requested.
 class _SimpleMatch {
   final int start;
   final int end;
   final String input;
-  final String _match;
 
-  _SimpleMatch(this.start, this.end, this.input, this._match);
+  _SimpleMatch(this.start, this.end, this.input);
 
   String? group(int group) {
-    if (group == 0) return _match;
+    if (group == 0) return input.substring(start, end);
     return null;
   }
 
