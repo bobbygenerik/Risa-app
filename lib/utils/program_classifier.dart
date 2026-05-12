@@ -81,14 +81,18 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
     
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
+    // Performance optimization: Avoid string interpolation/concatenation
+    // and utilize short-circuit evaluation for regex matching.
+    if (_newsKeywords.hasMatch(title) ||
+        _newsKeywords.hasMatch(category) ||
+        _newsKeywords.hasMatch(description)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
+    // Performance optimization: Check channelName and groupTitle separately
+    // to benefit from short-circuiting and prevent new string allocation.
     if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
+        (_newsKeywords.hasMatch(channelName) || _newsKeywords.hasMatch(groupTitle))) {
       return true;
     }
 
@@ -173,9 +177,12 @@ class ProgramClassifier {
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    // Performance optimization: Evaluating each field individually via short-circuiting (||)
+    // avoids allocating a concatenated string and stops immediately on the first match.
+    return pattern.hasMatch(title) ||
+        pattern.hasMatch(category) ||
+        pattern.hasMatch(description) ||
+        pattern.hasMatch(channelName) ||
+        pattern.hasMatch(groupTitle);
   }
 }

@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2023-11-20 - [Avoid String Interpolation for Composite RegExp Matching]
+**Learning:** In `ProgramClassifier`, multiple strings (`title`, `category`, `description`) were being concatenated via interpolation (`'$title $category $description'`) purely to check if a `RegExp` matched *any* of the fields. This forces the Dart VM to allocate a new, potentially large string for every program evaluated.
+**Action:** Replace string interpolation with individual `.hasMatch()` checks combined using the short-circuiting `||` operator. This completely avoids allocating the concatenated string and evaluates faster by stopping at the first successful match.
