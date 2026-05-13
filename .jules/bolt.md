@@ -53,3 +53,6 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+## 2024-05-22 - Avoid String Interpolation/Concatenation inside Pattern Matching Hot Loops
+**Learning:** In classification algorithms parsing thousands of items (like `ProgramClassifier`), using string interpolation to concatenate multiple fields (e.g., `'$title $category $description'`) just to perform a single `RegExp.hasMatch()` check incurs noticeable memory overhead from creating short-lived concatenated strings.
+**Action:** Replace string concatenation with independent, sequential `hasMatch()` checks using short-circuiting logic (`if (title.isNotEmpty && pattern.hasMatch(title)) return true;`). This prevents the allocation of intermediate combined strings and allows early exits before processing longer fields like descriptions.
