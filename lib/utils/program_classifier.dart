@@ -76,20 +76,30 @@ class ProgramClassifier {
   /// Check if a program is news-related.
   static bool isNewsProgram(Program? program, Channel channel) {
     final title = program?.title ?? '';
-    final category = program?.category ?? '';
-    final description = program?.description ?? '';
-    final channelName = channel.name;
-    final groupTitle = channel.groupTitle ?? '';
-    
-    final titleCategoryDescription = '$title $category $description';
-    if (_newsKeywords.hasMatch(titleCategoryDescription)) {
+    if (title.isNotEmpty && _newsKeywords.hasMatch(title)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
-    if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _newsKeywords.hasMatch(channelInfo)) {
+    final category = program?.category ?? '';
+    if (category.isNotEmpty && _newsKeywords.hasMatch(category)) {
       return true;
+    }
+
+    final description = program?.description ?? '';
+    if (description.isNotEmpty && _newsKeywords.hasMatch(description)) {
+      return true;
+    }
+
+    if (title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) {
+      final channelName = channel.name;
+      if (channelName.isNotEmpty && _newsKeywords.hasMatch(channelName)) {
+        return true;
+      }
+
+      final groupTitle = channel.groupTitle ?? '';
+      if (groupTitle.isNotEmpty && _newsKeywords.hasMatch(groupTitle)) {
+        return true;
+      }
     }
 
     return false;
@@ -101,7 +111,8 @@ class ProgramClassifier {
     final channelName = channel.name;
 
     // Check for excluded adult animated shows
-    if (_kidsExcludedShows.hasMatch(title) || _kidsExcludedShows.hasMatch(channelName)) {
+    if (_kidsExcludedShows.hasMatch(title) ||
+        _kidsExcludedShows.hasMatch(channelName)) {
       return false;
     }
 
@@ -168,14 +179,30 @@ class ProgramClassifier {
     RegExp pattern,
   ) {
     final title = program?.title ?? '';
+    if (title.isNotEmpty && pattern.hasMatch(title)) {
+      return true;
+    }
+
     final category = program?.category ?? '';
+    if (category.isNotEmpty && pattern.hasMatch(category)) {
+      return true;
+    }
+
     final description = program?.description ?? '';
+    if (description.isNotEmpty && pattern.hasMatch(description)) {
+      return true;
+    }
+
     final channelName = channel.name;
+    if (channelName.isNotEmpty && pattern.hasMatch(channelName)) {
+      return true;
+    }
+
     final groupTitle = channel.groupTitle ?? '';
+    if (groupTitle.isNotEmpty && pattern.hasMatch(groupTitle)) {
+      return true;
+    }
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-
-    return pattern.hasMatch(info) || pattern.hasMatch(channelInfo);
+    return false;
   }
 }
