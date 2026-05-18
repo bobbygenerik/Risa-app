@@ -80,7 +80,7 @@ class ProgramClassifier {
     final description = program?.description ?? '';
     final channelName = channel.name;
     final groupTitle = channel.groupTitle ?? '';
-    
+
     final titleCategoryDescription = '$title $category $description';
     if (_newsKeywords.hasMatch(titleCategoryDescription)) {
       return true;
@@ -101,7 +101,8 @@ class ProgramClassifier {
     final channelName = channel.name;
 
     // Check for excluded adult animated shows
-    if (_kidsExcludedShows.hasMatch(title) || _kidsExcludedShows.hasMatch(channelName)) {
+    if (_kidsExcludedShows.hasMatch(title) ||
+        _kidsExcludedShows.hasMatch(channelName)) {
       return false;
     }
 

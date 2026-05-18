@@ -18,6 +18,7 @@ class ApiRequestManager {
   final Map<String, DateTime> _requestStartTimes = {};
 
   static const Duration _maxRequestAge = Duration(minutes: 2);
+
   /// Executes an API request with deduplication.
   /// If a request with the same cacheKey is already in flight,
   /// returns the existing Future instead of making a duplicate call.

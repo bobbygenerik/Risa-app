@@ -48,8 +48,7 @@ class Channel {
           map['isFavorite'] is int ? map['isFavorite'] != 0 : map['isFavorite'],
       language: map['language'],
       country: map['country'],
-      isHidden:
-          map['isHidden'] is int ? map['isHidden'] != 0 : map['isHidden'],
+      isHidden: map['isHidden'] is int ? map['isHidden'] != 0 : map['isHidden'],
       sortOrder: map['sortOrder'],
     );
   }

@@ -172,13 +172,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     }
     _lastChannelCount = channelCount;
     _lastEpgCount = epgCount;
-    
+
     // Only refresh stats if enough time has passed to avoid rapid rebuilds
     final now = DateTime.now();
-    if (_lastRefreshAt != null && now.difference(_lastRefreshAt!).inSeconds < 2) {
+    if (_lastRefreshAt != null &&
+        now.difference(_lastRefreshAt!).inSeconds < 2) {
       return;
     }
-    
+
     // Defer state update to post-frame to avoid setState during build
     Future.microtask(() {
       if (mounted) _refreshStats();
@@ -236,8 +237,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       setState(() {
         _fullScanMatched = matched;
         _fullScanTotal = totalChannels;
-        _fullScanProgress =
-            totalChannels == 0 ? 0.0 : (processed / totalChannels).clamp(0.0, 1.0);
+        _fullScanProgress = totalChannels == 0
+            ? 0.0
+            : (processed / totalChannels).clamp(0.0, 1.0);
       });
       // Yield to keep UI responsive.
       await Future.delayed(const Duration(milliseconds: 1));
@@ -441,9 +443,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     final isEpgBusy = epgService.isDownloading ||
         epgService.isParsing ||
         epgService.isLoading;
-    final fullScanPercent = _fullScanTotal == 0
-        ? 0.0
-        : (_fullScanMatched / _fullScanTotal) * 100.0;
+    final fullScanPercent =
+        _fullScanTotal == 0 ? 0.0 : (_fullScanMatched / _fullScanTotal) * 100.0;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: FocusTraversalGroup(
@@ -488,7 +489,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                   debugLog('EPG: Cleared EPG data');
 
                                   // Force fresh download and parse
-                                  await epgService.initialize(forceRefresh: true);
+                                  await epgService.initialize(
+                                      forceRefresh: true);
                                   debugLog('EPG: Reload completed');
 
                                   if (!mounted) return;
@@ -525,7 +527,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                 unawaited(_runFullScan());
                               },
                               icon: Icons.find_in_page,
-                              label: _fullScanInFlight ? 'Scanning...' : 'Full Scan',
+                              label: _fullScanInFlight
+                                  ? 'Scanning...'
+                                  : 'Full Scan',
                               expand: true,
                               minHeight: 36,
                             ),
@@ -553,13 +557,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'EPG Channels: $displayEpg',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   Text(
                     'Playlist Channels: $displayChannels',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   FutureBuilder<Map<String, int>>(
                     future: _statsFuture,
@@ -961,9 +963,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               : AppTheme.cardBackground.withAlpha((0.85 * 255).round()),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? AppTheme.primaryBlue
-                : Colors.white.withAlpha(40),
+            color:
+                isSelected ? AppTheme.primaryBlue : Colors.white.withAlpha(40),
             width: 1,
           ),
         ),
@@ -1217,5 +1218,4 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       ),
     );
   }
-
 }

@@ -31,7 +31,7 @@ class LocalDbService {
     final docsDir = await getApplicationDocumentsDirectory();
     final docsPath = p.join(docsDir.path, 'iptv_local.db');
     final docsFile = File(docsPath);
-    
+
     if (!await docsFile.exists()) {
       // Migrate from cache directory if it exists there (previous incorrect location)
       final cacheDir = await getApplicationCacheDirectory();
@@ -51,7 +51,8 @@ class LocalDbService {
   }
 
   Future<void> init() async {
-    debugLog('LocalDbService: init() called, _isInit=$_isInit, _initCompleter=${_initCompleter != null}');
+    debugLog(
+        'LocalDbService: init() called, _isInit=$_isInit, _initCompleter=${_initCompleter != null}');
     if (_initCompleter != null) {
       debugLog('LocalDbService: Init already in progress, waiting...');
       return _initCompleter!.future;
@@ -63,7 +64,8 @@ class LocalDbService {
         debugLog('LocalDbService: DB already initialized and open');
         return;
       }
-      debugLog('LocalDbService: DB was marked init but not open, reinitializing...');
+      debugLog(
+          'LocalDbService: DB was marked init but not open, reinitializing...');
       _isInit = false;
       _db = null;
     }
@@ -86,7 +88,8 @@ class LocalDbService {
                 ? walResult.first.values.first?.toString()
                 : 'unknown';
             if (activeMode != 'wal') {
-              debugLog('LocalDbService: WAL mode FAILED — active mode: $activeMode');
+              debugLog(
+                  'LocalDbService: WAL mode FAILED — active mode: $activeMode');
             } else {
               debugLog('LocalDbService: WAL mode active');
             }
@@ -176,9 +179,8 @@ class LocalDbService {
       // Quick integrity check to catch corruption early
       try {
         final check = await _db!.rawQuery('PRAGMA integrity_check(1)');
-        final result = check.isNotEmpty
-            ? check.first.values.first?.toString()
-            : 'unknown';
+        final result =
+            check.isNotEmpty ? check.first.values.first?.toString() : 'unknown';
         if (result != 'ok') {
           debugLog('LocalDbService: integrity_check FAILED: $result');
         }
@@ -251,7 +253,7 @@ class LocalDbService {
     if (!_isInit) {
       await init();
     }
-    // WAL mode allows concurrent readers/writers. 
+    // WAL mode allows concurrent readers/writers.
     // Removed manual blocking check regarding _bulkWriteDepth to prevent UI freezes.
     return _withDb(action);
   }
@@ -396,8 +398,7 @@ class LocalDbService {
       if (trimmedCategory.toLowerCase() == 'uncategorized') {
         return db.query(
           'channels',
-          where:
-              'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
+          where: 'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
           whereArgs: ['', 'Uncategorized'],
           orderBy: 'idx ASC',
           limit: safeLimit,
@@ -413,8 +414,7 @@ class LocalDbService {
     return rows.map(_hydrateAttrs).toList();
   }
 
-  Future<Map<String, List<Map<String, dynamic>>>>
-      getChannelsForCategoriesPage(
+  Future<Map<String, List<Map<String, dynamic>>>> getChannelsForCategoriesPage(
     List<String> categories, {
     int offset = 0,
     int limit = 50,
@@ -428,7 +428,8 @@ class LocalDbService {
       mapped[c] = [];
     }
 
-    final hasUncategorized = categories.any((c) => c.trim().toLowerCase() == 'uncategorized');
+    final hasUncategorized =
+        categories.any((c) => c.trim().toLowerCase() == 'uncategorized');
 
     // OPTIMIZATION: Refactored `.where().map().toList()` chains into standard
     // looping bounds with cached `.trim()` strings to avoid multi-pass iterations
@@ -484,7 +485,8 @@ class LocalDbService {
 
       // Handle Uncategorized
       if (hasUncategorized) {
-        final uncategorizedCat = categories.firstWhere((c) => c.trim().toLowerCase() == 'uncategorized');
+        final uncategorizedCat = categories
+            .firstWhere((c) => c.trim().toLowerCase() == 'uncategorized');
         final uncategorizedRows = await db.query(
           'channels',
           where: 'groupTitle IS NULL OR TRIM(groupTitle) = ? OR groupTitle = ?',
@@ -528,9 +530,7 @@ class LocalDbService {
     final rows = await _withDbRead((db) {
       return db.rawQuery(query.toString(), args);
     });
-    return rows
-        .map((r) => (r['cat'] as String?) ?? 'Uncategorized')
-        .toList();
+    return rows.map((r) => (r['cat'] as String?) ?? 'Uncategorized').toList();
   }
 
   Future<int> channelCount() async {
@@ -589,15 +589,14 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> getProgramsForEpgIds(List<String> epgIds,
       {required int startMs, required int endMs}) async {
     if (epgIds.isEmpty) return [];
-    
+
     // Split into chunks to avoid SQLite variable limits (usually 999)
     const int chunkSize = 500;
     final results = <Map<String, dynamic>>[];
-    
+
     for (var i = 0; i < epgIds.length; i += chunkSize) {
-      final chunk = epgIds.sublist(
-          i, (i + chunkSize).clamp(0, epgIds.length));
-      
+      final chunk = epgIds.sublist(i, (i + chunkSize).clamp(0, epgIds.length));
+
       final placeholders = List.filled(chunk.length, '?').join(',');
       final rows = await _withDbRead((db) {
         return db.rawQuery(
@@ -607,13 +606,13 @@ class LocalDbService {
       });
       results.addAll(rows);
     }
-    
+
     return results;
   }
 
   Future<void> insertChannels(List<Map<String, dynamic>> channels) async {
     if (channels.isEmpty) return;
-    
+
     // Batch inserts to avoid locking DB for too long
     const int batchSize = 500;
 
@@ -626,7 +625,8 @@ class LocalDbService {
           await db.transaction((txn) async {
             final batch = txn.batch();
             for (final c in chunk) {
-              final id = c['id']?.toString() ?? c['url'].hashCode.toString(); // Fallback ID
+              final id = c['id']?.toString() ??
+                  c['url'].hashCode.toString(); // Fallback ID
               batch.insert(
                 'channels',
                 {
@@ -646,7 +646,10 @@ class LocalDbService {
                   'country': c['country'],
                   'isHidden': c['isHidden'] == true ? 1 : 0,
                   'sortOrder': c['sortOrder'],
-                  'idx': c['idx'] ?? (i + channels.indexOf(c)), // Ensure idx is preserved or generated
+                  'idx': c['idx'] ??
+                      (i +
+                          channels.indexOf(
+                              c)), // Ensure idx is preserved or generated
                 },
                 conflictAlgorithm: ConflictAlgorithm.replace,
               );
@@ -723,8 +726,8 @@ class LocalDbService {
       await _queueWrite((db) async {
         await db.transaction((txn) async {
           for (var i = 0; i < epgIds.length; i += chunkSize) {
-            final chunk = epgIds.sublist(
-                i, (i + chunkSize).clamp(0, epgIds.length));
+            final chunk =
+                epgIds.sublist(i, (i + chunkSize).clamp(0, epgIds.length));
             final placeholders = List.filled(chunk.length, '?').join(',');
             await txn.delete(
               'epg_programs',
@@ -740,20 +743,20 @@ class LocalDbService {
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
-    
+
     // Use smaller chunks to prevent holding the lock for too long
     const int batchSize = 500;
-    
+
     // If clearing, do it in a separate transaction first
     if (clearExisting) {
-      await _queueWrite((db) => db.delete('epg_programs',
-          where: 'epgId = ?', whereArgs: [epgId]));
+      await _queueWrite((db) =>
+          db.delete('epg_programs', where: 'epgId = ?', whereArgs: [epgId]));
     }
 
     for (var i = 0; i < programs.length; i += batchSize) {
       final end = (i + batchSize).clamp(0, programs.length);
       final chunk = programs.sublist(i, end);
-      
+
       await _withBulkWrite(() async {
         await _queueWrite((db) async {
           await db.transaction((txn) async {
@@ -776,7 +779,7 @@ class LocalDbService {
           });
         });
       });
-      
+
       // Small breathe window for UI/readers between batches
       if (i + batchSize < programs.length) {
         await Future.delayed(Duration.zero);
@@ -807,9 +810,10 @@ class LocalDbService {
     List<String>? epgIds,
   }) async {
     final now = DateTime.now();
-    final startMs = now.subtract(Duration(hours: pastHours)).millisecondsSinceEpoch;
+    final startMs =
+        now.subtract(Duration(hours: pastHours)).millisecondsSinceEpoch;
     final endMs = now.add(Duration(hours: futureHours)).millisecondsSinceEpoch;
-    
+
     final Map<String, List<Map<String, dynamic>>> result = {};
 
     await _withDbRead((db) async {
@@ -832,14 +836,14 @@ class LocalDbService {
           final end = (i + batchSize).clamp(0, epgIds.length);
           final batchIds = epgIds.sublist(i, end);
           final placeholders = List.filled(batchIds.length, '?').join(',');
-          
+
           final rows = await db.query(
             'epg_programs',
             where: 'epgId IN ($placeholders) AND endTs >= ? AND startTs <= ?',
             whereArgs: [...batchIds, startMs, endMs],
             orderBy: 'epgId, startTs',
           );
-          
+
           for (final row in rows) {
             final epgId = row['epgId'] as String;
             result.putIfAbsent(epgId, () => []).add(row);
@@ -847,7 +851,7 @@ class LocalDbService {
         }
       }
     });
-    
+
     return result;
   }
 
@@ -872,8 +876,7 @@ class LocalDbService {
   Future<Map<String, String>> getEpgChannelHashes() async {
     final rows = await _withDbRead((db) => db.query('epg_channel_hash'));
     return {
-      for (final r in rows)
-        r['epgId'] as String: (r['hash'] as String?) ?? ''
+      for (final r in rows) r['epgId'] as String: (r['hash'] as String?) ?? ''
     };
   }
 

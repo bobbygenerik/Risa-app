@@ -629,7 +629,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _categoryHasMore.clear();
       for (final entry in cache.entries) {
         _categoryOffsets[entry.key] = entry.value.length;
-        _categoryHasMore[entry.key] = entry.value.length >= _liveTvSnapshotRowLimit;
+        _categoryHasMore[entry.key] =
+            entry.value.length >= _liveTvSnapshotRowLimit;
       }
       // Show all snapshot categories, not limited to _liveTvSnapshotCategoryLimit
       _visibleCategoryCount = _categoryNames.length;
@@ -727,7 +728,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) continue;
         final prefetchChannels = <Channel>[];
-        final prefetchLimit = channels.length < _liveTvSnapshotRowLimit ? channels.length : _liveTvSnapshotRowLimit;
+        final prefetchLimit = channels.length < _liveTvSnapshotRowLimit
+            ? channels.length
+            : _liveTvSnapshotRowLimit;
         for (var i = 0; i < prefetchLimit; i++) {
           prefetchChannels.add(channels[i]);
         }
@@ -2196,7 +2199,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // OPTIMIZATION: Manual slice via loop replaces `.take().toList()`, averting
     // creation of temporary Iterables when rebuilding the UI row components.
     final recentChannels = <Channel>[];
-    final maxLimit = channelProvider.mostWatchedChannels.length < 8 ? channelProvider.mostWatchedChannels.length : 8;
+    final maxLimit = channelProvider.mostWatchedChannels.length < 8
+        ? channelProvider.mostWatchedChannels.length
+        : 8;
     for (var i = 0; i < maxLimit; i++) {
       recentChannels.add(channelProvider.mostWatchedChannels[i]);
     }

@@ -13,8 +13,9 @@ class EPGMatchingUtils {
       caseSensitive: false);
   static final RegExp _countryCodeSufRe =
       RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$', caseSensitive: false);
-  static final RegExp _suffixSufRe =
-      RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$', caseSensitive: false);
+  static final RegExp _suffixSufRe = RegExp(
+      r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$',
+      caseSensitive: false);
   static final RegExp _wordSepRe = RegExp(r'[\s\-_\.]+');
 
   /// Convert number words to digits for better matching
@@ -105,11 +106,8 @@ class EPGMatchingUtils {
       final normalized = key.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       normalizedEpgKeys[normalized] = key;
 
-      final withoutDomain = key
-          .split('.')
-          .first
-          .toLowerCase()
-          .replaceAll(_nonAlphaNumRe, '');
+      final withoutDomain =
+          key.split('.').first.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       if (!normalizedEpgKeys.containsKey(withoutDomain)) {
         normalizedEpgKeys[withoutDomain] = key;
       }
@@ -173,8 +171,7 @@ class EPGMatchingUtils {
       }
     }
 
-    final normalizedId =
-        channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+    final normalizedId = channelId.toLowerCase().replaceAll(_nonAlphaNumRe, '');
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
       return normalizedKeys[normalizedId];
@@ -195,8 +192,7 @@ class EPGMatchingUtils {
 
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry =
-          epgNormalized.replaceAll(_countryCodeSufRe, '');
+      final epgWithoutCountry = epgNormalized.replaceAll(_countryCodeSufRe, '');
       final epgWithNumbers = convertNumberWords(epgWithoutCountry);
       final epgStripped = stripSuffixes(epgWithNumbers);
 
@@ -230,13 +226,11 @@ class EPGMatchingUtils {
       return bestMatch.value;
     }
 
-    final channelStrippedNumbers =
-        stripNumbers(normalizedIdWithoutCountry);
+    final channelStrippedNumbers = stripNumbers(normalizedIdWithoutCountry);
     if (channelStrippedNumbers.length >= 3) {
       final matches = <MapEntry<String, String>>[];
       for (final entry in normalizedKeys.entries) {
-        final epgWithoutCountry =
-            entry.key.replaceAll(_countryCodeSufRe, '');
+        final epgWithoutCountry = entry.key.replaceAll(_countryCodeSufRe, '');
         final epgStrippedNumbers = stripNumbers(epgWithoutCountry);
         if (epgStrippedNumbers == channelStrippedNumbers) {
           _channelIdCache[cacheKey] = entry.value;
@@ -261,8 +255,7 @@ class EPGMatchingUtils {
     }
 
     for (final entry in normalizedKeys.entries) {
-      final epgWithoutCountry =
-          entry.key.replaceAll(_countryCodeSufRe, '');
+      final epgWithoutCountry = entry.key.replaceAll(_countryCodeSufRe, '');
       if (normalizedIdWithoutCountry.contains(epgWithoutCountry) &&
           epgWithoutCountry.length >= 4) {
         _channelIdCache[cacheKey] = entry.value;
@@ -279,8 +272,7 @@ class EPGMatchingUtils {
       }
       final cleanedName = normalizedName.replaceAll(_qualitySufRe, '');
       for (final entry in normalizedKeys.entries) {
-        final epgWithoutCountry =
-            entry.key.replaceAll(_countryCodeSufRe, '');
+        final epgWithoutCountry = entry.key.replaceAll(_countryCodeSufRe, '');
         if (cleanedName.contains(epgWithoutCountry) &&
             epgWithoutCountry.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
@@ -331,8 +323,7 @@ class EPGMatchingUtils {
     searchTerms.add(idNorm.replaceAll(_suffixSufRe, ''));
 
     if (channelName != null && channelName.isNotEmpty) {
-      final nameNorm =
-          channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
+      final nameNorm = channelName.toLowerCase().replaceAll(_nonAlphaNumRe, '');
       searchTerms.add(nameNorm);
       searchTerms.add(nameNorm.replaceAll(_suffixSufRe, ''));
       final words = channelName.toLowerCase().split(_wordSepRe);

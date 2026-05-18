@@ -7,18 +7,17 @@ class MockPlaylistLoader extends PlaylistLoader {
   Future<Map<String, dynamic>> loadFromUrl(String url,
       {void Function(int parsedChannels)? onProgress,
       void Function(List<Map<String, dynamic>> chunk)? onChannelsChunk}) async {
-
     // Simulate some delay
     await Future.delayed(const Duration(milliseconds: 10));
 
     if (url == 'error') {
-        throw Exception('Mock error');
+      throw Exception('Mock error');
     }
 
     // Simulate chunks
     final chunk1 = [
-        {'name': 'Ch1', 'url': 'http://1', 'groupTitle': 'News', 'id': '1'},
-        {'name': 'Ch2', 'url': 'http://2', 'groupTitle': 'Sports', 'id': '2'},
+      {'name': 'Ch1', 'url': 'http://1', 'groupTitle': 'News', 'id': '1'},
+      {'name': 'Ch2', 'url': 'http://2', 'groupTitle': 'Sports', 'id': '2'},
     ];
     if (onChannelsChunk != null) onChannelsChunk(chunk1);
     if (onProgress != null) onProgress(2);
@@ -26,15 +25,15 @@ class MockPlaylistLoader extends PlaylistLoader {
     await Future.delayed(const Duration(milliseconds: 10));
 
     final chunk2 = [
-        {'name': 'Ch3', 'url': 'http://3', 'groupTitle': 'News', 'id': '3'},
-        {'name': 'Ch4', 'url': 'http://4', 'groupTitle': 'Movies', 'id': '4'},
+      {'name': 'Ch3', 'url': 'http://3', 'groupTitle': 'News', 'id': '3'},
+      {'name': 'Ch4', 'url': 'http://4', 'groupTitle': 'Movies', 'id': '4'},
     ];
     if (onChannelsChunk != null) onChannelsChunk(chunk2);
     if (onProgress != null) onProgress(4);
 
     return {
-        'channelsFile': 'dummy.jsonl',
-        'channelCount': 4,
+      'channelsFile': 'dummy.jsonl',
+      'channelCount': 4,
     };
   }
 

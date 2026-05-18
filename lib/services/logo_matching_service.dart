@@ -184,7 +184,7 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
   Future<LogoData?> getLogoForChannel(
       String channelId, String channelName) async {
     if (_logoCache.containsKey(channelId)) {
-    return _logoCache[channelId];
+      return _logoCache[channelId];
     }
 
     // Try to download if not cached
@@ -269,7 +269,8 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
   // Private methods
 
   static final RegExp _nonAlphanumericRe = RegExp(r'[^a-z0-9]');
-  static final RegExp _qualitySuffixRe = RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
+  static final RegExp _qualitySuffixRe =
+      RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au)$');
 
   Future<String?> _findLogoUrl(String channelName, String? providerId) async {
     // This is a simplified implementation
@@ -344,8 +345,6 @@ class LogoMatchingService extends ChangeNotifier with ThrottledNotifier {
       return null;
     }
   }
-
-  
 
   Future<void> _saveLogoToCache(String channelId, LogoData logo) async {
     try {

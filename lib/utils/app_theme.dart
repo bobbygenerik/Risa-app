@@ -8,8 +8,8 @@ class AppTheme {
   // Using deep blue from logo palette
   static const Color primaryBlue = Color(0xFF2E3192);
   static const Color richBlack = Color(0xFF080808); // Cinema-grade Rich Black
-  static const Color darkBackground = Color(
-      0xFF111316); // Deep charcoal base for premium TV contrast
+  static const Color darkBackground =
+      Color(0xFF111316); // Deep charcoal base for premium TV contrast
   static const Color cardBackground = Color(0x00000000); // fully transparent
   static const Color dialogBackground =
       Color(0xFF1E1E2E); // Solid dark for dialogs/popups

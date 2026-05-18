@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -262,26 +261,27 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                       title: 'Update Frequency',
                       subtitle: 'Every ${playlist.updateFrequency} hours',
                       icon: Icons.timer,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TVFocusable(
-                              child: IconButton(
-                                icon: const Icon(Icons.remove, color: Colors.white),
-                                onPressed: () =>
-                                    _updatePlaylistFrequency(playlist, -1),
-                              ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TVFocusable(
+                            child: IconButton(
+                              icon:
+                                  const Icon(Icons.remove, color: Colors.white),
+                              onPressed: () =>
+                                  _updatePlaylistFrequency(playlist, -1),
                             ),
-                            const SizedBox(width: 8),
-                            TVFocusable(
-                              child: IconButton(
-                                icon: const Icon(Icons.add, color: Colors.white),
-                                onPressed: () =>
-                                    _updatePlaylistFrequency(playlist, 1),
-                              ),
+                          ),
+                          const SizedBox(width: 8),
+                          TVFocusable(
+                            child: IconButton(
+                              icon: const Icon(Icons.add, color: Colors.white),
+                              onPressed: () =>
+                                  _updatePlaylistFrequency(playlist, 1),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -509,7 +509,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
             autofocus: true,
             child: TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white)),
             ),
           ),
           TVFocusable(

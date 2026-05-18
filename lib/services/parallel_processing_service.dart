@@ -6,15 +6,16 @@ import '../models/program.dart';
 /// Parallel processing service for CPU-intensive operations
 class ParallelProcessingService {
   static ParallelProcessingService? _instance;
-  static ParallelProcessingService get instance => _instance ??= ParallelProcessingService._();
-  
+  static ParallelProcessingService get instance =>
+      _instance ??= ParallelProcessingService._();
+
   ParallelProcessingService._();
-  
+
   /// Parse M3U playlist (simplified)
   Future<List<Channel>> parseM3UInIsolate(String m3uContent) async {
     final channels = <Channel>[];
     final lines = m3uContent.split('\n');
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.startsWith('#EXTINF:')) {
@@ -31,18 +32,19 @@ class ParallelProcessingService {
         }
       }
     }
-    
+
     debugLog('ParallelProcessing: Parsed ${channels.length} channels');
     return channels;
   }
-  
+
   /// Parse EPG XML (simplified)
-  Future<Map<String, List<Program>>> parseEPGInIsolate(String xmlContent) async {
+  Future<Map<String, List<Program>>> parseEPGInIsolate(
+      String xmlContent) async {
     final programs = <String, List<Program>>{};
-    
+
     // Simplified parsing - just create mock programs
     final channelMatches = RegExp(r'channel="([^"]*)"').allMatches(xmlContent);
-    
+
     for (final match in channelMatches) {
       final channelId = match.group(1)!;
       programs[channelId] = [
@@ -56,28 +58,27 @@ class ParallelProcessingService {
         ),
       ];
     }
-    
+
     debugLog('ParallelProcessing: Parsed EPG for ${programs.length} channels');
     return programs;
   }
-  
+
   /// Process channel logos (simplified)
   Future<Map<String, String>> processChannelLogosInParallel(
-    List<Channel> channels,
-    {int batchSize = 50}
-  ) async {
+      List<Channel> channels,
+      {int batchSize = 50}) async {
     final results = <String, String>{};
-    
+
     for (final channel in channels) {
       if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
         results[channel.id] = channel.logoUrl!;
       }
     }
-    
+
     debugLog('ParallelProcessing: Processed ${results.length} channel logos');
     return results;
   }
-  
+
   /// Dispose all isolates
   void dispose() {
     debugLog('ParallelProcessing: Disposed');

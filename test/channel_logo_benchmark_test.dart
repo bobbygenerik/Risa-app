@@ -106,14 +106,16 @@ void main() {
 
     // We can't easily add to setUpAll now inside test.
     // But we can call markValid inside test.
-    final foxSports1Url = 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fox-sports-1-us.png';
+    final foxSports1Url =
+        'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fox-sports-1-us.png';
     ImageValidationService.markValid(foxSports1Url);
 
     final foxSports1 = await ChannelLogoService.getLogoUrl('fox sports 1 hd');
     expect(foxSports1, foxSports1Url);
 
     // 4. No Match
-    final noMatch = await ChannelLogoService.getLogoUrl('NonExistentChannelXYZ');
+    final noMatch =
+        await ChannelLogoService.getLogoUrl('NonExistentChannelXYZ');
     expect(noMatch, isNull);
   });
 }

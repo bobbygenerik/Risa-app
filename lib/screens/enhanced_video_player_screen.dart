@@ -41,7 +41,8 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
-  final FocusNode _playerFocusNode = FocusNode(debugLabel: 'video_player_focus');
+  final FocusNode _playerFocusNode =
+      FocusNode(debugLabel: 'video_player_focus');
   bool _isLoading = true;
   bool _showControls = true;
   final bool _isPlaying = true;
@@ -86,10 +87,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       _transcriptionServiceRef = service;
       _transcriptionListener = () {
         if (!mounted) return;
-        final url = widget.videoUrl ??
-            widget.streamUrl ??
-            widget.channel?.url ??
-            '';
+        final url =
+            widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
         if (service.isTranscribing && url.isNotEmpty) {
           // fire-and-forget: start transcription without awaiting here
           // ignore: unawaited_futures
@@ -123,17 +122,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    final url = widget.videoUrl ??
-        widget.streamUrl ??
-        widget.channel?.url ??
-        '';
+    final url =
+        widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
 
     debugLog('=== VIDEO PLAYER INIT START ===');
     debugLog('Video Player: Initializing with URL: $url');
     debugLog('isLive: ${widget.isLive}');
     debugLog('Channel: ${widget.channel?.name ?? "none"}');
     logToSystem('PLAYER INIT: $url', name: 'RisaPlayer');
-    
+
     if (url.isEmpty) {
       debugLog('=== VIDEO PLAYER INIT FAILED: Empty URL ===');
       if (mounted) {
@@ -159,7 +156,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       logToSystem('PLAYER INIT ERROR: $e', name: 'RisaPlayer');
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Initialization Error', 'Failed to initialize player: $e');
+        _showErrorDialog(
+            'Initialization Error', 'Failed to initialize player: $e');
       }
     }
   }
@@ -218,7 +216,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
         child: GestureDetector(
           onTap: _toggleControls,
-
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Stack(
@@ -230,17 +227,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           fit: StackFit.expand,
                           children: [
                             // Use Chewie (ExoPlayer backend) on all platforms
-                              ChewiePlayerWidget(
-                                key: ValueKey(widget.videoUrl ??
-                                    widget.streamUrl ??
-                                    widget.channel?.url ??
-                                    'player_key'),
-                                url: widget.videoUrl ??
-                                    widget.streamUrl ??
-                                    widget.channel?.url ??
-                                    '',
-                                isLive: widget.isLive,
-                              ),
+                            ChewiePlayerWidget(
+                              key: ValueKey(widget.videoUrl ??
+                                  widget.streamUrl ??
+                                  widget.channel?.url ??
+                                  'player_key'),
+                              url: widget.videoUrl ??
+                                  widget.streamUrl ??
+                                  widget.channel?.url ??
+                                  '',
+                              isLive: widget.isLive,
+                            ),
                             if (_videoUnavailable)
                               Positioned.fill(
                                 child: Container(
@@ -810,7 +807,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     // VLC handles subtitles internally
     return const SizedBox.shrink();
   }
-
 }
 
 enum EnhancedSubtitleMode { off, regular, liveTranslation }

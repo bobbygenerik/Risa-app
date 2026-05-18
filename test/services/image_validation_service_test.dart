@@ -50,7 +50,8 @@ void main() {
       expect(ImageValidationService.isKnownInvalid(url), isTrue);
     });
 
-    test('handles network errors gracefully (returns true to allow retry)', () async {
+    test('handles network errors gracefully (returns true to allow retry)',
+        () async {
       // Use a port that is likely closed or reserved
       final url = 'http://127.0.0.1:1/unreachable.jpg';
       final isValid = await ImageValidationService.isValid(url);

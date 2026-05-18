@@ -27,7 +27,10 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
   final maxSize = 200;
   Image work = decoded;
   if (decoded.width > maxSize || decoded.height > maxSize) {
-    work = copyResize(decoded, width: maxSize, height: (decoded.height * maxSize / decoded.width).round(), interpolation: Interpolation.nearest);
+    work = copyResize(decoded,
+        width: maxSize,
+        height: (decoded.height * maxSize / decoded.width).round(),
+        interpolation: Interpolation.nearest);
   }
 
   final width = work.width;
@@ -87,8 +90,8 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
       }
     }
     double maxEdge = 0.0;
-    for(int i = 0; i < edgeFeatures.length; i++) {
-        if(edgeFeatures[i] > maxEdge) maxEdge = edgeFeatures[i];
+    for (int i = 0; i < edgeFeatures.length; i++) {
+      if (edgeFeatures[i] > maxEdge) maxEdge = edgeFeatures[i];
     }
     if (maxEdge > 0) {
       for (int i = 0; i < edgeFeatures.length; i++) {
@@ -114,13 +117,15 @@ Map<String, dynamic> extractLogoFeaturesIsolate(Uint8List bytes) {
         }
         final mean = sum / 9.0;
         final variance = (sumSq / 9.0) - (mean * mean);
-        final bin = ((variance / 255.0) * textureBins).clamp(0, textureBins - 1).toInt();
+        final bin = ((variance / 255.0) * textureBins)
+            .clamp(0, textureBins - 1)
+            .toInt();
         textureFeatures[bin]++;
       }
     }
     double maxTex = 0.0;
-    for(int i = 0; i < textureFeatures.length; i++) {
-        if(textureFeatures[i] > maxTex) maxTex = textureFeatures[i];
+    for (int i = 0; i < textureFeatures.length; i++) {
+      if (textureFeatures[i] > maxTex) maxTex = textureFeatures[i];
     }
     if (maxTex > 0) {
       for (int i = 0; i < textureFeatures.length; i++) {
@@ -154,9 +159,16 @@ Map<String, dynamic> processLogoIsolate(Map<String, dynamic> params) {
 
   Image work = decoded;
   if (decoded.width > maxLogoSize || decoded.height > maxLogoSize) {
-    work = copyResize(decoded, width: maxLogoSize, height: (decoded.height * maxLogoSize / decoded.width).round(), interpolation: Interpolation.nearest);
+    work = copyResize(decoded,
+        width: maxLogoSize,
+        height: (decoded.height * maxLogoSize / decoded.width).round(),
+        interpolation: Interpolation.nearest);
   }
 
   final encoded = encodePng(work);
-  return {'bytes': Uint8List.fromList(encoded), 'width': work.width, 'height': work.height};
+  return {
+    'bytes': Uint8List.fromList(encoded),
+    'width': work.width,
+    'height': work.height
+  };
 }

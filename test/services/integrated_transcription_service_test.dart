@@ -44,7 +44,8 @@ void main() {
       expect(service.subtitles.isNotEmpty, true);
       // Depending on implementation, it might append to existing or create new entry
       // For now, check if text is present
-      final hasText = service.subtitles.any((s) => s.originalText == 'Fake Transcription');
+      final hasText =
+          service.subtitles.any((s) => s.originalText == 'Fake Transcription');
       expect(hasText, true);
     });
   });

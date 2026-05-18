@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 void main() {
-  testWidgets('BrandPrimaryButton shows loading spinner when isLoading is true', (WidgetTester tester) async {
+  testWidgets('BrandPrimaryButton shows loading spinner when isLoading is true',
+      (WidgetTester tester) async {
     // Create button with isLoading=true
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -21,7 +22,8 @@ void main() {
     expect(find.text('Save'), findsNothing);
   });
 
-  testWidgets('BrandPrimaryButton is disabled when isDisabled is true', (WidgetTester tester) async {
+  testWidgets('BrandPrimaryButton is disabled when isDisabled is true',
+      (WidgetTester tester) async {
     bool pressed = false;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -46,7 +48,9 @@ void main() {
     expect(pressed, isFalse);
   });
 
-  testWidgets('BrandSecondaryButton shows loading spinner when isLoading is true', (WidgetTester tester) async {
+  testWidgets(
+      'BrandSecondaryButton shows loading spinner when isLoading is true',
+      (WidgetTester tester) async {
     // Create button with isLoading=true
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -63,7 +67,8 @@ void main() {
     expect(find.text('Cancel'), findsNothing);
   });
 
-  testWidgets('BrandSecondaryButton is disabled when isDisabled is true', (WidgetTester tester) async {
+  testWidgets('BrandSecondaryButton is disabled when isDisabled is true',
+      (WidgetTester tester) async {
     bool pressed = false;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(

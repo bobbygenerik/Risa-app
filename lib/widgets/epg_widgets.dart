@@ -182,10 +182,10 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
                     color: Colors.white.withValues(alpha: 0.1), width: 1),
           ),
           child: Center(
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: CachedChannelLogo(
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: CachedChannelLogo(
                 logoUrl: widget.channel.logoUrl,
                 channelName: widget.channel.name,
                 tvgId: widget.channel.tvgId,
@@ -193,9 +193,9 @@ class _EPGChannelItemState extends State<EPGChannelItem> {
                 cacheWidth: 96,
                 cacheHeight: 96,
                 fallbackIcon: Icons.dvr,
-                ),
               ),
             ),
+          ),
         ),
       ),
     );
@@ -382,28 +382,28 @@ class EPGProgramRow extends StatelessWidget {
       },
       child: Builder(builder: (context) {
         final isFocused = Focus.of(context).hasFocus;
-          return Container(
-            height: rowHeight,
-            width: 12 * 240.0, // totalWidth
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.only(left: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2a2a3e).withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: isFocused
-                  ? Border.all(color: AppTheme.focusBorder, width: 3)
-                  : Border.all(
-                      color: Colors.white.withValues(alpha: 0.1), width: 1),
-              boxShadow: isFocused
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.focusBorder.withValues(alpha: 0.6),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
-            ),
+        return Container(
+          height: rowHeight,
+          width: 12 * 240.0, // totalWidth
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2a2a3e).withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: isFocused
+                ? Border.all(color: AppTheme.focusBorder, width: 3)
+                : Border.all(
+                    color: Colors.white.withValues(alpha: 0.1), width: 1),
+            boxShadow: isFocused
+                ? [
+                    BoxShadow(
+                      color: AppTheme.focusBorder.withValues(alpha: 0.6),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
           child: Text(
             label,
             style: TextStyle(
@@ -476,12 +476,13 @@ class EPGVirtualProgramRow extends StatelessWidget {
         FocusNode? resolvedFocusNode;
         if (isFirstRow && programIndex == 0) {
           resolvedFocusNode = firstProgramFocusNode;
-        } else if ((focusProgramIndex != -1 && focusProgramIndex == programIndex) ||
-                   (focusProgramIndex == -1 && programIndex == 0)) {
-                   // Assign to live program OR first program if none live
+        } else if ((focusProgramIndex != -1 &&
+                focusProgramIndex == programIndex) ||
+            (focusProgramIndex == -1 && programIndex == 0)) {
+          // Assign to live program OR first program if none live
           resolvedFocusNode = currentProgramFocusNode;
         }
-        
+
         final isClippedLeft = program.startTime.isBefore(displayStart);
 
         return Positioned(

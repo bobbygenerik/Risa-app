@@ -40,7 +40,7 @@ class FileLogger {
   void log(String message) {
     // Skip file logging in release/profile mode for performance
     if (kReleaseMode || kProfileMode) return;
-    
+
     final timestampedMessage = '[${DateTime.now().toIso8601String()}] $message';
     if (_isInitialized && _logFile != null) {
       // Buffer logs and write asynchronously to avoid blocking UI
@@ -50,7 +50,7 @@ class FileLogger {
       _logBuffer.add(timestampedMessage);
     }
   }
-  
+
   Future<void> _flushBufferAsync() async {
     if (_isWriting || _logBuffer.isEmpty || _logFile == null) return;
     _isWriting = true;

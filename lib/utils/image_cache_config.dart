@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 /// Centralized image cache configuration for consistent performance across the app.
-/// 
+///
 /// This class provides standardized cache settings to prevent memory issues
 /// and ensure consistent image loading behavior throughout the app.
 class ImageCacheConfig {
@@ -18,7 +18,7 @@ class ImageCacheConfig {
   /// Default cache width for thumbnails
   static const int defaultThumbWidth = 400;
 
-  /// Default cache height for thumbnails  
+  /// Default cache height for thumbnails
   static const int defaultThumbHeight = 300;
 
   /// Default cache width for hero images

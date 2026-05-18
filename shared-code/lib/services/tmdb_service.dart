@@ -77,8 +77,8 @@ class TMDBService {
 
   static String _normalizeTitle(String title) {
     var output = title.trim();
-    output = output.replaceAll(
-        RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+    output =
+        output.replaceAll(RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
     output = output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
     output = output.replaceAll(
         RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
@@ -88,8 +88,7 @@ class TMDBService {
         RegExp(r'\bS\d{1,2}\s*[\-:\.]?\s*E\d{1,2}\b', caseSensitive: false),
         '');
     output = output.replaceAll(
-        RegExp(
-            r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
+        RegExp(r'\b(?:Ep|Episode|Part|Chapter|Pt)\.?\s*\d+\b',
             caseSensitive: false),
         '');
     output = output.replaceAll(RegExp(r'\s+'), ' ').trim();

@@ -16,7 +16,7 @@ class ExitScreen extends StatefulWidget {
 class _ExitScreenState extends State<ExitScreen> {
   final FocusNode _backButtonFocus = FocusNode();
   final FocusNode _exitButtonFocus = FocusNode();
-  
+
   // Prevent back button events for a short time after entering the screen
   bool _allowBack = false;
 
@@ -151,8 +151,6 @@ class _ExitScreenState extends State<ExitScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-
-
                 // Exit message
                 Text(
                   _selectedMessage,

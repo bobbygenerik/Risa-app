@@ -4,12 +4,12 @@ import '../utils/app_theme.dart';
 /// Startup progress widget showing fast loading optimization
 class StartupProgressWidget extends StatefulWidget {
   final VoidCallback? onComplete;
-  
+
   const StartupProgressWidget({
     super.key,
     this.onComplete,
   });
-  
+
   @override
   State<StartupProgressWidget> createState() => _StartupProgressWidgetState();
 }
@@ -18,16 +18,16 @@ class _StartupProgressWidgetState extends State<StartupProgressWidget>
     with TickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     _progressController = AnimationController(
       duration: const Duration(seconds: 8),
       vsync: this,
     );
-    
+
     _progressAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -35,9 +35,9 @@ class _StartupProgressWidgetState extends State<StartupProgressWidget>
       parent: _progressController,
       curve: Curves.easeInOut,
     ));
-    
+
     _progressController.forward();
-    
+
     _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -48,13 +48,13 @@ class _StartupProgressWidgetState extends State<StartupProgressWidget>
       }
     });
   }
-  
+
   @override
   void dispose() {
     _progressController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

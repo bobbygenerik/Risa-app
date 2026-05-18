@@ -34,7 +34,8 @@ void main() {
     final stopwatchBaseline = Stopwatch()..start();
 
     // 1. List files
-    final filesBaseline = tempDir.listSync()
+    final filesBaseline = tempDir
+        .listSync()
         .whereType<File>()
         .where((f) => f.path.endsWith('.mp4'))
         .toList();
@@ -59,14 +60,14 @@ void main() {
     stopwatchBaseline.stop();
     print('Baseline Time: ${stopwatchBaseline.elapsedMilliseconds} ms');
 
-
     // ---------------------------------------------------------
     // OPTIMIZED: Pre-fetch stats (The Fix)
     // ---------------------------------------------------------
     final stopwatchOptimized = Stopwatch()..start();
 
     // 1. List files
-    final filesOptimized = await tempDir.list()
+    final filesOptimized = await tempDir
+        .list()
         .where((e) => e is File && e.path.endsWith('.mp4'))
         .toList();
 
@@ -97,7 +98,9 @@ void main() {
     tempDir.deleteSync(recursive: true);
 
     // Assert improvement
-    print('Improvement: ${(stopwatchBaseline.elapsedMilliseconds - stopwatchOptimized.elapsedMilliseconds)} ms faster');
-    print('Speedup: ${(stopwatchBaseline.elapsedMilliseconds / stopwatchOptimized.elapsedMilliseconds).toStringAsFixed(1)}x');
+    print(
+        'Improvement: ${(stopwatchBaseline.elapsedMilliseconds - stopwatchOptimized.elapsedMilliseconds)} ms faster');
+    print(
+        'Speedup: ${(stopwatchBaseline.elapsedMilliseconds / stopwatchOptimized.elapsedMilliseconds).toStringAsFixed(1)}x');
   });
 }

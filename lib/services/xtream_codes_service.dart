@@ -194,14 +194,17 @@ class XtreamCodesService {
       // Use batches of 10 to be respectful to the server while still being much faster than sequential.
       const int batchSize = 10;
       for (int i = 0; i < categories.length; i += batchSize) {
-        final end = (i + batchSize < categories.length) ? i + batchSize : categories.length;
+        final end = (i + batchSize < categories.length)
+            ? i + batchSize
+            : categories.length;
         final batch = categories.sublist(i, end);
-        
+
         final results = await Future.wait(batch.map((c) {
-          final id = (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
+          final id =
+              (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
           return getLiveStreams(id);
         }));
-        
+
         for (final list in results) {
           all.addAll(list);
         }
@@ -212,6 +215,4 @@ class XtreamCodesService {
       return [];
     }
   }
-
-
 }

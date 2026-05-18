@@ -71,17 +71,20 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             crossAxisCount: 4,
                             crossAxisSpacing: AppSpacing.gridSpacing,
                             mainAxisSpacing: AppSpacing.gridSpacing,
-                            childAspectRatio: 0.8, // Taller cards to prevent horizontal stretching
+                            childAspectRatio:
+                                0.8, // Taller cards to prevent horizontal stretching
                           ),
                           cacheExtent: 0,
                           itemCount: totalCount,
                           itemBuilder: (context, index) {
-                            final channel = channelProvider
-                                .getChannelInCategoryAtIndex(widget.category, index);
+                            final channel =
+                                channelProvider.getChannelInCategoryAtIndex(
+                                    widget.category, index);
                             if (channel == null) {
                               return const SizedBox.shrink();
                             }
-                            return _buildChannelCard(context, channel, channelProvider);
+                            return _buildChannelCard(
+                                context, channel, channelProvider);
                           },
                         ),
                 ),
@@ -147,11 +150,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       top: context.vScale(4),
                       right: context.scale(4),
                       child: IconButton(
-                        tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                        tooltip: isFavorite
+                            ? 'Remove from favorites'
+                            : 'Add to favorites',
                         icon: Icon(
-                          isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
+                          isFavorite
+                              ? AppIcons.favorite
+                              : AppIcons.favoriteOutline,
                           size: context.tvIconSize(16),
-                          color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
+                          color: isFavorite
+                              ? AppTheme.accentRed
+                              : AppColors.textPrimary,
                         ),
                         onPressed: () {
                           if (isFavorite) {
@@ -210,7 +219,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              channelName.length > 10 
+              channelName.length > 10
                   ? '${channelName.substring(0, 10)}...'
                   : channelName,
               style: const TextStyle(

@@ -11,9 +11,9 @@ import 'local_db_service.dart';
 class SmartCacheService {
   static SmartCacheService? _instance;
   static SmartCacheService get instance => _instance ??= SmartCacheService._();
-  
+
   SmartCacheService._();
-  
+
   bool _initialized = false;
   SharedPreferences? _prefs;
   final LocalDbService _db = LocalDbService.instance;
@@ -28,7 +28,7 @@ class SmartCacheService {
   static const String _channelsSignatureKey = 'smart_cache_channels_sig';
   static const String _channelsCountKey = 'smart_cache_channels_count';
   static const String _epgCountKey = 'smart_cache_epg_count';
-  
+
   /// Initialize smart cache service
   Future<void> initialize() async {
     if (_initialized) return;
@@ -48,16 +48,17 @@ class SmartCacheService {
   }
 
   /// Check if EPG data has changed
-  Future<bool> hasEpgChanged(String epgContent, {bool forceRefresh = false}) async {
+  Future<bool> hasEpgChanged(String epgContent,
+      {bool forceRefresh = false}) async {
     if (forceRefresh) return true;
     final prefs = await _requirePrefs();
     final last = prefs.getInt(_epgCacheAtKey);
     if (last == null) return true;
-    final age = DateTime.now()
-        .difference(DateTime.fromMillisecondsSinceEpoch(last));
+    final age =
+        DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(last));
     return age > _epgCacheTtl;
   }
-  
+
   /// Check if channel data has changed
   Future<bool> hasChannelDataChanged(List<Channel> channels) async {
     final prefs = await _requirePrefs();
@@ -65,7 +66,7 @@ class SmartCacheService {
     final signature = _channelSignature(channels);
     return lastSignature == null || lastSignature != signature;
   }
-  
+
   /// Cache EPG data
   Future<void> cacheEpgData(Map<String, List<Program>> channelPrograms,
       {bool overwriteDb = true}) async {
@@ -83,23 +84,24 @@ class SmartCacheService {
         }
       }
       final prefs = await _requirePrefs();
-      await prefs.setInt(
-          _epgCacheAtKey, DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(_epgCacheAtKey, DateTime.now().millisecondsSinceEpoch);
       await prefs.setInt(_epgCountKey, channelPrograms.length);
-      debugLog('SmartCache: EPG data cached (${channelPrograms.length} channels)');
+      debugLog(
+          'SmartCache: EPG data cached (${channelPrograms.length} channels)');
     } catch (e) {
       debugLog('SmartCache: Failed to cache EPG data: $e');
     }
   }
-  
+
   /// Load cached EPG data
-  Future<Map<String, List<Program>>?> loadCachedEpgData({bool forceRefresh = false}) async {
+  Future<Map<String, List<Program>>?> loadCachedEpgData(
+      {bool forceRefresh = false}) async {
     if (forceRefresh) return null;
     final prefs = await _requirePrefs();
     final last = prefs.getInt(_epgCacheAtKey);
     if (last == null) return null;
-    final age = DateTime.now()
-        .difference(DateTime.fromMillisecondsSinceEpoch(last));
+    final age =
+        DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(last));
     if (age > _epgCacheTtl) return null;
 
     try {
@@ -107,9 +109,11 @@ class SmartCacheService {
       final mappings = await _db.getAllMappings();
       if (mappings.isEmpty) return null;
       final now = DateTime.now();
-      final startMs = now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
-      final endMs =
-          now.add(const Duration(hours: _epgWindowHours)).millisecondsSinceEpoch;
+      final startMs =
+          now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
+      final endMs = now
+          .add(const Duration(hours: _epgWindowHours))
+          .millisecondsSinceEpoch;
       final result = <String, List<Program>>{};
       int loaded = 0;
       for (final epgId in mappings.values) {
@@ -132,7 +136,7 @@ class SmartCacheService {
       return null;
     }
   }
-  
+
   /// Cache channel data
   Future<void> cacheChannelData(List<Channel> channels,
       {bool overwriteDb = true}) async {
@@ -161,14 +165,14 @@ class SmartCacheService {
       debugLog('SmartCache: Failed to cache channel data: $e');
     }
   }
-  
+
   /// Load cached channel data
   Future<List<Channel>?> loadCachedChannelData() async {
     final prefs = await _requirePrefs();
     final last = prefs.getInt(_channelsCacheAtKey);
     if (last == null) return null;
-    final age = DateTime.now()
-        .difference(DateTime.fromMillisecondsSinceEpoch(last));
+    final age =
+        DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(last));
     if (age > _channelCacheTtl) return null;
 
     try {
@@ -199,7 +203,7 @@ class SmartCacheService {
       return null;
     }
   }
-  
+
   /// Check if cache is fresh
   Future<bool> isCacheFresh({bool forceRefresh = false}) async {
     if (forceRefresh) return false;
@@ -215,7 +219,7 @@ class SmartCacheService {
             _epgCacheTtl;
     return channelFresh || epgFresh;
   }
-  
+
   /// Clear all cached data
   Future<void> clearCache({bool forceRefresh = false}) async {
     try {
@@ -233,7 +237,7 @@ class SmartCacheService {
     }
     debugLog('SmartCache: Cache cleared${forceRefresh ? " (forced)" : ""}');
   }
-  
+
   /// Get cache statistics
   Future<Map<String, dynamic>> getCacheStats() async {
     final prefs = await _requirePrefs();
@@ -280,8 +284,7 @@ class SmartCacheService {
   String _channelSignature(List<Channel> channels) {
     if (channels.isEmpty) return 'empty';
     final sampleCount = math.min(4, channels.length);
-    final buffer = StringBuffer()
-      ..write('count:${channels.length}');
+    final buffer = StringBuffer()..write('count:${channels.length}');
     for (var i = 0; i < sampleCount; i++) {
       final c = channels[i];
       buffer

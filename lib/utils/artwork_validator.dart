@@ -196,7 +196,8 @@ class ArtworkValidator {
     final normalizedUrl = cleanUrl.toLowerCase();
 
     final qIndexLogo = channelLogo.indexOf('?');
-    final cleanLogo = qIndexLogo != -1 ? channelLogo.substring(0, qIndexLogo) : channelLogo;
+    final cleanLogo =
+        qIndexLogo != -1 ? channelLogo.substring(0, qIndexLogo) : channelLogo;
     final normalizedLogo = cleanLogo.toLowerCase();
 
     return normalizedUrl == normalizedLogo;

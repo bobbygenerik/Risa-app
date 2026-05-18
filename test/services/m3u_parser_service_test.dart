@@ -34,7 +34,8 @@ http://stream.com/live?token=123&u=abc
 http://redirect.com/play?url=http://stream.com/live
 ''';
       final channels = parser.parseM3U(content);
-      expect(channels[0].url, 'http://redirect.com/play?url=http://stream.com/live');
+      expect(channels[0].url,
+          'http://redirect.com/play?url=http://stream.com/live');
     });
 
     test('parses unencoded nested URLs (tricky case)', () {
@@ -84,7 +85,8 @@ http://stream.com/live
       expect(channels[0].logoUrl, 'http://logo.com');
     });
 
-    test('parses URL starting with non-scheme chars but having scheme inside', () {
+    test('parses URL starting with non-scheme chars but having scheme inside',
+        () {
       // "root/http://nested.com" -> valid match is "http://nested.com"
       final content = '''
 #EXTM3U
@@ -109,6 +111,5 @@ tvg-logo="http://ignore.me" http://real-url.com token=123
       final channels = parser.parseM3U(content);
       expect(channels[0].url, 'http://real-url.com');
     });
-
   });
 }

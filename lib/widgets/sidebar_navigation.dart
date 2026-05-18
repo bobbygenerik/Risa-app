@@ -188,7 +188,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     final index = _activeTabIndex.clamp(0, _tabs.length - 1);
     final node = _tabFocusNodes[index];
     // Only focus if forced or if nothing currently has focus
-    if (force || (!node.hasFocus && FocusManager.instance.primaryFocus == null)) {
+    if (force ||
+        (!node.hasFocus && FocusManager.instance.primaryFocus == null)) {
       node.requestFocus();
     }
     return true;
@@ -305,7 +306,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                   isFocused: isFocused,
                   icon: Icon(
                     tab.icon,
-                    color: (isActive || isFocused) ? Colors.white : Colors.white70,
+                    color:
+                        (isActive || isFocused) ? Colors.white : Colors.white70,
                     size: 16,
                   ),
                   label: _isExpanded
@@ -314,7 +316,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: (isActive || isFocused) ? Colors.white : Colors.white70,
+                            color: (isActive || isFocused)
+                                ? Colors.white
+                                : Colors.white70,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -417,8 +421,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                   isFocused: isFocused,
                   icon: Icon(
                     tab.icon,
-                    color:
-                        isActive ? AppTheme.primaryBlue : (isFocused ? Colors.white : Colors.white70),
+                    color: isActive
+                        ? AppTheme.primaryBlue
+                        : (isFocused ? Colors.white : Colors.white70),
                     size: 16,
                   ),
                   label: _isExpanded
@@ -431,8 +436,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                                 ? AppTheme.primaryBlue
                                 : (isFocused ? Colors.white : Colors.white70),
                             fontSize: 12,
-                            fontWeight:
-                                isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isActive || isFocused
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                         )
                       : null,
@@ -474,7 +480,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         ],
       ],
     );
-    
+
     // Center the row when collapsed for better visual alignment
     if (!_isExpanded) {
       return Center(child: row);
@@ -492,8 +498,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: _widthDuration,
-        width:
-            _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
+        width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.centerLeft,
@@ -656,8 +661,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                                 ? AppTheme.primaryBlue
                                 : (isFocused ? Colors.white : Colors.white70),
                             fontSize: 12,
-                            fontWeight:
-                                isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isActive || isFocused
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                         )
                       : null,

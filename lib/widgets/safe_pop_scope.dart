@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 /// consistent back navigation behavior.
 class SafePopScope extends StatelessWidget {
   final Widget child;
-  
+
   /// Optional callback to determine if back should be allowed.
   /// Return true to allow the default back behavior, false to handle custom navigation.
   final Future<bool> Function()? onWillPop;
@@ -25,16 +25,16 @@ class SafePopScope extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        
+
         // If custom handler provided, check if we should allow navigation
         if (onWillPop != null) {
           final shouldPop = await onWillPop!();
           if (!shouldPop) return;
         }
-        
+
         // Use GoRouter to navigate back safely
         if (!context.mounted) return;
-        
+
         if (context.canPop()) {
           context.pop();
         } else {

@@ -165,21 +165,21 @@ class SettingsActionTile extends StatelessWidget {
               return AnimatedScale(
                 scale: isFocused ? 1.05 : 1.0,
                 duration: TVFocusStyle.animationDuration,
-              child: AnimatedContainer(
-                duration: TVFocusStyle.animationDuration,
-                decoration: BoxDecoration(
-                  color: isFocused
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  border: isFocused
-                      ? Border.all(color: AppTheme.focusBorder, width: 3)
-                      : null,
-                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
-                ),
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: InkWell(
-                  onTap: onTap,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  decoration: BoxDecoration(
+                    color: isFocused
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isFocused
+                        ? Border.all(color: AppTheme.focusBorder, width: 3)
+                        : null,
+                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                  ),
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  child: InkWell(
+                    onTap: onTap,
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -204,7 +204,8 @@ class SettingsActionTile extends StatelessWidget {
                                       .textTheme
                                       .titleLarge
                                       ?.copyWith(
-                                        color: titleColor ?? AppTheme.textPrimary,
+                                        color:
+                                            titleColor ?? AppTheme.textPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -289,20 +290,20 @@ class SettingsSwitchTile extends StatelessWidget {
           return AnimatedScale(
             scale: isFocused ? 1.05 : 1.0,
             duration: TVFocusStyle.animationDuration,
-          child: AnimatedContainer(
-            duration: TVFocusStyle.animationDuration,
-            decoration: BoxDecoration(
-              color: isFocused
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: isFocused
-                  ? Border.all(color: AppTheme.focusBorder, width: 3)
-                  : null,
-              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
-            ),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            child: InkWell(
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: isFocused
+                    ? Border.all(color: AppTheme.focusBorder, width: 3)
+                    : null,
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+              ),
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: InkWell(
                 onTap: () => onChanged(!value),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
@@ -541,79 +542,79 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
               boxShadow: _isActive ? TVFocusStyle.focusedShadow : null,
             ),
             child: Row(
-            children: [
-              if (widget.icon != null) ...[
-                Icon(
-                  widget.icon,
-                  size: 20,
-                  color: _isActive ? Colors.white : Colors.white54,
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    textSelectionTheme: const TextSelectionThemeData(
-                      selectionColor: Colors.transparent,
-                      selectionHandleColor: Colors.transparent,
-                    ),
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    size: 20,
+                    color: _isActive ? Colors.white : Colors.white54,
                   ),
-                  child: Focus(
-                    onKeyEvent: (node, event) {
-                      if (!context.isTV || event is! KeyDownEvent) {
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      textSelectionTheme: const TextSelectionThemeData(
+                        selectionColor: Colors.transparent,
+                        selectionHandleColor: Colors.transparent,
+                      ),
+                    ),
+                    child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (!context.isTV || event is! KeyDownEvent) {
+                          return KeyEventResult.ignored;
+                        }
+
+                        // Escape/Back from Edit Mode -> Return to Container
+                        if (event.logicalKey == LogicalKeyboardKey.escape ||
+                            event.logicalKey == LogicalKeyboardKey.goBack) {
+                          widget.focusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+
+                        // Arrows in Edit Mode -> Leave Edit Mode and Traverse
+                        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          FocusScope.of(context)
+                              .focusInDirection(TraversalDirection.down);
+                          return KeyEventResult.handled;
+                        }
+                        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          FocusScope.of(context)
+                              .focusInDirection(TraversalDirection.up);
+                          return KeyEventResult.handled;
+                        }
+
                         return KeyEventResult.ignored;
-                      }
-
-                      // Escape/Back from Edit Mode -> Return to Container
-                      if (event.logicalKey == LogicalKeyboardKey.escape ||
-                          event.logicalKey == LogicalKeyboardKey.goBack) {
-                        widget.focusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-
-                      // Arrows in Edit Mode -> Leave Edit Mode and Traverse
-                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        FocusScope.of(context)
-                            .focusInDirection(TraversalDirection.down);
-                        return KeyEventResult.handled;
-                      }
-                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        FocusScope.of(context)
-                            .focusInDirection(TraversalDirection.up);
-                        return KeyEventResult.handled;
-                      }
-
-                      return KeyEventResult.ignored;
-                    },
-                    child: TextField(
-                      controller: widget.controller,
-                      focusNode: _textFocusNode,
-                      enableInteractiveSelection: false,
-                      selectionControls: NoTextSelectionControls(),
-                      showCursor:
-                          _isEditing, // Only show cursor when actually editing
-                      cursorColor: AppTheme.primaryBlue,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                      ),
-                      obscureText: widget.obscureText,
-                      decoration: InputDecoration.collapsed(
-                        hintText: widget.hint,
-                        hintStyle: const TextStyle(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      onSubmitted: (_) {
-                        widget.focusNode.requestFocus();
                       },
+                      child: TextField(
+                        controller: widget.controller,
+                        focusNode: _textFocusNode,
+                        enableInteractiveSelection: false,
+                        selectionControls: NoTextSelectionControls(),
+                        showCursor:
+                            _isEditing, // Only show cursor when actually editing
+                        cursorColor: AppTheme.primaryBlue,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 16,
+                        ),
+                        obscureText: widget.obscureText,
+                        decoration: InputDecoration.collapsed(
+                          hintText: widget.hint,
+                          hintStyle: const TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        onSubmitted: (_) {
+                          widget.focusNode.requestFocus();
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (_isActive && !_isEditing)
-                const Icon(Icons.edit, size: 18, color: Colors.white70),
-            ],
+                if (_isActive && !_isEditing)
+                  const Icon(Icons.edit, size: 18, color: Colors.white70),
+              ],
             ),
           ),
         ),

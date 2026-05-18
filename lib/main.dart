@@ -130,7 +130,6 @@ void main() {
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
 
-
       // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
       StartupProbe.mark('Image cache config initialized');
@@ -141,11 +140,13 @@ void main() {
       if (memoryInfo.isLowMemory) {
         // Balanced cache for Shield/low-memory devices
         PaintingBinding.instance.imageCache.maximumSize = 80;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            100 << 20; // 100MB
         StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
       } else {
         PaintingBinding.instance.imageCache.maximumSize = 150;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20; // 200MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            200 << 20; // 200MB
         StartupProbe.mark('Image cache limits configured (NORMAL)');
       }
 
@@ -607,7 +608,8 @@ class _MyAppState extends State<MyApp> {
               );
               playlistUrl = fallbackUri.toString();
             } catch (e) {
-              debugLog('main: Xtream fallback URI construction failed (credentials not logged)');
+              debugLog(
+                  'main: Xtream fallback URI construction failed (credentials not logged)');
               playlistUrl = '';
             }
           }

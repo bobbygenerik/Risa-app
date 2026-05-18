@@ -597,7 +597,8 @@ class TMDBService {
         final anyBackdrop = await _getAnyBackdrop(tmdbId, mediaType);
         if (anyBackdrop != null && anyBackdrop.isNotEmpty) {
           details['backdrop'] = anyBackdrop;
-          debugLog('TMDB: Found lower-res backdrop for "$normalizedTitle": $anyBackdrop');
+          debugLog(
+              'TMDB: Found lower-res backdrop for "$normalizedTitle": $anyBackdrop');
         }
       }
     }

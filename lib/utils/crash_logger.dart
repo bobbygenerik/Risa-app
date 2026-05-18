@@ -50,7 +50,6 @@ class CrashLogger {
       await file.writeAsString(buffer.toString(), mode: FileMode.append);
       // Mirror to external app storage so logs are easy to pull via adb
       await _writeExternal(buffer.toString());
-
     } catch (_) {
       // Ignore logging failures to avoid crashing during crash handling.
     }

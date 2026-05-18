@@ -22,15 +22,15 @@ class LiveTVScreen extends StatelessWidget {
             Text(
               'Live TV',
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                color: Colors.white,
-              ),
+                    color: Colors.white,
+                  ),
             ),
             const SizedBox(height: 16),
             Text(
               'Minimal version for memory testing',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-              ),
+                    color: Colors.white70,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),

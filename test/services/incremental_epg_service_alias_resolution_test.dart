@@ -16,7 +16,9 @@ void main() {
       service.dispose();
     });
 
-    test('resolves exact EPG id from alias name while preserving stable channel key', () {
+    test(
+        'resolves exact EPG id from alias name while preserving stable channel key',
+        () {
       final now = DateTime.now();
       service.applyProgramSnapshot({
         'bbc1.uk': [

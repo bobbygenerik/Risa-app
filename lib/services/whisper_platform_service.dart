@@ -137,8 +137,7 @@ class WhisperPlatformService {
           streamUrl.trim().isNotEmpty) {
         final started = await _startExoCapture(streamUrl.trim(), modelName);
         if (started) return true;
-        _lastError =
-            'Audio capture failed. Switch player backend to VLC.';
+        _lastError = 'Audio capture failed. Switch player backend to VLC.';
         return false;
       }
       final permissionGranted = await requestAudioCapturePermission();
@@ -246,9 +245,8 @@ class WhisperPlatformService {
     if (_exoAudioBuffer.length < _exoChunkBytes) return;
     _exoTranscribeInFlight = true;
     final all = _exoAudioBuffer.takeBytes();
-    final chunk = all.length <= _exoChunkBytes
-        ? all
-        : all.sublist(0, _exoChunkBytes);
+    final chunk =
+        all.length <= _exoChunkBytes ? all : all.sublist(0, _exoChunkBytes);
     if (all.length > _exoChunkBytes) {
       _exoAudioBuffer.add(all.sublist(_exoChunkBytes));
     }

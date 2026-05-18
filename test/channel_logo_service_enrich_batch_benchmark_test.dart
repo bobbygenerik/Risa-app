@@ -47,7 +47,7 @@ void main() {
     // Mix in some valid ones
     for (int i = 0; i < 500; i += 10) {
       channelNames[i] = 'tsn channel $i';
-      channelNames[i+1] = 'fox channel $i';
+      channelNames[i + 1] = 'fox channel $i';
     }
 
     final stopwatch1 = Stopwatch()..start();

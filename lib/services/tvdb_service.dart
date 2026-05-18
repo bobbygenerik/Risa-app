@@ -26,13 +26,13 @@ class TvdbService {
   static const int _kArtworkTypeBackground = 3;
   static const int _kArtworkTypeSeasonBanner = 6;
   static const int _kArtworkTypeMovieBackground = 15;
-  
+
   // Preferred types for hero images (landscape-oriented backgrounds)
   static const List<int> _kPreferredHeroTypes = [
     _kArtworkTypeBackground,
     _kArtworkTypeMovieBackground,
   ];
-  
+
   // Fallback landscape types when no backgrounds available
   static const List<int> _kFallbackLandscapeTypes = [
     _kArtworkTypeBanner,
@@ -138,7 +138,8 @@ class TvdbService {
         if (score < minScore) {
           continue;
         }
-        debugLog('TVDB: Match found "$candidateTitle" (score: ${score.toStringAsFixed(2)}) for "$title"');
+        debugLog(
+            'TVDB: Match found "$candidateTitle" (score: ${score.toStringAsFixed(2)}) for "$title"');
         final image = _extractImage(entry);
         if (image != null) {
           debugLog('TVDB: Using inline image from search result');
@@ -195,7 +196,7 @@ class TvdbService {
     final tvdbId = entry['tvdb_id'] ?? entry['tvdbId'];
     if (tvdbId is int) return tvdbId;
     if (tvdbId is String) return int.tryParse(tvdbId);
-    
+
     // ObjectID field (used in some responses)
     final objectId = entry['objectID'];
     if (objectId is String) {
@@ -213,7 +214,9 @@ class TvdbService {
       entry['seriesName'],
       entry['title'],
       entry['originalName'],
-      entry['translations'] is Map ? (entry['translations'] as Map)['eng'] : null,
+      entry['translations'] is Map
+          ? (entry['translations'] as Map)['eng']
+          : null,
     ];
     for (final value in candidates) {
       if (value is String && value.trim().isNotEmpty) {
@@ -326,7 +329,7 @@ class TvdbService {
       }
       return null;
     }
-    
+
     // OPTIMIZATION: Replaced chained `.where(...).toList()` with manual `for` loops
     // to avoid intermediate `Iterable` allocations and reduce GC pressure.
     // First try preferred hero types (backgrounds)
@@ -354,7 +357,7 @@ class TvdbService {
         return _normalizeImageUrl(image);
       }
     }
-    
+
     // Fallback to banner types (still landscape-oriented)
     final banners = <Map<String, dynamic>>[];
     for (final art in artworks) {
@@ -364,22 +367,23 @@ class TvdbService {
         banners.add(art);
       }
     }
-    
+
     if (banners.isNotEmpty) {
       banners.sort((a, b) {
         final aScore = (a['score'] as num?)?.toDouble() ?? 0.0;
         final bScore = (b['score'] as num?)?.toDouble() ?? 0.0;
         return bScore.compareTo(aScore);
       });
-      
+
       final best = banners.first;
       final image = best['image'] as String?;
       if (image != null && image.isNotEmpty && !_isMissingArtwork(image)) {
-        debugLog('TVDB: Falling back to banner artwork type ${getTypeId(best)}');
+        debugLog(
+            'TVDB: Falling back to banner artwork type ${getTypeId(best)}');
         return _normalizeImageUrl(image);
       }
     }
-    
+
     // Last resort: any artwork that isn't a poster or missing
     for (final art in artworks) {
       if (art is! Map<String, dynamic>) continue;
@@ -387,7 +391,10 @@ class TvdbService {
       // Skip posters (type 2, 7)
       if (type == 2 || type == 7) continue;
       final image = art['image'] as String?;
-      if (image != null && image.isNotEmpty && !_isMissingArtwork(image) && !_isPosterPath(image)) {
+      if (image != null &&
+          image.isNotEmpty &&
+          !_isMissingArtwork(image) &&
+          !_isPosterPath(image)) {
         debugLog('TVDB: Using any available artwork type $type');
         return _normalizeImageUrl(image);
       }

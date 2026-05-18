@@ -34,8 +34,8 @@ Set<int> _generateTrigramSet(String s) {
 
   final units = s.codeUnits;
   for (var i = 0; i < len - 2; i++) {
-     final t = (units[i] << 32) | (units[i+1] << 16) | units[i+2];
-     set.add(t);
+    final t = (units[i] << 32) | (units[i + 1] << 16) | units[i + 2];
+    set.add(t);
   }
   return set;
 }
@@ -50,7 +50,6 @@ double _calculateTrigramSetSimilarity(Set<int> aSet, String b) {
   if (union == 0) return 0.0;
   return inter / union;
 }
-
 
 void main() {
   const iterations = 10000;
@@ -90,7 +89,8 @@ void main() {
   swNew.stop();
   print('New Implementation: ${swNew.elapsedMilliseconds} ms');
 
-  print('Speedup: ${(swOld.elapsedMilliseconds / swNew.elapsedMilliseconds).toStringAsFixed(2)}x');
+  print(
+      'Speedup: ${(swOld.elapsedMilliseconds / swNew.elapsedMilliseconds).toStringAsFixed(2)}x');
   print('checksumOld: $checksumOld');
   print('checksumNew: $checksumNew');
 }

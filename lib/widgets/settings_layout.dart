@@ -137,7 +137,8 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.showHeader && widget.headerTitle.isNotEmpty) ...[
+                      if (widget.showHeader &&
+                          widget.headerTitle.isNotEmpty) ...[
                         Padding(
                           padding: EdgeInsets.fromLTRB(
                             24,
@@ -247,78 +248,77 @@ class _SettingsLayoutState extends State<SettingsLayout> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-           final isHighlighted = isFocused || isSelected;
-           final iconColor = isSelected
-               ? AppTheme.primaryBlue
-               : (isFocused ? Colors.white : Colors.white70);
-           final labelColor = isSelected
-               ? AppTheme.primaryBlue
-               : (isFocused ? Colors.white : Colors.white70);
+          final isHighlighted = isFocused || isSelected;
+          final iconColor = isSelected
+              ? AppTheme.primaryBlue
+              : (isFocused ? Colors.white : Colors.white70);
+          final labelColor = isSelected
+              ? AppTheme.primaryBlue
+              : (isFocused ? Colors.white : Colors.white70);
 
-           return GestureDetector(
-             onTap: () {
-               widget.onCategorySelected(index);
-               _menuFocusNodes[index].requestFocus();
-             },
-             child: AnimatedScale(
-               duration: TVFocusStyle.animationDuration,
-               curve: TVFocusStyle.animationCurve,
-               scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-               child: AnimatedContainer(
-                 duration: TVFocusStyle.animationDuration,
-                 curve: TVFocusStyle.animationCurve,
-                 margin: const EdgeInsets.symmetric(vertical: 4),
-                 padding: const EdgeInsets.symmetric(
-                   horizontal: 20,
-                   vertical: 14,
-                 ),
-                 decoration: BoxDecoration(
-                   color: Colors.transparent,
-                   borderRadius: BorderRadius.circular(12),
-                 ),
-                 child: Row(
-                   children: [
-                     AnimatedContainer(
-                       duration: TVFocusStyle.animationDuration,
-                       curve: TVFocusStyle.animationCurve,
-                       width: 4,
-                       height: 42,
-                       decoration: BoxDecoration(
-                         color: isHighlighted
-                             ? AppTheme.primaryBlue
-                             : Colors.transparent,
-                         borderRadius: const BorderRadius.only(
-                           topRight: Radius.circular(4),
-                           bottomRight: Radius.circular(4),
-                         ),
-                       ),
-                     ),
-                     const SizedBox(width: 12),
-                     Icon(
-                       category.icon,
-                       color: iconColor,
-                       size: 24,
-                     ),
-                     const SizedBox(width: 14),
-                     Expanded(
-                       child: Text(
-                         category.title,
-                         style: TextStyle(
-                           color: labelColor,
-                           fontSize: 16,
-                           fontWeight: isHighlighted
-                               ? FontWeight.w600
-                               : FontWeight.w500,
-                         ),
-                         maxLines: 1,
-                         overflow: TextOverflow.ellipsis,
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-             ),
-           );
+          return GestureDetector(
+            onTap: () {
+              widget.onCategorySelected(index);
+              _menuFocusNodes[index].requestFocus();
+            },
+            child: AnimatedScale(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      width: 4,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isHighlighted
+                            ? AppTheme.primaryBlue
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(4),
+                          bottomRight: Radius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      category.icon,
+                      color: iconColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        category.title,
+                        style: TextStyle(
+                          color: labelColor,
+                          fontSize: 16,
+                          fontWeight:
+                              isHighlighted ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         },
       ),
     );

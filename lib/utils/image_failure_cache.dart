@@ -101,7 +101,8 @@ class ImageFailureCache {
         'aggressive=$_aggressiveMode';
   }
 
-  static Set<String> get blacklistedHosts => Set.unmodifiable(_blacklistedHosts);
+  static Set<String> get blacklistedHosts =>
+      Set.unmodifiable(_blacklistedHosts);
 
   // ---------------------------------------------------------------------------
   // Helpers

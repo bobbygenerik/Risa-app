@@ -201,7 +201,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           return;
         }
         // EPG image was poster — fall through to try API sources
-        debugLog('ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
+        debugLog(
+            'ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
       }
 
       if (isSports) {

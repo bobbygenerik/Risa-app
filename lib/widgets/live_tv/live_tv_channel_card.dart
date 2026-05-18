@@ -35,10 +35,12 @@ typedef OnChannelLongPress = void Function(Channel channel);
 typedef GetImageUrlCallback = String? Function(
     Program? program, Channel? channel, bool allowPrefetch,
     {bool highPriority});
-typedef DisplayTitleCallback = String Function(Program program, Channel channel);
+typedef DisplayTitleCallback = String Function(
+    Program program, Channel channel);
 typedef FormatTimeCallback = String Function(DateTime dt);
 typedef NavigationFocusCallback = bool Function();
-typedef BuildFallbackCallback = Widget Function(Program? program, Channel channel);
+typedef BuildFallbackCallback = Widget Function(
+    Program? program, Channel channel);
 typedef BuildLogoCallback = Widget Function(
     Channel channel, Program? program, int cacheWidth, int cacheHeight);
 typedef BuildAdaptiveImageCallback = Widget Function(
@@ -189,9 +191,8 @@ class LiveTvChannelCard extends StatelessWidget {
     Program? currentProgram,
     bool isFocused,
   ) {
-    final displayTitleText = currentProgram == null
-        ? ''
-        : displayTitle(currentProgram, channel);
+    final displayTitleText =
+        currentProgram == null ? '' : displayTitle(currentProgram, channel);
     final progress = currentProgram?.progressPercentage ?? 0.0;
 
     final imageUrl = getImageUrl(
@@ -271,13 +272,14 @@ class LiveTvChannelCard extends StatelessWidget {
                         ),
                         // 2. Foreground layer: fits entirely inside the box without clipping
                         buildAdaptiveImage(
-                            context,
-                            normalizedImageUrl,
-                            BoxFit.contain,
-                            cacheWidth,
-                            cacheHeight,
-                            const SizedBox.shrink(), // Fallback already handled by bg
-                          ),
+                          context,
+                          normalizedImageUrl,
+                          BoxFit.contain,
+                          cacheWidth,
+                          cacheHeight,
+                          const SizedBox
+                              .shrink(), // Fallback already handled by bg
+                        ),
                       ],
                     ),
                   )

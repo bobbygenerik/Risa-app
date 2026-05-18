@@ -161,8 +161,7 @@ class HeroInfoBox extends StatelessWidget {
                       skipTraversal: !autofocusWatchButton,
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent &&
-                            event.logicalKey ==
-                                LogicalKeyboardKey.arrowRight &&
+                            event.logicalKey == LogicalKeyboardKey.arrowRight &&
                             nextFocusOnRight != null) {
                           nextFocusOnRight!.requestFocus();
                           return KeyEventResult.handled;

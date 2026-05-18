@@ -16,7 +16,8 @@ class OmdbService {
   /// Reuses the same list of posters for logo fallbacks.
   static Future<String?> getLogo(String title) async => getHeroImage(title);
 
-  static Future<String?> _fetchPoster(String title, {String type = 'movie'}) async {
+  static Future<String?> _fetchPoster(String title,
+      {String type = 'movie'}) async {
     if (title.isEmpty || OmdbConfig.apiKey.isEmpty) return null;
     final encoded = Uri.encodeComponent(title);
     final uri = Uri.parse(
@@ -25,7 +26,8 @@ class OmdbService {
     try {
       final response = await http.get(uri);
       if (response.statusCode != 200) {
-        debugLog('OMDb lookup failed ($type) for "$title": ${response.statusCode}');
+        debugLog(
+            'OMDb lookup failed ($type) for "$title": ${response.statusCode}');
         return null;
       }
       final data = json.decode(response.body);

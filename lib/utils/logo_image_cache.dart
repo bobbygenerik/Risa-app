@@ -36,9 +36,8 @@ class LogoImageCache {
 
   static String _cacheKey(String url, Map<String, String>? headers) {
     if (headers == null || headers.isEmpty) return url;
-    final headerKey = headers.entries
-        .map((entry) => '${entry.key}:${entry.value}')
-        .join('|');
+    final headerKey =
+        headers.entries.map((entry) => '${entry.key}:${entry.value}').join('|');
     return '$url|$headerKey';
   }
 

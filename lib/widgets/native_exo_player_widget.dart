@@ -84,15 +84,21 @@ class NativeExoPlayerWidgetState extends State<NativeExoPlayerWidget> {
 
   // Public controls
   Future<void> play() async {
-    try { await _channel?.invokeMethod('play'); } catch (_) {}
+    try {
+      await _channel?.invokeMethod('play');
+    } catch (_) {}
   }
 
   Future<void> pause() async {
-    try { await _channel?.invokeMethod('pause'); } catch (_) {}
+    try {
+      await _channel?.invokeMethod('pause');
+    } catch (_) {}
   }
 
   Future<void> playOrPause() async {
-    try { await _channel?.invokeMethod('playOrPause'); } catch (_) {}
+    try {
+      await _channel?.invokeMethod('playOrPause');
+    } catch (_) {}
   }
 
   Future<void> seekForward([int seconds = 10]) async {
@@ -114,7 +120,9 @@ class NativeExoPlayerWidgetState extends State<NativeExoPlayerWidget> {
   }
 
   Future<void> stop() async {
-    try { await _channel?.invokeMethod('stop'); } catch (_) {}
+    try {
+      await _channel?.invokeMethod('stop');
+    } catch (_) {}
   }
 
   @override

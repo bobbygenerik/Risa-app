@@ -47,7 +47,8 @@ class LocalBackupService {
       }
 
       final content = await file.readAsString();
-      final decoded = await compute(jsonDecode, content) as Map<String, dynamic>;
+      final decoded =
+          await compute(jsonDecode, content) as Map<String, dynamic>;
       return decoded;
     } catch (e) {
       // Swallow plugin / I/O exceptions and return null so callers can handle

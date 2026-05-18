@@ -19,10 +19,12 @@ void main() {
       // This should complete quickly. If it hangs, it's deadlocked.
       // The deadlock happens because _executeTracked awaits the result of _inFlightRequests.remove(key),
       // which returns the Future of _executeTracked itself (which is still running).
-      final result = await manager.execute(
-        cacheKey,
-        () async => 'success',
-      ).timeout(const Duration(seconds: 2));
+      final result = await manager
+          .execute(
+            cacheKey,
+            () async => 'success',
+          )
+          .timeout(const Duration(seconds: 2));
 
       expect(result, 'success');
     } on TimeoutException {

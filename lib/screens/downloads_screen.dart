@@ -227,94 +227,96 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                           ),
                         )
                       : _errorMessage != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 80,
-                                  color: AppTheme.textSecondary.withAlpha(
-                                    (0.3 * 255).round(),
+                          ? Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 80,
+                                      color: AppTheme.textSecondary.withAlpha(
+                                        (0.3 * 255).round(),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Text(
+                                      _errorMessage!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : _files.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.download_rounded,
+                                        size: 80,
+                                        color: AppTheme.textSecondary.withAlpha(
+                                          (0.3 * 255).round(),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'No Downloads Yet',
+                                        style: TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Recorded programs will appear here',
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.lg),
+                                      BrandPrimaryButton(
+                                        label: 'Open TV Guide',
+                                        icon: Icons.dvr,
+                                        onPressed: () => context.go('/epg'),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 24),
-                                Text(
-                                  _errorMessage!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : _files.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.download_rounded,
-                                size: 80,
-                                color: AppTheme.textSecondary.withAlpha(
-                                  (0.3 * 255).round(),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              const Text(
-                                'No Downloads Yet',
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Recorded programs will appear here',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              BrandPrimaryButton(
-                                label: 'Open TV Guide',
-                                icon: Icons.dvr,
-                                onPressed: () => context.go('/epg'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : FocusTraversalGroup(
-                          policy: WidgetOrderTraversalPolicy(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSizes.sm,
-                            ),
-                            itemCount: _files.length,
-                            itemBuilder: (context, index) {
-                              final item = _files[index];
-                              final file = item.file;
-                              final fileName = path.basename(file.path);
-                              final fileStat = item.stat;
-                              final fileSize = _formatFileSize(fileStat.size);
-                              final modDate =
-                                  '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
+                                )
+                              : FocusTraversalGroup(
+                                  policy: WidgetOrderTraversalPolicy(),
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: AppSizes.sm,
+                                    ),
+                                    itemCount: _files.length,
+                                    itemBuilder: (context, index) {
+                                      final item = _files[index];
+                                      final file = item.file;
+                                      final fileName = path.basename(file.path);
+                                      final fileStat = item.stat;
+                                      final fileSize =
+                                          _formatFileSize(fileStat.size);
+                                      final modDate =
+                                          '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
 
-                              return _buildFocusableDownloadTile(
-                                file: file,
-                                fileName: fileName,
-                                subtitle: '$fileSize • $modDate',
-                              );
-                            },
-                          ),
-                        ),
+                                      return _buildFocusableDownloadTile(
+                                        file: file,
+                                        fileName: fileName,
+                                        subtitle: '$fileSize • $modDate',
+                                      );
+                                    },
+                                  ),
+                                ),
                 ),
               ],
             ),

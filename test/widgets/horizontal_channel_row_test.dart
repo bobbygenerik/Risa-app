@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/widgets/horizontal_channel_row.dart';
 
 void main() {
-  testWidgets('HorizontalChannelRow renders items', (WidgetTester tester) async {
+  testWidgets('HorizontalChannelRow renders items',
+      (WidgetTester tester) async {
     final controller = ScrollController();
 
     await tester.pumpWidget(
@@ -36,7 +37,8 @@ void main() {
     expect(find.text('Item 19'), findsNothing);
   });
 
-  testWidgets('HorizontalChannelRow calls onLoadMore when scrolled to end', (WidgetTester tester) async {
+  testWidgets('HorizontalChannelRow calls onLoadMore when scrolled to end',
+      (WidgetTester tester) async {
     final controller = ScrollController();
     bool loadMoreCalled = false;
 

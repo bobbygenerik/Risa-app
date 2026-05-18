@@ -73,7 +73,8 @@ class MockHttpHeaders extends Fake implements HttpHeaders {
   @override
   String? value(String name) => name == 'content-type' ? 'image/png' : null;
   @override
-  List<String>? operator [](String name) => value(name) != null ? [value(name)!] : null;
+  List<String>? operator [](String name) =>
+      value(name) != null ? [value(name)!] : null;
   @override
   void add(String name, Object value, {bool preserveHeaderCase = false}) {}
   @override
@@ -110,7 +111,8 @@ class MockHttpClientResponse extends Fake implements HttpClientResponse {
   List<RedirectInfo> get redirects => [];
 
   @override
-  HttpClientResponseCompressionState get compressionState => HttpClientResponseCompressionState.notCompressed;
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
 
   @override
   StreamSubscription<List<int>> listen(void Function(List<int> event)? onData,
@@ -121,7 +123,8 @@ class MockHttpClientResponse extends Fake implements HttpClientResponse {
 }
 
 void main() {
-  test('Benchmark fuzzy matching sequential vs parallel verification', () async {
+  test('Benchmark fuzzy matching sequential vs parallel verification',
+      () async {
     final file = File('./channel_logos_cache.json');
     if (await file.exists()) {
       await file.delete();
@@ -142,7 +145,6 @@ void main() {
 
       print('Time elapsed: ${stopwatch.elapsedMilliseconds} ms');
       print('Network calls: ${overrides.getRequestCount}');
-
     }, createHttpClient: (context) => overrides.createHttpClient(context));
   });
 }

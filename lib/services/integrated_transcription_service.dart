@@ -356,13 +356,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       final sourceCode = sourceLanguage.bcpCode;
       final targetCode = TranslateLanguage.english.bcpCode;
       try {
-        final sourceReady =
-            await _modelManager.isModelDownloaded(sourceCode);
+        final sourceReady = await _modelManager.isModelDownloaded(sourceCode);
         if (!sourceReady) {
           await _modelManager.downloadModel(sourceCode);
         }
-        final targetReady =
-            await _modelManager.isModelDownloaded(targetCode);
+        final targetReady = await _modelManager.isModelDownloaded(targetCode);
         if (!targetReady) {
           await _modelManager.downloadModel(targetCode);
         }

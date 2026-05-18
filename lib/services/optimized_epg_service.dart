@@ -26,7 +26,7 @@ class OptimizedEpgService extends ChangeNotifier {
   bool _isParsing = false;
   bool _isReady = false;
   String? _epgUrl;
-  
+
   // Manual mappings storage
   final Map<String, String> _manualMappings = {};
   bool _mappingsLoaded = false;
@@ -40,12 +40,14 @@ class OptimizedEpgService extends ChangeNotifier {
   bool get isParsing => _isParsing;
 
   // Regex constants for parsing
-  static final RegExp _timeParseRe = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+  static final RegExp _timeParseRe =
+      RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
 
   /// Load EPG data with fast startup optimizations
-  Future<void> loadEpgData(String epgUrl, List<Channel> criticalChannels, {bool force = false}) async {
+  Future<void> loadEpgData(String epgUrl, List<Channel> criticalChannels,
+      {bool force = false}) async {
     if (_isLoading) return;
-    
+
     _epgUrl = epgUrl;
     if (epgUrl.isEmpty) {
       _isReady = true;
@@ -55,19 +57,20 @@ class OptimizedEpgService extends ChangeNotifier {
 
     _isLoading = true;
     notifyListeners();
-    
+
     // Ensure mappings are loaded
     await _ensureMappingsLoaded();
 
     try {
-      debugLog('OptimizedEpgService: Starting fast EPG load for ${criticalChannels.length} critical channels');
-      
+      debugLog(
+          'OptimizedEpgService: Starting fast EPG load for ${criticalChannels.length} critical channels');
+
       // Initialize DB
       final db = LocalDbService.instance;
       if (!db.isReady) {
         await db.init();
       }
-      
+
       // 1. Check freshness
       final smartCache = SmartCacheService.instance;
       bool isFresh = !force && await smartCache.isCacheFresh();
@@ -81,19 +84,20 @@ class OptimizedEpgService extends ChangeNotifier {
       if (!isFresh) {
         await _downloadAndParse(epgUrl);
       } else {
-        debugLog('OptimizedEpgService: Using fresh DB data ($programCount programs)');
+        debugLog(
+            'OptimizedEpgService: Using fresh DB data ($programCount programs)');
         await _refreshEpgIdMap(db);
       }
 
       // 2. Load programs for critical channels from DB into memory
       await _loadProgramsForChannels(criticalChannels);
-      
+
       _isReady = true;
       _isLoading = false;
       notifyListeners();
-      
-      debugLog('OptimizedEpgService: EPG data ready (${_programs.length} channels loaded)');
-      
+
+      debugLog(
+          'OptimizedEpgService: EPG data ready (${_programs.length} channels loaded)');
     } catch (e) {
       _isLoading = false;
       _isDownloading = false;
@@ -147,7 +151,8 @@ class OptimizedEpgService extends ChangeNotifier {
       final programs = result['programs'] as Map<String, List<Program>>;
       final channelIds = result['channelIds'] as List<String>;
 
-      debugLog('OptimizedEpgService: Parsed ${programs.length} channels with programs');
+      debugLog(
+          'OptimizedEpgService: Parsed ${programs.length} channels with programs');
 
       _normalizedEpgIds.clear();
       for (final id in channelIds) {
@@ -160,13 +165,15 @@ class OptimizedEpgService extends ChangeNotifier {
 
       final dbPayload = <String, List<Map<String, dynamic>>>{};
       for (final entry in programs.entries) {
-        dbPayload[entry.key] = entry.value.map((p) => {
-          'startTs': p.startTime.millisecondsSinceEpoch,
-          'endTs': p.endTime.millisecondsSinceEpoch,
-          'title': p.title,
-          'description': p.description,
-          'imageUrl': p.imageUrl,
-        }).toList();
+        dbPayload[entry.key] = entry.value
+            .map((p) => {
+                  'startTs': p.startTime.millisecondsSinceEpoch,
+                  'endTs': p.endTime.millisecondsSinceEpoch,
+                  'title': p.title,
+                  'description': p.description,
+                  'imageUrl': p.imageUrl,
+                })
+            .toList();
       }
 
       await db.insertAllPrograms(dbPayload);
@@ -179,11 +186,11 @@ class OptimizedEpgService extends ChangeNotifier {
 
       // Mark as fresh in SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('smart_cache_epg_at', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+          'smart_cache_epg_at', DateTime.now().millisecondsSinceEpoch);
       await prefs.setInt('smart_cache_epg_count', programs.length);
 
       _isParsing = false;
-
     } catch (e) {
       _isDownloading = false;
       _isParsing = false;
@@ -215,31 +222,36 @@ class OptimizedEpgService extends ChangeNotifier {
       final epgId = entry.key;
       final rows = entry.value;
 
-      _programs[epgId] = rows.map((row) => Program(
-        id: '${epgId}_${row['startTs']}',
-        channelId: epgId,
-        title: row['title'] ?? '',
-        description: row['description'],
-        startTime: DateTime.fromMillisecondsSinceEpoch(row['startTs']),
-        endTime: DateTime.fromMillisecondsSinceEpoch(row['endTs']),
-        imageUrl: row['imageUrl'],
-      )).toList();
+      _programs[epgId] = rows
+          .map((row) => Program(
+                id: '${epgId}_${row['startTs']}',
+                channelId: epgId,
+                title: row['title'] ?? '',
+                description: row['description'],
+                startTime: DateTime.fromMillisecondsSinceEpoch(row['startTs']),
+                endTime: DateTime.fromMillisecondsSinceEpoch(row['endTs']),
+                imageUrl: row['imageUrl'],
+              ))
+          .toList();
     }
   }
 
   String? _resolveEpgId(Channel channel) {
     if (channel.tvgId != null && channel.tvgId!.isNotEmpty) {
       if (_normalizedEpgIds.containsValue(channel.tvgId)) {
-        debugLog('EPG Match: ${channel.name} -> ${channel.tvgId} (direct tvgId)');
+        debugLog(
+            'EPG Match: ${channel.name} -> ${channel.tvgId} (direct tvgId)');
         return channel.tvgId;
       }
       final normalizedTvg = _normalize(channel.tvgId!);
       if (_normalizedEpgIds.containsKey(normalizedTvg)) {
         final matched = _normalizedEpgIds[normalizedTvg]!;
-        debugLog('EPG Match: ${channel.name} -> $matched (from tvgId=${channel.tvgId})');
+        debugLog(
+            'EPG Match: ${channel.name} -> $matched (from tvgId=${channel.tvgId})');
         return matched;
       }
-      debugLog('EPG Miss: ${channel.name} tvgId=${channel.tvgId} normalized=$normalizedTvg not found');
+      debugLog(
+          'EPG Miss: ${channel.name} tvgId=${channel.tvgId} normalized=$normalizedTvg not found');
     }
 
     final normalizedName = _normalize(channel.name);
@@ -264,7 +276,8 @@ class OptimizedEpgService extends ChangeNotifier {
 
   // ---- Static Isolate Methods ----
 
-  static Future<Map<String, dynamic>> _parseEpgInIsolate(Map<String, dynamic> args) async {
+  static Future<Map<String, dynamic>> _parseEpgInIsolate(
+      Map<String, dynamic> args) async {
     final filePath = args['filePath'] as String;
     final file = File(filePath);
     if (!await file.exists()) {
@@ -278,64 +291,83 @@ class OptimizedEpgService extends ChangeNotifier {
     final stream = file.openRead().transform(utf8.decoder);
     final events = stream.toXmlEvents().withParentEvents();
 
-    final elements = events.selectSubtreeEvents((event) =>
-      event.name == 'programme' || event.name == 'channel'
-    );
+    final elements = events.selectSubtreeEvents(
+        (event) => event.name == 'programme' || event.name == 'channel');
 
     await for (final subtree in elements) {
-       if (subtree.isEmpty) continue;
-       final start = subtree.first;
-       if (start is! XmlStartElementEvent) continue;
+      if (subtree.isEmpty) continue;
+      final start = subtree.first;
+      if (start is! XmlStartElementEvent) continue;
 
-       if (start.name == 'channel') {
-          final id = start.attributes.firstWhere((a) => a.name == 'id', orElse: () => XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE)).value;
-          if (id.isNotEmpty) channelIds.add(id);
-       } else if (start.name == 'programme') {
-          final channelId = start.attributes.firstWhere((a) => a.name == 'channel', orElse: () => XmlEventAttribute('channel', '', XmlAttributeType.DOUBLE_QUOTE)).value;
-          final startStr = start.attributes.firstWhere((a) => a.name == 'start', orElse: () => XmlEventAttribute('start', '', XmlAttributeType.DOUBLE_QUOTE)).value;
-          final stopStr = start.attributes.firstWhere((a) => a.name == 'stop', orElse: () => XmlEventAttribute('stop', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+      if (start.name == 'channel') {
+        final id = start.attributes
+            .firstWhere((a) => a.name == 'id',
+                orElse: () =>
+                    XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE))
+            .value;
+        if (id.isNotEmpty) channelIds.add(id);
+      } else if (start.name == 'programme') {
+        final channelId = start.attributes
+            .firstWhere((a) => a.name == 'channel',
+                orElse: () => XmlEventAttribute(
+                    'channel', '', XmlAttributeType.DOUBLE_QUOTE))
+            .value;
+        final startStr = start.attributes
+            .firstWhere((a) => a.name == 'start',
+                orElse: () => XmlEventAttribute(
+                    'start', '', XmlAttributeType.DOUBLE_QUOTE))
+            .value;
+        final stopStr = start.attributes
+            .firstWhere((a) => a.name == 'stop',
+                orElse: () => XmlEventAttribute(
+                    'stop', '', XmlAttributeType.DOUBLE_QUOTE))
+            .value;
 
-          if (channelId.isNotEmpty && startStr.isNotEmpty && stopStr.isNotEmpty) {
-            channelIds.add(channelId);
+        if (channelId.isNotEmpty && startStr.isNotEmpty && stopStr.isNotEmpty) {
+          channelIds.add(channelId);
 
-            String title = 'Unknown';
-            String? description;
-            String? imageUrl;
+          String title = 'Unknown';
+          String? description;
+          String? imageUrl;
 
-            for (final e in subtree) {
-              if (e is XmlStartElementEvent) {
-                if (e.name == 'title') {
-                   final idx = subtree.indexOf(e);
-                   if (idx + 1 < subtree.length) {
-                     final next = subtree[idx+1];
-                     if (next is XmlTextEvent) title = next.value;
-                   }
-                } else if (e.name == 'desc') {
-                   final idx = subtree.indexOf(e);
-                   if (idx + 1 < subtree.length) {
-                     final next = subtree[idx+1];
-                     if (next is XmlTextEvent) description = next.value;
-                   }
-                } else if (e.name == 'icon') {
-                   imageUrl = e.attributes.firstWhere((a) => a.name == 'src', orElse: () => XmlEventAttribute('src', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+          for (final e in subtree) {
+            if (e is XmlStartElementEvent) {
+              if (e.name == 'title') {
+                final idx = subtree.indexOf(e);
+                if (idx + 1 < subtree.length) {
+                  final next = subtree[idx + 1];
+                  if (next is XmlTextEvent) title = next.value;
                 }
+              } else if (e.name == 'desc') {
+                final idx = subtree.indexOf(e);
+                if (idx + 1 < subtree.length) {
+                  final next = subtree[idx + 1];
+                  if (next is XmlTextEvent) description = next.value;
+                }
+              } else if (e.name == 'icon') {
+                imageUrl = e.attributes
+                    .firstWhere((a) => a.name == 'src',
+                        orElse: () => XmlEventAttribute(
+                            'src', '', XmlAttributeType.DOUBLE_QUOTE))
+                    .value;
               }
             }
-
-            final startTime = _staticParseTime(startStr);
-            final endTime = _staticParseTime(stopStr);
-
-            programs.putIfAbsent(channelId, () => []).add(Program(
-              id: '${channelId}_${startTime.millisecondsSinceEpoch}',
-              channelId: channelId,
-              title: title,
-              description: description,
-              startTime: startTime,
-              endTime: endTime,
-              imageUrl: imageUrl,
-            ));
           }
-       }
+
+          final startTime = _staticParseTime(startStr);
+          final endTime = _staticParseTime(stopStr);
+
+          programs.putIfAbsent(channelId, () => []).add(Program(
+                id: '${channelId}_${startTime.millisecondsSinceEpoch}',
+                channelId: channelId,
+                title: title,
+                description: description,
+                startTime: startTime,
+                endTime: endTime,
+                imageUrl: imageUrl,
+              ));
+        }
+      }
     }
 
     return {
@@ -357,7 +389,12 @@ class OptimizedEpgService extends ChangeNotifier {
       final g5 = m.group(5);
       final g6 = m.group(6);
 
-      if (g1 == null || g2 == null || g3 == null || g4 == null || g5 == null || g6 == null) {
+      if (g1 == null ||
+          g2 == null ||
+          g3 == null ||
+          g4 == null ||
+          g5 == null ||
+          g6 == null) {
         return DateTime.now();
       }
 
@@ -386,14 +423,17 @@ class OptimizedEpgService extends ChangeNotifier {
   }
 
   // ---- Helper / Public Methods ----
-  
+
   /// Get current program for channel
   Program? getCurrentProgram(
     String channelId, {
     String? channelName,
     String? groupTitle,
   }) {
-    final epgId = _channelIdToEpgId[channelId] ?? (channelName != null ? _normalizedEpgIds[_normalize(channelName)] : null);
+    final epgId = _channelIdToEpgId[channelId] ??
+        (channelName != null
+            ? _normalizedEpgIds[_normalize(channelName)]
+            : null);
 
     if (epgId != null) {
       final channelPrograms = _programs[epgId];
@@ -409,30 +449,35 @@ class OptimizedEpgService extends ChangeNotifier {
 
     final directPrograms = _programs[channelId];
     if (directPrograms != null) {
-       final now = DateTime.now();
-        for (final p in directPrograms) {
-          if (now.isAfter(p.startTime) && now.isBefore(p.endTime)) {
-            return p;
-          }
+      final now = DateTime.now();
+      for (final p in directPrograms) {
+        if (now.isAfter(p.startTime) && now.isBefore(p.endTime)) {
+          return p;
         }
+      }
     }
 
     return null;
   }
-  
+
   /// Check if channel has programs
   bool hasProgramsForChannel(
     String channelId, {
     String? channelName,
     String? groupTitle,
   }) {
-    final epgId = _channelIdToEpgId[channelId] ?? (channelName != null ? _normalizedEpgIds[_normalize(channelName)] : null);
-    if (epgId != null && _programs.containsKey(epgId) && _programs[epgId]!.isNotEmpty) {
+    final epgId = _channelIdToEpgId[channelId] ??
+        (channelName != null
+            ? _normalizedEpgIds[_normalize(channelName)]
+            : null);
+    if (epgId != null &&
+        _programs.containsKey(epgId) &&
+        _programs[epgId]!.isNotEmpty) {
       return true;
     }
     return _programs.containsKey(channelId) && _programs[channelId]!.isNotEmpty;
   }
-  
+
   /// Ensure channel is loaded
   Future<void> ensureChannelLoaded(
     String channelId, {
@@ -441,29 +486,33 @@ class OptimizedEpgService extends ChangeNotifier {
     if (hasProgramsForChannel(channelId, channelName: channelName)) return;
 
     if (!_channelIdToEpgId.containsKey(channelId)) {
-        final channel = Channel(id: channelId, name: channelName ?? '', url: '');
-        final epgId = _resolveEpgId(channel);
-        if (epgId != null) {
-          _channelIdToEpgId[channelId] = epgId;
-        }
+      final channel = Channel(id: channelId, name: channelName ?? '', url: '');
+      final epgId = _resolveEpgId(channel);
+      if (epgId != null) {
+        _channelIdToEpgId[channelId] = epgId;
+      }
     }
 
     final epgId = _channelIdToEpgId[channelId];
     if (epgId != null) {
-      await _loadProgramsForChannels([Channel(id: channelId, name: channelName ?? '', url: '', tvgId: epgId)]);
+      await _loadProgramsForChannels([
+        Channel(id: channelId, name: channelName ?? '', url: '', tvgId: epgId)
+      ]);
       notifyListeners();
     }
   }
-  
+
   /// Ensure channels are loaded in batch
   Future<void> ensureChannelsLoadedBatch(
     List<String> channelIds, {
     List<String>? channelNames,
   }) async {
     final channelsToLoad = <Channel>[];
-    for (int i=0; i<channelIds.length; i++) {
+    for (int i = 0; i < channelIds.length; i++) {
       final id = channelIds[i];
-      final name = (channelNames != null && i < channelNames.length) ? channelNames[i] : '';
+      final name = (channelNames != null && i < channelNames.length)
+          ? channelNames[i]
+          : '';
       if (!hasProgramsForChannel(id, channelName: name)) {
         channelsToLoad.add(Channel(id: id, name: name, url: ''));
       }
@@ -474,7 +523,7 @@ class OptimizedEpgService extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   /// Check if channel should be hidden
   bool shouldHideChannel(
     String channelId, {
@@ -482,18 +531,18 @@ class OptimizedEpgService extends ChangeNotifier {
   }) {
     return false;
   }
-  
+
   /// Get EPG channel IDs
   List<String> getEpgChannelIds() {
     return _programs.keys.toList();
   }
-  
+
   /// Get channel preview
   String? getChannelPreview(String channelId) {
     final currentProgram = getCurrentProgram(channelId);
     return currentProgram?.title;
   }
-  
+
   /// Get suggested matches for channel
   List<MapEntry<String, double>> getSuggestedMatches(
     String channelId,
@@ -502,7 +551,7 @@ class OptimizedEpgService extends ChangeNotifier {
   }) {
     return [];
   }
-  
+
   /// Manual mapping methods
   String? getManualMapping(String channelId) {
     return _manualMappings[channelId];
@@ -550,7 +599,8 @@ class OptimizedEpgService extends ChangeNotifier {
       final mappings = await LocalDbService.instance.getAllMappings();
       _manualMappings.addAll(mappings);
       _mappingsLoaded = true;
-      debugLog('OptimizedEpgService: Loaded ${_manualMappings.length} manual mappings');
+      debugLog(
+          'OptimizedEpgService: Loaded ${_manualMappings.length} manual mappings');
     } catch (e) {
       debugLog('OptimizedEpgService: Failed to load manual mappings: $e');
     }

@@ -24,7 +24,9 @@ void main() {
 
     test('deterministic for inputs with whitespace', () {
       final a = stableChannelId(
-          tvgId: null, name: '  Channel One  ', url: '  http://example.com/stream  ');
+          tvgId: null,
+          name: '  Channel One  ',
+          url: '  http://example.com/stream  ');
       final b = stableChannelId(
           tvgId: null, name: 'Channel One', url: 'http://example.com/stream');
       expect(a, b);
@@ -47,14 +49,13 @@ void main() {
       expect(a, b);
     });
 
-    test('handles internal whitespace in Name correctly (preserves/normalized)', () {
+    test('handles internal whitespace in Name correctly (preserves/normalized)',
+        () {
       // Logic: Name internal whitespace is kept (after normalization if any)
       // Actually, standard `trim()` keeps internal whitespace.
       // So 'Channel One' != 'ChannelOne'
-      final a = stableChannelId(
-          tvgId: null, name: 'Channel One', url: 'u');
-      final b = stableChannelId(
-          tvgId: null, name: 'ChannelOne', url: 'u');
+      final a = stableChannelId(tvgId: null, name: 'Channel One', url: 'u');
+      final b = stableChannelId(tvgId: null, name: 'ChannelOne', url: 'u');
       expect(a, isNot(b));
     });
 
