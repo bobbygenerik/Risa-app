@@ -314,9 +314,8 @@ class ProviderOptimizationService extends ChangeNotifier {
       'knownProviders': _providerConfigs.values.where((c) => c.isKnown).length,
       'customProviders':
           _providerConfigs.values.where((c) => c.customConfiguration).length,
-      'averageConfidence': _providerConfigs.isNotEmpty
-          ? _calculateAverageConfidence()
-          : 0.0,
+      'averageConfidence':
+          _providerConfigs.isNotEmpty ? _calculateAverageConfidence() : 0.0,
       'supportedProviderTypes': _knownProviders.keys.toList(),
     };
   }
@@ -766,7 +765,8 @@ class ProviderPattern {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
+        // Bolt: Optimized enum serialization using .name property
+        'type': type.name,
         'pattern': pattern,
         'weight': weight,
       };
@@ -774,7 +774,8 @@ class ProviderPattern {
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
         type: PatternType.values.firstWhere(
-          (e) => e.toString().split('.').last == json['type'],
+          // Bolt: Optimized enum serialization using .name property
+          (e) => e.name == json['type'],
           orElse: () => PatternType.channelId,
         ),
         pattern: json['pattern'],
