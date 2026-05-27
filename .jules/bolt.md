@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-05-27 - Optimize string similarity allocation
+**Learning:** In string comparison or processing algorithms (like similarity checks), converting strings to character lists via `.split('')` causes massive unnecessary allocations. Using `.codeUnitAt(index)` within a loop performs zero-allocation integer comparisons of Unicode values, halving execution time and vastly reducing GC pressure.
+**Action:** Avoid `.split('')` for character-by-character string analysis; prefer `.codeUnitAt()`.
