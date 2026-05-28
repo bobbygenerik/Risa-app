@@ -52,4 +52,6 @@
 
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
-**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+**Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.## 2026-05-28 - Early Return in XML Entity Decoding
+**Learning:** Chaining multiple .replaceAll() calls on strings without the target characters creates significant overhead due to string allocations. When parsing massive datasets like EPG XMLs, unconditionally replacing entities when none exist drastically increases GC pressure and parsing time.
+**Action:** Always add a pre-flight check (like .contains('&')) before executing chained string replacements in hot paths.
