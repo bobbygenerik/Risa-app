@@ -19,22 +19,23 @@ dependencies:
   # Local persistence for large playlists/EPG (DB-backed paging)
   sqflite: ^2.3.3
 
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.9
   http: ^1.2.0
   dio: ^5.7.0
   crypto: ^3.0.7
   provider: ^6.1.5+1
   xml: ^6.5.0
-  shared_preferences: ^2.3.2
+  shared_preferences: ^2.5.5
   path: ^1.8.3
   path_provider: ^2.1.2
+  sqflite_common_ffi: ^2.3.3
 
   permission_handler: ^12.0.1
   speech_to_text: ^7.3.0
   go_router: ^17.0.1
   intl: ^0.20.2
-  wakelock_plus: ^1.2.8
-  video_player: ^2.9.2
+  wakelock_plus: ^1.5.1
+  video_player: ^2.11.1
   chewie: ^1.8.5
 
 
@@ -42,7 +43,7 @@ dependencies:
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.4.1
   file_picker: ^10.3.7
-  flutter_svg: ^2.0.7
+  flutter_svg: ^2.2.4
   image: ^4.0.17
 
   google_mlkit_translation: ^0.13.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
@@ -50,18 +51,23 @@ dependencies:
   record: ^6.1.2  # Audio recording for transcription
   linked_scroll_controller: ^0.2.0
 
+  # Desktop video playback (Linux/Windows/macOS) - bundles prebuilt libmpv
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_linux: ^1.2.1
+
   # State management - BLoC pattern for complex business logic
   flutter_bloc: ^9.0.0
   equatable: ^2.0.7
 
   # High-performance local storage for large datasets (alternative to SharedPreferences)
   hive_flutter: ^1.1.0
+  flutter_secure_storage: ^10.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.3.3
   flutter_launcher_icons: ^0.14.4
 
 flutter:

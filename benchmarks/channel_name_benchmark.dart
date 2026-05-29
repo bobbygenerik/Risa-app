@@ -1,6 +1,8 @@
+// ignore_for_file: avoid_print
 
 void main() {
-  final info = '-1 tvg-id="cnn" tvg-logo="http://example.com/logo.png" group-title="News",CNN International';
+  final info =
+      '-1 tvg-id="cnn" tvg-logo="http://example.com/logo.png" group-title="News",CNN International';
 
   // Warmup
   for (int i = 0; i < 1000; i++) {

@@ -76,7 +76,9 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   @override
   void didUpdateWidget(ProgramArtworkWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.channel.id != oldWidget.channel.id) {
+    if (widget.channel.epgLookupId != oldWidget.channel.epgLookupId ||
+        widget.channel.name != oldWidget.channel.name ||
+        widget.channel.groupTitle != oldWidget.channel.groupTitle) {
       _fetchArtwork();
     }
   }
@@ -132,6 +134,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     final currentProgram = epgService.getProgramForChannel(
       widget.channel.epgLookupId,
       channelName: widget.channel.epgLookupNameFallback,
+      groupTitle: widget.channel.groupTitle,
     );
 
     // Determine the search title
@@ -144,8 +147,14 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       currentProgram,
       widget.channel,
     );
+    final channelHint =
+        (widget.channel.tvgId ?? widget.channel.id).trim().isNotEmpty
+            ? (widget.channel.tvgId ?? widget.channel.id).trim()
+            : (widget.channel.groupTitle?.trim().isNotEmpty == true
+                ? widget.channel.groupTitle!.trim()
+                : widget.channel.name);
     final cacheKey =
-        '${searchTitle.toLowerCase()}|${isSports ? 'sports' : 'general'}';
+        '${searchTitle.toLowerCase()}|${isSports ? 'sports' : 'general'}|${channelHint.toLowerCase()}';
 
     debugLog(
         'ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
@@ -201,7 +210,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           return;
         }
         // EPG image was poster — fall through to try API sources
-        debugLog('ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
+        debugLog(
+            'ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
       }
 
       if (isSports) {

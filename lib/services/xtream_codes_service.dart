@@ -1,4 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/services/ssl_handler.dart';
+import 'package:iptv_player/utils/url_redactor.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -19,13 +21,16 @@ class XtreamCodesService {
     http.Client? client,
   }) : _client = client ?? _createDefaultClient();
 
-  /// Create HTTP client that bypasses SSL certificate verification
+  /// Create HTTP client with normal certificate validation by default.
   static http.Client _createDefaultClient() {
     final ioClient =
         HttpClient(context: SecurityContext(withTrustedRoots: true))
           ..badCertificateCallback = (cert, host, port) {
-            debugLog('XtreamCodes: Accepting cert from $host:$port');
-            return true;
+            final accepted =
+                SSLHandler.shouldAcceptCertificate(cert, host, port);
+            debugLog(
+                'XtreamCodes: Bad certificate from $host:$port accepted=$accepted');
+            return accepted;
           }
           ..connectionTimeout = const Duration(seconds: 15)
           ..idleTimeout = const Duration(seconds: 15);
@@ -43,7 +48,7 @@ class XtreamCodesService {
   /// Make HTTP request with error handling
   Future<http.Response> _makeRequest(String url) async {
     try {
-      debugLog('XtreamCodes: Requesting $url');
+      debugLog('XtreamCodes: Requesting ${redactUrl(url)}');
       final response = await _client.get(Uri.parse(url)).timeout(
         const Duration(seconds: 20),
         onTimeout: () {
@@ -62,7 +67,7 @@ class XtreamCodesService {
               e.toString().contains('badd certificate'))) {
         final httpUrl = url.replaceFirst('https://', 'http://');
         debugLog(
-            'XtreamCodes: SSL/Handshake failed. Retrying with HTTP: $httpUrl');
+            'XtreamCodes: SSL/Handshake failed. Retrying with HTTP: ${redactUrl(httpUrl)}');
         try {
           final response = await _client.get(Uri.parse(httpUrl)).timeout(
             const Duration(seconds: 20),
@@ -194,14 +199,17 @@ class XtreamCodesService {
       // Use batches of 10 to be respectful to the server while still being much faster than sequential.
       const int batchSize = 10;
       for (int i = 0; i < categories.length; i += batchSize) {
-        final end = (i + batchSize < categories.length) ? i + batchSize : categories.length;
+        final end = (i + batchSize < categories.length)
+            ? i + batchSize
+            : categories.length;
         final batch = categories.sublist(i, end);
-        
+
         final results = await Future.wait(batch.map((c) {
-          final id = (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
+          final id =
+              (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
           return getLiveStreams(id);
         }));
-        
+
         for (final list in results) {
           all.addAll(list);
         }
@@ -212,6 +220,4 @@ class XtreamCodesService {
       return [];
     }
   }
-
-
 }

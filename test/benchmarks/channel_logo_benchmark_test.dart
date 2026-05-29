@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:io';
 
@@ -37,14 +39,14 @@ class MockHttpClient extends Fake implements HttpClient {
 
   @override
   Future<HttpClientRequest> headUrl(Uri url) async {
-      overrides.headRequestCount++;
-      return MockHttpClientRequest();
+    overrides.headRequestCount++;
+    return MockHttpClientRequest();
   }
 
   @override
   Future<HttpClientRequest> getUrl(Uri url) async {
-      overrides.getRequestCount++;
-      return MockHttpClientRequest();
+    overrides.getRequestCount++;
+    return MockHttpClientRequest();
   }
 }
 
@@ -83,7 +85,8 @@ class MockHttpClientResponse extends Fake implements HttpClientResponse {
   int get contentLength => 0;
 
   @override
-  HttpClientResponseCompressionState get compressionState => HttpClientResponseCompressionState.notCompressed;
+  HttpClientResponseCompressionState get compressionState =>
+      HttpClientResponseCompressionState.notCompressed;
 
   @override
   StreamSubscription<List<int>> listen(void Function(List<int> event)? onData,
@@ -97,7 +100,8 @@ class MockHttpClientResponse extends Fake implements HttpClientResponse {
 }
 
 void main() {
-  testWidgets('ChannelLogoWidget N+1 HEAD request benchmark', (WidgetTester tester) async {
+  testWidgets('ChannelLogoWidget N+1 HEAD request benchmark',
+      (WidgetTester tester) async {
     final overrides = MockHttpOverrides();
 
     await HttpOverrides.runZoned(() async {
@@ -127,8 +131,8 @@ void main() {
       print('GET requests: ${overrides.getRequestCount}');
 
       // We expect 0 HEAD requests now, as validation is removed
-      expect(overrides.headRequestCount, 0, reason: 'Should NOT perform HEAD request for each logo');
-
+      expect(overrides.headRequestCount, 0,
+          reason: 'Should NOT perform HEAD request for each logo');
     }, createHttpClient: (context) => overrides.createHttpClient(context));
   });
 }
