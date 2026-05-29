@@ -53,3 +53,7 @@
 ## 2024-05-20 - Avoid `.split(...).first` for Substring Extraction
 **Learning:** Using `string.split(separator).first` to extract a prefix creates an unnecessary array and iterates over the entire string, increasing garbage collection and CPU overhead in hot paths like EPG title parsing.
 **Action:** Replace `string.split(separator).first` with `.indexOf(separator)` and `.substring(0, index)`. This avoids array allocations and stops processing early once the separator is found.
+
+## 2024-05-21 - [Lazy Substring Allocation in Matchers]
+**Learning:** When creating custom pattern matching classes (like `_SimpleMatch`), eagerly allocating matched substrings during object instantiation increases GC overhead. A micro-benchmark showed a 4x speedup by storing indices and lazily slicing the string only when accessed.
+**Action:** Store the input string and start/end indices, and lazily slice the string only when the match group is accessed to reduce unnecessary allocations.

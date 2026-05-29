@@ -343,8 +343,7 @@ class M3UParserService {
 
       int urlEnd = k;
       if (urlEnd > afterSchemeIdx) {
-        return _SimpleMatch(
-            schemeStart, urlEnd, line, line.substring(schemeStart, urlEnd));
+        return _SimpleMatch(schemeStart, urlEnd, line);
       } else {
         searchEnd = idx;
         continue;
@@ -731,12 +730,11 @@ class _SimpleMatch {
   final int start;
   final int end;
   final String input;
-  final String _match;
 
-  _SimpleMatch(this.start, this.end, this.input, this._match);
+  _SimpleMatch(this.start, this.end, this.input);
 
   String? group(int group) {
-    if (group == 0) return _match;
+    if (group == 0) return input.substring(start, end);
     return null;
   }
 
