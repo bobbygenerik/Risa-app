@@ -2,6 +2,11 @@
 class LiveTvFormatters {
   LiveTvFormatters._();
 
+  static final RegExp _articleRe = RegExp(r'^(the|a|an)\s+');
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9\s]');
+  static final RegExp _whitespaceRe = RegExp(r'\s+');
+  static final RegExp _epgRe = RegExp(r'\bEPG\b', caseSensitive: false);
+
   static String formatProgramTime(DateTime dt) {
     final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
     final period = dt.hour < 12 ? 'AM' : 'PM';
@@ -12,17 +17,15 @@ class LiveTvFormatters {
   static String normalizeTitleForFilter(String title) {
     if (title.isEmpty) return title;
     var s = title.toLowerCase().trim();
-    s = s.replaceAll(RegExp(r'^(the|a|an)\s+'), '');
-    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
-    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    s = s.replaceAll(_articleRe, '');
+    s = s.replaceAll(_nonAlphaNumRe, ' ');
+    s = s.replaceAll(_whitespaceRe, ' ').trim();
     return s;
   }
 
   /// User-facing status line: replace "EPG" with "data".
   static String? replaceEpgWithData(String? s) {
     if (s == null) return null;
-    return s
-        .replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data')
-        .trim();
+    return s.replaceAll(_epgRe, 'data').trim();
   }
 }
