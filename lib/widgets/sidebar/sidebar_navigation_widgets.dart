@@ -1,6 +1,24 @@
 part of '../sidebar_navigation.dart';
 
 extension SidebarNavigationWidgets on SidebarNavigationState {
+  TextStyle _sidebarLabelStyle(
+    BuildContext context, {
+    required Color color,
+    required FontWeight fontWeight,
+  }) {
+    return TextStyle(
+      color: color,
+      fontSize: 12,
+      fontWeight: fontWeight,
+      shadows: _isExpanded && context.isTV
+          ? const [
+              Shadow(color: Colors.black87, blurRadius: 6),
+              Shadow(color: Colors.black54, blurRadius: 14),
+            ]
+          : null,
+    );
+  }
+
 Widget _buildSearchButton(int index) {
   final tab = _tabs[index];
   final isActive = widget.activeTab == tab.id;
@@ -84,6 +102,7 @@ Widget _buildSearchButton(int index) {
                 color: Colors.transparent,
               ),
               child: _buildSidebarRow(
+                context: context,
                 isFocused: isFocused,
                 icon: Icon(
                   tab.icon,
@@ -95,9 +114,11 @@ Widget _buildSearchButton(int index) {
                         tab.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: (isActive || isFocused) ? Colors.white : Colors.white70,
-                          fontSize: 12,
+                        style: _sidebarLabelStyle(
+                          context,
+                          color: (isActive || isFocused)
+                              ? Colors.white
+                              : Colors.white70,
                           fontWeight: FontWeight.w500,
                         ),
                       )
@@ -196,6 +217,7 @@ Widget _buildTabButton(int index) {
                 color: Colors.transparent,
               ),
               child: _buildSidebarRow(
+                context: context,
                 isFocused: isFocused,
                 icon: Icon(
                   tab.icon,
@@ -208,13 +230,14 @@ Widget _buildTabButton(int index) {
                         tab.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: _sidebarLabelStyle(
+                          context,
                           color: isActive
                               ? AppTheme.primaryBlue
                               : (isFocused ? Colors.white : Colors.white70),
-                          fontSize: 12,
-                          fontWeight:
-                              isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: isActive || isFocused
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       )
                     : null,
@@ -228,6 +251,7 @@ Widget _buildTabButton(int index) {
 }
 
 Widget _buildSidebarRow({
+  required BuildContext context,
   required bool isFocused,
   required Widget icon,
   Widget? label,

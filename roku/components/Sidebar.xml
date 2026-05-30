@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="Sidebar" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/Sidebar.brs" />
+    <interface>
+        <!-- itemSelected: 0=Search 1=Guide 2=LiveTV 3=Favorites 4=Downloads 5=Settings -->
+        <field id="itemSelected" type="integer" value="2" alwaysNotify="true" />
+        <field id="isExpanded" type="boolean" value="false" onChange="onExpandedChange" />
+    </interface>
+    <children>
+        <!-- Sidebar background: sidebarBackground #111316 -->
+        <Rectangle id="sidebarBg" width="56" height="1080" color="0x111316FF" />
+
+        <!-- Logo: collapsed = logo_icon.png, expanded = logo.png -->
+        <Group id="logoArea" translation="[4, 12]">
+            <Poster id="logoIcon" width="48" height="28"
+                uri="pkg:/images/logo_icon.png"
+                loadDisplayMode="scaleToFit" />
+            <Poster id="logoFull" width="120" height="28"
+                uri="pkg:/images/logo.png"
+                loadDisplayMode="scaleToFit" visible="false" />
+        </Group>
+
+        <!-- Nav items: Search, Guide, Live TV, Favorites, Downloads -->
+        <LabelList id="menuList" translation="[0, 80]"
+            itemSize="[200, 52]"
+            numRows="5"
+            color="0xB3B3B3FF"
+            focusedColor="0xE8E8E8FF"
+            focusBitmapBlendColor="0x2E3192FF"
+            drawFocusFeedback="true"
+            vertAlign="center" />
+
+        <!-- Settings pinned at bottom as a LabelList -->
+        <LabelList id="settingsList" translation="[0, 998]"
+            itemSize="[200, 52]"
+            numRows="1"
+            color="0xB3B3B3FF"
+            focusedColor="0xE8E8E8FF"
+            focusBitmapBlendColor="0x2E3192FF" />
+    </children>
+</component>

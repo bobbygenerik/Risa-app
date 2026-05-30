@@ -10,6 +10,7 @@ import 'package:iptv_player/screens/live_tv/landscape_guarded_image.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_card_fallbacks.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_formatters.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_models.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_scroll_navigation.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -104,15 +105,24 @@ class LiveTvChannelRowCard extends StatelessWidget {
               }
               if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                 if (isFirstRow) {
-                  if (mainScrollController.hasClients) {
-                    mainScrollController.animateTo(
+                  void focusWatch() {
+                    if (watchButtonFocus.canRequestFocus) {
+                      watchButtonFocus.requestFocus();
+                    }
+                  }
+
+                  if (mainScrollController.hasClients &&
+                      LiveTvScrollNavigation.safeOffset(mainScrollController) >
+                          8) {
+                    mainScrollController
+                        .animateTo(
                       0.0,
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
-                    );
-                  }
-                  if (watchButtonFocus.canRequestFocus) {
-                    watchButtonFocus.requestFocus();
+                    )
+                        .then((_) => focusWatch());
+                  } else {
+                    focusWatch();
                   }
                   return KeyEventResult.handled;
                 }

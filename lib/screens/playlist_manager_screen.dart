@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +36,7 @@ class PlaylistManagerScreen extends StatefulWidget {
 class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   List<SavedPlaylist> _playlists = [];
   bool _isLoading = true;
+  String? _loadError;
   String? _activePlaylistId;
   final List<FocusNode> _playlistFocusNodes = [];
   final ScrollController _contentScrollController = ScrollController();
@@ -44,7 +49,9 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPlaylists();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_loadPlaylists());
+    });
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
@@ -8,6 +10,7 @@ import 'package:iptv_player/screens/live_tv/live_tv_continue_watching_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_featured_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_full_screen_hero.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_candidate_cache.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_models.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_info_widgets.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_program_type_row_cache.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
@@ -15,7 +18,7 @@ import 'package:iptv_player/services/live_tv_artwork_service.dart';
 import 'package:provider/provider.dart';
 
 /// Builds the parallax hero + rows shell for Live TV.
-class LiveTvFullScreenHeroHost extends StatelessWidget {
+class LiveTvFullScreenHeroHost extends StatefulWidget {
   const LiveTvFullScreenHeroHost({
     super.key,
     required this.featuredChannel,
@@ -71,74 +74,159 @@ class LiveTvFullScreenHeroHost extends StatelessWidget {
   final Widget? fallbackSkeleton;
 
   @override
+  State<LiveTvFullScreenHeroHost> createState() =>
+      _LiveTvFullScreenHeroHostState();
+}
+
+class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
+  String? _lastSideEffectKey;
+  bool _sideEffectsScheduled = false;
+  List<LiveTvHeroCandidate>? _cachedHeroCandidates;
+  LiveTvHeroSelection? _cachedSelection;
+  List<LiveTvHeroCandidate>? _cachedSelectionPool;
+  LiveTvHeroCandidate? _cachedSelectedHero;
+  String? _cachedHeroImageUrl;
+  int _cachedChannelsLen = -1;
+  int _cachedFeaturedIndex = -1;
+
+  void _scheduleSideEffects({
+    required LiveTvHeroSelection selection,
+    required List<LiveTvHeroCandidate> selectionPool,
+    required LiveTvHeroCandidate? selectedHero,
+  }) {
+    final key =
+        '${selection.activeChannel.epgLookupId}|${widget.featuredIndex}|'
+        '${selection.candidateCount}|${widget.allChannels.length}';
+    if (key == _lastSideEffectKey) return;
+    _lastSideEffectKey = key;
+    if (_sideEffectsScheduled) return;
+    _sideEffectsScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sideEffectsScheduled = false;
+      if (!mounted) return;
+      widget.onCandidateCount(selection.candidateCount);
+      widget.artworkPrefetcher.prefetchTitleLogosForCandidates(selectionPool);
+      widget.onPrefetchRowArtwork(
+        selectionPool.map((c) => c.channel).toList(),
+        limit: 15,
+      );
+      final hero = selectedHero;
+      final program = hero?.program;
+      if (program != null && hero != null) {
+        widget.artworkService.ensureFreshProgramArtwork(
+          program,
+          hero.channel,
+          highPriority: true,
+        );
+      }
+    });
+  }
+
+  void _refreshHeroCache(IncrementalEpgService epgService) {
+    final heroCandidates = widget.heroCandidateCache.build(
+      widget.allChannels,
+      epgService,
+      widget.artworkResolver,
+    );
+    final resolved = LiveTvHeroSelectionResolver.resolve(
+      featuredChannel: widget.featuredChannel,
+      allChannels: widget.allChannels,
+      featuredIndex: widget.featuredIndex,
+      heroCandidates: heroCandidates,
+    );
+    _cachedHeroCandidates = heroCandidates;
+    _cachedSelection = resolved.selection;
+    _cachedSelectionPool = resolved.selectionPool;
+    _cachedSelectedHero = resolved.selectedHero;
+    _cachedChannelsLen = widget.allChannels.length;
+    _cachedFeaturedIndex = widget.featuredIndex;
+    _cachedHeroImageUrl = widget.artworkResolver.resolveHeroImage(
+      resolved.selection.program,
+      resolved.selection.activeChannel,
+      allowFetch: false,
+    );
+    _scheduleSideEffects(
+      selection: resolved.selection,
+      selectionPool: resolved.selectionPool,
+      selectedHero: resolved.selectedHero,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.heroArtworkVersion.addListener(_onHeroArtworkBumped);
+  }
+
+  @override
+  void dispose() {
+    widget.heroArtworkVersion.removeListener(_onHeroArtworkBumped);
+    super.dispose();
+  }
+
+  void _onHeroArtworkBumped() {
+    if (!mounted || _cachedSelection == null) return;
+    setState(() {
+      _cachedHeroImageUrl = widget.artworkResolver.resolveHeroImage(
+        _cachedSelection!.program,
+        _cachedSelection!.activeChannel,
+        allowFetch: false,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final epgService = context.read<IncrementalEpgService>();
-    final heroCandidates = heroCandidateCache.build(
-      allChannels,
-      epgService,
-      artworkResolver,
-    );
+    if (!widget.heroCandidateCache.isValid) {
+      _cachedSelection = null;
+    }
+    if (_cachedSelection == null ||
+        _cachedChannelsLen != widget.allChannels.length ||
+        _cachedFeaturedIndex != widget.featuredIndex) {
+      _refreshHeroCache(epgService);
+    }
+    final heroCandidates = _cachedHeroCandidates!;
+    final selection = _cachedSelection!;
     final hasEpgHero =
         heroCandidates.any((candidate) => candidate.program != null);
-    if (!hasEpgHero && allChannels.isEmpty) {
-      return fallbackSkeleton ?? const SizedBox.shrink();
+    if (!hasEpgHero && widget.allChannels.isEmpty) {
+      return widget.fallbackSkeleton ?? const SizedBox.shrink();
     }
-
-    final selection = LiveTvHeroSelectionResolver.resolve(
-      featuredChannel: featuredChannel,
-      allChannels: allChannels,
-      featuredIndex: featuredIndex,
-      heroCandidates: heroCandidates,
-      onCandidateCount: onCandidateCount,
-      onPrefetchPool: (pool) {
-        artworkPrefetcher.prefetchTitleLogosForCandidates(pool);
-        onPrefetchRowArtwork(
-          pool.map((c) => c.channel).toList(),
-          limit: 15,
-        );
-      },
-      onEnsureArtwork: (selected) {
-        final program = selected?.program;
-        if (program != null) {
-          artworkService.ensureFreshProgramArtwork(
-            program,
-            selected!.channel,
-            highPriority: true,
-          );
-        }
-      },
-    );
 
     return LiveTvFullScreenHero(
       selection: selection,
-      allChannels: allChannels,
-      scrollController: scrollController,
-      heroArtworkVersion: heroArtworkVersion,
-      suspendHeroBackground: suspendHeroBackground,
-      forceRowsVisible: forceRowsVisible,
-      debugRowProbe: debugRowProbe,
-      sidebarInset: sidebarInset,
-      artworkResolver: artworkResolver,
+      heroImageUrl: _cachedHeroImageUrl,
+      allChannels: widget.allChannels,
+      scrollController: widget.scrollController,
+      heroArtworkVersion: widget.heroArtworkVersion,
+      suspendHeroBackground: widget.suspendHeroBackground,
+      forceRowsVisible: widget.forceRowsVisible,
+      debugRowProbe: widget.debugRowProbe,
+      sidebarInset: widget.sidebarInset,
+      artworkResolver: widget.artworkResolver,
       featuredRow: LiveTvFeaturedRow(
-        fallbackChannels: allChannels,
-        bindings: bindings,
-        artworkResolver: artworkResolver,
+        fallbackChannels: widget.allChannels,
+        bindings: widget.bindings,
+        artworkResolver: widget.artworkResolver,
       ),
-      continueWatchingRow: LiveTvContinueWatchingRow(bindings: bindings),
-      buildProgramTypeRow: buildProgramTypeRow,
+      continueWatchingRow: LiveTvContinueWatchingRow(bindings: widget.bindings),
+      buildProgramTypeRow: widget.buildProgramTypeRow,
       heroInfoOverlay: (channel, program) {
         final heroInfoWidth =
-            LiveTvHeroInfoWidgets.heroInfoWidth(context, sidebarInset);
+            LiveTvHeroInfoWidgets.heroInfoWidth(context, widget.sidebarInset);
         return LiveTvHeroInfoWidgets.heroInfoPanel(
           width: heroInfoWidth,
           child: LiveTvHeroInfoWidgets.featuredInfoWithFocus(
             context: context,
             channel: channel,
             program: program,
-            artworkResolver: artworkResolver,
-            watchButtonFocus: watchButtonFocus,
-            firstChannelFocus: firstChannelFocus,
-            onWatch: () => onWatchChannel(channel),
+            artworkResolver: widget.artworkResolver,
+            watchButtonFocus: widget.watchButtonFocus,
+            firstFeaturedFocus: widget.bindings.firstFeaturedFocus,
+            firstChannelFocus: widget.firstChannelFocus,
+            scrollController: widget.scrollController,
+            onWatch: () => widget.onWatchChannel(channel),
           ),
         );
       },

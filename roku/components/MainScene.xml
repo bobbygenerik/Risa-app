@@ -1,168 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MainScene.xml - Main app scene with modern Netflix-style UI -->
 <component name="MainScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
     <children>
-        <!-- Background gradient simulation (top to bottom: #050710 to #0d1140) -->
-        <Rectangle id="appBackground" width="1920" height="1080" color="0x050710FF" />
-        <Rectangle width="1920" height="540" translation="[0,540]" color="0x0d1140FF" />
-        
-        <!-- Top Navigation Bar - dark transparent overlay -->
-        <Group id="navBar" translation="[0,0]">
-            <Rectangle width="1920" height="80" color="0x00000099" />
-            
-            <!-- App Logo/Title -->
-            <Group translation="[60,20]">
-                <Label id="appLogo" text="RISA" 
-                    font="font:HugeBoldSystemFont" color="0xFF6B35FF" />
-            </Group>
-            
-            <!-- Navigation Tabs -->
-            <Group id="navTabs" translation="[280,0]">
-                <LabelList id="tabList" translation="[0,20]" 
-                    numRows="1"
-                    itemSize="[160,40]"
-                    color="0xB3B3B3FF"
-                    focusedColor="0xFFFFFFFF"
-                    focusBitmapBlendColor="0x2E3192FF"
-                    drawFocusFeedback="false" />
-            </Group>
-            
-            <!-- Right side: Time & Settings -->
-            <Group translation="[1700,20]">
-                <Label id="timeLabel" width="120" horizAlign="right"
-                    font="font:MediumSystemFont" color="0xB3B3B3FF" />
-            </Group>
-            <Group translation="[1840,15]">
-                <Poster id="settingsIcon" width="40" height="40" 
-                    uri="pkg:/images/icon_settings.png"
-                    loadDisplayMode="scaleToFit" />
-            </Group>
-        </Group>
-        
-        <!-- Status/Loading indicator -->
-        <Group id="loadingOverlay" translation="[860,480]" visible="false">
-            <BusySpinner id="spinner" translation="[0,0]" />
-            <Label id="statusLabel" translation="[-60,80]" text="Loading..." 
+        <!-- App background: darkBackground #111316 -->
+        <Rectangle id="appBackground" width="1920" height="1080" color="0x111316FF" />
+
+        <!-- ========== SIDEBAR (always visible, z-order: on top) ========== -->
+        <Sidebar id="sidebar" translation="[0,0]" />
+
+        <!-- ========== STATUS / ERROR ========== -->
+        <Group id="loadingOverlay" translation="[900,480]" visible="false">
+            <BusySpinner id="spinner" />
+            <Label id="statusLabel" translation="[-80,80]" text="Loading..."
                 font="font:LargeBoldSystemFont" color="0xE8E8E8FF" />
         </Group>
-        
-        <!-- Error display -->
-        <Label id="errorLabel" translation="[60,500]" width="1800" 
+        <Label id="errorLabel" translation="[100,500]" width="1800"
             font="font:MediumSystemFont" color="0xE53935FF" visible="false" />
-        
-        <!-- ========== LIVE TV SCREEN ========== -->
-        <Group id="liveTVScreen" translation="[0,80]" visible="true">
-            <!-- Hero Banner Section -->
-            <Group id="heroSection" translation="[40,20]">
-                <!-- Hero container with rounded corners effect -->
-                <Rectangle id="heroBg" width="1840" height="420" color="0x1a1a2eFF" />
-                
-                <!-- Hero backdrop image -->
-                <Poster id="heroImage" translation="[0,0]" width="1840" height="420" 
-                    loadDisplayMode="scaleToZoom" />
-                
-                <!-- Dark overlay for text readability -->
-                <Rectangle width="1840" height="420" color="0x00000066" />
-                
-                <!-- Bottom gradient overlay -->
-                <Rectangle width="1840" height="200" translation="[0,220]" color="0x05071099" />
-                
-                <!-- NOW PLAYING badge (top right) -->
-                <Group id="nowPlayingBadge" translation="[1660,20]">
-                    <Rectangle width="140" height="36" color="0xFF6B35FF" />
-                    <Label translation="[12,6]" text="NOW PLAYING" 
-                        font="font:SmallBoldSystemFont" color="0xFFFFFFFF" />
+
+        <!-- ========== LIVE TV SCREEN (default, offset past sidebar) ========== -->
+        <Group id="liveTVScreen" translation="[56,0]" visible="false">
+            <!-- Hero Banner -->
+            <Group id="heroSection" translation="[24,20]">
+                <Rectangle id="heroBg" width="1840" height="400" color="0x1A1A2EFF" />
+                <Poster id="heroImage" width="1840" height="400" loadDisplayMode="scaleToZoom" />
+                <Rectangle width="1840" height="400" color="0x00000066" />
+                <Rectangle width="1840" height="200" translation="[0,200]" color="0x11131699" />
+                <!-- Channel logo -->
+                <Group translation="[24,24]">
+                    <Rectangle id="logoContainer" width="72" height="72" color="0x000000BB" />
+                    <Poster id="heroLogo" translation="[8,8]" width="56" height="56" loadDisplayMode="scaleToFit" />
                 </Group>
-                
-                <!-- Channel logo (top left) -->
-                <Group translation="[30,30]">
-                    <Rectangle id="logoContainer" width="80" height="80" color="0x000000BB" />
-                    <Poster id="heroLogo" translation="[8,8]" width="64" height="64" 
-                        loadDisplayMode="scaleToFit" />
-                </Group>
-                
-                <!-- Hero content (bottom left) -->
-                <Group translation="[40,260]">
+                <!-- Title + info -->
+                <Group translation="[24,240]">
                     <Label id="heroTitle" width="1400" wrap="true" maxLines="2"
                         font="font:HugeBoldSystemFont" color="0xE8E8E8FF" />
-                    <Label id="heroTime" translation="[0,70]" width="600" 
+                    <Label id="heroChannel" translation="[0,70]" width="600"
                         font="font:MediumSystemFont" color="0xB3B3B3FF" />
-                    
+                    <Label id="heroTime" translation="[0,100]" width="600"
+                        font="font:SmallSystemFont" color="0x808080FF" />
                     <!-- Progress bar -->
-                    <Group translation="[0,100]">
-                        <Rectangle id="heroProgressBg" width="600" height="6" color="0xFFFFFF33" />
-                        <Rectangle id="heroProgressBar" width="0" height="6" color="0xFF6B35FF" />
+                    <Group translation="[0,130]">
+                        <Rectangle id="heroProgressBg" width="500" height="4" color="0xFFFFFF33" />
+                        <Rectangle id="heroProgressBar" width="0" height="4" color="0x2E3192FF" />
                     </Group>
-                    
-                    <!-- Channel name with icon -->
-                    <Group translation="[0,120]">
-                        <Label id="heroChannel" width="600" 
-                            font="font:MediumSystemFont" color="0xB3B3B3FF" />
-                    </Group>
-                </Group>
-                
-                <!-- Page indicators (dots) -->
-                <Group id="heroIndicators" translation="[880,390]">
-                    <!-- Will be populated dynamically -->
                 </Group>
             </Group>
-            
-            <!-- Channel Rows -->
-            <RowList id="channelGrid" translation="[40,480]" 
-                itemComponentName="ChannelItem" 
+
+            <!-- Channel grid / row list -->
+            <RowList id="channelGrid" translation="[24,440]"
+                itemComponentName="ChannelItem"
                 numRows="2"
-                itemSize="[220,160]" 
-                itemSpacing="[20,30]"
-                rowItemSize="[[220,160]]"
-                rowItemSpacing="[[20,0]]"
+                itemSize="[200,150]"
+                itemSpacing="[16,24]"
+                rowItemSize="[[200,150]]"
+                rowItemSpacing="[[16,0]]"
                 showRowLabel="[true]"
-                rowLabelOffset="[[0,-45]]"
+                rowLabelOffset="[[0,-40]]"
                 rowLabelColor="0xE8E8E8FF"
                 rowLabelFont="font:MediumBoldSystemFont"
                 focusBitmapBlendColor="0x2E3192FF"
                 drawFocusFeedback="true"
                 visible="false" />
         </Group>
-        
-        <!-- ========== MOVIES SCREEN ========== -->
-        <MoviesScreen id="moviesScreen" visible="false" />
-        
-        <!-- ========== SERIES SCREEN ========== -->
-        <SeriesScreen id="seriesScreen" visible="false" />
-        
+
+        <!-- ========== EPG SCREEN ========== -->
+        <Group id="epgContainer" translation="[56,0]" visible="false">
+            <EPGScreen id="epgScreen" />
+        </Group>
+
         <!-- ========== SETTINGS SCREEN ========== -->
-        <SettingsScreen id="settingsScreen" visible="false" />
-        
+        <!-- Sits beside the 56px sidebar. SettingsScreen has its own left panel. -->
+        <SettingsScreen id="settingsScreen" translation="[56,0]" visible="false" />
+
+        <!-- ========== HOME SCREEN (placeholder for Downloads tab) ========== -->
+        <Group id="homeContainer" translation="[56,0]" visible="false">
+            <HomeScreen id="homeScreen" />
+        </Group>
+
         <!-- ========== VIDEO PLAYER ========== -->
-        <Video id="videoPlayer" width="1920" height="1080" visible="false" 
+        <Video id="videoPlayer" width="1920" height="1080" visible="false"
             enableUI="true" enableTrickPlay="true" />
-        
+
         <!-- ========== SEARCH OVERLAY ========== -->
         <Group id="searchOverlay" visible="false">
             <Rectangle width="1920" height="1080" color="0x000000EE" />
-            <Rectangle translation="[360,150]" width="1200" height="780" color="0x1a1a2eFF" />
-            <Label translation="[400,190]" text="Search" 
+            <Rectangle translation="[300,100]" width="1320" height="880" color="0x1E1E2EFF" />
+            <Label translation="[340,140]" text="Search"
                 font="font:LargeBoldSystemFont" color="0xE8E8E8FF" />
-            <Keyboard id="searchKeyboard" translation="[400,260]" />
-            <RowList id="searchResults" translation="[400,580]" 
+            <Keyboard id="searchKeyboard" translation="[340,210]" />
+            <RowList id="searchResults" translation="[340,560]"
                 itemComponentName="ChannelItem"
                 numRows="1"
                 itemSize="[180,130]"
                 itemSpacing="[16,0]"
                 visible="false" />
         </Group>
-        
+
         <!-- ========== CATEGORY MENU ========== -->
         <Group id="categoryMenu" visible="false">
             <Rectangle width="1920" height="1080" color="0x000000EE" />
-            <Rectangle translation="[660,50]" width="600" height="980" color="0x1a1a2eFF" />
-            <Label translation="[700,90]" text="Categories" 
+            <Rectangle translation="[600,50]" width="680" height="980" color="0x1E1E2EFF" />
+            <Label translation="[640,90]" text="Categories"
                 font="font:LargeBoldSystemFont" color="0xE8E8E8FF" />
-            <LabelList id="categoryList" translation="[700,160]" 
-                itemSize="[520,50]" numRows="15" 
+            <LabelList id="categoryList" translation="[640,160]"
+                itemSize="[600,52]" numRows="15"
                 color="0xB3B3B3FF"
-                focusedColor="0xFFFFFFFF"
+                focusedColor="0xE8E8E8FF"
                 focusBitmapBlendColor="0x2E3192FF" />
         </Group>
     </children>

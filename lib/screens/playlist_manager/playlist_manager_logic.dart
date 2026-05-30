@@ -1,30 +1,72 @@
 part of '../playlist_manager_screen.dart';
 
+List<dynamic> _decodePlaylistJsonList(String raw) => jsonDecode(raw) as List<dynamic>;
+
 extension PlaylistManagerLogic on _PlaylistManagerScreenState {
-  Future<void> _loadPlaylists() async {
-    setState(() => _isLoading = true);
-
-    final prefs = await SharedPreferences.getInstance();
-    final playlistsJson = prefs.getString('saved_playlists');
-    var activeId = prefs.getString('active_playlist_id');
-
-    if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
-      final List<dynamic> decoded = jsonDecode(playlistsJson);
-      _playlists = decoded
-          .map(
-              (json) => SavedPlaylist.fromJson(Map<String, dynamic>.from(json)))
-          .toList();
+  Future<List<SavedPlaylist>> _parseSavedPlaylistsJson(String raw) async {
+    try {
+      final decoded = await compute(_decodePlaylistJsonList, raw);
+      final out = <SavedPlaylist>[];
+      for (final item in decoded) {
+        if (item is! Map) continue;
+        try {
+          out.add(
+            SavedPlaylist.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (e) {
+          debugLog('PlaylistManager: skip bad playlist entry: $e');
+        }
+      }
+      return out;
+    } catch (e) {
+      debugLog('PlaylistManager: saved_playlists JSON parse failed: $e');
+      return [];
     }
+  }
 
-    await _migrateLegacyPlaylistsIfNeeded(prefs);
-    await _normalizePlaylistIds(prefs);
-    activeId = prefs.getString('active_playlist_id');
-
+  Future<void> _loadPlaylists() async {
+    if (!mounted) return;
     setState(() {
-      _activePlaylistId = activeId;
-      _isLoading = false;
-      _syncPlaylistFocusNodes();
+      _isLoading = true;
+      _loadError = null;
     });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final playlistsJson = prefs.getString('saved_playlists');
+      var activeId = prefs.getString('active_playlist_id');
+
+      if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
+        _playlists = await _parseSavedPlaylistsJson(playlistsJson);
+      } else {
+        _playlists = [];
+      }
+
+      if (mounted) {
+        setState(() {
+          _activePlaylistId = activeId;
+          _syncPlaylistFocusNodes();
+        });
+      }
+
+      await _migrateLegacyPlaylistsIfNeeded(prefs);
+      await _normalizePlaylistIds(prefs);
+      activeId = prefs.getString('active_playlist_id');
+
+      if (!mounted) return;
+      setState(() {
+        _activePlaylistId = activeId;
+        _isLoading = false;
+        _syncPlaylistFocusNodes();
+      });
+    } catch (e, st) {
+      debugLog('PlaylistManager: load failed: $e\n$st');
+      if (!mounted) return;
+      setState(() {
+        _loadError = 'Failed to load playlists';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _migrateLegacyPlaylistsIfNeeded(SharedPreferences prefs) async {

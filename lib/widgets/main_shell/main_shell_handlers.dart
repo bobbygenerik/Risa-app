@@ -94,21 +94,25 @@ void _handleRouteChange() {
   _lastNavTime = DateTime.now(); // Track when navigation occurred
   _sidebarKey.currentState?.collapse();
 
-  // Restore focus to content when route changes (e.g. returning from player)
-  // Use post-frame callback to allow new route to build and register focus
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted) {
-      _requestContentFocus();
-    }
-  });
+  // Settings manages its own menu focus (autoFocusOnShow). Skip shell focus here
+  // to avoid competing post-frame focus work during Live TV → Settings.
+  if (!location.startsWith('/settings')) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _requestContentFocus();
+      }
+    });
+  }
 
-  if (location.startsWith('/settings') || location.startsWith('/player')) {
-    PaintingBinding.instance.imageCache.clear();
-    try {
-      PaintingBinding.instance.imageCache.clearLiveImages();
-    } catch (_) {
-      // Ignore file deletion errors
-    }
+}
+
+void _purgeImageCacheAfterNavigation() {
+  if (!mounted) return;
+  PaintingBinding.instance.imageCache.clear();
+  try {
+    PaintingBinding.instance.imageCache.clearLiveImages();
+  } catch (_) {
+    // Ignore file deletion errors
   }
 }
 
@@ -121,8 +125,15 @@ int _registerContentFocusCallback(ContentFocusCallback callback) {
   _contentFocusCallback = callback;
   _activeFocusToken = token;
   debugLog('content_focus: Shell registered focus callback token=$token');
-  // Don't auto-focus content - let the navbar keep focus
-  // User can press down arrow to focus content
+  if (_pendingInitialHomeContentFocus) {
+    final path = GoRouterState.of(context).uri.path;
+    if (path == '/home') {
+      _pendingInitialHomeContentFocus = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _requestContentFocus();
+      });
+    }
+  }
   return token;
 }
 

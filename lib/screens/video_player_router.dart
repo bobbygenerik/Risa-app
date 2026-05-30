@@ -1,9 +1,11 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/channel.dart';
 import 'enhanced_video_player_screen.dart';
+import 'minimal_live_player_screen.dart';
 
-/// Always builds the `EnhancedVideoPlayerScreen` so the Flutter overlay
-/// controls are used for every playback.
 class VideoPlayerRouter extends StatelessWidget {
   final Channel? channel;
   final String? streamUrl;
@@ -24,6 +26,16 @@ class VideoPlayerRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final url = videoUrl ?? streamUrl ?? channel?.url ?? '';
+
+    if (!kIsWeb && Platform.isAndroid && isLive && url.isNotEmpty) {
+      return MinimalLivePlayerScreen(
+        channel: channel,
+        streamUrl: url,
+        title: title ?? channel?.name,
+      );
+    }
+
     return EnhancedVideoPlayerScreen(
       channel: channel,
       streamUrl: streamUrl,

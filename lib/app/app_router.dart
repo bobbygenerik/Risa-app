@@ -159,13 +159,6 @@ final _router = GoRouter(
           title = data.name;
           channel = data;
           isLive = true;
-          final appContext = context;
-          Future.microtask(() {
-            if (!appContext.mounted) return;
-            final channelProvider =
-                Provider.of<ChannelProvider>(appContext, listen: false);
-            channelProvider.incrementWatchCount(data.id);
-          });
         } else if (data is Map<String, dynamic> || data is Map) {
           final mapArgs = data is Map<String, dynamic>
               ? data

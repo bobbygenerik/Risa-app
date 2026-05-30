@@ -186,7 +186,9 @@ extension SettingsScreenHandlers on _SettingsScreenState {
   }
 
   void _showManagePlaylistsDialog() {
-    // Use the unified playlist manager that reads the new saved_playlists store
-    context.push('/playlist-manager');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.push('/playlist-manager');
+    });
   }
 }

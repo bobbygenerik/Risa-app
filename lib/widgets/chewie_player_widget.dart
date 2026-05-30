@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 import 'media_kit_player_widget.dart';
+import 'native_exo_player_widget.dart';
 
 class ChewiePlayerWidget extends StatefulWidget {
   final String url;
   final bool isLive;
+  final VoidCallback? onSurfaceReady;
 
   const ChewiePlayerWidget({
     super.key,
     required this.url,
     this.isLive = false,
+    this.onSurfaceReady,
   });
 
   @override
@@ -25,21 +29,85 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   ChewieController? _chewieController;
   bool _isInitializing = true;
   String? _errorMessage;
+  bool _useChewieFallback = false;
+  bool _nativePlaybackReady = false;
+  bool _mountNativePlayer = false;
+
+  // Native AndroidView ANRs on SHIELD during Live TV → Watch; use SimpleTvPlayer on Android.
+  static bool get _preferNativeAndroid => false;
 
   @override
   void initState() {
     super.initState();
-    // Defer initialization to next frame to avoid blocking UI
+    if (_preferNativeAndroid && !_useChewieFallback) {
+      _isInitializing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) setState(() => _mountNativePlayer = true);
+        });
+      });
+      return;
+    }
+    _scheduleChewieInit();
+  }
+
+  void _notifySurfaceReady() {
+    widget.onSurfaceReady?.call();
+  }
+
+  void _scheduleChewieInit() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializePlayer();
+      final delay = Platform.isAndroid
+          ? const Duration(milliseconds: 500)
+          : const Duration(milliseconds: 250);
+      Future.delayed(delay, () {
+        if (mounted) _initializePlayer();
+      });
     });
+  }
+
+  void _onNativeError(String error) {
+    debugPrint('Native ExoPlayer failed, falling back to Chewie: $error');
+    if (!mounted) return;
+    setState(() {
+      _useChewieFallback = true;
+      _nativePlaybackReady = false;
+      _isInitializing = true;
+      _errorMessage = null;
+    });
+    _scheduleChewieInit();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use MediaKit on Linux/desktop — video_player has no Linux backend
     if (!kIsWeb && Platform.isLinux) {
       return MediaKitPlayerWidget(url: widget.url, isLive: widget.isLive);
+    }
+
+    if (_preferNativeAndroid && !_useChewieFallback) {
+      if (_errorMessage != null) {
+        return _buildErrorWidget(_errorMessage!);
+      }
+      if (!_mountNativePlayer) {
+        return _buildLoadingWidget();
+      }
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          NativeExoPlayerWidget(
+            url: widget.url,
+            isLive: widget.isLive,
+            autoPlay: true,
+            onPlaybackReady: () {
+              if (!mounted) return;
+              setState(() => _nativePlaybackReady = true);
+              _notifySurfaceReady();
+            },
+            onError: _onNativeError,
+          ),
+          if (!_nativePlaybackReady) _buildLoadingWidget(),
+        ],
+      );
     }
 
     if (_errorMessage != null) {
@@ -106,8 +174,9 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
               setState(() {
                 _errorMessage = null;
                 _isInitializing = true;
+                _useChewieFallback = true;
               });
-              _initializePlayer();
+              _scheduleChewieInit();
             },
             child: const Text('Retry'),
           ),
@@ -139,6 +208,10 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   void didUpdateWidget(ChewiePlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.url != oldWidget.url) {
+      if (_preferNativeAndroid && !_useChewieFallback) {
+        setState(() => _nativePlaybackReady = false);
+        return;
+      }
       _disposeControllers();
       _isInitializing = true;
       _errorMessage = null;
@@ -164,25 +237,19 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
 
     try {
       final uri = Uri.parse(widget.url);
+      final headers = HttpClientService().videoHeaders;
 
-      // Create controller with optimized settings for live TV
       _videoController = VideoPlayerController.networkUrl(
         uri,
         formatHint: uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
         ),
-        httpHeaders: {
-          'User-Agent': 'RisaTV/1.0',
-          'Connection': 'keep-alive',
-          'Accept': '*/*',
-        },
+        httpHeaders: headers,
       );
 
-      // Add listener before initialization to catch errors early
       _videoController!.addListener(_onVideoPlayerUpdate);
 
-      // Initialize with timeout to prevent hanging
       await _videoController!.initialize().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
@@ -192,12 +259,16 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
 
       if (!mounted) return;
 
-      // Create Chewie controller with optimized settings
+      var aspectRatio = _videoController!.value.aspectRatio;
+      if (!aspectRatio.isFinite || aspectRatio <= 0) {
+        aspectRatio = 16 / 9;
+      }
+
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
         autoPlay: true,
         looping: false,
-        aspectRatio: _videoController!.value.aspectRatio,
+        aspectRatio: aspectRatio,
         autoInitialize: true,
         allowFullScreen: true,
         allowedScreenSleep: false,
@@ -211,7 +282,6 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
         errorBuilder: (context, errorMessage) {
           return _buildErrorWidget(errorMessage);
         },
-        // Buffering settings for smoother playback
         startAt: Duration.zero,
       );
 
@@ -219,6 +289,7 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
         setState(() {
           _isInitializing = false;
         });
+        _notifySurfaceReady();
       }
     } catch (e) {
       debugPrint('Video player initialization error: $e');
@@ -232,7 +303,6 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   }
 
   void _onVideoPlayerUpdate() {
-    // Handle any video player errors
     if (_videoController != null &&
         _videoController!.value.hasError &&
         _errorMessage == null) {

@@ -50,10 +50,14 @@ class LiveTvHeroInfoWidgets {
   }
 
   static Widget featuredInfo({
+    required BuildContext context,
     required Channel channel,
     required Program? program,
     required LiveTvArtworkResolver artworkResolver,
     required FocusNode watchButtonFocus,
+    required FocusNode firstFeaturedFocus,
+    required FocusNode firstChannelFocus,
+    required ScrollController scrollController,
     required VoidCallback onWatch,
   }) {
     final displayTitle = program == null
@@ -65,6 +69,9 @@ class LiveTvHeroInfoWidgets {
       displayTitle: displayTitle,
       titleLogoUrl: artworkResolver.resolveProgramTitleLogo(program, channel),
       watchButtonFocus: watchButtonFocus,
+      firstFeaturedFocus: firstFeaturedFocus,
+      firstChannelFocus: firstChannelFocus,
+      scrollController: scrollController,
       onWatch: onWatch,
     );
   }
@@ -75,28 +82,21 @@ class LiveTvHeroInfoWidgets {
     required Program? program,
     required LiveTvArtworkResolver artworkResolver,
     required FocusNode watchButtonFocus,
+    required FocusNode firstFeaturedFocus,
     required FocusNode firstChannelFocus,
+    required ScrollController scrollController,
     required VoidCallback onWatch,
   }) {
-    return Focus(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            if (firstChannelFocus.canRequestFocus) {
-              firstChannelFocus.requestFocus();
-              return KeyEventResult.handled;
-            }
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: featuredInfo(
-        channel: channel,
-        program: program,
-        artworkResolver: artworkResolver,
-        watchButtonFocus: watchButtonFocus,
-        onWatch: onWatch,
-      ),
+    return featuredInfo(
+      context: context,
+      channel: channel,
+      program: program,
+      artworkResolver: artworkResolver,
+      watchButtonFocus: watchButtonFocus,
+      firstFeaturedFocus: firstFeaturedFocus,
+      firstChannelFocus: firstChannelFocus,
+      scrollController: scrollController,
+      onWatch: onWatch,
     );
   }
 }

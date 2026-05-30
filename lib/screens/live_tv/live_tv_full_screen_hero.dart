@@ -11,6 +11,7 @@ import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
 
 /// Full-screen hero layout with parallax scroll and channel rows.
 class LiveTvFullScreenHero extends StatelessWidget {
@@ -30,9 +31,11 @@ class LiveTvFullScreenHero extends StatelessWidget {
     required this.buildProgramTypeRow,
     required this.heroInfoOverlay,
     required this.channelLogo,
+    this.heroImageUrl,
   });
 
   final LiveTvHeroSelection selection;
+  final String? heroImageUrl;
   final List<Channel> allChannels;
   final ScrollController scrollController;
   final ValueNotifier<int> heroArtworkVersion;
@@ -63,23 +66,11 @@ class LiveTvFullScreenHero extends StatelessWidget {
     Channel activeChannel,
     Program? currentProgram,
   ) {
-    return ValueListenableBuilder<int>(
-      valueListenable: heroArtworkVersion,
-      builder: (context, _, __) {
-        final freshImage = artworkResolver.resolveHeroImage(
-              currentProgram,
-              activeChannel,
-              allowFetch: true,
-              highPriority: true,
-            ) ??
-            '';
-        return LiveTvHeroContent(
-          channel: activeChannel,
-          program: currentProgram,
-          heroImage: freshImage,
-          suspendBackground: suspendHeroBackground,
-        );
-      },
+    return LiveTvHeroContent(
+      channel: activeChannel,
+      program: currentProgram,
+      heroImage: heroImageUrl ?? '',
+      suspendBackground: suspendHeroBackground,
     );
   }
 
@@ -92,6 +83,10 @@ class LiveTvFullScreenHero extends StatelessWidget {
     final rightInset = context.spacingLg();
     final activeChannel = selection.activeChannel;
     final currentProgram = selection.program;
+    final navProvider =
+        context.dependOnInheritedWidgetOfExactType<ContentFocusProvider>();
+    final hideHeroChrome =
+        context.isTV && (navProvider?.isNavExpanded ?? false);
 
     if (forceRowsVisible) {
       return Container(
@@ -301,84 +296,95 @@ class LiveTvFullScreenHero extends StatelessWidget {
             left: 0,
             right: rightInset,
             height: contentTop,
-            child: AnimatedBuilder(
-              animation: scrollController,
-              builder: (context, _) {
-                final fadeProgress =
-                    (_scrollOffset() / (heroHeight * 0.3)).clamp(0.0, 1.0);
-                final opacity = 1.0 - fadeProgress;
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              opacity: hideHeroChrome ? 0.0 : 1.0,
+              child: AnimatedBuilder(
+                animation: scrollController,
+                builder: (context, _) {
+                  final fadeProgress =
+                      (_scrollOffset() / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                  final opacity = 1.0 - fadeProgress;
 
-                Widget content;
-                if (opacity <= 0.01) {
-                  content = Focus(
-                    onKeyEvent: (node, event) {
-                      if (event is KeyDownEvent) {
-                        if (event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.enter ||
-                            event.logicalKey == LogicalKeyboardKey.space) {
+                  Widget content;
+                  if (opacity <= 0.01) {
+                    content = Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space) {
+                            scrollController.animateTo(
+                              0.0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOutCubic,
+                            );
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: GestureDetector(
+                        onTap: () {
                           scrollController.animateTo(
                             0.0,
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeOutCubic,
                           );
-                          return KeyEventResult.handled;
-                        }
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () {
-                        scrollController.animateTo(
-                          0.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOutCubic,
-                        );
-                      },
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: contentTop,
-                        child: const ColoredBox(color: Colors.transparent),
-                      ),
-                    ),
-                  );
-                } else {
-                  content = Opacity(
-                    opacity: opacity,
-                    child: Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Padding(
-                          padding: EdgeInsets.only(left: contentInset),
-                          child: heroInfoOverlay(activeChannel, currentProgram),
+                        },
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: contentTop,
+                          child: const ColoredBox(color: Colors.transparent),
                         ),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  } else {
+                    content = Opacity(
+                      opacity: opacity,
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Padding(
+                            padding: EdgeInsets.only(left: contentInset),
+                            child:
+                                heroInfoOverlay(activeChannel, currentProgram),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
 
-                return Transform.translate(
-                  offset: Offset(0, -_scrollOffset()),
-                  child: content,
-                );
-              },
+                  return Transform.translate(
+                    offset: Offset(0, -_scrollOffset()),
+                    child: content,
+                  );
+                },
+              ),
             ),
           ),
           Positioned(
             top: context.tvSpacing(AppSizes.xxl),
             right: context.tvSpacing(AppSizes.lg),
-            child: Builder(builder: (context) {
-              final fadeProgress =
-                  (_scrollOffset() / (heroHeight * 0.5)).clamp(0.0, 1.0);
-              return Opacity(
-                opacity: 1.0 - fadeProgress,
-                child: SizedBox(
-                  width: context.tvSpacing(72),
-                  height: context.tvSpacing(48),
-                  child: channelLogo(activeChannel),
-                ),
-              );
-            }),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              opacity: hideHeroChrome ? 0.0 : 1.0,
+              child: Builder(builder: (context) {
+                final fadeProgress =
+                    (_scrollOffset() / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                return Opacity(
+                  opacity: 1.0 - fadeProgress,
+                  child: SizedBox(
+                    width: context.tvSpacing(72),
+                    height: context.tvSpacing(48),
+                    child: channelLogo(activeChannel),
+                  ),
+                );
+              }),
+            ),
           ),
         ],
       ),

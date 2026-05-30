@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_formatters.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_layout.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_typography.dart';
@@ -19,6 +21,9 @@ class LiveTvFeaturedInfo extends StatelessWidget {
     required this.displayTitle,
     required this.titleLogoUrl,
     required this.watchButtonFocus,
+    required this.firstFeaturedFocus,
+    required this.firstChannelFocus,
+    required this.scrollController,
     required this.onWatch,
   });
 
@@ -27,7 +32,31 @@ class LiveTvFeaturedInfo extends StatelessWidget {
   final String displayTitle;
   final String? titleLogoUrl;
   final FocusNode watchButtonFocus;
+  final FocusNode firstFeaturedFocus;
+  final FocusNode firstChannelFocus;
+  final ScrollController scrollController;
   final VoidCallback onWatch;
+
+  void _focusFirstChannelRow(BuildContext context) {
+    final heroHeight = context.heroHeight();
+    const cardPeek = 80.0;
+    final target = LiveTvLayout.contentTop(heroHeight, cardPeek);
+    if (scrollController.hasClients &&
+        scrollController.offset < target - 16) {
+      scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    if (firstFeaturedFocus.canRequestFocus) {
+      firstFeaturedFocus.requestFocus();
+      return;
+    }
+    if (firstChannelFocus.canRequestFocus) {
+      firstChannelFocus.requestFocus();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,14 +175,21 @@ class LiveTvFeaturedInfo extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             width: context.cardWidth() * 0.6,
-            child: BrandPrimaryButton(
-              onPressed: onWatch,
-              label: 'Watch',
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              fontSize: 14,
-              minHeight: 32,
-              expand: true,
-              focusNode: watchButtonFocus,
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.arrowDown):
+                    () => _focusFirstChannelRow(context),
+              },
+              child: BrandPrimaryButton(
+                onPressed: onWatch,
+                label: 'Watch',
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                fontSize: 14,
+                minHeight: 32,
+                expand: true,
+                focusNode: watchButtonFocus,
+              ),
             ),
           ),
         ],

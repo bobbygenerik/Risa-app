@@ -9,6 +9,8 @@ class LiveTvHeroCandidateCache {
   List<LiveTvHeroCandidate>? _cached;
   bool _valid = false;
 
+  bool get isValid => _valid;
+
   void invalidate() {
     _valid = false;
   }
@@ -83,14 +85,15 @@ class LiveTvHeroSelection {
 }
 
 class LiveTvHeroSelectionResolver {
-  static LiveTvHeroSelection resolve({
+  static ({
+    LiveTvHeroSelection selection,
+    List<LiveTvHeroCandidate> selectionPool,
+    LiveTvHeroCandidate? selectedHero,
+  }) resolve({
     required Channel featuredChannel,
     required List<Channel> allChannels,
     required int featuredIndex,
     required List<LiveTvHeroCandidate> heroCandidates,
-    required void Function(int count) onCandidateCount,
-    required void Function(List<LiveTvHeroCandidate> pool) onPrefetchPool,
-    required void Function(LiveTvHeroCandidate? selected) onEnsureArtwork,
   }) {
     final epgHeroCandidates =
         heroCandidates.where((c) => c.program != null).toList();
@@ -106,19 +109,20 @@ class LiveTvHeroSelectionResolver {
           ];
 
     final candidateCount = selectionPool.length;
-    onCandidateCount(candidateCount);
-    onPrefetchPool(selectionPool);
 
     final selectedHero = candidateCount == 0
         ? null
         : selectionPool[featuredIndex % candidateCount];
 
-    onEnsureArtwork(selectedHero);
-
-    return LiveTvHeroSelection(
+    final selection = LiveTvHeroSelection(
       activeChannel: selectedHero?.channel ?? featuredChannel,
       program: selectedHero?.program,
       candidateCount: candidateCount,
+      selectedHero: selectedHero,
+    );
+    return (
+      selection: selection,
+      selectionPool: selectionPool,
       selectedHero: selectedHero,
     );
   }

@@ -22,12 +22,13 @@ Future<void> _initializePlayer() async {
   }
 
   try {
-    await WakelockPlus.enable();
     _hideControlsAfterDelay();
-
     if (mounted) {
       _updatePlayerState(() => _isLoading = false);
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(WakelockPlus.enable());
+    });
     debugLog('=== VIDEO PLAYER INIT COMPLETE ===');
   } catch (e, st) {
     debugLog('=== VIDEO PLAYER INIT ERROR ===');
@@ -40,17 +41,6 @@ Future<void> _initializePlayer() async {
           'Initialization Error', 'Failed to initialize player: $e');
     }
   }
-}
-
-void _schedulePlayerWarmup() {
-  if (_playerLoadScheduled) return;
-  _playerLoadScheduled = true;
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (!mounted) return;
-    MemoryManager.checkMemoryPressure();
-    MemoryManager.scheduleCleanup();
-    _updatePlayerState(() => _playerReady = true);
-  });
 }
 
 void _showErrorDialog(String title, String message) {

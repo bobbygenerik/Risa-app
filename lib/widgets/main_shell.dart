@@ -14,6 +14,7 @@ import 'package:iptv_player/widgets/sidebar_navigation.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 part 'main_shell/main_shell_handlers.dart';
 
@@ -21,6 +22,8 @@ const bool kForceSearchPopup = bool.fromEnvironment(
   'FORCE_SEARCH_POPUP',
   defaultValue: false,
 );
+
+const Duration _sidebarOverlayDuration = Duration(milliseconds: 150);
 
 /// Main shell that keeps the navigation bar fixed while content changes
 class MainShell extends StatefulWidget {
@@ -50,6 +53,7 @@ class _MainShellState extends State<MainShell> {
   RouteInformationProvider? _routeInfoProvider;
   String? _lastLocation;
   bool _isSidebarExpanded = false;
+  bool _pendingInitialHomeContentFocus = true;
   DateTime? _lastBackPress;
   DateTime?
       _lastNavTime; // Track navigation timing to prevent PopScope conflict
@@ -142,6 +146,7 @@ class _MainShellState extends State<MainShell> {
     final sidebarScrimWidth = showSidebarScrim
         ? AppSpacing.sidebarWidth + 16
         : AppSpacing.sidebarCollapsedWidth;
+    final useLightweightScrim = context.isTV;
 
     return PopScope(
       canPop: false,
@@ -174,87 +179,114 @@ class _MainShellState extends State<MainShell> {
                         node: _contentFocusScope,
                         autofocus: false,
                         child: ContentFocusProvider(
-                          registerFocusCallback: _registerContentFocusCallback,
+                          registerFocusCallback:
+                              _registerContentFocusCallback,
                           unregisterFocusCallback:
                               _unregisterContentFocusCallback,
                           requestNavFocus: _requestNavFocus,
+                          isNavExpanded: _isSidebarExpanded,
                           child: widget.child,
                         ),
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  child: IgnorePointer(
-                    ignoring: !showSidebarScrim,
-                    child: AnimatedOpacity(
-                      opacity: showSidebarScrim ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeOut,
-                      child: ClipRect(
-                        child: SizedBox(
-                          width: sidebarScrimWidth,
-                          child: Stack(
-                            children: [
-                              // Strong blur on left side
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: showSidebarScrim
-                                    ? sidebarScrimWidth * 0.75
-                                    : 0,
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: showSidebarScrim ? 6.0 : 0.0,
-                                    sigmaY: showSidebarScrim ? 6.0 : 0.0,
-                                  ),
-                                  child: Container(color: Colors.transparent),
-                                ),
-                              ),
-                              // Medium blur in middle
-                              Positioned(
-                                left: showSidebarScrim
-                                    ? sidebarScrimWidth * 0.45
-                                    : 0,
-                                top: 0,
-                                bottom: 0,
-                                width: showSidebarScrim
-                                    ? sidebarScrimWidth * 0.35
-                                    : 0,
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: showSidebarScrim ? 3.0 : 0.0,
-                                    sigmaY: showSidebarScrim ? 3.0 : 0.0,
-                                  ),
-                                  child: Container(color: Colors.transparent),
-                                ),
-                              ),
-                              // Gradient overlay
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.75),
-                                      Colors.black.withValues(alpha: 0.4),
-                                      Colors.transparent,
-                                    ],
-                                    stops: const [0.0, 0.55, 0.90],
-                                  ),
-                                ),
-                              ),
-                            ],
+                if (useLightweightScrim)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !showSidebarScrim,
+                      child: AnimatedOpacity(
+                        opacity: showSidebarScrim ? 1.0 : 0.0,
+                        duration: _sidebarOverlayDuration,
+                        curve: Curves.easeOut,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.90),
+                                Colors.black.withValues(alpha: 0.74),
+                                Colors.black.withValues(alpha: 0.50),
+                              ],
+                              stops: const [0.0, 0.30, 1.0],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                if (!useLightweightScrim)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    child: IgnorePointer(
+                      ignoring: !showSidebarScrim,
+                      child: AnimatedOpacity(
+                        opacity: showSidebarScrim ? 1.0 : 0.0,
+                        duration: _sidebarOverlayDuration,
+                        curve: Curves.easeOut,
+                        child: ClipRect(
+                          child: SizedBox(
+                            width: sidebarScrimWidth,
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: showSidebarScrim
+                                      ? sidebarScrimWidth * 0.75
+                                      : 0,
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: showSidebarScrim ? 6.0 : 0.0,
+                                      sigmaY: showSidebarScrim ? 6.0 : 0.0,
+                                    ),
+                                    child:
+                                        Container(color: Colors.transparent),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: showSidebarScrim
+                                      ? sidebarScrimWidth * 0.45
+                                      : 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: showSidebarScrim
+                                      ? sidebarScrimWidth * 0.35
+                                      : 0,
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: showSidebarScrim ? 3.0 : 0.0,
+                                      sigmaY: showSidebarScrim ? 3.0 : 0.0,
+                                    ),
+                                    child:
+                                        Container(color: Colors.transparent),
+                                  ),
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Colors.black.withValues(alpha: 0.75),
+                                        Colors.black.withValues(alpha: 0.4),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.0, 0.55, 0.90],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 // Navigation bar overlayed on top - completely transparent
                 // Removed TopNavigationBar
                 // Positioned(
@@ -317,7 +349,7 @@ class _MainShellState extends State<MainShell> {
 
   void _updateShellState(VoidCallback fn) {
     if (!mounted) return;
-    _updateShellState(fn);
+    setState(fn);
   }
 }
 

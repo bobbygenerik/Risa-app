@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 part 'sidebar/sidebar_navigation_widgets.dart';
 part 'sidebar/sidebar_navigation_content.dart';
@@ -87,16 +88,10 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
 
     _isExpanded = false;
-    // Suppress auto-expansion triggered by the initial focus request so the
-    // sidebar remains collapsed on app startup (avoid flashing open).
+    // Live TV content owns cold-start focus; do not grab sidebar focus here.
     _suppressAutoExpandOnInitialFocus = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusActiveTab();
-      // Clear the suppression on the next frame so normal focus expansion
-      // behavior resumes for user-driven focus changes.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _suppressAutoExpandOnInitialFocus = false;
-      });
+      if (mounted) _suppressAutoExpandOnInitialFocus = false;
     });
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
     widget.onExpandRegistration?.call(_expandSidebar);
@@ -234,17 +229,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         duration: _widthDuration,
         width:
             _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Colors.black.withAlpha((0.95 * 255).round()),
-              Colors.black.withAlpha((0.0 * 255).round()),
-            ],
-            stops: const [0.0, 1.0],
-          ),
-        ),
+        decoration: _sidebarDecoration(context),
         child: _buildSidebarContent(),
       ),
     );
@@ -253,6 +238,25 @@ class SidebarNavigationState extends State<SidebarNavigation> {
   void _updateSidebarState(VoidCallback fn) {
     if (!mounted) return;
     setState(fn);
+  }
+
+  BoxDecoration _sidebarDecoration(BuildContext context) {
+    // TV + expanded: no panel — MainShell full-screen dim handles separation.
+    if (_isExpanded && context.isTV) {
+      return const BoxDecoration(color: Colors.transparent);
+    }
+
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.black.withAlpha((0.95 * 255).round()),
+          Colors.black.withAlpha((0.0 * 255).round()),
+        ],
+        stops: const [0.0, 1.0],
+      ),
+    );
   }
 }
 

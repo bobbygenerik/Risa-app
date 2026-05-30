@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="EPGScreen" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/EPGScreen.brs" />
+    <interface>
+        <field id="epgData" type="object" onChange="onEPGDataLoaded" />
+    </interface>
+    <children>
+        <Label id="titleLabel" translation="[100, 60]" text="TV Guide (EPG)" font="font:MediumSystemFont" color="0xE8E8E8FF" />
+        
+        <!-- EPG TimeGrid -->
+        <TimeGrid id="epgGrid" translation="[100, 140]"
+            itemSize="[200, 60]"
+            numRows="8"
+            channelBitmapMode="scaleToFit"
+            programBackground="0x1a1a2eFF"
+            programColor="0xE8E8E8FF"
+            focusBitmapBlendColor="0x00A8E8FF" />
+    </children>
+</component>

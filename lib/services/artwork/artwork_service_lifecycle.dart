@@ -32,6 +32,32 @@ extension LiveTvArtworkServiceLifecycle on LiveTvArtworkService {
     }
   }
 
+  /// Drop in-memory artwork maps before opening the player (OOM on TV).
+  void releaseMemoryForPlayback() {
+    _artworkThrottle?.cancel();
+    _artworkTitleSaveDebounce?.cancel();
+    _artworkNegativeSaveDebounce?.cancel();
+    _artworkUiDebounce?.cancel();
+    _artworkQueueHigh.clear();
+    _artworkQueueLow.clear();
+    _queuedArtworkIds.clear();
+    _artworkRequests.clear();
+    _pendingArtworkRequests.clear();
+    _pendingArtworkByTitle.clear();
+    _programArtwork.clear();
+    _programArtworkByTitle.clear();
+    _programArtworkByTitleTimestamps.clear();
+    _programArtworkNegativeByTitle.clear();
+    _programTitleLogos.clear();
+    _programArtworkOrder.clear();
+    _programArtworkTitleOrder.clear();
+    _programArtworkNegativeTitleOrder.clear();
+    _programTitleLogoOrder.clear();
+    _artworkRetryAfter.clear();
+    _artworkFailureCounts.clear();
+    debugLog('LiveTV artwork: released in-memory caches for playback');
+  }
+
   /// Dispose of timers and resources.
   void dispose() {
     _isDisposed = true;

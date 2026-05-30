@@ -24,7 +24,8 @@ class LiveTvScrollPrefetch {
     int prefetchWindowRows = 3,
   }) {
     if (!scrollController.hasClients || categoryState.names.isEmpty) return;
-    if (scrollController.position.isScrollingNotifier.value) {
+    final isScrolling = scrollController.position.isScrollingNotifier.value;
+    if (isScrolling) {
       onUserScroll();
     }
     final heroHeight = context.heroHeight();
@@ -34,7 +35,9 @@ class LiveTvScrollPrefetch {
     final offset = safeScrollOffset - contentTop;
     if (offset < 0) return;
 
-    if (categoryState.visibleCount < categoryState.names.length &&
+    // Expanding category rows during scroll (e.g. arrow-up to Watch) freezes TV.
+    if (!isScrolling &&
+        categoryState.visibleCount < categoryState.names.length &&
         scrollController.position.extentAfter < categoryPrefetchExtent) {
       setState(() {
         categoryState.visibleCount =

@@ -18,6 +18,8 @@ Widget _buildSidebarContent() {
                           ? 'assets/images/logo.png'
                           : 'assets/images/logo_icon.png'),
                       height: _isExpanded ? 28 : 20,
+                      filterQuality: FilterQuality.medium,
+                      gaplessPlayback: true,
                     ),
                   ),
                 ),
@@ -129,6 +131,7 @@ Widget _buildBottomButton(IconData icon, String label, String route) {
                 color: Colors.transparent,
               ),
               child: _buildSidebarRow(
+                context: context,
                 isFocused: isFocused,
                 icon: Icon(
                   icon,
@@ -142,13 +145,14 @@ Widget _buildBottomButton(IconData icon, String label, String route) {
                         label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: _sidebarLabelStyle(
+                          context,
                           color: isActive
                               ? AppTheme.primaryBlue
                               : (isFocused ? Colors.white : Colors.white70),
-                          fontSize: 12,
-                          fontWeight:
-                              isActive || isFocused ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: isActive || isFocused
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       )
                     : null,

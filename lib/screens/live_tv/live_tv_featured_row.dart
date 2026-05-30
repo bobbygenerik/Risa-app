@@ -30,15 +30,39 @@ class LiveTvFeaturedRow extends StatefulWidget {
 
 class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
   bool _initialized = false;
+  bool _computeScheduled = false;
   List<Channel> _stableChannels = [];
 
   @override
-  Widget build(BuildContext context) {
-    final channelProvider = context.read<ChannelProvider>();
-    final epgService = context.read<IncrementalEpgService>();
-    final mostWatched = channelProvider.mostWatchedChannels;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduleFeaturedCompute();
+    });
+  }
 
-    if (_initialized && _stableChannels.isNotEmpty) {
+  @override
+  void didUpdateWidget(covariant LiveTvFeaturedRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_initialized &&
+        oldWidget.fallbackChannels.length != widget.fallbackChannels.length) {
+      _scheduleFeaturedCompute();
+    }
+  }
+
+  void _scheduleFeaturedCompute() {
+    if (_initialized || _computeScheduled || !mounted) return;
+    _computeScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _computeScheduled = false;
+      if (!mounted || _initialized) return;
+      _computeFeaturedChannels();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_stableChannels.isNotEmpty) {
       return RepaintBoundary(
         child: LiveTvChannelSection(
           title: 'Featured',
@@ -49,6 +73,16 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
         ),
       );
     }
+
+    _scheduleFeaturedCompute();
+    return const SizedBox.shrink();
+  }
+
+  void _computeFeaturedChannels() {
+    if (!mounted || _initialized) return;
+    final channelProvider = context.read<ChannelProvider>();
+    final epgService = context.read<IncrementalEpgService>();
+    final mostWatched = channelProvider.mostWatchedChannels;
 
     final featuredChannels = <Channel>[];
     final addedChannelIds = <String>{};
@@ -173,29 +207,14 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
       });
     }
 
+    if (!mounted) return;
+
     final epgReady = !epgService.isLoading &&
         !epgService.isParsing &&
         !epgService.isDownloading;
-    if (featuredChannels.isNotEmpty &&
-        epgReady &&
-        featuredChannels.length >= 5) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _initialized) return;
-        setState(() {
-          _stableChannels = List.from(featuredChannels);
-          _initialized = true;
-        });
-      });
-    }
-
-    if (featuredChannels.isEmpty) return const SizedBox.shrink();
-
-    return LiveTvChannelSection(
-      title: 'Featured',
-      channels: featuredChannels,
-      bindings: widget.bindings,
-      isFirstRow: true,
-      allowCategoryPaging: false,
-    );
+    setState(() {
+      _stableChannels = List<Channel>.from(featuredChannels);
+      _initialized = featuredChannels.length >= 5 && epgReady;
+    });
   }
 }

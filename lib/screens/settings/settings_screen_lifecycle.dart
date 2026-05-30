@@ -1,6 +1,27 @@
 part of '../settings_screen.dart';
 
 extension SettingsScreenLifecycle on _SettingsScreenState {
+  Future<List<dynamic>> _createGeneralPlaylistStatusFuture() {
+    final channelProvider = context.read<ChannelProvider>();
+    return Future.wait<dynamic>([
+      channelProvider.getChannelCountAsync(),
+      _fetchXtreamPanelCounts(),
+    ]);
+  }
+
+  void _refreshGeneralPlaylistStatus() {
+    _xtreamPanelCounts = null;
+    _xtreamPanelCountsFetchedAt = null;
+    _generalPlaylistStatusFuture = _createGeneralPlaylistStatusFuture();
+    if (mounted) setState(() {});
+  }
+
+  void _invalidateGeneralPlaylistStatus() {
+    _generalPlaylistStatusFuture = null;
+    _xtreamPanelCounts = null;
+    _xtreamPanelCountsFetchedAt = null;
+  }
+
   Future<void> _loadSettingsSync() async {
     final prefs = await SharedPreferences.getInstance();
     final xtreamPassword = await XtreamCredentialStore.readGlobalPassword();
@@ -39,6 +60,9 @@ extension SettingsScreenLifecycle on _SettingsScreenState {
         _videoPlayerBackend = 'VLC';
       }
     });
+    if (mounted) {
+      _refreshGeneralPlaylistStatus();
+    }
   }
 
   void _saveCustomEpgUrl() async {

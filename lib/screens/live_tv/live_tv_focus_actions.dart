@@ -33,11 +33,15 @@ class LiveTvFocusActions {
       settingsButtonFocus.requestFocus();
       return true;
     }
+    if (watchButtonFocus.canRequestFocus) {
+      watchButtonFocus.requestFocus();
+      return true;
+    }
     if (firstChannelFocus.canRequestFocus) {
       firstChannelFocus.requestFocus();
-    } else {
-      watchButtonFocus.requestFocus();
+      return true;
     }
+    watchButtonFocus.requestFocus();
     return true;
   }
 }

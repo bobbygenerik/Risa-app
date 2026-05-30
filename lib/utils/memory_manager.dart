@@ -62,8 +62,8 @@ class MemoryManager {
       
       // Set more aggressive cache limits for better memory management
       // Reduced from 150MB to 100MB to prevent OOM on large playlists
-      PaintingBinding.instance.imageCache.maximumSize = 80;
-      PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100MB max
+      PaintingBinding.instance.imageCache.maximumSize = 40;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 48 * 1024 * 1024; // 48MB max
       
       LogoImageCache.clear();
       

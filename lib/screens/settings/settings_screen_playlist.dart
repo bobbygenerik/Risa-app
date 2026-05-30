@@ -97,6 +97,7 @@ extension SettingsScreenPlaylist on _SettingsScreenState {
               .initialize(forceRefresh: true));
         }
       }
+      if (mounted) _refreshGeneralPlaylistStatus();
     }
   }
 
@@ -208,6 +209,7 @@ extension SettingsScreenPlaylist on _SettingsScreenState {
               .initialize(forceRefresh: true));
         }
       }
+      if (mounted) _refreshGeneralPlaylistStatus();
     }
   }
 

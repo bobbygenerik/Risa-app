@@ -97,16 +97,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  void _requestInitialFocus() {
-    if (_deps.initialFocusRequested) return;
+  void _requestInitialFocus({bool force = false}) {
+    if (!force && _deps.initialFocusRequested) return;
     _deps.initialFocusRequested = true;
     _tryInitialFocus();
+  }
+
+  void _markSkeletonVisibility(bool showing) {
+    _deps.skeletonController.markVisibility(showing);
+    if (!showing) {
+      _requestInitialFocus(force: true);
+    }
   }
 
   void _tryInitialFocus() {
     LiveTvInitialFocus.request(
       isMounted: () => mounted,
-      readChannelProvider: () => context.read<ChannelProvider>(),
       watchButtonFocus: _deps.watchButtonFocus,
       firstFeaturedFocus: _deps.firstFeaturedFocus,
       firstChannelFocus: _deps.firstChannelFocus,
@@ -161,6 +167,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Returning from VLC keeps Live TV mounted; heavy refresh ANRs SHIELD.
+      if (LiveTvPlayerLauncher.returningFromExternalPlayback) {
+        LiveTvPlayerLauncher.clearExternalPlaybackFlag();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 2000), () {
+            if (!mounted) return;
+            _requestCategoryPrefetch();
+          });
+        });
+        return;
+      }
       LiveTvResumeRefresh.refresh(
         channelProvider: context.read<ChannelProvider>(),
         categoryState: _deps.categoryState,
@@ -223,10 +240,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _goToSettings() {
-    final router = GoRouter.of(context);
-    unawaited(Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) router.go('/settings');
-    }));
+    if (!mounted) return;
+    context.go('/settings');
   }
 
   Future<void> _openChannelPlayer(Channel channel) async {
@@ -302,7 +317,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             categoryState: _deps.categoryState,
             requestCategoryPrefetch: _requestCategoryPrefetch,
           ),
-          onMarkSkeletonVisibility: _deps.skeletonController.markVisibility,
+          onMarkSkeletonVisibility: _markSkeletonVisibility,
           onGoToSettings: _goToSettings,
           onEnsureEpgForChannels: LiveTvEpgBatch.ensureChannelsForPreview,
           onInvalidateCaches: () {

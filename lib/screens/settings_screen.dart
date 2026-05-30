@@ -108,6 +108,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   Map<String, int>? _xtreamPanelCounts;
   DateTime? _xtreamPanelCountsFetchedAt;
   bool _xtreamPanelCountsInFlight = false;
+  /// Cached so General tab [FutureBuilder] does not restart work every rebuild.
+  Future<List<dynamic>>? _generalPlaylistStatusFuture;
   FocusNode? _lastGeneralFocusNode;
   final SettingsLayoutController _layoutController = SettingsLayoutController();
 

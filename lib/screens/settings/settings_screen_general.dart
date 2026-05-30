@@ -15,11 +15,10 @@ extension SettingsScreenGeneral on _SettingsScreenState {
         // Playlist Status
         Consumer<ChannelProvider>(
           builder: (context, channelProvider, _) {
+            _generalPlaylistStatusFuture ??=
+                _createGeneralPlaylistStatusFuture();
             return FutureBuilder<List<dynamic>>(
-              future: Future.wait([
-                channelProvider.getChannelCountAsync(),
-                _fetchXtreamPanelCounts(),
-              ]),
+              future: _generalPlaylistStatusFuture,
               builder: (context, snapshot) {
                 final data = snapshot.data;
                 final rawChannels = data != null

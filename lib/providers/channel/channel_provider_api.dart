@@ -34,6 +34,16 @@ extension ChannelProviderApi on ChannelProvider {
   Future<int> getChannelCountAsync() =>
       _channelQueryService.getChannelCountAsync();
 
+  /// Drop hot caches before playback so ExoPlayer/VLC does not OOM the app.
+  void trimMemoryForPlayback() {
+    _channelCache.clear();
+    _categoryCache.invalidate();
+    _invalidateCategoryCaches();
+    debugLog(
+      'ChannelProvider: trim for playback (${_channelMaps.length} maps in RAM)',
+    );
+  }
+
   /// Quick check if there are any channels (no conversion needed)
   bool get hasChannels => _dbReady
       ? (_channelCountDb > 0 || _channelMaps.isNotEmpty)

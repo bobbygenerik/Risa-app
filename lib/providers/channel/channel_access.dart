@@ -95,7 +95,7 @@ class ChannelAccess {
 
   Future<void> incrementWatchCount(String channelId) async {
     deps.watchCounts[channelId] = (deps.watchCounts[channelId] ?? 0) + 1;
-    deps.notifyListeners();
+    // Persist only — notifyListeners during playback OOMs/ANRs on Android TV.
 
     unawaited((() async {
       final prefs = await SharedPreferences.getInstance();

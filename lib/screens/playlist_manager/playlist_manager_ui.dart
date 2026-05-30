@@ -74,6 +74,21 @@ extension PlaylistManagerUi on _PlaylistManagerScreenState {
         child: CircularProgressIndicator(color: AppTheme.primaryBlue),
       );
     }
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Text(
+            _loadError!,
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: AppTheme.accentRed),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
     if (_playlists.isEmpty) {
       return _buildEmptyState();
     }
