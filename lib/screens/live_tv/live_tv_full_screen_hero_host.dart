@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -7,6 +6,7 @@ import 'package:iptv_player/screens/live_tv/artwork_prefetcher.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_channel_section.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_continue_watching_row.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_epg_batch.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_featured_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_full_screen_hero.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_candidate_cache.dart';
@@ -35,6 +35,7 @@ class LiveTvFullScreenHeroHost extends StatefulWidget {
     required this.heroCandidateCache,
     required this.programTypeRowCache,
     required this.onCandidateCount,
+    required this.onAdvanceFeaturedHero,
     required this.onPrefetchRowArtwork,
     required this.buildProgramTypeRow,
     required this.onWatchChannel,
@@ -59,6 +60,7 @@ class LiveTvFullScreenHeroHost extends StatefulWidget {
   final LiveTvHeroCandidateCache heroCandidateCache;
   final LiveTvProgramTypeRowCache programTypeRowCache;
   final void Function(int count) onCandidateCount;
+  final VoidCallback onAdvanceFeaturedHero;
   final void Function(List<Channel> channels, {int limit}) onPrefetchRowArtwork;
   final Widget Function(
     BuildContext context,
@@ -88,6 +90,9 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
   String? _cachedHeroImageUrl;
   int _cachedChannelsLen = -1;
   int _cachedFeaturedIndex = -1;
+  int _cachedProgramCount = -1;
+  final Set<String> _rejectedHeroUrls = {};
+  bool _backdropRejectAdvanceScheduled = false;
 
   void _scheduleSideEffects({
     required LiveTvHeroSelection selection,
@@ -122,11 +127,26 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     });
   }
 
+  void _onHeroBackdropRejected(String url) {
+    if (url.isNotEmpty) {
+      _rejectedHeroUrls.add(url);
+      widget.heroCandidateCache.invalidate();
+    }
+    if (_backdropRejectAdvanceScheduled) return;
+    _backdropRejectAdvanceScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _backdropRejectAdvanceScheduled = false;
+      if (!mounted) return;
+      widget.onAdvanceFeaturedHero();
+    });
+  }
+
   void _refreshHeroCache(IncrementalEpgService epgService) {
     final heroCandidates = widget.heroCandidateCache.build(
       widget.allChannels,
       epgService,
       widget.artworkResolver,
+      rejectedHeroUrls: _rejectedHeroUrls,
     );
     final resolved = LiveTvHeroSelectionResolver.resolve(
       featuredChannel: widget.featuredChannel,
@@ -135,22 +155,38 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
       heroCandidates: heroCandidates,
     );
     _cachedHeroCandidates = heroCandidates;
-    _cachedSelection = resolved.selection;
     _cachedSelectionPool = resolved.selectionPool;
     _cachedSelectedHero = resolved.selectedHero;
     _cachedChannelsLen = widget.allChannels.length;
     _cachedFeaturedIndex = widget.featuredIndex;
-    _cachedHeroImageUrl = widget.artworkResolver.resolveHeroImage(
-      resolved.selection.program,
-      resolved.selection.activeChannel,
-      allowFetch: false,
+    _cachedProgramCount = epgService.loadedProgramChannelCount;
+
+    final selected = resolved.selectedHero;
+    final heroUrl = selected?.heroImage;
+    _cachedHeroImageUrl =
+        (heroUrl != null && heroUrl.isNotEmpty) ? heroUrl : null;
+
+    final hasBackdrop = _cachedHeroImageUrl != null;
+    _cachedSelection = LiveTvHeroSelection(
+      activeChannel: resolved.selection.activeChannel,
+      program: hasBackdrop ? resolved.selection.program : null,
+      candidateCount: resolved.selection.candidateCount,
+      selectedHero: selected,
     );
+
     _scheduleSideEffects(
-      selection: resolved.selection,
+      selection: _cachedSelection!,
       selectionPool: resolved.selectionPool,
-      selectedHero: resolved.selectedHero,
+      selectedHero: selected,
     );
   }
+
+  // Hero programs are loaded from DB in slices until the pool is full. EPG
+  // programs are otherwise loaded lazily per visible card, so without this the
+  // hero only ever sees the handful of channels the cards happened to load.
+  static const int _heroEpgBatchSize = 40;
+  IncrementalEpgService? _epgService;
+  int _heroEpgCursor = 0;
 
   @override
   void initState() {
@@ -159,20 +195,65 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final epg = context.read<IncrementalEpgService>();
+    if (!identical(epg, _epgService)) {
+      _epgService?.removeListener(_onEpgChanged);
+      _epgService = epg;
+      epg.addListener(_onEpgChanged);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _ensureHeroEpgLoaded();
+      });
+    }
+  }
+
+  // Request DB loading of the next slice of channels' programs, advancing a
+  // cursor. Stops once the pool is full or every channel has been requested,
+  // so total work is bounded regardless of channel count.
+  void _ensureHeroEpgLoaded() {
+    final epg = _epgService;
+    if (epg == null) return;
+    if (widget.heroCandidateCache.isPoolComplete) return;
+    if (_heroEpgCursor >= widget.allChannels.length) return;
+    final end = (_heroEpgCursor + _heroEpgBatchSize)
+        .clamp(0, widget.allChannels.length);
+    final slice = widget.allChannels.sublist(_heroEpgCursor, end);
+    _heroEpgCursor = end;
+    LiveTvEpgBatch.ensureChannelsForPreview(slice, epg);
+  }
+
+  // EPG streams in incrementally. The hero candidate pool is built once on
+  // first frame when only a handful of programs exist, so we refresh it as
+  // programs load and request more — but only until the pool is full, then we
+  // detach the listener so we never rescan on a settled EPG.
+  void _onEpgChanged() {
+    if (!mounted) return;
+    if (widget.heroCandidateCache.isPoolComplete) {
+      _epgService?.removeListener(_onEpgChanged);
+      return;
+    }
+    final epg = _epgService;
+    if (epg == null) return;
+    if (epg.loadedProgramChannelCount > _cachedProgramCount) {
+      setState(() => _refreshHeroCache(epg));
+    }
+    _ensureHeroEpgLoaded();
+  }
+
+  @override
   void dispose() {
+    _epgService?.removeListener(_onEpgChanged);
     widget.heroArtworkVersion.removeListener(_onHeroArtworkBumped);
     super.dispose();
   }
 
   void _onHeroArtworkBumped() {
-    if (!mounted || _cachedSelection == null) return;
-    setState(() {
-      _cachedHeroImageUrl = widget.artworkResolver.resolveHeroImage(
-        _cachedSelection!.program,
-        _cachedSelection!.activeChannel,
-        allowFetch: false,
-      );
-    });
+    if (!mounted) return;
+    widget.heroCandidateCache.invalidate();
+    final epg = _epgService;
+    if (epg == null) return;
+    setState(() => _refreshHeroCache(epg));
   }
 
   @override
@@ -183,13 +264,17 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     }
     if (_cachedSelection == null ||
         _cachedChannelsLen != widget.allChannels.length ||
-        _cachedFeaturedIndex != widget.featuredIndex) {
+        _cachedFeaturedIndex != widget.featuredIndex ||
+        (epgService.loadedProgramChannelCount > _cachedProgramCount &&
+            !widget.heroCandidateCache.isPoolComplete)) {
       _refreshHeroCache(epgService);
     }
     final heroCandidates = _cachedHeroCandidates!;
     final selection = _cachedSelection!;
-    final hasEpgHero =
-        heroCandidates.any((candidate) => candidate.program != null);
+    final hasEpgHero = heroCandidates.any(
+      (candidate) =>
+          candidate.program != null && candidate.heroImage.isNotEmpty,
+    );
     if (!hasEpgHero && widget.allChannels.isEmpty) {
       return widget.fallbackSkeleton ?? const SizedBox.shrink();
     }
@@ -197,6 +282,7 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     return LiveTvFullScreenHero(
       selection: selection,
       heroImageUrl: _cachedHeroImageUrl,
+      onHeroBackdropRejected: _onHeroBackdropRejected,
       allChannels: widget.allChannels,
       scrollController: widget.scrollController,
       heroArtworkVersion: widget.heroArtworkVersion,

@@ -41,6 +41,13 @@ class ArtworkValidator {
       return true;
     }
 
+    // Gracenote/TMS asset naming: _b_h* and _st_h* are wide artwork, while
+    // _p_v* and _e_v* are portrait/poster-like assets.
+    if ((lower.contains('tmsimg.com') || lower.contains('tvpassport.com')) &&
+        (lower.contains('_p_v') || lower.contains('_e_v'))) {
+      return true;
+    }
+
     // OMDb poster URLs — always portrait images
     if (lower.contains('m.media-amazon.com') ||
         lower.contains('ia.media-imdb.com')) {
@@ -85,7 +92,7 @@ class ArtworkValidator {
   /// poster, portrait, logo, or has dimension metadata proving it's tall.
   /// This matches the permissive approach used inside LiveTvArtworkService
   /// and prevents valid artwork from being silently dropped.
-  static bool isLikelyLandscapeUrl(String url) {
+  static bool isLikelyLandscapeUrl(String url, {bool strict = false}) {
     if (url.isEmpty) return false;
 
     // Reject if it's clearly poster/portrait/logo
@@ -122,8 +129,11 @@ class ArtworkValidator {
       }
     }
 
-    // Default: accept — better to show a slightly wrong aspect ratio image
-    // than to show no artwork at all.
+    // Hero backdrops need an explicit landscape signal — ambiguous URLs are
+    // usually posters or channel art that decode tall at runtime.
+    if (strict) return false;
+
+    // Cards: accept ambiguous URLs rather than showing no artwork.
     return true;
   }
 

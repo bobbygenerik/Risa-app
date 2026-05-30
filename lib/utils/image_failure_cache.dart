@@ -1,33 +1,16 @@
+import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
 /// Tracks image URLs and hosts that have failed so we stop retrying them.
-///
-/// Two layers:
-///   1. **Per-URL**: after [_maxRetries] failures a specific URL is skipped.
-///   2. **Per-host TLS**: if a host fails with a TLS/HandshakeException we
-///      blacklist the entire host for the session so we don't waste time on
-///      every URL under it (e.g. logo.m3uassets.com).
 class ImageFailureCache {
-  // ---------------------------------------------------------------------------
-  // Per-URL tracking
-  // ---------------------------------------------------------------------------
   static const int _maxRetries = 2;
 
-  /// url → consecutive failure count
   static final Map<String, int> _failureCounts = {};
-
-  /// URLs that have loaded successfully at least once
   static final Set<String> _successes = {};
-
-  // ---------------------------------------------------------------------------
-  // Per-host TLS / connection-level blacklist
-  // ---------------------------------------------------------------------------
-  /// Hosts whose TLS handshake (or socket connection) has permanently failed.
+  static final Set<String> _portraitRejected = {};
+  static final Set<String> _heroOnlyRejected = {};
   static final Set<String> _blacklistedHosts = {};
 
-  // ---------------------------------------------------------------------------
-  // Aggressive mode (low-memory devices – skip even faster)
-  // ---------------------------------------------------------------------------
   static bool _aggressiveMode = false;
   static const int _aggressiveMaxRetries = 1;
 
@@ -38,14 +21,22 @@ class ImageFailureCache {
   static void clear() {
     _failureCounts.clear();
     _successes.clear();
+    _portraitRejected.clear();
+    _heroOnlyRejected.clear();
     _blacklistedHosts.clear();
   }
 
-  // ---------------------------------------------------------------------------
-  // Query
-  // ---------------------------------------------------------------------------
-  static bool shouldSkip(String url) {
+  static bool shouldSkip(
+    String url, {
+    ArtworkSlot slot = ArtworkSlot.card,
+    bool isHero = false,
+  }) {
     if (url.isEmpty) return true;
+    final effective = isHero ? ArtworkSlot.hero : slot;
+    if (_portraitRejected.contains(url)) return true;
+    if (effective == ArtworkSlot.hero && _heroOnlyRejected.contains(url)) {
+      return true;
+    }
     if (_isHostBlacklisted(url)) return true;
     if (_successes.contains(url)) return false;
     final count = _failureCounts[url] ?? 0;
@@ -55,9 +46,6 @@ class ImageFailureCache {
 
   static bool shouldSkipLogo(String url) => shouldSkip(url);
 
-  // ---------------------------------------------------------------------------
-  // Recording
-  // ---------------------------------------------------------------------------
   static void recordSuccess(String url) {
     if (url.isEmpty) return;
     _successes.add(url);
@@ -68,10 +56,6 @@ class ImageFailureCache {
     if (url.isEmpty) return;
     _failureCounts[url] = (_failureCounts[url] ?? 0) + 1;
 
-    // Only blacklist the entire host on hard TLS failures — these indicate a
-    // structural incompatibility (wrong TLS version, bad cert) that will affect
-    // every URL on that host. Transient errors like connection refused or
-    // socket closed should NOT blacklist the host; they may be temporary.
     final errStr = error.toString().toLowerCase();
     if (errStr.contains('handshakeexception') ||
         errStr.contains('wrong_version_number') ||
@@ -86,13 +70,29 @@ class ImageFailureCache {
     }
   }
 
-  static void recordPortrait(String url) {
-    // Currently unused – placeholder for future aspect-ratio tracking.
+  /// [portrait] true → unusable on every slot. Otherwise hero-only rejection.
+  static void recordAspectRejected(
+    String url, {
+    required ArtworkSlot slot,
+    required bool portrait,
+  }) {
+    if (url.isEmpty) return;
+    if (portrait || slot == ArtworkSlot.card) {
+      _portraitRejected.add(url);
+      return;
+    }
+    _heroOnlyRejected.add(url);
   }
 
-  // ---------------------------------------------------------------------------
-  // Diagnostics
-  // ---------------------------------------------------------------------------
+  /// Back-compat for existing call sites.
+  static void recordPortrait(String url, {required bool isHero}) {
+    recordAspectRejected(
+      url,
+      slot: isHero ? ArtworkSlot.hero : ArtworkSlot.card,
+      portrait: !isHero,
+    );
+  }
+
   static String diagnosticSummary() {
     return 'ImageFailureCache: '
         'failures=${_failureCounts.length} '
@@ -103,9 +103,6 @@ class ImageFailureCache {
 
   static Set<String> get blacklistedHosts => Set.unmodifiable(_blacklistedHosts);
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
   static bool _isHostBlacklisted(String url) {
     final host = _hostFromUrl(url);
     return host.isNotEmpty && _blacklistedHosts.contains(host);

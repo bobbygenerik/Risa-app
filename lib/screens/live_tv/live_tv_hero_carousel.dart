@@ -52,13 +52,11 @@ class LiveTvHeroCarousel {
   void advance() {
     final channelProvider = getChannelProvider();
     if (!channelProvider.hasChannels) return;
+    final heroCount = featuredState.lastHeroCandidateCount;
+    if (heroCount <= 0) return;
     featuredState.channelId = null;
-    final heroCount = featuredState.lastHeroCandidateCount > 0
-        ? featuredState.lastHeroCandidateCount
-        : null;
     requestRebuild(() {
-      final divisor = heroCount ?? channelProvider.channelCount;
-      featuredState.index = (featuredState.index + 1) % divisor;
+      featuredState.index = (featuredState.index + 1) % heroCount;
     });
   }
 }

@@ -80,6 +80,7 @@ class LiveTvRowBuilders {
       heroCandidateCache: deps.heroCandidateCache,
       programTypeRowCache: deps.programTypeRowCache,
       onCandidateCount: (count) => deps.featuredState.lastHeroCandidateCount = count,
+      onAdvanceFeaturedHero: () => deps.heroCarousel.advance(),
       onPrefetchRowArtwork: onPrefetchRowArtwork,
       buildProgramTypeRow: programTypeRow,
       onWatchChannel: onWatchChannel,

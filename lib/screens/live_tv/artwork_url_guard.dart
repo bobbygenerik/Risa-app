@@ -1,9 +1,12 @@
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/services/image_validation_service.dart';
+import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
+import 'package:iptv_player/screens/live_tv/artwork/card_artwork_policy.dart';
+import 'package:iptv_player/screens/live_tv/artwork/hero_artwork_policy.dart';
 import 'package:iptv_player/utils/artwork_validator.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 
+/// URL normalization and legacy validation entry points.
 class LiveTvArtworkUrlGuard {
   static const Set<String> blockedProgramArtworkHosts = {
     'zap2it.tmsimg.com',
@@ -12,6 +15,9 @@ class LiveTvArtworkUrlGuard {
     'ngiss.t-online.de',
   };
 
+  static const _heroPolicy = HeroArtworkPolicy();
+  static const _cardPolicy = CardArtworkPolicy();
+
   static bool isValidProgramArtwork(
     String? url,
     Channel channel, {
@@ -19,77 +25,51 @@ class LiveTvArtworkUrlGuard {
     String? source,
     bool forCard = false,
     bool isEpgFallback = false,
+    bool forHero = false,
     void Function(String message)? onDecision,
   }) {
-    if (url == null || url.isEmpty) return false;
-    final blockedHost = blockedProgramArtworkHost(url);
-    if (blockedHost != null) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_blocked_host host=$blockedHost',
+    if (forHero) {
+      return _heroPolicy.acceptsUrl(
+        url,
+        channel,
+        source: source ?? 'unknown',
+        programTitle: programTitle,
+        isEpgFallback: isEpgFallback,
+        onDecision: onDecision,
       );
-      return false;
     }
-    if (ImageValidationService.isKnownInvalid(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_invalid_cached',
+    if (forCard) {
+      return _cardPolicy.acceptsUrl(
+        url,
+        channel,
+        source: source ?? 'unknown',
+        programTitle: programTitle,
+        isEpgFallback: isEpgFallback,
+        onDecision: onDecision,
       );
-      return false;
     }
-    if (ArtworkValidator.isLikelyChannelLogoUrl(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo_hint',
-      );
-      return false;
-    }
-    if (ArtworkValidator.isLikelyPosterUrl(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_poster',
-      );
-      return false;
-    }
-    if (!forCard &&
-        !isEpgFallback &&
-        !ArtworkValidator.isLikelyLandscapeUrl(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_not_landscape',
-      );
-      return false;
-    }
-    if (ArtworkValidator.isLikelyTitleLogoUrl(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_title_logo',
-      );
-      return false;
-    }
-
-    final channelLogo = channel.logoUrl;
-    if (channelLogo != null && channelLogo == url) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo',
-      );
-      return false;
-    }
-    if (matchesChannelLogo(url, channel)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_channel_logo_match',
-      );
-      return false;
-    }
-    if (!isEpgFallback && ArtworkValidator.isLikelySmallImage(url)) {
-      onDecision?.call(
-        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_small',
-      );
-      return false;
-    }
-    return true;
+    return _heroPolicy.acceptsUrl(
+          url,
+          channel,
+          source: source ?? 'unknown',
+          programTitle: programTitle,
+          isEpgFallback: isEpgFallback,
+          onDecision: onDecision,
+        ) ||
+        _cardPolicy.acceptsUrl(
+          url,
+          channel,
+          source: source ?? 'unknown',
+          programTitle: programTitle,
+          isEpgFallback: isEpgFallback,
+          onDecision: onDecision,
+        );
   }
 
   static String? blockedProgramArtworkHost(String url) {
     try {
       final host = Uri.parse(url).host.toLowerCase();
-      if (blockedProgramArtworkHosts.contains(host)) {
-        return host;
-      }
+      if (blockedProgramArtworkHosts.contains(host)) return host;
     } catch (_) {}
     return null;
   }
@@ -103,6 +83,10 @@ class LiveTvArtworkUrlGuard {
 
   static bool isLikelyTitleLogoUrl(String url) {
     return ArtworkValidator.isLikelyTitleLogoUrl(url);
+  }
+
+  static bool isLikelyChannelLogoUrl(String url) {
+    return ArtworkValidator.isLikelyChannelLogoUrl(url);
   }
 
   static bool matchesChannelLogo(String url, Channel channel) {
@@ -128,10 +112,13 @@ class LiveTvArtworkUrlGuard {
   static String? normalizeArtworkUrl(
     String? url, {
     bool isHero = false,
+    ArtworkSlot? slot,
     double? targetWidth,
   }) {
     if (url == null || url.isEmpty) return url;
-    final size = isHero ? heroSizeForWidth(targetWidth) : 'w780';
+    final heroSizing =
+        isHero || slot == ArtworkSlot.hero;
+    final size = heroSizing ? heroSizeForWidth(targetWidth) : 'w780';
     return applyTmdbSize(url, size);
   }
 

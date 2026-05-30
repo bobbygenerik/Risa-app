@@ -32,10 +32,12 @@ class LiveTvFullScreenHero extends StatelessWidget {
     required this.heroInfoOverlay,
     required this.channelLogo,
     this.heroImageUrl,
+    this.onHeroBackdropRejected,
   });
 
   final LiveTvHeroSelection selection;
   final String? heroImageUrl;
+  final void Function(String url)? onHeroBackdropRejected;
   final List<Channel> allChannels;
   final ScrollController scrollController;
   final ValueNotifier<int> heroArtworkVersion;
@@ -71,6 +73,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
       program: currentProgram,
       heroImage: heroImageUrl ?? '',
       suspendBackground: suspendHeroBackground,
+      onBackdropRejected: onHeroBackdropRejected,
     );
   }
 

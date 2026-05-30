@@ -190,7 +190,7 @@ class LiveTvScreenContent extends StatelessWidget {
           previewState.lastChannelCount = previewCount;
           previewState.future = channelProvider.getChannelsPage(
             offset: 0,
-            limit: 60,
+            limit: 200,
           );
         }
 

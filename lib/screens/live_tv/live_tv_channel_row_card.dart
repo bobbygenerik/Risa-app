@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
-import 'package:iptv_player/screens/live_tv/landscape_guarded_image.dart';
+import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
+import 'package:iptv_player/screens/live_tv/artwork/card_artwork_policy.dart';
+import 'package:iptv_player/screens/live_tv/artwork/guarded_artwork_image.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_card_fallbacks.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_formatters.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_models.dart';
@@ -249,8 +251,15 @@ class LiveTvChannelCardContent extends StatelessWidget {
       allowPrefetch,
       highPriority: isFirstRow,
     );
+    const cardPolicy = CardArtworkPolicy();
     final normalizedImageUrl =
         imageUrl == null ? null : normalizeImageUrl(imageUrl);
+    final hasProgramArt = normalizedImageUrl != null &&
+        !ImageFailureCache.shouldSkip(
+          normalizedImageUrl,
+          slot: ArtworkSlot.card,
+        ) &&
+        cardPolicy.acceptsCoverLayer(normalizedImageUrl, channel);
     if (channel.name == 'CWWLVI' ||
         channel.name == 'PBSWGBH' ||
         channel.name.contains('NBCSportsBoston')) {
@@ -307,7 +316,7 @@ class LiveTvChannelCardContent extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(child: fallback),
-                if (normalizedImageUrl != null)
+                if (hasProgramArt)
                   Positioned.fill(
                     child: LiveTvAdaptiveCardImage(
                       url: normalizedImageUrl,
@@ -454,7 +463,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ImageFailureCache.shouldSkip(url)) {
+    if (ImageFailureCache.shouldSkip(url, slot: ArtworkSlot.card)) {
       return fallback;
     }
     ImageLoadProbe.recordAttempt(url, 'live_tv_adaptive');
@@ -468,9 +477,10 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
       fadeOutDuration: Duration.zero,
       useOldImageOnUrlChange: true,
       imageBuilder: (context, imageProvider) {
-        return LandscapeGuardedImage(
+        return GuardedArtworkImage(
           url: url,
           imageProvider: imageProvider,
+          slot: ArtworkSlot.card,
           fit: fit,
           fallback: fallback,
           probeTag: 'live_tv_card',

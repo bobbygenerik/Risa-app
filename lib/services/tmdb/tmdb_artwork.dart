@@ -207,7 +207,7 @@ Future<String?> _tmdbGetHighResBackdrop(
     int tmdbId, String mediaType) async {
   final typePath = mediaType == 'tv' ? 'tv' : 'movie';
   final url =
-      '$TMDBService._baseUrl/$typePath/$tmdbId/images?api_key=$TMDBService._apiKey&include_image_language=null,en';
+      '${TMDBService._baseUrl}/$typePath/$tmdbId/images?api_key=${TMDBService._apiKey}&include_image_language=null,en';
   try {
     final response = await http.get(Uri.parse(url));
     if (response.statusCode != 200) return null;
@@ -250,7 +250,7 @@ Future<String?> _tmdbGetHighResBackdrop(
     final best = filtered.first;
     final filePath = (best['file_path'] as String?)?.trim();
     if (filePath != null && filePath.isNotEmpty) {
-      return _tmdbResizeTmdbImageUrl('$TMDBService._imageBaseUrl$filePath', isBackdrop: true);
+      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath', isBackdrop: true);
     }
   } catch (e, st) {
     debugLog('TMDB image lookup failed for $mediaType/$tmdbId: $e\n$st');
@@ -263,7 +263,7 @@ Future<String?> _tmdbGetHighResBackdrop(
 Future<String?> _tmdbGetAnyBackdrop(int tmdbId, String mediaType) async {
   final typePath = mediaType == 'tv' ? 'tv' : 'movie';
   final url =
-      '$TMDBService._baseUrl/$typePath/$tmdbId/images?api_key=$TMDBService._apiKey&include_image_language=null,en';
+      '${TMDBService._baseUrl}/$typePath/$tmdbId/images?api_key=${TMDBService._apiKey}&include_image_language=null,en';
   try {
     final response = await http.get(Uri.parse(url));
     if (response.statusCode != 200) return null;
@@ -294,7 +294,7 @@ Future<String?> _tmdbGetAnyBackdrop(int tmdbId, String mediaType) async {
     final best = filtered.first;
     final filePath = (best['file_path'] as String?)?.trim();
     if (filePath != null && filePath.isNotEmpty) {
-      return _tmdbResizeTmdbImageUrl('$TMDBService._imageBaseUrl$filePath', isBackdrop: true);
+      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath', isBackdrop: true);
     }
   } catch (e) {
     debugLog('TMDB any-backdrop lookup failed for $mediaType/$tmdbId: $e');
@@ -352,7 +352,7 @@ Future<String?> tmdbGetTitleLogo(String title, {int? year}) async {
 
     // Try TV first
     final tvSearchUrl =
-        '$TMDBService._baseUrl/search/tv?api_key=$TMDBService._apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&first_air_date_year=$year' : ''}';
+        '${TMDBService._baseUrl}/search/tv?api_key=${TMDBService._apiKey}&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&first_air_date_year=$year' : ''}';
     final tvResponse = await http.get(Uri.parse(tvSearchUrl));
     if (tvResponse.statusCode == 200) {
       final tvData = json.decode(tvResponse.body);
@@ -360,7 +360,7 @@ Future<String?> tmdbGetTitleLogo(String title, {int? year}) async {
       if (tvResults.isNotEmpty) {
         final tvId = tvResults.first['id'];
         final imagesUrl =
-            '$TMDBService._baseUrl/tv/$tvId/images?api_key=$TMDBService._apiKey&include_image_language=en,null';
+            '${TMDBService._baseUrl}/tv/$tvId/images?api_key=${TMDBService._apiKey}&include_image_language=en,null';
         final imagesResponse = await http.get(Uri.parse(imagesUrl));
         if (imagesResponse.statusCode == 200) {
           final imagesData = json.decode(imagesResponse.body);
@@ -378,7 +378,7 @@ Future<String?> tmdbGetTitleLogo(String title, {int? year}) async {
     // Try Movie if TV didn't find a logo
     if (logoUrl == null) {
       final movieSearchUrl =
-          '$TMDBService._baseUrl/search/movie?api_key=$TMDBService._apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&year=$year' : ''}';
+          '${TMDBService._baseUrl}/search/movie?api_key=${TMDBService._apiKey}&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&year=$year' : ''}';
       final movieResponse = await http.get(Uri.parse(movieSearchUrl));
       if (movieResponse.statusCode == 200) {
         final movieData = json.decode(movieResponse.body);
@@ -386,7 +386,7 @@ Future<String?> tmdbGetTitleLogo(String title, {int? year}) async {
         if (movieResults.isNotEmpty) {
           final movieId = movieResults.first['id'];
           final imagesUrl =
-              '$TMDBService._baseUrl/movie/$movieId/images?api_key=$TMDBService._apiKey&include_image_language=en,null';
+              '${TMDBService._baseUrl}/movie/$movieId/images?api_key=${TMDBService._apiKey}&include_image_language=en,null';
           final imagesResponse = await http.get(Uri.parse(imagesUrl));
           if (imagesResponse.statusCode == 200) {
             final imagesData = json.decode(imagesResponse.body);

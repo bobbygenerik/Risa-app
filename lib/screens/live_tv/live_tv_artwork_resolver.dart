@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
+import 'package:iptv_player/screens/live_tv/artwork/artwork_source_resolver.dart';
+import 'package:iptv_player/screens/live_tv/artwork/card_artwork_policy.dart';
+import 'package:iptv_player/screens/live_tv/artwork/hero_artwork_policy.dart';
 import 'package:iptv_player/screens/live_tv/artwork_url_guard.dart';
 import 'package:iptv_player/services/live_tv_artwork_service.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
@@ -10,7 +14,7 @@ import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/program_classifier.dart';
 
-/// Resolves program artwork URLs for Live TV hero and channel cards.
+/// Facade: shared artwork sources, separate hero/card policies.
 class LiveTvArtworkResolver {
   LiveTvArtworkResolver({
     required LiveTvArtworkService artworkService,
@@ -18,9 +22,17 @@ class LiveTvArtworkResolver {
     this.tmdbEnabled = true,
     this.fanartEnabled = true,
     this.sportsDbEnabled = true,
-  }) : _artworkService = artworkService;
+    HeroArtworkPolicy? heroPolicy,
+    CardArtworkPolicy? cardPolicy,
+  })  : _artworkService = artworkService,
+        _heroPolicy = heroPolicy ?? const HeroArtworkPolicy(),
+        _cardPolicy = cardPolicy ?? const CardArtworkPolicy(),
+        _sourceResolver = ArtworkSourceResolver(artworkService);
 
   final LiveTvArtworkService _artworkService;
+  final HeroArtworkPolicy _heroPolicy;
+  final CardArtworkPolicy _cardPolicy;
+  final ArtworkSourceResolver _sourceResolver;
   final bool logArtworkMatches;
   final bool tmdbEnabled;
   final bool fanartEnabled;
@@ -34,6 +46,9 @@ class LiveTvArtworkResolver {
   int diagHeroArtMiss = 0;
   int diagHeroValidationReject = 0;
 
+  CardArtworkPolicy get cardPolicy => _cardPolicy;
+  HeroArtworkPolicy get heroPolicy => _heroPolicy;
+
   String? getChannelCardImage(
     Program? program,
     Channel? channel,
@@ -45,50 +60,28 @@ class LiveTvArtworkResolver {
       return null;
     }
 
-    final cached = normalizeArtworkUrl(
-      _artworkService.getArtwork(program.id),
-      isHero: false,
-    );
-    if (cached != null && cached.isNotEmpty) {
-      if (isValidProgramArtwork(
-        cached,
+    for (final candidate in _sourceResolver.candidates(
+      program,
+      channel,
+      slot: ArtworkSlot.card,
+    )) {
+      if (_cardPolicy.acceptsUrl(
+        candidate.url,
         channel,
+        source: candidate.source,
         programTitle: program.title,
-        source: 'cached',
-        forCard: true,
+        isEpgFallback: candidate.isEpgFallback,
+        onDecision: _logArtworkDecision,
       )) {
-        final normalized = normalizeImageUrl(cached);
+        final normalized = normalizeImageUrl(candidate.url!);
         _logArtworkDecision(
-          'LiveTV artwork: card source=cached program="${program.title}" url=$normalized',
+          'LiveTV artwork: card source=${candidate.source} '
+          'program="${program.title}" url=$normalized',
         );
         diagCardArtHit++;
         return normalized;
-      } else {
-        diagCardValidationReject++;
       }
-    }
-
-    final byTitle = normalizeArtworkUrl(
-      _artworkService.getArtworkByTitle(program, channel),
-      isHero: false,
-    );
-    if (byTitle != null && byTitle.isNotEmpty) {
-      if (isValidProgramArtwork(
-        byTitle,
-        channel,
-        programTitle: program.title,
-        source: 'title_cache',
-        forCard: true,
-      )) {
-        final normalized = normalizeImageUrl(byTitle);
-        _logArtworkDecision(
-          'LiveTV artwork: card source=title_cache program="${program.title}" url=$normalized',
-        );
-        diagCardArtHit++;
-        return normalized;
-      } else {
-        diagCardValidationReject++;
-      }
+      diagCardValidationReject++;
     }
 
     if (allowPrefetch) {
@@ -97,27 +90,6 @@ class LiveTvArtworkResolver {
         channel,
         highPriority: highPriority,
       );
-    }
-
-    final epgUrl = normalizeArtworkUrl(program.imageUrl, isHero: false);
-    if (epgUrl != null && epgUrl.isNotEmpty) {
-      if (isValidProgramArtwork(
-        epgUrl,
-        channel,
-        programTitle: program.title,
-        source: 'card_epg',
-        forCard: true,
-        isEpgFallback: true,
-      )) {
-        final normalized = normalizeImageUrl(epgUrl);
-        _logArtworkDecision(
-          'LiveTV artwork: card source=epg program="${program.title}" url=$normalized',
-        );
-        diagCardArtHit++;
-        return normalized;
-      } else {
-        diagCardValidationReject++;
-      }
     }
 
     diagCardArtMiss++;
@@ -130,74 +102,41 @@ class LiveTvArtworkResolver {
     bool allowFetch = true,
     bool highPriority = false,
   }) {
-    if (program != null) {
-      final cached = normalizeArtworkUrl(
-        _artworkService.getArtwork(program.id),
-        isHero: true,
-      );
-      if (cached != null && cached.isNotEmpty) {
-        if (isValidProgramArtwork(
-          cached,
-          channel,
-          programTitle: program.title,
-          source: 'hero_cached',
-        )) {
-          final normalized = normalizeImageUrl(cached);
-          _logArtworkDecision(
-            'LiveTV artwork: hero source=cached program="${program.title}" url=$normalized',
-          );
-          diagHeroArtHit++;
-          return normalized;
-        } else {
-          diagHeroValidationReject++;
-        }
-      }
+    if (program == null) {
+      diagHeroArtMiss++;
+      return null;
+    }
 
-      final byTitle = normalizeArtworkUrl(
-        _artworkService.getArtworkByTitle(program, channel),
-        isHero: true,
-      );
-      if (byTitle != null && byTitle.isNotEmpty) {
-        if (isValidProgramArtwork(
-          byTitle,
-          channel,
-          programTitle: program.title,
-          source: 'hero_title_cache',
-        )) {
-          final normalized = normalizeImageUrl(byTitle);
-          _logArtworkDecision(
-            'LiveTV artwork: hero source=title_cache program="${program.title}" url=$normalized',
-          );
-          diagHeroArtHit++;
-          return normalized;
-        } else {
-          diagHeroValidationReject++;
-        }
-      }
-
-      if (allowFetch) {
-        _artworkService.ensureFreshProgramArtwork(
-          program,
-          channel,
-          highPriority: highPriority,
-        );
-      }
-
-      final direct = normalizeArtworkUrl(program.imageUrl, isHero: true);
-      if (isValidProgramArtwork(
-        direct,
+    for (final candidate in _sourceResolver.candidates(
+      program,
+      channel,
+      slot: ArtworkSlot.hero,
+    )) {
+      if (_heroPolicy.acceptsUrl(
+        candidate.url,
         channel,
+        source: candidate.source,
         programTitle: program.title,
-        source: 'hero_epg',
-        isEpgFallback: true,
+        isEpgFallback: candidate.isEpgFallback,
+        onDecision: _logArtworkDecision,
       )) {
-        final normalized = normalizeImageUrl(direct!);
+        final normalized = normalizeImageUrl(candidate.url!);
         _logArtworkDecision(
-          'LiveTV artwork: hero source=epg program="${program.title}" url=$normalized',
+          'LiveTV artwork: hero source=${candidate.source} '
+          'program="${program.title}" url=$normalized',
         );
         diagHeroArtHit++;
         return normalized;
       }
+      diagHeroValidationReject++;
+    }
+
+    if (allowFetch) {
+      _artworkService.ensureFreshProgramArtwork(
+        program,
+        channel,
+        highPriority: highPriority,
+      );
     }
 
     diagHeroArtMiss++;
@@ -208,9 +147,7 @@ class LiveTvArtworkResolver {
     if (program == null) return null;
 
     final cachedUrl = _artworkService.getTitleLogoForProgram(program, channel);
-    if (_isValidTitleLogo(cachedUrl, channel)) {
-      return cachedUrl;
-    }
+    if (_isValidTitleLogo(cachedUrl, channel)) return cachedUrl;
 
     final url = program.imageUrl;
     if (url != null &&
@@ -244,31 +181,15 @@ class LiveTvArtworkResolver {
 
   String? normalizeArtworkUrl(
     String? url, {
+    ArtworkSlot? slot,
     bool isHero = false,
     double? targetWidth,
   }) =>
       LiveTvArtworkUrlGuard.normalizeArtworkUrl(
         url,
+        slot: slot,
         isHero: isHero,
         targetWidth: targetWidth,
-      );
-
-  bool isValidProgramArtwork(
-    String? url,
-    Channel channel, {
-    String? programTitle,
-    String? source,
-    bool forCard = false,
-    bool isEpgFallback = false,
-  }) =>
-      LiveTvArtworkUrlGuard.isValidProgramArtwork(
-        url,
-        channel,
-        programTitle: programTitle,
-        source: source,
-        forCard: forCard,
-        isEpgFallback: isEpgFallback,
-        onDecision: _logArtworkDecision,
       );
 
   bool _isValidTitleLogo(String? url, Channel channel) =>
