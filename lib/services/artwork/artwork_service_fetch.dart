@@ -8,12 +8,12 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
     bool highPriority = false,
   }) {
     debugLog(
-        'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=$LiveTvArtworkService._fanartEnabled sports=$LiveTvArtworkService._sportsDbEnabled tvdb=$_tvdbEnabled)');
+        'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=${LiveTvArtworkService._fanartEnabled} sports=${LiveTvArtworkService._sportsDbEnabled} tvdb=$_tvdbEnabled)');
     if (!(_tmdbEnabled || LiveTvArtworkService._fanartEnabled || LiveTvArtworkService._sportsDbEnabled || _tvdbEnabled)) {
       diagSkipServicesDisabled++;
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
-        'reason=all_services_disabled (tmdb=$_tmdbEnabled fanart=$LiveTvArtworkService._fanartEnabled sports=$LiveTvArtworkService._sportsDbEnabled tvdb=$_tvdbEnabled)',
+        'reason=all_services_disabled (tmdb=$_tmdbEnabled fanart=${LiveTvArtworkService._fanartEnabled} sports=${LiveTvArtworkService._sportsDbEnabled} tvdb=$_tvdbEnabled)',
       );
       return;
     }

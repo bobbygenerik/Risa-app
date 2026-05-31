@@ -191,28 +191,29 @@ class LiveTvChannelSection extends StatelessWidget {
         channelName: channel.epgLookupNameFallback,
         groupTitle: channel.groupTitle,
       );
+      // Only surface a channel that has a show airing right now. A null program
+      // means EPG hasn't loaded for it yet — schedule a lazy load so it can
+      // appear on a later rebuild once data arrives.
       if (program == null) {
         missingIds.add(channelId);
         missingNames.add(channel.epgLookupNameFallback);
-        final hasManyWithEpg = filteredChannels.length > 10;
-        if (isFirstRow && hasManyWithEpg) {
-          continue;
-        }
+        continue;
+      }
+      if (!program.isCurrentlyPlaying) {
+        continue;
       }
 
-      if (isFirstRow && program != null) {
-        if (program.title.isNotEmpty) {
-          final displayTitle =
-              bindings.artworkResolver.displayProgramTitle(program, channel);
-          final normalizedTitle =
-              LiveTvFormatters.normalizeTitleForFilter(displayTitle);
-          if (seenProgramKeys.contains(normalizedTitle)) {
-            debugLog(
-                'LiveTV: Filtering out duplicate program "${program.title}" from featured row');
-            continue;
-          }
-          seenProgramKeys.add(normalizedTitle);
+      if (isFirstRow && program.title.isNotEmpty) {
+        final displayTitle =
+            bindings.artworkResolver.displayProgramTitle(program, channel);
+        final normalizedTitle =
+            LiveTvFormatters.normalizeTitleForFilter(displayTitle);
+        if (seenProgramKeys.contains(normalizedTitle)) {
+          debugLog(
+              'LiveTV: Filtering out duplicate program "${program.title}" from featured row');
+          continue;
         }
+        seenProgramKeys.add(normalizedTitle);
       }
       filteredChannels.add(channel);
     }

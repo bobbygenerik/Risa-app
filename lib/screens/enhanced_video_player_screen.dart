@@ -120,6 +120,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           return KeyEventResult.ignored;
         },
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: _toggleControls,
           child: Stack(
                   children: [

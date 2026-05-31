@@ -50,6 +50,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   int _artworkDebugTick = 0;
   bool _statsInFlight = false;
   DateTime? _lastRefreshAt;
+  bool _wasEpgBusy = false;
   bool _fullScanInFlight = false;
   int _fullScanMatched = 0;
   int _fullScanTotal = 0;
@@ -76,6 +77,15 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshStats());
     WidgetsBinding.instance.addPostFrameCallback((_) => _requestInitialFocus());
+  }
+
+  void _onEpgLoadFinished() {
+    if (!mounted) return;
+    _lastChannelCount = -1;
+    _lastEpgCount = -1;
+    _refreshStats();
+    _resetPagedMatches();
+    unawaited(_loadNextMatchPage());
   }
   @override
   void dispose() {
@@ -128,6 +138,10 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                 _diagnosticEpgCount > 0 ? _diagnosticEpgCount : epgCount;
             _maybeRefreshStats(displayChannels, displayEpg, isEpgBusy,
                 channelProvider.isLoading);
+            if (_wasEpgBusy && !isEpgBusy) {
+              _onEpgLoadFinished();
+            }
+            _wasEpgBusy = isEpgBusy;
             _updatePageSignature(displayChannels, displayEpg);
             if (_pageEntries.isEmpty &&
                 !_pageLoading &&

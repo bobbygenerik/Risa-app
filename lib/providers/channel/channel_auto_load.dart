@@ -70,9 +70,20 @@ class ChannelAutoLoad {
       await deps.loadWatchCounts();
       debugLog('ChannelProvider: Auto-loading playlist...');
       await _initializeAutoLoadDatabase();
-
       final prefs = await SharedPreferences.getInstance();
+      await _migrateFlutterPrefFile(prefs);
+      await _migrateFlutterPrefKeys(prefs);
+      try {
+        final keys = prefs.getKeys().toList();
+        debugLog('ChannelProvider: PREF KEYS: $keys');
+        for (final k in keys) {
+          debugLog('ChannelProvider: PREF: $k -> ${prefs.get(k)}');
+        }
+      } catch (e) {
+        debugLog('ChannelProvider: PREF DUMP FAILED: $e');
+      }
       final playlistType = await _resolvePlaylistType(prefs);
+      debugLog('ChannelProvider: PREFS snapshot: playlist_type=${prefs.getString('playlist_type')}, m3u_url=${prefs.getString('m3u_url')}, active_playlist=${prefs.getString('active_playlist_id')}');
       if (playlistType == null) {
         await _handleNoPlaylistConfigured(prefs);
         return;
@@ -114,6 +125,84 @@ class ChannelAutoLoad {
         deps.setIsLoading(false);
         deps.notifyListeners();
       }
+    }
+  }
+
+  Future<void> _migrateFlutterPrefKeys(SharedPreferences prefs) async {
+    try {
+      // Migrate keys stored with 'flutter.' prefix into legacy unprefixed keys
+      final mappings = <String, String>{
+        'flutter.playlist_type': 'playlist_type',
+        'flutter.m3u_url': 'm3u_url',
+        'flutter.active_playlist_id': 'active_playlist_id',
+        'flutter.cached_playlist': 'cached_playlist',
+        'flutter.cached_playlist_file': 'cached_playlist_file',
+        'flutter.cache_timestamp': 'cache_timestamp',
+      };
+      for (final entry in mappings.entries) {
+        final from = entry.key;
+        final to = entry.value;
+        final val = prefs.getString(from);
+        if (val != null && prefs.getString(to) == null) {
+          await prefs.setString(to, val);
+          debugLog('ChannelProvider: Migrated pref $from -> $to');
+        }
+      }
+    } catch (e) {
+      debugLog('ChannelProvider: Pref migration failed: $e');
+    }
+  }
+
+  Future<void> _migrateFlutterPrefFile(SharedPreferences prefs) async {
+    try {
+      final already = prefs.getBool('migrated_from_flutter_prefs') ?? false;
+      if (already) return;
+
+      final home = Platform.environment['HOME'] ?? '';
+      if (home.isEmpty) return;
+      final path = '$home/.local/share/com.risa.app/shared_preferences.json';
+      final file = File(path);
+      if (!await file.exists()) return;
+      final content = await file.readAsString();
+      final Map<String, dynamic> disk = jsonDecode(content) as Map<String, dynamic>;
+
+      final mappings = <String, String>{
+        'flutter.playlist_type': 'playlist_type',
+        'flutter.m3u_url': 'm3u_url',
+        'flutter.active_playlist_id': 'active_playlist_id',
+        'flutter.cached_playlist': 'cached_playlist',
+        'flutter.cached_playlist_file': 'cached_playlist_file',
+        'flutter.cache_timestamp': 'cache_timestamp',
+        'flutter.epg_url': 'epg_url',
+        'flutter.custom_epg_url': 'custom_epg_url',
+      };
+
+      var migratedAny = false;
+      for (final e in mappings.entries) {
+        if (disk.containsKey(e.key)) {
+          final val = disk[e.key];
+          if (val is String) {
+            if (prefs.getString(e.value) == null) {
+              await prefs.setString(e.value, val);
+              debugLog('ChannelProvider: FILE MIGRATE ${e.key} -> ${e.value}');
+              migratedAny = true;
+            }
+          } else if (val is int) {
+            if (prefs.getInt(e.value) == null) {
+              await prefs.setInt(e.value, val);
+              debugLog('ChannelProvider: FILE MIGRATE ${e.key} -> ${e.value} (int)');
+              migratedAny = true;
+            }
+          }
+        }
+      }
+
+      if (migratedAny) {
+        await prefs.setBool('migrated_from_flutter_prefs', true);
+        debugLog('ChannelProvider: Pref file migration complete, guard set');
+      }
+    } catch (e) {
+      debugLog('ChannelProvider: Pref file migration failed: $e');
     }
   }
 

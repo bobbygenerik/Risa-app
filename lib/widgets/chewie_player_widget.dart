@@ -39,6 +39,10 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb && Platform.isLinux) {
+      _isInitializing = false;
+      return;
+    }
     if (_preferNativeAndroid && !_useChewieFallback) {
       _isInitializing = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,7 +85,11 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb && Platform.isLinux) {
-      return MediaKitPlayerWidget(url: widget.url, isLive: widget.isLive);
+      return MediaKitPlayerWidget(
+        url: widget.url,
+        isLive: widget.isLive,
+        onSurfaceReady: widget.onSurfaceReady,
+      );
     }
 
     if (_preferNativeAndroid && !_useChewieFallback) {
@@ -303,13 +311,23 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   }
 
   void _onVideoPlayerUpdate() {
-    if (_videoController != null &&
-        _videoController!.value.hasError &&
-        _errorMessage == null) {
+    final v = _videoController;
+    if (v == null) return;
+    if (v.value.hasError && _errorMessage == null) {
       setState(() {
-        _errorMessage =
-            _videoController!.value.errorDescription ?? 'Unknown error';
+        _errorMessage = v.value.errorDescription ?? 'Unknown error';
       });
+      return;
+    }
+    // Live streams: restart if the player stalls or reports ended
+    if (widget.isLive &&
+        v.value.isInitialized &&
+        !v.value.isPlaying &&
+        !v.value.isBuffering &&
+        !v.value.hasError &&
+        _errorMessage == null &&
+        _chewieController != null) {
+      v.play();
     }
   }
 }

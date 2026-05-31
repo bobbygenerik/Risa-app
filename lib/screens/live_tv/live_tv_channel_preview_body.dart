@@ -126,7 +126,10 @@ class LiveTvChannelPreviewBody extends StatelessWidget {
 
             final safeFeaturedIndex = resolvedIndex % displayChannels.length;
             final featuredChannel = displayChannels[safeFeaturedIndex];
-            onFeaturedChannelIdChanged(featuredChannel.epgLookupId);
+            final featuredId = featuredChannel.epgLookupId;
+            if (featuredChannelId != featuredId) {
+              onFeaturedChannelIdChanged(featuredId);
+            }
 
             final channelId = featuredChannel.epgLookupId;
             if (channelId.isNotEmpty) {

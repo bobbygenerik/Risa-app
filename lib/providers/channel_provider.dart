@@ -44,13 +44,13 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   // Debug preview capture size (unused after refactor)
 
   // Store raw channel data as maps to avoid expensive conversion on main thread
-  List<Map<String, dynamic>> _channelMaps = [];
+  final List<Map<String, dynamic>> _channelMaps = [];
   // Cache of converted Channel objects (populated on-demand)
   final Map<int, Channel> _channelCache = {};
-  Map<String, int> _channelIndexById = {};
-  Map<String, List<int>> _channelIndicesByGroup = {};
-  List<String> _channelLowerNames = [];
-  List<String> _channelLowerGroups = [];
+  final Map<String, int> _channelIndexById = {};
+  final Map<String, List<int>> _channelIndicesByGroup = {};
+  final List<String> _channelLowerNames = [];
+  final List<String> _channelLowerGroups = [];
 
   final List<Channel> _favoriteChannels = [];
   bool get isBackgroundSyncing => _isBackgroundSyncing;
@@ -228,7 +228,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   // Watch count tracking (channelId -> count)
-  Map<String, int> _watchCounts = {};
+  final Map<String, int> _watchCounts = {};
   int _channelCountDb = 0;
 
   /// Get specific channel by index

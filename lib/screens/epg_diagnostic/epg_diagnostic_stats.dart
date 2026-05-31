@@ -1,14 +1,14 @@
 part of '../epg_diagnostic_screen.dart';
 
 extension EpgDiagnosticStats on _EpgDiagnosticScreenState {
-  void _refreshStats() {
+  void _refreshStats({bool allowWhileEpgBusy = false}) {
     if (_statsInFlight) return;
     final epgService = context.read<IncrementalEpgService>();
     final channelProvider = context.read<ChannelProvider>();
     final isEpgBusy = epgService.isDownloading ||
         epgService.isParsing ||
         epgService.isLoading;
-    if (isEpgBusy || channelProvider.isLoading) {
+    if (!allowWhileEpgBusy && (isEpgBusy || channelProvider.isLoading)) {
       return;
     }
     final now = DateTime.now();

@@ -28,12 +28,17 @@ extension IncrementalEpgServiceRuntime on IncrementalEpgService {
     }
   }
 
-  /// Reset all loading states to ensure clean state
-  void _resetLoadingState() {
+  /// Clears in-flight flags without wiping progress (successful load finish).
+  void _clearLoadingFlags() {
     _isLoading = false;
     _isDownloading = false;
     _isParsing = false;
     _stopParseProgressTimer();
+  }
+
+  /// Reset all loading states to ensure clean state
+  void _resetLoadingState() {
+    _clearLoadingFlags();
     _epgProgress = 0.0;
     _epgProgressLabel = '';
     _channelBatchLoader.clearAttemptedLoads();
@@ -143,6 +148,7 @@ extension IncrementalEpgServiceRuntime on IncrementalEpgService {
     _playlistIdentity = next;
     _manualMappingsStore.setPlaylistIdentity(next);
     _normalizedMappingStore.setPlaylistIdentity(next);
+    _displayNamesStore.setPlaylistIdentity(next);
     _manualMappingsStore.clear();
     unawaited(() async {
       final prefs = await SharedPreferences.getInstance();
@@ -165,5 +171,13 @@ extension IncrementalEpgServiceRuntime on IncrementalEpgService {
     if (result.migratedFromLegacy) {
       await _normalizedMappingStore.save(_normalizedAvailableChannels);
     }
+  }
+
+  Future<void> _hydrateFuzzyMatchIndexFromDisk() async {
+    final displayNames = await _displayNamesStore.load();
+    if (displayNames != null && displayNames.isNotEmpty) {
+      _channelMatcher.setDisplayNames(displayNames);
+    }
+    _channelMatcher.rebuildFuzzyCandidates();
   }
 }

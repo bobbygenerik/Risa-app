@@ -82,3 +82,6 @@ tmp/**
 **/intermediates/
 **/.idea/
 **/tmp/tivimate_jadx/
+
+# Artwork provider API keys (build-time secrets) — never commit
+dart_defines.json

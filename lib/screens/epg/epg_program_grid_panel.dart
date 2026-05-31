@@ -95,9 +95,9 @@ class EpgProgramGridPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugLog(
-        'EPG Grid: isLoading=${epgService.isLoading}, availableChannels=${epgService.availableChannels.length}, loadedChannels=${epgService.loadedChannelCount}');
+        'EPG Grid: bootstrapBusy=${epgService.isGuideBootstrapBusy}, availableChannels=${epgService.availableChannels.length}, loadedChannels=${epgService.loadedChannelCount}');
 
-    final bool isLoading = epgService.isLoading;
+    final bool showLoadingOverlay = epgService.isGuideBootstrapBusy;
     final preloadCount = math.min(12, channels.length);
     if (preloadCount > 0) {
       final channelIds = <String>[];
@@ -117,7 +117,7 @@ class EpgProgramGridPanel extends StatelessWidget {
       children: [
         Column(
           children: [
-            if (epgService.availableChannels.isEmpty && !isLoading)
+            if (epgService.availableChannels.isEmpty && !showLoadingOverlay)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -173,7 +173,7 @@ class EpgProgramGridPanel extends StatelessWidget {
             ),
           ],
         ),
-        if (isLoading)
+        if (showLoadingOverlay)
           Container(
             color: Colors.black54,
             child: const Center(

@@ -21,6 +21,7 @@ import 'package:iptv_player/widgets/safe_pop_scope.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/hash_utils.dart';
 import 'package:iptv_player/services/xtream_credential_store.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 
 part 'playlist_manager/playlist_manager_logic.dart';
 part 'playlist_manager/playlist_manager_ui.dart';
@@ -74,6 +75,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         return false;
       },
       child: SettingsLayout(
+        headerTitle: 'Playlists',
         categories: _categories,
         selectedIndex: _selectedCategoryIndex,
         onCategorySelected: (index) {
@@ -83,7 +85,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         },
         content: _buildSettingsContent(),
         onBackToHome: () {
-          context.go('/settings');
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/settings');
+          }
         },
         onRequestContentFocus: () {
           if (_playlistFocusNodes.isNotEmpty) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/clipboard_paste.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';

@@ -1,0 +1,7 @@
+{
+  "TMDB_API_KEY": "your_tmdb_key_here",
+  "TVDB_API_KEY": "your_tvdb_key_here",
+  "OMDB_API_KEY": "your_omdb_key_here",
+  "FANART_API_KEY": "your_fanart_key_here",
+  "THESPORTSDB_API_KEY": "3"
+}

@@ -16,7 +16,7 @@ extension LiveTvArtworkServiceValidation on LiveTvArtworkService {
   }) {
     if (url == null || url.isEmpty) return false;
     final blockedHost = _blockedProgramArtworkHost(url);
-    if (blockedHost != null) {
+    if (blockedHost != null && !isEpgFallback) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_blocked_host host=$blockedHost',
       );

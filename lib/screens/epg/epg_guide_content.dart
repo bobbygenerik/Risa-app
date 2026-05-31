@@ -162,7 +162,7 @@ class EpgGuideContent extends StatelessWidget {
             right: 0,
             child: EpgGuideHeader(
               selectedDate: selectedDate,
-              isLoading: epgService.isLoading,
+              isLoading: epgService.isGuideBootstrapBusy,
               refreshAnimation: refreshAnimation,
               refreshButtonFocus: refreshButtonFocus,
               firstProgramFocus: firstProgramFocus,

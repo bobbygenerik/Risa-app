@@ -53,10 +53,12 @@ Widget _buildTVFriendlyTextField({
         controller: controller,
         readOnly: !isEditable,
         obscureText: obscureText,
-        enableInteractiveSelection: false,
-        selectionControls: NoTextSelectionControls(),
-        showCursor: false,
-        cursorColor: Colors.transparent,
+        enableInteractiveSelection:
+            !context.isTV && isEditable,
+        selectionControls: context.isTV ? NoTextSelectionControls() : null,
+        showCursor: !context.isTV && isEditable,
+        cursorColor:
+            context.isTV ? Colors.transparent : AppTheme.primaryBlue,
         onTap: () {
           final text = controller.text;
           controller.selection = TextSelection.collapsed(offset: text.length);

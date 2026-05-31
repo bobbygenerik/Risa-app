@@ -114,14 +114,39 @@ extension EpgDiagnosticEpgTab on _EpgDiagnosticScreenState {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  if (isEpgBusy)
+                  if (isEpgBusy) ...[
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        'EPG: ${_formatEpgStatus(epgService)}',
-                        style: const TextStyle(color: Colors.white70),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'EPG: ${_formatEpgStatus(epgService)}',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: epgService.epgProgress > 0.02
+                                ? epgService.epgProgress
+                                : null,
+                            color: AppTheme.primaryBlue,
+                            backgroundColor: Colors.white12,
+                            minHeight: 6,
+                          ),
+                          if (epgService.epgProgress > 0.02) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${(epgService.epgProgress * 100).round()}% complete',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
+                  ],
                   if (epgService.error != null) ...[
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -155,6 +180,18 @@ extension EpgDiagnosticEpgTab on _EpgDiagnosticScreenState {
                         );
                       }
                       if (!snapshot.hasData) {
+                        if (isEpgBusy) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'Match stats will update when EPG loading finishes.',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        }
                         return const Padding(
                           padding: EdgeInsets.only(top: 8.0),
                           child: Center(

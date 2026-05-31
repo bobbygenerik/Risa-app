@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:iptv_player/l10n/gen/app_localizations.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,8 +61,10 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
+import 'package:iptv_player/services/sqlite_platform_init.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_cache_config.dart';
+import 'package:iptv_player/utils/linux_keyboard_workarounds.dart';
 import 'package:iptv_player/services/clock_service.dart';
 
 part 'app/app_startup.dart';
@@ -81,9 +84,13 @@ void main() {
       // the guarded zone can cause a "bindings initialized in a
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
+      installLinuxKeyboardWorkarounds();
       StartupProbe.mark('Flutter bindings initialized');
+      MediaKit.ensureInitialized();
+      StartupProbe.mark('MediaKit initialized');
+      initializeSqliteForPlatform();
+      StartupProbe.mark('SQLite platform initialized');
       unawaited(CrashLogger.instance.init());
-
 
       // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
@@ -95,11 +102,13 @@ void main() {
       if (memoryInfo.isLowMemory) {
         // Balanced cache for Shield/low-memory devices
         PaintingBinding.instance.imageCache.maximumSize = 80;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            100 << 20; // 100MB
         StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
       } else {
         PaintingBinding.instance.imageCache.maximumSize = 150;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20; // 200MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            200 << 20; // 200MB
         StartupProbe.mark('Image cache limits configured (NORMAL)');
       }
 
@@ -212,6 +221,7 @@ class _MyAppState extends State<MyApp> {
     StartupProbe.mark('MyAppState initState');
     _initialize();
   }
+
   @override
   Widget build(BuildContext context) {
     // Loading screen removed to show skeleton loaders immediately

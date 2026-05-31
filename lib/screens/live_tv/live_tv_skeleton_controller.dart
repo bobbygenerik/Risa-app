@@ -24,8 +24,14 @@ class LiveTvSkeletonController {
   static const Duration stuckThreshold = Duration(seconds: 35);
   static const Duration watchInterval = Duration(seconds: 3);
 
+  /// Survives Live TV remounts when shell routes swap children.
+  static bool sessionHasShownContent = false;
+
   bool isVisible = false;
   bool hasShownContent = false;
+
+  bool get hasShownContentEver =>
+      hasShownContent || sessionHasShownContent;
   bool recoveryInFlight = false;
   DateTime? shownAt;
   DateTime? lastRecoveryAttempt;
@@ -40,6 +46,7 @@ class LiveTvSkeletonController {
       return;
     }
     hasShownContent = true;
+    sessionHasShownContent = true;
     shownAt = null;
     recoveryInFlight = false;
     _stopWatchdog();

@@ -36,13 +36,19 @@ class EpgChannelListLoader {
     if (!_deps.hasEpgUrl()) return;
 
     if (_deps.isLoading() || _deps.isDownloading() || _deps.isParsing()) {
-      debugLog('EPG: Load already in progress, skipping concurrent request.');
-      return;
+      if (!forceRefresh) {
+        debugLog('EPG: Load already in progress, skipping concurrent request.');
+        return;
+      }
+      debugLog('EPG: Force refresh interrupting in-flight load.');
+      _deps.resetLoadingState();
+      _deps.notifyListeners();
     }
 
     final loadStart = DateTime.now();
     _deps.setLoading(true);
     _deps.setError(null);
+    _deps.setEpgProgress(0.02, label: 'Loading EPG');
     _deps.notifyListeners();
     _deps.resetMatchDiagnostics();
 
@@ -100,7 +106,7 @@ class EpgChannelListLoader {
               addAvailableChannels: _deps.addAvailableChannels,
               clearInternalMapping: _deps.clearInternalMapping,
               rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
-              rebuildFuzzyCandidates: _deps.rebuildFuzzyCandidates,
+              hydrateFuzzyMatchIndexFromDisk: _deps.hydrateFuzzyMatchIndexFromDisk,
               epgIdsRawCount: _deps.epgIdsRawCount,
             );
 
@@ -127,6 +133,7 @@ class EpgChannelListLoader {
               if (deferRefresh) {
                 unawaited(_deps.refreshFromNetwork());
               }
+              _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
               return;
             }
 
@@ -156,6 +163,7 @@ class EpgChannelListLoader {
           mappingCount: _deps.dbMappingCount,
           addAvailableChannels: _deps.addAvailableChannels,
           rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
+          hydrateFuzzyMatchIndexFromDisk: _deps.hydrateFuzzyMatchIndexFromDisk,
         );
         if (skippedParse) {
           _deps.setHasParsed(true);
@@ -165,6 +173,7 @@ class EpgChannelListLoader {
           _deps.notifyListeners();
           debugLog(
               'EPG: EPG channel ids count (mapping-only): ${_deps.availableChannelCount()}');
+          _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
           return;
         }
 
@@ -205,10 +214,13 @@ class EpgChannelListLoader {
           final now = DateTime.now();
           final windowStart = dayOnly
               ? DateTime(now.year, now.month, now.day)
+                  .subtract(Duration(hours: epgPastWindowHours))
               : now.subtract(Duration(hours: epgPastWindowHours));
+          // dayOnly covers today + tomorrow so the cached window always spans
+          // more than 24h ahead of `now` and never ages out mid-evening.
           final windowEnd = dayOnly
               ? DateTime(now.year, now.month, now.day)
-                  .add(const Duration(days: 1))
+                  .add(const Duration(days: 2))
               : now.add(Duration(hours: futureHours));
 
           return compute(parseEpgInIsolate, {
@@ -354,6 +366,7 @@ class EpgChannelListLoader {
         _deps.clearInternalMapping();
 
         await _deps.saveNormalizedMappingToPrefs(_deps.getNormalizedChannels());
+        await _deps.saveDisplayNamesToPrefs(displayNamesById);
         await _deps.backupCacheFile();
 
         debugLog(
@@ -384,6 +397,7 @@ class EpgChannelListLoader {
         _deps.scheduleEpgWindowExtension(
           fromBackgroundRefresh: fromBackgroundRefresh,
         );
+        _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
         break;
       } catch (e, stack) {
         retryCount++;
@@ -409,7 +423,7 @@ class EpgChannelListLoader {
       }
     }
 
-    _deps.resetLoadingState();
+    _deps.clearLoadingFlags();
     _deps.notifyListeners();
   }
 }

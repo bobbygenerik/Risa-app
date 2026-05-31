@@ -67,17 +67,22 @@ class EpgServiceInit {
       debugLog('EPG: Progressive init skipped (already loading or in flight)');
       return;
     }
-    if (!forceRefresh &&
-        (_deps.hasLoadedPrograms() || _deps.hasParsed() || _deps.isParsing())) {
+    // Only skip when the full guide has actually been parsed (or is parsing).
+    // A handful of DB-cached programs from lazy per-channel loads in a prior
+    // session must NOT short-circuit the full parse — otherwise the channel
+    // index never populates and most channels fail epgId resolution.
+    if (!forceRefresh && (_deps.hasParsed() || _deps.isParsing())) {
       debugLog(
           'EPG: Progressive init skipped (hasParsed=${_deps.hasParsed()}, hasPrograms=${_deps.hasLoadedPrograms()}, isParsing=${_deps.isParsing()}, channels=${_deps.programsByChannelKeyCount()})');
       return;
     }
     if (forceRefresh && _lastForceRefreshRequested != null) {
       final since = DateTime.now().difference(_lastForceRefreshRequested!);
-      if (since < _forceRefreshCooldown && _deps.hasLoadedPrograms()) {
+      if (since < _forceRefreshCooldown &&
+          _deps.hasLoadedPrograms() &&
+          _deps.hasParsed()) {
         debugLog(
-            'EPG: Force refresh skipped (cooldown ${since.inMinutes}m, programs loaded)');
+            'EPG: Force refresh skipped (cooldown ${since.inSeconds}s, programs loaded)');
         return;
       }
     }
@@ -120,6 +125,11 @@ class EpgServiceInit {
       }
       epgUrl = epgUrl?.trim();
       _deps.setEpgUrl(epgUrl);
+
+      final secondaryRaw = prefs.getString('secondary_epg_url')?.trim();
+      _deps.setSecondaryEpgUrl(
+        secondaryRaw != null && secondaryRaw.isNotEmpty ? secondaryRaw : null,
+      );
 
       if (epgUrl != null && epgUrl.isNotEmpty) {
         final normalized = EpgFileCache.normalizeEpgUrl(epgUrl);
@@ -289,6 +299,15 @@ class EpgServiceInit {
           _deps.normalizedMapFileName) {
         final legacy = File('${dir.path}/${_deps.normalizedMapFileName}');
         if (await legacy.exists()) await legacy.delete();
+      }
+      final displayFile =
+          File('${dir.path}/${_deps.displayNamesMapFileNameForPlaylist()}');
+      if (await displayFile.exists()) await displayFile.delete();
+      if (_deps.displayNamesMapFileNameForPlaylist() !=
+          _deps.displayNamesMapFileName) {
+        final legacyDisplay =
+            File('${dir.path}/${_deps.displayNamesMapFileName}');
+        if (await legacyDisplay.exists()) await legacyDisplay.delete();
       }
     } catch (e) {
       debugLog('EPG: Failed to delete normalized mapping file: $e');

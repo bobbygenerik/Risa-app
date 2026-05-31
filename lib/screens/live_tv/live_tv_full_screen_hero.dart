@@ -86,6 +86,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
     final rightInset = context.spacingLg();
     final activeChannel = selection.activeChannel;
     final currentProgram = selection.program;
+    final showHeroChrome = selection.hasArtwork;
     final navProvider =
         context.dependOnInheritedWidgetOfExactType<ContentFocusProvider>();
     final hideHeroChrome =
@@ -302,7 +303,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut,
-              opacity: hideHeroChrome ? 0.0 : 1.0,
+              opacity: hideHeroChrome || !showHeroChrome ? 0.0 : 1.0,
               child: AnimatedBuilder(
                 animation: scrollController,
                 builder: (context, _) {
@@ -374,7 +375,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut,
-              opacity: hideHeroChrome ? 0.0 : 1.0,
+              opacity: hideHeroChrome || !showHeroChrome ? 0.0 : 1.0,
               child: Builder(builder: (context) {
                 final fadeProgress =
                     (_scrollOffset() / (heroHeight * 0.5)).clamp(0.0, 1.0);

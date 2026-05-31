@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 
@@ -42,12 +43,15 @@ class BrandTextField extends StatelessWidget {
       builder: (context) {
         final isFocused =
             isFocusedOverride ?? (Focus.maybeOf(context)?.hasFocus ?? false);
+        final isDesktopInput = !context.isTV;
         final borderRadius = BorderRadius.circular(12);
         final theme = Theme.of(context);
-        final selectionTheme = theme.textSelectionTheme.copyWith(
-          selectionColor: Colors.transparent,
-          selectionHandleColor: Colors.transparent,
-        );
+        final selectionTheme = isDesktopInput
+            ? theme.textSelectionTheme
+            : theme.textSelectionTheme.copyWith(
+                selectionColor: Colors.transparent,
+                selectionHandleColor: Colors.transparent,
+              );
         return Container(
           decoration: isFocused
               ? BoxDecoration(
@@ -73,8 +77,11 @@ class BrandTextField extends StatelessWidget {
                 onTap?.call();
               },
               readOnly: readOnly,
-              showCursor: false,
-              cursorColor: Colors.transparent,
+              enableInteractiveSelection: isDesktopInput && !readOnly,
+              selectionControls:
+                  isDesktopInput ? null : NoTextSelectionControls(),
+              showCursor: isDesktopInput && !readOnly,
+              cursorColor: isDesktopInput ? AppTheme.primaryBlue : Colors.transparent,
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: context.tvTextSize(14),

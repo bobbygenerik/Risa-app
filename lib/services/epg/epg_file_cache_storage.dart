@@ -20,6 +20,7 @@ extension EpgFileCacheStorage on EpgFileCache {
         debugLog('EPG: cache file purge failed: $e');
       }
     }
+    await purgeSecondaryCacheFiles();
   }
 
   Future<void> restoreCacheFromBackupIfMissing() async {

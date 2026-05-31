@@ -20,6 +20,7 @@ class EpgServiceInitDeps {
     required this.setCacheDuration,
     required this.setEpgUrl,
     required this.epgUrl,
+    required this.setSecondaryEpgUrl,
     required this.setError,
     required this.resetLoadingState,
     required this.notifyListeners,
@@ -53,6 +54,8 @@ class EpgServiceInitDeps {
     required this.purgeCacheFiles,
     required this.normalizedMapFileNameForPlaylist,
     required this.normalizedMapFileName,
+    required this.displayNamesMapFileNameForPlaylist,
+    required this.displayNamesMapFileName,
     required this.manualMappingsStorageKey,
     required this.manualMappingsKey,
     required this.epgCacheTimeKey,
@@ -76,6 +79,7 @@ class EpgServiceInitDeps {
   final void Function(Duration duration) setCacheDuration;
   final void Function(String? url) setEpgUrl;
   final String? Function() epgUrl;
+  final void Function(String? url) setSecondaryEpgUrl;
   final void Function(String? value) setError;
   final void Function() resetLoadingState;
   final void Function() notifyListeners;
@@ -120,6 +124,8 @@ class EpgServiceInitDeps {
   final Future<void> Function() purgeCacheFiles;
   final String Function() normalizedMapFileNameForPlaylist;
   final String normalizedMapFileName;
+  final String Function() displayNamesMapFileNameForPlaylist;
+  final String displayNamesMapFileName;
   final String Function() manualMappingsStorageKey;
   final String manualMappingsKey;
   final String epgCacheTimeKey;

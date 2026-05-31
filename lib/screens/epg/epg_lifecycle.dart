@@ -25,6 +25,11 @@ class EpgLifecycle {
           prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
 
       if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+        if (epgService.hasLoadedPrograms) {
+          debugLog(
+              'EPG Screen: Programs already loaded - skipping guide init');
+          return;
+        }
         debugLog('EPG Screen: Found EPG URL - initializing service');
         final loadedCount = epgService.loadedProgramChannelCount;
         final availableCount = epgService.availableChannels.length;

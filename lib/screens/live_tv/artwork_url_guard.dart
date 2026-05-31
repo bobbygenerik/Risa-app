@@ -15,6 +15,21 @@ class LiveTvArtworkUrlGuard {
     'ngiss.t-online.de',
   };
 
+  /// Hosts that only ever serve channel/title logos. Program art from these is
+  /// the channel's own logo (or a sibling logo) and must not be layered over
+  /// the logo fallback — that produces the doubled-logo artifact on cards.
+  static const Set<String> logoOnlyHosts = {
+    'logo.m3uassets.com',
+  };
+
+  static bool isLogoOnlyHost(String url) {
+    try {
+      return logoOnlyHosts.contains(Uri.parse(url).host.toLowerCase());
+    } catch (_) {
+      return false;
+    }
+  }
+
   static const _heroPolicy = HeroArtworkPolicy();
   static const _cardPolicy = CardArtworkPolicy();
 

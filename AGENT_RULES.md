@@ -4,6 +4,13 @@
 
 This document outlines the core principles, goals, and operational protocols for building the Risa-app.
 
+## 0. Caveman Protocol
+* Keep replies short.
+* Prefer action over explanation.
+* Use brief progress updates.
+* Final answers: changed files, verification, blockers.
+* Expand only if asked or needed for safety.
+
 ## 1. Project Vision
 *   **Goal**: Build an industry-leading IPTV application.
 *   **Benchmark**: The app must rival major streaming platforms like **Disney+, Netflix, and HBO Max** in terms of quality, feel, and performance.

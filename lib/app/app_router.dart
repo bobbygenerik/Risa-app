@@ -145,8 +145,7 @@ final _router = GoRouter(
       path: '/player',
       pageBuilder: (context, state) {
         final data = state.extra;
-        String videoUrl =
-            'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
+        String? videoUrl;
         String title = 'Video';
         String? subtitle;
         String? streamUrl;

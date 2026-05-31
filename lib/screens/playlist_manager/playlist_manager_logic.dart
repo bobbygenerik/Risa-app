@@ -391,6 +391,41 @@ extension PlaylistManagerLogic on _PlaylistManagerScreenState {
     }
   }
 
+  Future<void> _reloadActivePlaylist(SavedPlaylist playlist) async {
+    setState(() => _isLoading = true);
+    try {
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
+      await channelProvider.loadPlaylistFromUrl(playlist.url);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      SnackbarUtils.showSuccess(
+        context,
+        'Reloaded "${playlist.name}" (${channelProvider.channelCount} channels)',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      SnackbarUtils.showError(context, 'Failed to reload playlist: $e');
+    }
+  }
+
+  Future<void> _forceRefreshEpg() async {
+    try {
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
+      SnackbarUtils.show(context, 'Refreshing EPG...');
+      await epgService.forceRefresh();
+      if (!mounted) return;
+      SnackbarUtils.showSuccess(context, 'EPG refresh started');
+    } catch (e) {
+      if (!mounted) return;
+      SnackbarUtils.showError(context, 'EPG refresh failed: $e');
+    }
+  }
+
   Future<void> _editPlaylist(SavedPlaylist playlist) async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(

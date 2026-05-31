@@ -188,6 +188,12 @@ class ChannelPlaylistPersistence {
       final duration = DateTime.now().difference(start);
       debugLog(
           'ChannelProvider: Deferred DB insert completed in ${duration.inMilliseconds}ms');
+      try {
+        final count = await db.channelCount();
+        debugLog('ChannelProvider: DB channel count after insert: $count');
+      } catch (e) {
+        debugLog('ChannelProvider: DB channel count query failed: $e');
+      }
     } catch (e) {
       debugLog('ChannelProvider: Deferred DB insert failed: $e');
       deps.handleDbError(e);

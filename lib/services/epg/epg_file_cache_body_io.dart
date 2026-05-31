@@ -35,7 +35,7 @@ Future<String?> _writeEpgResponseToFile({
   required File file,
   required String epgUrl,
   required int contentLength,
-  required void Function(double progress) onProgress,
+  required void Function(double progress, {String? label}) onProgress,
 }) async {
   final encHeader =
       response.headers.value('content-encoding')?.toLowerCase() ?? '';
@@ -120,11 +120,22 @@ Future<String?> _writeEpgResponseToFile({
         }
 
         received += data.length;
+        final mb = received / (1024 * 1024);
         if (contentLength > 0 &&
             !isGzipHeader &&
             !isGzipExt &&
             !isDeflateHeader) {
-          onProgress(0.05 + (0.25 * (received / contentLength).clamp(0.0, 1.0)));
+          onProgress(
+            0.05 + (0.25 * (received / contentLength).clamp(0.0, 1.0)),
+            label: 'Downloading EPG (${mb.toStringAsFixed(1)} MB)',
+          );
+        } else if (received > 0) {
+          // Gzip/chunked responses often omit Content-Length; show bytes received.
+          final pseudo = (mb / 40).clamp(0.0, 0.24);
+          onProgress(
+            0.05 + pseudo,
+            label: 'Downloading EPG (${mb.toStringAsFixed(1)} MB)',
+          );
         }
       } catch (e) {
         debugLog('EPG: Stream chunk handling error: $e');

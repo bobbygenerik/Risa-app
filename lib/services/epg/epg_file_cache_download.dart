@@ -133,7 +133,7 @@ extension EpgFileCacheDownload on EpgFileCache {
         file: file,
         epgUrl: epgUrl,
         contentLength: response.contentLength,
-        onProgress: (p) => onProgress(p),
+        onProgress: onProgress,
       );
       if (streamError != null) {
         setError(streamError);

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 part 'epg_file_cache_body_io.dart';
 part 'epg_file_cache_storage.dart';
 part 'epg_file_cache_download.dart';
+part 'epg_file_cache_secondary.dart';
 
 /// On-disk EPG XML cache: download, gzip storage, backup, and validity.
 class EpgFileCache {

@@ -13,12 +13,14 @@ import 'package:iptv_player/services/epg/epg_manual_mapping_facade.dart';
 import 'package:iptv_player/services/epg/epg_manual_mapping_facade_deps.dart';
 import 'package:iptv_player/services/epg/epg_manual_mappings_store.dart';
 import 'package:iptv_player/services/epg/epg_normalize_cache.dart';
+import 'package:iptv_player/services/epg/epg_display_names_store.dart';
 import 'package:iptv_player/services/epg/epg_normalized_mapping_store.dart';
 import 'package:iptv_player/services/epg/epg_public_api.dart';
 import 'package:iptv_player/services/epg/epg_refresh_coordinator.dart';
 import 'package:iptv_player/services/epg/epg_program_db_loader.dart';
 import 'package:iptv_player/services/epg/epg_program_ingest.dart';
 import 'package:iptv_player/services/epg/epg_program_query.dart';
+import 'package:iptv_player/services/epg/epg_secondary_loader.dart';
 import 'package:iptv_player/services/epg/epg_service_init.dart';
 import 'package:iptv_player/services/epg/epg_service_init_deps.dart';
 import 'package:iptv_player/services/local_db_service.dart';
@@ -49,6 +51,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool _externalDbBusy = false;
   String? _error;
   String? _epgUrl;
+  String? _secondaryEpgUrl;
   bool _hasParsed = false;
   bool _initInFlight = false;
   bool _refreshInFlight = false;
@@ -60,18 +63,29 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   int _lastParseDurationMs = 60000;
   Timer? _parseProgressTimer;
   DateTime? _lastDownloadTime; // Track when last download completed
+  DateTime? _lastSecondaryDownloadTime;
+  bool _secondaryMergeInFlight = false;
   Set<String> _allowedChannelIdsNormalized = {};
   int _allowedChannelCount = 0;
-  int _epgFutureHours = 12;
-  // Reduced window for faster cold starts while keeping timezone buffer.
-  static const int _initialFutureHours = 6;
-  // 8-hour window covers global timezones (UTC-12 to UTC+14) for 6-hour viewing window
-  static const int _fullFutureHours = 8;
-  // Reduced past/future windows for faster parsing
-  static const int _epgPastWindowHours = 2;
-  static const int _epgFutureWindowHours = 8;
+  int _epgFutureHours = _initialFutureHours;
+  // Wide window so a single parse covers more than a full day; the cached
+  // window no longer ages out before the next download/parse cycle. Initial
+  // equals full so the legacy window-extension re-parse stays a no-op — the
+  // freshness timer handles staleness instead.
+  static const int _initialFutureHours = 36;
+  static const int _fullFutureHours = 36;
+  // Past/future windows kept on disk so DB reads (which re-slice with a fresh
+  // `now`) keep finding the current program well past parse time.
+  static const int _epgPastWindowHours = 6;
+  static const int _epgFutureWindowHours = 36;
   bool _extendedWindowScheduled = false;
   bool _extendingWindow = false;
+  // Freshness tracking so the cached EPG window is re-sliced after a day
+  // rollover or long idle, keeping "current program" resolution accurate.
+  DateTime? _lastInitCompletedAt;
+  Timer? _freshnessTimer;
+  static const Duration _freshnessCheckInterval = Duration(minutes: 15);
+  static const Duration _freshnessMaxAge = Duration(hours: 6);
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
   Map<String, int> _catchupHoursByNormalizedId = {};
   String? _xtreamServer;
@@ -158,12 +172,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   late final EpgChannelBatchLoader _channelBatchLoader;
   late final EpgChannelListLoader _channelListLoader;
   late final EpgRefreshCoordinator _refreshCoordinator;
+  late final EpgSecondaryLoader _secondaryLoader;
   late final EpgServiceInit _serviceInit;
   late final EpgPublicApi _publicApi;
   final EpgManualMappingsStore _manualMappingsStore =
       EpgManualMappingsStore(db: LocalDbService.instance);
   final EpgNormalizedMappingStore _normalizedMappingStore =
       EpgNormalizedMappingStore();
+  final EpgDisplayNamesStore _displayNamesStore = EpgDisplayNamesStore();
   String? _playlistIdentity;
   EpgManualMappingFacade? _manualMappingFacade;
 
@@ -254,8 +270,37 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _availableChannels.isNotEmpty;
   }
 
-  Future<void> initialize({bool forceRefresh = false}) =>
-      _serviceInit.initialize(forceRefresh: forceRefresh);
+  Future<void> initialize({bool forceRefresh = false}) async {
+    await _serviceInit.initialize(forceRefresh: forceRefresh);
+    _lastInitCompletedAt = DateTime.now();
+    _startFreshnessTimer();
+  }
+
+  void _startFreshnessTimer() {
+    _freshnessTimer ??=
+        Timer.periodic(_freshnessCheckInterval, (_) => _maybeRefreshForFreshness());
+  }
+
+  /// Re-slice the cached EPG window after a day rollover or long idle so the
+  /// current program stays accurate without a full network re-download. A DB
+  /// reload recomputes its window from a fresh `now`, so this is cheap unless
+  /// the on-disk cache itself has expired.
+  void _maybeRefreshForFreshness() {
+    if (_disposed) return;
+    final last = _lastInitCompletedAt;
+    if (last == null) return;
+    if (_initInFlight || _isLoading || _isDownloading || _isParsing) return;
+    if (_playbackActive) return;
+    final now = DateTime.now();
+    final dayChanged = now.day != last.day ||
+        now.month != last.month ||
+        now.year != last.year;
+    final tooOld = now.difference(last) >= _freshnessMaxAge;
+    if (!dayChanged && !tooOld) return;
+    debugLog(
+        'EPG: Freshness refresh (dayChanged=$dayChanged tooOld=$tooOld, lastInit=$last)');
+    unawaited(initialize(forceRefresh: false));
+  }
 
   Future<void> clearAllData(
       {bool clearUrls = true, bool clearSavedPlaylists = true}) =>
@@ -298,12 +343,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   void _logMatchDiagnostics({String context = 'EPG'}) {}
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      _mappingFacade.didChangeAppLifecycleState(state);
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _mappingFacade.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _maybeRefreshForFreshness();
+    }
+  }
 
   @override
   void dispose() {
     _disposed = true;
+    _freshnessTimer?.cancel();
+    _freshnessTimer = null;
     _mappingFacade.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

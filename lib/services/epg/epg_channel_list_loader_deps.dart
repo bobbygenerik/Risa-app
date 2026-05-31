@@ -28,7 +28,9 @@ class EpgChannelListLoaderDeps {
     required this.getNormalizedChannels,
     required this.setNormalizedChannels,
     required this.loadNormalizedMappingFromPrefs,
+    required this.hydrateFuzzyMatchIndexFromDisk,
     required this.saveNormalizedMappingToPrefs,
+    required this.saveDisplayNamesToPrefs,
     required this.normalize,
     required this.clearProgramsByChannel,
     required this.invalidateProgramIndexCache,
@@ -54,6 +56,7 @@ class EpgChannelListLoaderDeps {
     required this.enableMatchingDiagnostics,
     required this.dbMappingCount,
     required this.resetLoadingState,
+    required this.clearLoadingFlags,
     required this.getEpgChannelHashes,
     required this.startParseProgressTimer,
     required this.stopParseProgressTimer,
@@ -68,6 +71,7 @@ class EpgChannelListLoaderDeps {
     required this.persistProgramsToDb,
     required this.refreshFromNetwork,
     required this.scheduleEpgWindowExtension,
+    required this.scheduleSecondaryMerge,
   });
 
   final bool Function() hasEpgUrl;
@@ -96,8 +100,11 @@ class EpgChannelListLoaderDeps {
   final Map<String, List<String>>? Function() getNormalizedChannels;
   final void Function(Map<String, List<String>>? value) setNormalizedChannels;
   final Future<void> Function() loadNormalizedMappingFromPrefs;
+  final Future<void> Function() hydrateFuzzyMatchIndexFromDisk;
   final Future<void> Function(Map<String, List<String>>? mapping)
       saveNormalizedMappingToPrefs;
+  final Future<void> Function(Map<String, List<String>>? displayNames)
+      saveDisplayNamesToPrefs;
   final String Function(String text) normalize;
   final void Function() clearProgramsByChannel;
   final void Function() invalidateProgramIndexCache;
@@ -124,6 +131,7 @@ class EpgChannelListLoaderDeps {
   final bool Function() enableMatchingDiagnostics;
   final Future<int> Function() dbMappingCount;
   final void Function() resetLoadingState;
+  final void Function() clearLoadingFlags;
   final Future<Map<String, String>> Function() getEpgChannelHashes;
   final void Function() startParseProgressTimer;
   final void Function() stopParseProgressTimer;
@@ -147,4 +155,5 @@ class EpgChannelListLoaderDeps {
   final Future<void> Function() refreshFromNetwork;
   final void Function({required bool fromBackgroundRefresh})
       scheduleEpgWindowExtension;
+  final void Function({bool forceRefresh}) scheduleSecondaryMerge;
 }

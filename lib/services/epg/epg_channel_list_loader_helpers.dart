@@ -41,7 +41,7 @@ Future<EpgDbLoadOutcome> tryLoadProgramsFromDb({
   required void Function(Iterable<String> ids) addAvailableChannels,
   required void Function() clearInternalMapping,
   required void Function() rebuildEpgIdIndex,
-  required void Function() rebuildFuzzyCandidates,
+  required Future<void> Function() hydrateFuzzyMatchIndexFromDisk,
   required int Function() epgIdsRawCount,
 }) async {
   if (forceRefresh || dbDisabled || skipDbLoad || !dbReady) {
@@ -130,7 +130,7 @@ Future<EpgDbLoadOutcome> tryLoadProgramsFromDb({
           'EPG: Diagnostics - dbChannels=$loadedChannels rawIds=${epgIdsRawCount()}');
     }
 
-    rebuildFuzzyCandidates();
+    await hydrateFuzzyMatchIndexFromDisk();
 
     if (epgCacheTooSmall(
       loadedChannels: loadedChannels,
@@ -162,6 +162,7 @@ Future<bool> trySkipXmlParseWithMappings({
   required Future<int> Function() mappingCount,
   required void Function(Iterable<String> ids) addAvailableChannels,
   required void Function() rebuildEpgIdIndex,
+  required Future<void> Function() hydrateFuzzyMatchIndexFromDisk,
 }) async {
   if (forceRefresh ||
       normalizedChannels == null ||
@@ -183,6 +184,7 @@ Future<bool> trySkipXmlParseWithMappings({
           'EPG: Skipping XML parse - using ${normalizedChannels.length} cached channels and $count DB mappings.');
       addAvailableChannels(normalizedChannels.values.expand((list) => list));
       rebuildEpgIdIndex();
+      await hydrateFuzzyMatchIndexFromDisk();
       return true;
     }
   } catch (e) {

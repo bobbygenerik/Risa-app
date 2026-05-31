@@ -166,12 +166,12 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     _cachedHeroImageUrl =
         (heroUrl != null && heroUrl.isNotEmpty) ? heroUrl : null;
 
-    final hasBackdrop = _cachedHeroImageUrl != null;
     _cachedSelection = LiveTvHeroSelection(
       activeChannel: resolved.selection.activeChannel,
-      program: hasBackdrop ? resolved.selection.program : null,
+      program: resolved.selection.program,
       candidateCount: resolved.selection.candidateCount,
       selectedHero: selected,
+      hasArtwork: selected != null && _cachedHeroImageUrl != null,
     );
 
     _scheduleSideEffects(

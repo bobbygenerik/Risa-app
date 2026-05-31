@@ -73,6 +73,22 @@ extension IncrementalEpgServiceApi on IncrementalEpgService {
   bool hasEpgMatch(String channelId, {String? channelName}) =>
       _publicApi.hasEpgMatch(channelId, channelName: channelName);
 
+  /// True while the guide has no EPG data yet and a full load is in flight.
+  bool get isGuideBootstrapBusy =>
+      !hasUsableData &&
+      (_isLoading || _isParsing || _isDownloading);
+
+  /// Whether an empty guide row should show a loading placeholder.
+  bool shouldShowGuideRowLoading(
+    String channelId, {
+    String? channelName,
+  }) {
+    if (isGuideBootstrapBusy) return true;
+    if (!isBatchLoading) return false;
+    if (!hasEpgMatch(channelId, channelName: channelName)) return false;
+    return !hasProgramsForChannel(channelId, channelName: channelName);
+  }
+
   /// Fast match estimator for diagnostics using the new pipeline
   int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
     return _channelMatcher.estimateMatchesFast(

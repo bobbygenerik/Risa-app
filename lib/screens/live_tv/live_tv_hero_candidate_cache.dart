@@ -105,12 +105,15 @@ class LiveTvHeroSelection {
     required this.program,
     required this.candidateCount,
     this.selectedHero,
+    this.hasArtwork = false,
   });
 
   final Channel activeChannel;
   final Program? program;
   final int candidateCount;
   final LiveTvHeroCandidate? selectedHero;
+  /// True only when the hero is showing a channel with validated backdrop art.
+  final bool hasArtwork;
 }
 
 class LiveTvHeroSelectionResolver {
@@ -140,10 +143,13 @@ class LiveTvHeroSelectionResolver {
         : selectionPool[featuredIndex % candidateCount];
 
     final selection = LiveTvHeroSelection(
+      // activeChannel is only shown when [hasArtwork]; placeholder avoids ABC-style
+      // fallbacks while the artwork pool is still empty.
       activeChannel: selectedHero?.channel ?? featuredChannel,
       program: selectedHero?.program,
       candidateCount: candidateCount,
       selectedHero: selectedHero,
+      hasArtwork: selectedHero != null,
     );
     return (
       selection: selection,

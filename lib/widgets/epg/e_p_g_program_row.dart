@@ -53,16 +53,17 @@ class EPGProgramRow extends StatelessWidget {
       return program.isCurrentlyPlaying;
     });
 
-    final isBusy = epgService.isLoading ||
-        epgService.isParsing ||
-        epgService.isDownloading;
+    final showLoading = epgService.shouldShowGuideRowLoading(
+      channelKey,
+      channelName: channel.epgLookupNameFallback,
+    );
     return Container(
       height: rowHeight,
       width: totalWidth,
       margin: const EdgeInsets.only(bottom: rowGap, left: 0),
       child: dayPrograms.isEmpty
           ? _buildFocusablePlaceholder(
-              label: isBusy ? 'Loading EPG...' : 'No EPG data',
+              label: showLoading ? 'Loading EPG...' : 'No EPG data',
               focusNode: currentProgramFocusNode,
               onMoveLeft: onMoveLeft,
               onMoveUp: isFirstRow ? onMoveUpFromFirst : null,

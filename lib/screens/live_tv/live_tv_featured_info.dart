@@ -66,6 +66,7 @@ class LiveTvFeaturedInfo extends StatelessWidget {
         ? '${LiveTvFormatters.formatProgramTime(program!.startTime)} - ${LiveTvFormatters.formatProgramTime(program!.endTime)}'
         : 'Live Stream';
     final progress = program?.progressPercentage ?? 0.0;
+    final isAiring = program?.isCurrentlyPlaying ?? false;
     final titleStyle = AppTypography.heroTitle(context).copyWith(
       color: Colors.white,
       fontWeight: FontWeight.w700,
@@ -135,23 +136,27 @@ class LiveTvFeaturedInfo extends StatelessWidget {
             ),
             SizedBox(height: context.tvSpacing(6)),
           ],
-          SizedBox(
-            height: 4,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppColors.progressBackground,
-                color: AppColors.progressForeground,
-                minHeight: 4,
+          if (isAiring) ...[
+            SizedBox(
+              height: 4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: AppColors.progressBackground,
+                  color: AppColors.progressForeground,
+                  minHeight: 4,
+                ),
               ),
             ),
-          ),
-          SizedBox(height: context.tvSpacing(6)),
+            SizedBox(height: context.tvSpacing(6)),
+          ],
           Row(
             children: [
-              const BrandBadge.live(),
-              const SizedBox(width: 8),
+              if (isAiring) ...[
+                const BrandBadge.live(),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: Text(
                   timeRange,

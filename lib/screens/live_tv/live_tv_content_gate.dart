@@ -24,7 +24,7 @@ class LiveTvContentGate {
     required ChannelProvider channelProvider,
     required LiveTvCategoryState categoryState,
     required bool hasShownContent,
-    required bool epgBusy,
+    required bool epgBusyBlocksSkeleton,
     required bool shouldBlockForEpg,
     required List<String> Function(ChannelProvider) buildFallbackCategories,
   }) {
@@ -42,10 +42,10 @@ class LiveTvContentGate {
         hasChannels;
 
     final overlayBusy = channelProvider.isLoading ||
-        epgBusy ||
+        epgBusyBlocksSkeleton ||
         categoriesNotReady;
 
-    if ((shouldBlockForEpg || epgBusy) && !hasShownContent) {
+    if ((shouldBlockForEpg || epgBusyBlocksSkeleton) && !hasShownContent) {
       return const LiveTvContentGateResult(phase: LiveTvContentPhase.skeleton);
     }
 
@@ -94,10 +94,12 @@ class LiveTvContentGate {
 
   static ({
     bool epgBusy,
+    bool epgBusyBlocksSkeleton,
     bool shouldBlockForEpg,
     String? epgStatus,
   }) epgFlags(IncrementalEpgService epg, {required bool hasDisplayData}) {
     final epgBusy = epg.isDownloading || epg.isParsing || epg.isLoading;
+    final epgBusyBlocksSkeleton = epgBusy && !epg.hasLoadedPrograms;
     final shouldBlockForEpg = hasDisplayData &&
         epg.hasEpgUrl &&
         !epg.hasLoadedPrograms;
@@ -110,6 +112,7 @@ class LiveTvContentGate {
                 : null;
     return (
       epgBusy: epgBusy,
+      epgBusyBlocksSkeleton: epgBusyBlocksSkeleton,
       shouldBlockForEpg: shouldBlockForEpg,
       epgStatus: epgStatus,
     );

@@ -138,8 +138,8 @@ class LiveTvScreenContent extends StatelessWidget {
         final gate = LiveTvContentGate.evaluate(
           channelProvider: channelProvider,
           categoryState: categoryState,
-          hasShownContent: skeletonController.hasShownContent,
-          epgBusy: epgFlags.epgBusy,
+          hasShownContent: skeletonController.hasShownContentEver,
+          epgBusyBlocksSkeleton: epgFlags.epgBusyBlocksSkeleton,
           shouldBlockForEpg: epgFlags.shouldBlockForEpg,
           buildFallbackCategories: categoryCoordinator.buildFallbackCategories,
         );

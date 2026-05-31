@@ -128,8 +128,10 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       getNormalizedChannels: () => s._normalizedAvailableChannels,
       setNormalizedChannels: (v) => s._normalizedAvailableChannels = v,
       loadNormalizedMappingFromPrefs: s._loadNormalizedMappingFromPrefs,
+      hydrateFuzzyMatchIndexFromDisk: s._hydrateFuzzyMatchIndexFromDisk,
       saveNormalizedMappingToPrefs: (mapping) =>
           s._normalizedMappingStore.save(mapping),
+      saveDisplayNamesToPrefs: (names) => s._displayNamesStore.save(names),
       normalize: s._normalize,
       clearProgramsByChannel: () {
         s._programsByChannel.clear();
@@ -168,6 +170,7 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       enableMatchingDiagnostics: () => s._enableMatchingDiagnostics,
       dbMappingCount: () => s._db.mappingCount(),
       resetLoadingState: s._resetLoadingState,
+      clearLoadingFlags: s._clearLoadingFlags,
       getEpgChannelHashes: () => s._db.getEpgChannelHashes(),
       startParseProgressTimer: s._startParseProgressTimer,
       stopParseProgressTimer: s._stopParseProgressTimer,
@@ -185,6 +188,8 @@ void wireEpgServiceModules(IncrementalEpgService s) {
           s._refreshCoordinator.scheduleEpgWindowExtension(
             fromBackgroundRefresh: fromBackgroundRefresh,
           ),
+      scheduleSecondaryMerge: ({bool forceRefresh = false}) =>
+          s._secondaryLoader.scheduleMerge(forceRefresh: forceRefresh),
     ),
     maxRetries: IncrementalEpgService._maxRetries,
     epgPastWindowHours: IncrementalEpgService._epgPastWindowHours,
@@ -222,6 +227,41 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       setExtendingWindow: (v) => s._extendingWindow = v,
     ),
   );
+  s._secondaryLoader = EpgSecondaryLoader(
+    deps: EpgSecondaryLoaderDeps(
+      secondaryEpgUrl: () => s._secondaryEpgUrl,
+      lastSecondaryDownloadTime: () => s._lastSecondaryDownloadTime,
+      setLastSecondaryDownloadTime: (v) => s._lastSecondaryDownloadTime = v,
+      secondaryMergeInFlight: () => s._secondaryMergeInFlight,
+      setSecondaryMergeInFlight: (v) => s._secondaryMergeInFlight = v,
+      fileCache: s._fileCache,
+      epgFutureHours: () => s._epgFutureHours,
+      catchupHoursByNormalizedId: () => s._catchupHoursByNormalizedId,
+      programsByChannel: () => s._programsByChannel,
+      getNormalizedChannels: () => s._normalizedAvailableChannels,
+      setNormalizedChannels: (v) => s._normalizedAvailableChannels = v,
+      mergeDisplayNames: s._channelMatcher.mergeDisplayNames,
+      addAvailableChannels: s._availableChannels.addAll,
+      rebuildEpgIdIndex: () =>
+          s._channelMatcher.rebuildEpgIdIndexFromIds(s._availableChannels),
+      rebuildFuzzyCandidates: s._channelMatcher.rebuildFuzzyCandidates,
+      clearInternalMapping: () => s._internalToEpgIdMapping.clear(),
+      saveNormalizedMappingToPrefs: (mapping) =>
+          s._normalizedMappingStore.save(mapping),
+      saveDisplayNamesToPrefs: (names) => s._displayNamesStore.save(names),
+      getDisplayNames: () =>
+          Map<String, List<String>>.from(s._channelMatcher.epgDisplayNamesById),
+      ingestProgramsFromFile: (path, {skipChannels, skipDbWrites = false}) =>
+          s._programIngest.ingestFromFile(
+            path,
+            skipChannels: skipChannels,
+            skipDbWrites: skipDbWrites,
+          ),
+      persistProgramsToDb: () => s._refreshCoordinator.persistProgramsToDb(),
+      isDbDisabled: () => s._dbDisabled,
+      notifyListeners: s.notifyListeners,
+    ),
+  );
   s._serviceInit = EpgServiceInit(
     deps: EpgServiceInitDeps(
       isLoading: () => s._isLoading,
@@ -241,6 +281,7 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       setCacheDuration: (d) => s._fileCache.cacheDuration = d,
       setEpgUrl: (url) => s._epgUrl = url,
       epgUrl: () => s._epgUrl,
+      setSecondaryEpgUrl: (url) => s._secondaryEpgUrl = url,
       setError: (v) => s._error = v,
       resetLoadingState: s._resetLoadingState,
       notifyListeners: s.notifyListeners,
@@ -284,6 +325,9 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       normalizedMapFileNameForPlaylist: () =>
           s._normalizedMappingStore.fileNameForPlaylist(),
       normalizedMapFileName: EpgNormalizedMappingStore.defaultFileName,
+      displayNamesMapFileNameForPlaylist: () =>
+          s._displayNamesStore.fileNameForPlaylist(),
+      displayNamesMapFileName: EpgDisplayNamesStore.defaultFileName,
       manualMappingsStorageKey: () => s._manualMappingsStore.storageKey(),
       manualMappingsKey: EpgManualMappingsStore.manualMappingsKey,
       epgCacheTimeKey: EpgFileCache.epgCacheTimeKey,

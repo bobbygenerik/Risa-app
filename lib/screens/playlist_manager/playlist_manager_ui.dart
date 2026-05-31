@@ -69,6 +69,10 @@ extension PlaylistManagerUi on _PlaylistManagerScreenState {
   }
 
   Widget _buildSettingsContent() {
+    if (_selectedCategoryIndex == 1) {
+      return _buildActionsPanel();
+    }
+
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -93,6 +97,88 @@ extension PlaylistManagerUi on _PlaylistManagerScreenState {
       return _buildEmptyState();
     }
     return _buildPlaylistList();
+  }
+
+  Widget _buildActionsPanel() {
+    SavedPlaylist? active;
+    if (_activePlaylistId != null) {
+      for (final playlist in _playlists) {
+        if (playlist.id == _activePlaylistId) {
+          active = playlist;
+          break;
+        }
+      }
+    }
+
+    return ListView(
+      controller: _contentScrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      children: [
+        const SettingsSectionHeader(
+          title: 'Actions',
+          subtitle: 'Refresh playlists, reload channels, or update EPG',
+        ),
+        SettingsGroup(
+          title: 'Navigation',
+          children: [
+            SettingsActionTile(
+              title: 'Back to Settings',
+              subtitle: 'Return to the main settings screen',
+              icon: Icons.arrow_back,
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/settings');
+                }
+              },
+            ),
+            SettingsActionTile(
+              title: 'Open Playlist Editor',
+              subtitle: 'Edit M3U/Xtream credentials and update frequency',
+              icon: Icons.edit_note,
+              onTap: () => context.push('/playlist-editor'),
+            ),
+            SettingsActionTile(
+              title: 'EPG Diagnostics',
+              subtitle: 'Check match rates and configured EPG URLs',
+              icon: Icons.analytics_outlined,
+              onTap: () => context.push('/epg-diagnostic'),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          title: 'Refresh',
+          children: [
+            SettingsActionTile(
+              title: 'Refresh Saved Playlists',
+              subtitle: 'Reload the playlist list from storage',
+              icon: Icons.refresh,
+              onTap: () => unawaited(_loadPlaylists()),
+            ),
+            SettingsActionTile(
+              title: 'Reload Active Playlist',
+              subtitle: active == null
+                  ? 'No active playlist selected'
+                  : 'Reload channels for "${active.name}"',
+              icon: Icons.playlist_play,
+              onTap: active == null
+                  ? null
+                  : () {
+                      final playlist = active!;
+                      unawaited(_reloadActivePlaylist(playlist));
+                    },
+            ),
+            SettingsActionTile(
+              title: 'Force Refresh EPG',
+              subtitle: 'Re-download primary and secondary EPG sources',
+              icon: Icons.live_tv,
+              onTap: () => unawaited(_forceRefreshEpg()),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildPremiumPlaylistTile({

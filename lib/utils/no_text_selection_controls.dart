@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:iptv_player/utils/tv_focus_helper.dart';
+
 /// Disables selection handles and toolbars for TextField widgets.
 class NoTextSelectionControls extends MaterialTextSelectionControls {
   NoTextSelectionControls();
@@ -37,3 +39,9 @@ class NoTextSelectionControls extends MaterialTextSelectionControls {
     return const SizedBox.shrink();
   }
 }
+
+/// TV builds hide selection UI; desktop keeps normal paste/select behavior.
+bool textFieldInteractiveSelection(BuildContext context) => !context.isTV;
+
+TextSelectionControls? textFieldSelectionControls(BuildContext context) =>
+    context.isTV ? NoTextSelectionControls() : null;
