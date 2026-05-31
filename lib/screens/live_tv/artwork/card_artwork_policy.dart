@@ -49,7 +49,12 @@ class CardArtworkPolicy {
   /// Program art suitable for a cover layer (not a logo — use fallback instead).
   bool acceptsCoverLayer(String? url, Channel channel) {
     if (url == null || url.isEmpty) return false;
+    if (LiveTvArtworkUrlGuard.blockedProgramArtworkHost(url) != null) {
+      return false;
+    }
+    if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
     if (LiveTvArtworkUrlGuard.matchesChannelLogo(url, channel)) return false;
+    if (LiveTvArtworkUrlGuard.isLogoOnlyHost(url)) return false;
     if (LiveTvArtworkUrlGuard.isLikelyChannelLogoUrl(url)) return false;
     if (LiveTvArtworkUrlGuard.isLikelyTitleLogoUrl(url)) return false;
     return true;

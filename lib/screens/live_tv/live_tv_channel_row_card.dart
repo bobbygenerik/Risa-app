@@ -22,6 +22,7 @@ import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/network_error_logger.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:provider/provider.dart';
 
@@ -215,7 +216,7 @@ class LiveTvChannelRowCard extends StatelessWidget {
 }
 
 /// Visual content for a single channel card (image, badges, program text).
-class LiveTvChannelCardContent extends StatelessWidget {
+class LiveTvChannelCardContent extends StatefulWidget {
   const LiveTvChannelCardContent({
     super.key,
     required this.channel,
@@ -240,10 +241,32 @@ class LiveTvChannelCardContent extends StatelessWidget {
   final LiveTvCardImageFn getCardImage;
 
   @override
+  State<LiveTvChannelCardContent> createState() =>
+      _LiveTvChannelCardContentState();
+}
+
+class _LiveTvChannelCardContentState extends State<LiveTvChannelCardContent> {
+  // True once the decode-time guard rejects the resolved program art, so the
+  // big art falls back to the centered channel logo. We hide the small corner
+  // logo in that case to avoid the logo-on-logo artifact.
+  bool _artRejected = false;
+  String? _lastImageUrl;
+
+  @override
   Widget build(BuildContext context) {
+    final channel = widget.channel;
+    final currentProgram = widget.currentProgram;
+    final isFocused = widget.isFocused;
+    final cardWidth = widget.cardWidth;
+    final cardHeight = widget.cardHeight;
+    final allowPrefetch = widget.allowPrefetch;
+    final isFirstRow = widget.isFirstRow;
+    final displayTitle = widget.displayTitle;
+    final getCardImage = widget.getCardImage;
+
     final displayTitleText = currentProgram == null
         ? ''
-        : displayTitle(currentProgram!, channel);
+        : displayTitle(currentProgram, channel);
     final progress = currentProgram?.progressPercentage ?? 0.0;
     final imageUrl = getCardImage(
       currentProgram,
@@ -260,6 +283,12 @@ class LiveTvChannelCardContent extends StatelessWidget {
           slot: ArtworkSlot.card,
         ) &&
         cardPolicy.acceptsCoverLayer(normalizedImageUrl, channel);
+    if (normalizedImageUrl != _lastImageUrl) {
+      _lastImageUrl = normalizedImageUrl;
+      _artRejected = false;
+    }
+    final showArt = hasProgramArt && !_artRejected;
+    final hasChannelLogoForCorner = channel.logoUrl?.isNotEmpty ?? false;
     if (channel.name == 'CWWLVI' ||
         channel.name == 'PBSWGBH' ||
         channel.name.contains('NBCSportsBoston')) {
@@ -274,8 +303,9 @@ class LiveTvChannelCardContent extends StatelessWidget {
     final fallback = LiveTvCardFallbacks.channelCard(currentProgram, channel);
 
     final hasMinimumData = currentProgram != null &&
-        currentProgram!.title.isNotEmpty &&
+        currentProgram.title.isNotEmpty &&
         (channel.logoUrl?.isNotEmpty == true || imageUrl != null);
+    final isAiring = currentProgram?.isCurrentlyPlaying ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -316,7 +346,7 @@ class LiveTvChannelCardContent extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(child: fallback),
-                if (hasProgramArt)
+                if (showArt)
                   Positioned.fill(
                     child: LiveTvAdaptiveCardImage(
                       url: normalizedImageUrl,
@@ -324,7 +354,24 @@ class LiveTvChannelCardContent extends StatelessWidget {
                       cacheWidth: cacheWidth,
                       cacheHeight: cacheHeight,
                       fallback: const SizedBox.shrink(),
+                      onArtRejected: () {
+                        if (_artRejected || !mounted) return;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && !_artRejected) {
+                            setState(() => _artRejected = true);
+                          }
+                        });
+                      },
                     ),
+                  ),
+                // Small channel logo, top-left, only while real program art is
+                // shown — lets the viewer identify the channel without doubling
+                // the logo when the card falls back to the centered logo.
+                if (showArt && hasChannelLogoForCorner)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _CardCornerLogo(channel: channel),
                   ),
                 if (currentProgram == null)
                   const Positioned(
@@ -355,13 +402,13 @@ class LiveTvChannelCardContent extends StatelessWidget {
                       ),
                     ),
                   )
-                else
+                else if (isAiring)
                   const Positioned(
                     top: 8,
                     right: 8,
                     child: BrandBadge.live(fontSize: 8),
                   ),
-                if (currentProgram != null)
+                if (currentProgram != null && isAiring)
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -383,7 +430,7 @@ class LiveTvChannelCardContent extends StatelessWidget {
             ),
           ),
         ),
-        if (currentProgram != null && currentProgram!.title.isNotEmpty) ...[
+        if (currentProgram != null && currentProgram.title.isNotEmpty) ...[
           const SizedBox(height: 4),
           SizedBox(
             width: cardWidth,
@@ -403,7 +450,7 @@ class LiveTvChannelCardContent extends StatelessWidget {
           SizedBox(
             width: cardWidth,
             child: Text(
-              '${LiveTvFormatters.formatProgramTime(currentProgram!.startTime)} - ${LiveTvFormatters.formatProgramTime(currentProgram!.endTime)}',
+              '${LiveTvFormatters.formatProgramTime(currentProgram.startTime)} - ${LiveTvFormatters.formatProgramTime(currentProgram.endTime)}',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.6),
                 fontSize: 10,
@@ -453,6 +500,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
     required this.cacheWidth,
     required this.cacheHeight,
     required this.fallback,
+    this.onArtRejected,
   });
 
   final String url;
@@ -460,6 +508,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
   final int cacheWidth;
   final int cacheHeight;
   final Widget fallback;
+  final VoidCallback? onArtRejected;
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +533,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
           fit: fit,
           fallback: fallback,
           probeTag: 'live_tv_card',
+          onRejected: onArtRejected,
         );
       },
       placeholder: (context, url) => fallback,
@@ -493,6 +543,38 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
         logHandshakeIfNeeded(url, err, context: 'LiveTV Adaptive');
         return fallback;
       },
+    );
+  }
+}
+
+/// Small channel-logo badge shown in the top-left corner of a card while real
+/// program artwork is displayed.
+class _CardCornerLogo extends StatelessWidget {
+  const _CardCornerLogo({required this.channel});
+
+  final Channel channel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 24,
+      constraints: const BoxConstraints(maxWidth: 56, minWidth: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: ChannelLogoWidget(
+        channelName: channel.name,
+        logoUrl: channel.logoUrl,
+        allowEnrichment: false,
+        width: 48,
+        height: 18,
+        fit: BoxFit.contain,
+        backgroundColor: Colors.transparent,
+        placeholder: const SizedBox.shrink(),
+        errorWidget: const SizedBox.shrink(),
+      ),
     );
   }
 }

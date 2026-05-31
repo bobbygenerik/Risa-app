@@ -10,6 +10,10 @@ class ArtworkValidator {
   // Pre-compiled regex constants — compiled once, reused on every call
   static final RegExp _dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
 
+  // Gracenote/TMS aspect token: `_v<digit>` marks a vertical/portrait asset
+  // (e.g. `_b_v12_`, `_p_v10_`), while `_h<digit>` marks wide landscape art.
+  static final RegExp _gracenoteVerticalPattern = RegExp(r'_v\d');
+
   /// Returns true if the URL points to a poster/portrait image.
   static bool isLikelyPosterUrl(String url) {
     if (url.isEmpty) return false;
@@ -41,10 +45,11 @@ class ArtworkValidator {
       return true;
     }
 
-    // Gracenote/TMS asset naming: _b_h* and _st_h* are wide artwork, while
-    // _p_v* and _e_v* are portrait/poster-like assets.
+    // Gracenote/TMS asset naming: `_h<digit>` tokens are wide landscape art,
+    // `_v<digit>` tokens (e.g. `_b_v12_`, `_p_v10_`) are portrait/poster assets
+    // — even when padded onto a landscape canvas like tvpassport's 960x540.
     if ((lower.contains('tmsimg.com') || lower.contains('tvpassport.com')) &&
-        (lower.contains('_p_v') || lower.contains('_e_v'))) {
+        _gracenoteVerticalPattern.hasMatch(lower)) {
       return true;
     }
 
@@ -146,6 +151,9 @@ class ArtworkValidator {
         (lower.contains('/logo') || lower.contains('/logos/'))) {
       return true;
     }
+    // The tv-logo/tv-logos GitHub repo only ever serves channel logos, so any
+    // program "art" pointing there is the channel's own logo, not show artwork.
+    if (lower.contains('tv-logos')) return true;
     // Match explicit /logo/ path segments but NOT domain names like
     // 'logo.m3uassets.com' — those are CDNs that serve program images too.
     if (lower.contains('/logo/')) return true;
