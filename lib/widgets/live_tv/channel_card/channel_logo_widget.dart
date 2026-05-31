@@ -1,6 +1,8 @@
 part of '../live_tv_channel_card.dart';
 
 class ChannelLogoWidget extends StatelessWidget {
+  static final RegExp _svgExtensionRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   const ChannelLogoWidget({
     super.key,
     required this.channel,
@@ -27,8 +29,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = _svgExtensionRe.hasMatch(url);
 
     if (isSvg) {
       return Padding(

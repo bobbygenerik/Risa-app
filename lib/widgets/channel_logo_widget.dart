@@ -45,6 +45,7 @@ class ChannelLogoWidget extends StatefulWidget {
 }
 
 class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
+  static final RegExp _svgExtensionRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
   String? _effectiveLogoUrl;
   bool _isEnriching = false;
   bool _triedEnrichment = false;
@@ -118,8 +119,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   }
 
   bool _isSvgUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.svg') || lower.contains('.svg?');
+    return _svgExtensionRe.hasMatch(url);
   }
 
   String _hostFromUrl(String url) {

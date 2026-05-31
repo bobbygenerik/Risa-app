@@ -12,6 +12,8 @@ import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 /// Channel row card artwork fallbacks when program images are unavailable.
 class LiveTvCardFallbacks {
+  static final RegExp _svgExtensionRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   LiveTvCardFallbacks._();
 
   static Widget channelCard(Program? program, Channel channel) {
@@ -26,8 +28,7 @@ class LiveTvCardFallbacks {
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    final isSvg = _svgExtensionRe.hasMatch(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(
