@@ -424,6 +424,12 @@ class EpgChannelListLoader {
     }
 
     _deps.clearLoadingFlags();
+    // Channels requested by the UI while parsing was in flight were marked
+    // "attempted" before their programs existed in memory/DB, which would
+    // otherwise block them from ever reloading. Clear that guard and flush the
+    // deferred requests so they reload now that programs are available.
+    _deps.clearAttemptedLoads();
+    _deps.flushDeferredChannelRequests();
     _deps.notifyListeners();
   }
 }

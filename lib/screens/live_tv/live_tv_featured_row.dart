@@ -6,6 +6,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_channel_section.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_continue_watching_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_formatters.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
@@ -90,10 +91,19 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
     final missingChannelIds = <String>{};
     final missingChannelNames = <String?>[];
 
+    // Channels shown in the Continue Watching row are reserved for it; exclude
+    // them here so a channel never appears in both rows at the same time.
+    final continueWatchingIds = mostWatched
+        .take(LiveTvContinueWatchingRow.maxItems)
+        .map((c) => c.epgLookupId)
+        .toSet();
+    addedChannelIds.addAll(continueWatchingIds);
+
     final maxMostWatched = math.min(mostWatched.length, 6);
     for (var i = 0; i < maxMostWatched; i++) {
       final channel = mostWatched[i];
       final channelId = channel.epgLookupId;
+      if (addedChannelIds.contains(channelId)) continue;
       final currentProgram = epgService.getCurrentProgram(
         channelId,
         channelName: channel.epgLookupNameFallback,

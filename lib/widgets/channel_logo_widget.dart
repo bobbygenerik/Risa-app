@@ -20,6 +20,7 @@ class ChannelLogoWidget extends StatefulWidget {
   final double width;
   final double height;
   final BoxFit fit;
+  final Alignment alignment;
   final Widget? placeholder;
   final Widget? errorWidget;
   final BorderRadius? borderRadius;
@@ -34,6 +35,7 @@ class ChannelLogoWidget extends StatefulWidget {
     this.width = 48,
     this.height = 48,
     this.fit = BoxFit.contain,
+    this.alignment = Alignment.center,
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
@@ -197,6 +199,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                 ? SvgPicture.network(
                     effectiveUrl,
                     fit: widget.fit,
+                    alignment: widget.alignment,
                     headers: HttpClientService().imageHeaders,
                     placeholderBuilder: (_) =>
                         widget.placeholder ??
@@ -209,6 +212,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                         headers: HttpClientService().imageHeaders,
                       ),
                       fit: widget.fit,
+                      alignment: widget.alignment,
                       filterQuality: FilterQuality.high,
                       gaplessPlayback: true,
                       frameBuilder: (context, child, frame, wasSync) {

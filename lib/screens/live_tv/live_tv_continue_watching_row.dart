@@ -12,12 +12,16 @@ class LiveTvContinueWatchingRow extends StatelessWidget {
 
   final LiveTvChannelSectionBindings bindings;
 
+  /// Number of recently watched channels shown. Featured excludes these so the
+  /// same channel never appears in both rows at once.
+  static const int maxItems = 8;
+
   @override
   Widget build(BuildContext context) {
     final recentChannels = context
         .read<ChannelProvider>()
         .mostWatchedChannels
-        .take(8)
+        .take(maxItems)
         .toList();
 
     if (recentChannels.isEmpty) return const SizedBox.shrink();

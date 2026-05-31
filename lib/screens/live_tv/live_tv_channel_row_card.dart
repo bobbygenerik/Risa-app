@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -554,26 +555,45 @@ class _CardCornerLogo extends StatelessWidget {
 
   final Channel channel;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 24,
-      constraints: const BoxConstraints(maxWidth: 56, minWidth: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: ChannelLogoWidget(
+  ChannelLogoWidget _logo() => ChannelLogoWidget(
         channelName: channel.name,
         logoUrl: channel.logoUrl,
         allowEnrichment: false,
-        width: 48,
-        height: 18,
+        width: 56,
+        height: 24,
         fit: BoxFit.contain,
+        alignment: Alignment.centerLeft,
         backgroundColor: Colors.transparent,
+        borderRadius: BorderRadius.zero,
         placeholder: const SizedBox.shrink(),
         errorWidget: const SizedBox.shrink(),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 24,
+      width: 56,
+      child: Stack(
+        children: [
+          // Soft dark shadow behind the logo silhouette so pale logos (e.g.
+          // Animal Planet) stay readable over bright artwork. ColorFilter.srcIn
+          // recolors the logo to black while preserving its alpha; the blur
+          // softens it into a halo. The badge is tiny, so the saveLayer is cheap.
+          Positioned.fill(
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Colors.black87,
+                  BlendMode.srcIn,
+                ),
+                child: _logo(),
+              ),
+            ),
+          ),
+          Positioned.fill(child: _logo()),
+        ],
       ),
     );
   }

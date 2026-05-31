@@ -27,7 +27,14 @@ class LogoImageCache {
 
     final provider =
         CachedNetworkImageProvider(normalizedUrl, headers: headers);
-    final resized = ResizeImage(provider, width: 256, height: 256);
+    // policy.fit preserves aspect ratio; without it ResizeImage stretches
+    // non-square logos (e.g. HBO) to a 256x256 square.
+    final resized = ResizeImage(
+      provider,
+      width: 256,
+      height: 256,
+      policy: ResizeImagePolicy.fit,
+    );
     _cache[key] = _LogoCacheEntry(resized);
     _order.add(key);
     _trim();

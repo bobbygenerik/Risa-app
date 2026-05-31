@@ -86,63 +86,50 @@ class LiveTvHeroContent extends StatelessWidget {
             final cacheHeight =
                 math.min(1500, (constraints.maxHeight * dpr).round());
 
-            // Full-bleed art with left-edge alpha mask — same layout as before.
-            // The parent scrim in LiveTvFullScreenHero is unchanged.
+            // Full-bleed art. The soft left-edge fade is provided by the parent
+            // scrim in LiveTvFullScreenHero (solid darkBackground over the left
+            // 0-20%), so we deliberately avoid a ShaderMask here — its
+            // BlendMode.dstIn forces a per-frame saveLayer that made the
+            // rotation crossfade janky on a 2500px-wide backdrop.
             return SizedBox.expand(
               child: Align(
                 alignment: Alignment.topRight,
                 child: FractionallySizedBox(
                   widthFactor: 0.94,
                   heightFactor: 1.0,
-                  child: ShaderMask(
-                    shaderCallback: (bounds) {
-                      return const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          Colors.transparent,
-                          Colors.white,
-                          Colors.white,
-                        ],
-                        stops: [0.0, 0.25, 1.0],
-                      ).createShader(bounds);
+                  child: CachedNetworkImage(
+                    imageUrl: normalizedHeroUrl,
+                    httpHeaders: HttpClientService().imageHeaders,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    filterQuality: FilterQuality.medium,
+                    memCacheWidth: cacheWidth,
+                    memCacheHeight: cacheHeight,
+                    imageBuilder: (context, imageProvider) {
+                      return GuardedArtworkImage(
+                        url: normalizedHeroUrl,
+                        imageProvider: imageProvider,
+                        slot: ArtworkSlot.hero,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        fallback: LiveTvCardFallbacks.gradientPlaceholder(),
+                        probeTag: 'hero_backdrop',
+                        onRejected: () =>
+                            onBackdropRejected?.call(normalizedHeroUrl),
+                      );
                     },
-                    blendMode: BlendMode.dstIn,
-                    child: CachedNetworkImage(
-                      imageUrl: normalizedHeroUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      filterQuality: FilterQuality.high,
-                      memCacheWidth: cacheWidth,
-                      memCacheHeight: cacheHeight,
-                      imageBuilder: (context, imageProvider) {
-                        return GuardedArtworkImage(
-                          url: normalizedHeroUrl,
-                          imageProvider: imageProvider,
-                          slot: ArtworkSlot.hero,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          fallback: LiveTvCardFallbacks.gradientPlaceholder(),
-                          probeTag: 'hero_backdrop',
-                          onRejected: () =>
-                              onBackdropRejected?.call(normalizedHeroUrl),
-                        );
-                      },
-                      placeholder: (_, __) =>
-                          LiveTvCardFallbacks.gradientPlaceholder(),
-                      errorWidget: (_, url, error) {
-                        ImageFailureCache.recordFailure(url, error);
-                        ImageLoadProbe.recordFailure(
-                            url, 'hero_backdrop', error);
-                        logHandshakeIfNeeded(url, error,
-                            context: 'LiveTV hero backdrop');
-                        onBackdropRejected?.call(url);
-                        return LiveTvCardFallbacks.gradientPlaceholder();
-                      },
-                      fadeInDuration: const Duration(milliseconds: 300),
-                      useOldImageOnUrlChange: true,
-                    ),
+                    placeholder: (_, __) =>
+                        LiveTvCardFallbacks.gradientPlaceholder(),
+                    errorWidget: (_, url, error) {
+                      ImageFailureCache.recordFailure(url, error);
+                      ImageLoadProbe.recordFailure(url, 'hero_backdrop', error);
+                      logHandshakeIfNeeded(url, error,
+                          context: 'LiveTV hero backdrop');
+                      onBackdropRejected?.call(url);
+                      return LiveTvCardFallbacks.gradientPlaceholder();
+                    },
+                    fadeInDuration: const Duration(milliseconds: 300),
+                    useOldImageOnUrlChange: true,
                   ),
                 ),
               ),

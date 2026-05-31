@@ -171,6 +171,9 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       dbMappingCount: () => s._db.mappingCount(),
       resetLoadingState: s._resetLoadingState,
       clearLoadingFlags: s._clearLoadingFlags,
+      clearAttemptedLoads: () => s._channelBatchLoader.clearAttemptedLoads(),
+      flushDeferredChannelRequests: () =>
+          s._channelBatchLoader.flushDeferredChannelRequests(),
       getEpgChannelHashes: () => s._db.getEpgChannelHashes(),
       startParseProgressTimer: s._startParseProgressTimer,
       stopParseProgressTimer: s._stopParseProgressTimer,

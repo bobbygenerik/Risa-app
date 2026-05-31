@@ -57,6 +57,8 @@ class EpgChannelListLoaderDeps {
     required this.dbMappingCount,
     required this.resetLoadingState,
     required this.clearLoadingFlags,
+    required this.clearAttemptedLoads,
+    required this.flushDeferredChannelRequests,
     required this.getEpgChannelHashes,
     required this.startParseProgressTimer,
     required this.stopParseProgressTimer,
@@ -132,6 +134,8 @@ class EpgChannelListLoaderDeps {
   final Future<int> Function() dbMappingCount;
   final void Function() resetLoadingState;
   final void Function() clearLoadingFlags;
+  final void Function() clearAttemptedLoads;
+  final void Function() flushDeferredChannelRequests;
   final Future<Map<String, String>> Function() getEpgChannelHashes;
   final void Function() startParseProgressTimer;
   final void Function() stopParseProgressTimer;
