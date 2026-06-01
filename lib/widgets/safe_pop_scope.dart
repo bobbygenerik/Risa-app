@@ -13,14 +13,10 @@ class SafePopScope extends StatelessWidget {
   /// Return true to allow the default back behavior, false to handle custom navigation.
   final Future<bool> Function()? onWillPop;
 
-  /// Optional fallback path to navigate to when canPop is false. Defaults to '/home'.
-  final String? fallbackPath;
-
   const SafePopScope({
     super.key,
     required this.child,
     this.onWillPop,
-    this.fallbackPath,
   });
 
   @override
@@ -39,8 +35,12 @@ class SafePopScope extends StatelessWidget {
         // Use GoRouter to navigate back safely
         if (!context.mounted) return;
         
-        // ALWAYS navigate directly to fallbackPath/home using context.go() to avoid double-pops
-        context.go(fallbackPath ?? '/home');
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          // If we can't pop, go to home screen instead of exiting app
+          context.go('/home');
+        }
       },
       child: child,
     );

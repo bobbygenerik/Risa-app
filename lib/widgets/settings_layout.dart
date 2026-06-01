@@ -165,23 +165,11 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                     AppSpacing.sidebarCollapsedWidth,
                 bottom: bottomInset,
               ),
-
-              // Right Pane: Content
-              Expanded(
-                child: FocusScope(
-                  autofocus: false,
-                  child: Focus(
-                    canRequestFocus: false,
-                    onKeyEvent: (node, event) {
-                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        // Return focus to sidebar - go back to currently selected menu item
-                        _menuFocusNodes[widget.selectedIndex].requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 320,
                     child: Container(
                       color: Colors.transparent,
                       child: Column(

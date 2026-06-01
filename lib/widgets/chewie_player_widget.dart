@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 import 'media_kit_player_widget.dart';
+import 'native_exo_player_widget.dart';
 
 class ChewiePlayerWidget extends StatefulWidget {
   final String url;
@@ -82,9 +84,37 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Use MediaKit on Linux/desktop — video_player has no Linux backend
     if (!kIsWeb && Platform.isLinux) {
-      return MediaKitPlayerWidget(url: widget.url, isLive: widget.isLive);
+      return MediaKitPlayerWidget(
+        url: widget.url,
+        isLive: widget.isLive,
+      );
+    }
+
+    if (_preferNativeAndroid && !_useChewieFallback) {
+      if (_errorMessage != null) {
+        return _buildErrorWidget(_errorMessage!);
+      }
+      if (!_mountNativePlayer) {
+        return _buildLoadingWidget();
+      }
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          NativeExoPlayerWidget(
+            url: widget.url,
+            isLive: widget.isLive,
+            autoPlay: true,
+            onPlaybackReady: () {
+              if (!mounted) return;
+              setState(() => _nativePlaybackReady = true);
+              _notifySurfaceReady();
+            },
+            onError: _onNativeError,
+          ),
+          if (!_nativePlaybackReady) _buildLoadingWidget(),
+        ],
+      );
     }
 
     if (_errorMessage != null) {
@@ -218,15 +248,11 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
 
       _videoController = VideoPlayerController.networkUrl(
         uri,
-        formatHint: uri.toString().toLowerCase().contains('.m3u8') ? VideoFormat.hls : null,
+        formatHint: uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
         ),
-        httpHeaders: {
-          'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
-          'Connection': 'keep-alive',
-          'Accept': '*/*',
-        },
+        httpHeaders: headers,
       );
 
       _videoController!.addListener(_onVideoPlayerUpdate);
