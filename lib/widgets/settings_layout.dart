@@ -182,6 +182,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                 child: FocusScope(
                   autofocus: false,
                   child: Focus(
+                    canRequestFocus: false,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
 

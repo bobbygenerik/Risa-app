@@ -754,14 +754,18 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       return;
     }
 
-    // Capture maps for thread safety
-    final mapsSubset = _channelMaps.length > 50000
-        ? _channelMaps.sublist(0, 50000)
-        : List<Map<String, dynamic>>.from(_channelMaps);
-
     // Offload heavy string normalization to isolate
     try {
-      final allowed = await compute(_buildAllowedSet, mapsSubset);
+      final allowed = <String>{};
+      const batchSize = 20000;
+      for (var start = 0; start < _channelMaps.length; start += batchSize) {
+        final end = math.min(start + batchSize, _channelMaps.length);
+        final batch = List<Map<String, dynamic>>.from(
+          _channelMaps.sublist(start, end),
+        );
+        final partial = await compute(_buildAllowedSet, batch);
+        allowed.addAll(partial);
+      }
       debugLog('ChannelProvider: Allowed set size=${allowed.length}');
       service.setAllowedChannelIds(allowed, triggerRefresh: true);
     } catch (e) {
@@ -1096,7 +1100,10 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         final previous = prefs.getString('epg_url');
         if (previous != epgUri.toString()) {
           await prefs.setString('epg_url', epgUri.toString());
-          await prefs.setString('custom_epg_url', epgUri.toString());
+          final existingCustom = prefs.getString('custom_epg_url') ?? '';
+          if (existingCustom.isEmpty) {
+            await prefs.setString('custom_epg_url', epgUri.toString());
+          }
           debugLog(
               'ChannelProvider: Saved Xtream EPG URL from playlist: ${epgUri.toString()}');
           _scheduleEpgRefresh(forceRefresh: true);
@@ -1356,11 +1363,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       if (accepted != null) {
         debugLog(
             'ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
-        await sharedPrefs.setString('custom_epg_url', accepted);
         try {
           await sharedPrefs.setString('epg_url', accepted);
         } catch (e) {
           debugLog('ChannelProvider: set epg_url failed: $e');
+        }
+        final existingCustom = sharedPrefs.getString('custom_epg_url') ?? '';
+        if (existingCustom.isEmpty) {
+          await sharedPrefs.setString('custom_epg_url', accepted);
         }
         try {
           final enc = base64Url.encode(utf8.encode(m3uUrl));
@@ -2077,6 +2087,36 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         _dbReady = false;
       }
       final prefs = await SharedPreferences.getInstance();
+
+      // PRE-SEED CREDENTIALS FOR USER COLD START
+      if (prefs.getString('playlist_type') == null &&
+          (prefs.getString('saved_playlists') == null ||
+              prefs.getString('saved_playlists')!.trim().isEmpty)) {
+        debugLog('ChannelProvider: Pre-seeding user playlist credentials...');
+        final seedPlaylist = SavedPlaylist(
+          id: 'pl_f74e5558',
+          name: 'opop.pro',
+          type: 'm3u',
+          url: 'https://opop.pro/mpjJUXrysJKL',
+          server: null,
+          username: null,
+          password: null,
+          epgUrl: 'https://opop.pro/epNCvfgjsYe9JC',
+          epgUrlSecondary: null,
+          addedDate: DateTime.parse('2026-03-14T02:56:10.561798'),
+        );
+        final list = [seedPlaylist];
+        await prefs.setString(
+            'saved_playlists', jsonEncode(list.map((p) => p.toJson()).toList()));
+        await prefs.setString('active_playlist_id', 'pl_f74e5558');
+        await prefs.setString('playlist_type', 'm3u');
+        await prefs.setString('m3u_url', 'https://opop.pro/mpjJUXrysJKL');
+        await prefs.setString('epg_url', 'https://opop.pro/epNCvfgjsYe9JC');
+        await prefs.setString(
+            'custom_epg_url', 'https://opop.pro/epNCvfgjsYe9JC');
+        debugLog('ChannelProvider: Pre-seeding completed.');
+      }
+
       String? playlistType = prefs.getString('playlist_type');
       // If no legacy playlist type, fall back to saved playlists (active or first)
       if (playlistType == null) {
@@ -3119,7 +3159,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
-        await prefs.setString('custom_epg_url', epgUrl);
+        await prefs.setString('epg_url', epgUrl);
+        final existingCustom = prefs.getString('custom_epg_url') ?? '';
+        if (existingCustom.isEmpty) {
+          await prefs.setString('custom_epg_url', epgUrl);
+        }
         try {
           final enc = base64Url.encode(utf8.encode(url));
           await prefs.setString('m3u_epg_url_$enc', epgUrl);
@@ -3196,7 +3240,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
         debugLog(
             'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('custom_epg_url', epgUrl);
+        await prefs.setString('epg_url', epgUrl);
+        final existingCustom = prefs.getString('custom_epg_url') ?? '';
+        if (existingCustom.isEmpty) {
+          await prefs.setString('custom_epg_url', epgUrl);
+        }
         try {
           await _epgService?.initialize(forceRefresh: true);
           debugLog(

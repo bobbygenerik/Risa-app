@@ -63,6 +63,8 @@ import 'package:iptv_player/services/prewarm_service.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_cache_config.dart';
 import 'package:iptv_player/services/clock_service.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:media_kit/media_kit.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 const bool _enablePrewarm = false;
@@ -134,6 +136,16 @@ void main() {
       // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
       StartupProbe.mark('Image cache config initialized');
+
+      // Desktop platforms require sqflite FFI initialization before any
+      // openDatabase call is made.
+      if (!kIsWeb &&
+          (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        MediaKit.ensureInitialized();
+        StartupProbe.mark('sqflite FFI initialized (desktop)');
+      }
 
       // Optimize image cache for IPTV with conservative but functional limits
       final memoryInfo = await _getDeviceMemoryInfo();
@@ -911,57 +923,91 @@ final _router = GoRouter(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const SafePopScope(child: PlaylistEditorScreen()),
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: PlaylistEditorScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: '/playlist-manager',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const SafePopScope(child: PlaylistManagerScreen()),
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: PlaylistManagerScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: '/ssl-settings',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
-        child: const SafePopScope(child: SSLSettingsScreen()),
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: SSLSettingsScreen(),
+        ),
       ),
     ),
     GoRoute(
       path: '/ai-models',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: TranslationModelsScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: TranslationModelsScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/translation-models',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: TranslationModelsScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: TranslationModelsScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/whisper-models',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: WhisperModelsScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: WhisperModelsScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/epg-diagnostic',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: EpgDiagnosticScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: EpgDiagnosticScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/epg-manager',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey,
-          child: const SafePopScope(child: EpgManagerScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: EpgManagerScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/debug',
       pageBuilder: (context, state) => _fadeSlidePage(
-          key: state.pageKey, child: const SafePopScope(child: DebugScreen())),
+        key: state.pageKey,
+        child: const SafePopScope(
+          fallbackPath: '/settings',
+          child: DebugScreen(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/exit',

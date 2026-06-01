@@ -23,6 +23,8 @@ class M3UParserService {
     r"""(?:url-tvg|x-tvg-url|tvg-url)=["']?([^"']+)""",
     caseSensitive: false,
   );
+  static final RegExp _seriesEpisodeRegex =
+      RegExp(r'S\d+E\d+', caseSensitive: false);
 
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
@@ -367,8 +369,10 @@ class M3UParserService {
   }
 
   /// Optimized parser that directly returns maps (avoids object creation/conversion overhead)
-  /// Used by isolate parsing for better performance with large playlists
-  /// VOD detection is SKIPPED for maximum speed - all entries treated as live channels.
+  /// Used by isolate parsing for better performance with large playlists.
+  ///
+  /// This app is live-TV-only, so VOD/movie/series entries are explicitly
+  /// filtered out here instead of being mixed into the channel list.
   Future<Map<String, dynamic>> parseM3UStreamToMaps(
       Stream<List<int>> byteStream,
       {SendPort? progressPort}) async {
@@ -416,8 +420,16 @@ class M3UParserService {
             }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle = currentAttributes['group-title'] ?? '';
+            if (_isVodEntry(
+              channelName: channelName,
+              groupTitle: groupTitle,
+              url: inlineUrl,
+            )) {
+              currentInfo = null;
+              currentAttributes = {};
+              return;
+            }
 
-            // FAST PATH: Skip all VOD detection - treat everything as live channel
             final tvgId = currentAttributes['tvg-id'];
             channelMaps.add({
               'id': (tvgId != null && tvgId.trim().isNotEmpty)
@@ -486,8 +498,16 @@ class M3UParserService {
         }
         final channelName = _extractChannelName(currentInfo!);
         final groupTitle = currentAttributes['group-title'] ?? '';
+        if (_isVodEntry(
+          channelName: channelName,
+          groupTitle: groupTitle,
+          url: channelUrl,
+        )) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
 
-        // FAST PATH: Skip all VOD detection - treat everything as live channel
         final tvgId = currentAttributes['tvg-id'];
         channelMaps.add({
           'id': (tvgId != null && tvgId.trim().isNotEmpty)
@@ -523,6 +543,9 @@ class M3UParserService {
         if (urlMatch != null) {
           final channelUrl = urlMatch.group(0) ?? '';
           if (channelUrl.isNotEmpty && seenUrls.add(channelUrl)) {
+            if (_isLikelyVodUrl(channelUrl)) {
+              return;
+            }
             debugLog('M3UParser: Found bare URL, auto-adding: $channelUrl');
             // Fallback name from URL
             String fallbackName = 'Channel ${channelCount + 1}';
@@ -617,6 +640,102 @@ class M3UParserService {
       return info.substring(lastComma + 1).trim();
     }
     return 'Unknown Channel';
+  }
+
+  bool _isVodEntry({
+    required String channelName,
+    required String groupTitle,
+    required String url,
+  }) {
+    final normalizedGroup = groupTitle.trim().toLowerCase();
+    final normalizedTitle = channelName.trim().toLowerCase();
+    final normalizedUrl = url.trim().toLowerCase();
+
+    if (_isLikelyLiveUrl(normalizedUrl)) {
+      return false;
+    }
+
+    if (_hasSeriesPathKeyword(normalizedUrl)) {
+      return true;
+    }
+
+    if (_hasMoviePathKeyword(normalizedUrl) ||
+        _hasVodFileExtension(normalizedUrl)) {
+      return true;
+    }
+
+    if (_seriesEpisodeRegex.hasMatch(channelName)) {
+      return true;
+    }
+
+    if (_looksLikeSeriesGroup(normalizedGroup)) {
+      return true;
+    }
+
+    return _looksLikeMovieGroup(normalizedGroup, normalizedTitle);
+  }
+
+  bool _looksLikeSeriesGroup(String lowerGroupTitle) {
+    return lowerGroupTitle.contains('series') ||
+        lowerGroupTitle.contains('tv shows') ||
+        lowerGroupTitle.contains('episodes') ||
+        lowerGroupTitle.contains('shows');
+  }
+
+  bool _looksLikeMovieGroup(String lowerGroupTitle, String lowerTitle) {
+    if (lowerGroupTitle.contains('vod') ||
+        lowerGroupTitle.contains('video on demand')) {
+      return true;
+    }
+    if (lowerGroupTitle.contains('movie') ||
+        lowerGroupTitle.contains('movies') ||
+        lowerGroupTitle.contains('film') ||
+        lowerGroupTitle.contains('cinema')) {
+      return true;
+    }
+    return lowerTitle == 'movie' || lowerTitle == 'film';
+  }
+
+  bool _isLikelyLiveUrl(String lowerUrl) {
+    return lowerUrl.contains('/live/') ||
+        lowerUrl.endsWith('.m3u8') ||
+        lowerUrl.endsWith('.ts');
+  }
+
+  bool _isLikelyVodUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    if (_isLikelyLiveUrl(lowerUrl)) return false;
+    return _hasMoviePathKeyword(lowerUrl) ||
+        _hasSeriesPathKeyword(lowerUrl) ||
+        _hasVodFileExtension(lowerUrl);
+  }
+
+  bool _hasVodFileExtension(String lowerUrl) {
+    const extensions = [
+      '.mp4',
+      '.mkv',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.mpg',
+      '.mpeg',
+      '.m4v',
+    ];
+    return extensions.any(lowerUrl.endsWith);
+  }
+
+  bool _hasMoviePathKeyword(String lowerUrl) {
+    return lowerUrl.contains('/movie/') ||
+        lowerUrl.contains('/movies/') ||
+        lowerUrl.contains('/vod/') ||
+        lowerUrl.contains('/film/');
+  }
+
+  bool _hasSeriesPathKeyword(String lowerUrl) {
+    return lowerUrl.contains('/series/') ||
+        lowerUrl.contains('/episodes/') ||
+        lowerUrl.contains('/tvshows/');
   }
 
   /// Parses attributes from EXTINF line - FAST version without regex

@@ -36,11 +36,13 @@ import 'package:iptv_player/state/epg_screen_state.dart';
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
   final bool continuePlayback;
+  final VoidCallback? onExit;
 
   const EPGScreen({
     super.key,
     this.initialChannel,
     this.continuePlayback = false,
+    this.onExit,
   });
 
   @override
@@ -81,7 +83,7 @@ class _EPGScreenState extends State<EPGScreen>
   // Category focus nodes for smooth D-pad navigation
   final Map<int, FocusNode> _categoryFocusNodes = {};
   static const int _maxCategoryFocusNodes = 100;
-  static const String _epgSnapshotKey = 'epg_snapshot_v1';
+  static const String _epgSnapshotKey = 'epg_snapshot_v2';
   static const Duration _epgSnapshotTtl = Duration(hours: 6);
   static const int _epgSnapshotChannelLimit = 60;
   bool _snapshotApplied = false;
@@ -139,7 +141,7 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
-      
+
       // Ensure we have focus
       _firstChannelFocus.requestFocus();
     });
@@ -164,7 +166,8 @@ class _EPGScreenState extends State<EPGScreen>
         final loadedCount = epgService.loadedProgramChannelCount;
         final availableCount = epgService.availableChannels.length;
         if (loadedCount < 50 && availableCount > 100) {
-          debugLog('EPG Screen: Data sparse ($loadedCount/$availableCount loaded) - forcing refresh');
+          debugLog(
+              'EPG Screen: Data sparse ($loadedCount/$availableCount loaded) - forcing refresh');
           unawaited(epgService.forceRefresh());
         } else {
           unawaited(epgService.initialize());
@@ -242,6 +245,9 @@ class _EPGScreenState extends State<EPGScreen>
           groupTitle: c['groupTitle'] as String?,
           tvgId: c['tvgId'] as String?,
           channelNumber: c['channelNumber'] as int?,
+          attributes: c['attributes'] is Map
+              ? Map<String, String>.from(c['attributes'] as Map)
+              : null,
           language: c['language'] as String?,
           country: c['country'] as String?,
         );
@@ -363,6 +369,8 @@ class _EPGScreenState extends State<EPGScreen>
           'groupTitle': channel.groupTitle,
           'tvgId': channel.tvgId,
           'channelNumber': channel.channelNumber,
+          if (channel.attributes != null && channel.attributes!.isNotEmpty)
+            'attributes': channel.attributes,
           'language': channel.language,
           'country': channel.country,
           if (programPayload.isNotEmpty) 'programs': programPayload,
@@ -409,6 +417,38 @@ class _EPGScreenState extends State<EPGScreen>
       }
     } catch (e) {
       debugLog('EPG Screen: Failed to prime categories: $e');
+    }
+  }
+
+  void _ensureInitialCategorySelection(List<String> categoryNames) {
+    if (!mounted || categoryNames.isEmpty) return;
+    final selectedCategory = _epgState.selectedCategory;
+    final hasFavorites = _epgState.epgFavoriteChannelIds.isNotEmpty &&
+        categoryNames.contains('⭐ Favorites');
+    final hasSelectedCategory =
+        selectedCategory != null && categoryNames.contains(selectedCategory);
+    if (hasSelectedCategory) return;
+    if (selectedCategory == '⭐ Favorites' && !hasFavorites) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _epgState.setSelectedCategory(categoryNames.first);
+      });
+      return;
+    }
+    if (selectedCategory == null && categoryNames.first == '⭐ Favorites') {
+      final fallback = categoryNames.length > 1 ? categoryNames[1] : null;
+      if (fallback == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _epgState.selectedCategory != null) return;
+        _epgState.setSelectedCategory(fallback);
+      });
+      return;
+    }
+    if (selectedCategory == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _epgState.selectedCategory != null) return;
+        _epgState.setSelectedCategory(categoryNames.first);
+      });
     }
   }
 
@@ -578,6 +618,21 @@ class _EPGScreenState extends State<EPGScreen>
     setState(() {});
   }
 
+  Future<bool> _handleBackNavigation() async {
+    final onExit = widget.onExit;
+    if (onExit != null) {
+      onExit();
+      return false;
+    }
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      context.pop();
+      return false;
+    }
+    context.go('/home');
+    return false;
+  }
+
   /// Scroll the channel list back to the top when category changes
   void _scrollChannelListToTop() {
     if (_verticalScrollController.hasClients) {
@@ -713,10 +768,7 @@ class _EPGScreenState extends State<EPGScreen>
     // ignore: deprecated_member_use
     return Scaffold(
       body: CompatPopScope(
-        onWillPop: () async {
-          context.go('/home');
-          return false;
-        },
+        onWillPop: _handleBackNavigation,
         child: Consumer2<ChannelProvider, IncrementalEpgService>(
           builder: (context, channelProvider, epgService, child) {
             final hasChannels = channelProvider.hasChannels;
@@ -763,6 +815,7 @@ class _EPGScreenState extends State<EPGScreen>
               '⭐ Favorites',
               ...categoryList
             ]; // Favorites first, then categories
+            _ensureInitialCategorySelection(categoryNames);
             final showCenteredUpdating =
                 isCategoryLoading && categoryList.isEmpty;
 
@@ -770,7 +823,25 @@ class _EPGScreenState extends State<EPGScreen>
             return FutureBuilder<List<Channel>>(
               future: channelPageFuture,
               builder: (context, snapshot) {
+                final fallbackChannels = _lastFilteredChannels;
+                if (snapshot.hasError) {
+                  if (fallbackChannels.isEmpty) {
+                    return _buildLoadingErrorState(snapshot.error);
+                  }
+                }
                 if (!snapshot.hasData) {
+                  if (fallbackChannels.isNotEmpty) {
+                    return _buildGuideContent(
+                      context,
+                      categoryNames,
+                      fallbackChannels,
+                      hasMore: false,
+                      allFilteredChannels: fallbackChannels,
+                      epgService: epgService,
+                      isCategoryLoading: isCategoryLoading,
+                      showCenteredUpdating: showCenteredUpdating,
+                    );
+                  }
                   return const Center(
                       child: CircularProgressIndicator(
                           color: AppTheme.primaryBlue));
@@ -789,64 +860,15 @@ class _EPGScreenState extends State<EPGScreen>
                 _lastFilteredChannels = allFilteredChannels;
 
                 // Calculate header height for offset
-                const headerHeight =
-                    AppSpacing.epgRowHeight + 4.0; // Match row height + gap
-
-                return Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF080808), // Rich Black
-                        AppTheme.darkBackground, // True Black
-                      ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Content layer - starts from top, header overlays on top
-                      Column(
-                        children: [
-                          // Spacer for header area
-                          const SizedBox(height: headerHeight),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                  left: AppSpacing.sidebarCollapsedWidth),
-                              child: Row(
-                                children: [
-                                  // Category sidebar
-                                  _buildCategorySidebar(
-                                    categoryNames,
-                                    isLoading: isCategoryLoading,
-                                    showCenteredUpdating: showCenteredUpdating,
-                                  ),
-                                  SizedBox(
-                                    width: context.channelSidebarWidth(),
-                                    child:
-                                        _buildChannelColumn(filteredChannels, categoryNames, hasMore),
-                                  ),
-                                  Expanded(
-                                    child: _buildProgramGrid(filteredChannels,
-                                        epgService, allFilteredChannels),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Transparent header overlay
-                      Positioned(
-                        top: 0,
-                        left: AppSpacing.sidebarCollapsedWidth,
-                        right: 0,
-                        child: _buildHeader(epgService),
-                      ),
-                    ],
-                  ),
+                return _buildGuideContent(
+                  context,
+                  categoryNames,
+                  filteredChannels,
+                  hasMore: hasMore,
+                  allFilteredChannels: allFilteredChannels,
+                  epgService: epgService,
+                  isCategoryLoading: isCategoryLoading,
+                  showCenteredUpdating: showCenteredUpdating,
                 );
               },
             );
@@ -930,6 +952,137 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
+  Widget _buildLoadingErrorState(Object? error) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.darkBackground,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Container(
+            padding: const EdgeInsets.all(AppSizes.xl),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.05 * 255).round()),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              border: Border.all(
+                color: Colors.white.withAlpha((0.12 * 255).round()),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  AppIcons.warning,
+                  size: 42,
+                  color: AppTheme.accentRed,
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Guide Failed To Load',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSizes.md),
+                Text(
+                  '${error ?? 'Unknown error'}',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSizes.xl),
+                BrandPrimaryButton(
+                  icon: AppIcons.refresh,
+                  label: 'Retry',
+                  onPressed: () {
+                    setState(() {
+                      _channelPageFuture = null;
+                      _channelPageKey = '';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuideContent(
+    BuildContext context,
+    List<String> categoryNames,
+    List<Channel> filteredChannels, {
+    required bool hasMore,
+    required List<Channel> allFilteredChannels,
+    required IncrementalEpgService epgService,
+    required bool isCategoryLoading,
+    required bool showCenteredUpdating,
+  }) {
+    const headerHeight =
+        AppSpacing.epgRowHeight + 4.0; // Match row height + gap
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF080808),
+            AppTheme.darkBackground,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              const SizedBox(height: headerHeight),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                      left: AppSpacing.sidebarCollapsedWidth),
+                  child: Row(
+                    children: [
+                      _buildCategorySidebar(
+                        categoryNames,
+                        isLoading: isCategoryLoading,
+                        showCenteredUpdating: showCenteredUpdating,
+                      ),
+                      SizedBox(
+                        width: context.channelSidebarWidth(),
+                        child: _buildChannelColumn(
+                          filteredChannels,
+                          categoryNames,
+                          hasMore,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildProgramGrid(
+                          filteredChannels,
+                          epgService,
+                          allFilteredChannels,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 0,
+            left: AppSpacing.sidebarCollapsedWidth,
+            right: 0,
+            child: _buildHeader(epgService),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(IncrementalEpgService epgService) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -1007,7 +1160,7 @@ class _EPGScreenState extends State<EPGScreen>
                         ? null
                         : () {
                             // Clear image failure cache to retry blocked logos
-                            ImageFailureCache.clear(); 
+                            ImageFailureCache.clear();
                             unawaited(_triggerEpgRefresh());
                           },
                     icon: AnimatedBuilder(
@@ -1312,7 +1465,8 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildChannelColumn(List<Channel> channels, List<String> categories, bool hasMore) {
+  Widget _buildChannelColumn(
+      List<Channel> channels, List<String> categories, bool hasMore) {
     const rowHeight = AppSpacing.epgRowHeight;
     const rowGap = 4.0;
     return Column(
@@ -1358,21 +1512,23 @@ class _EPGScreenState extends State<EPGScreen>
                 _showChannelContextMenu(context, channel),
             firstChannelFocusNode: _firstChannelFocus,
             onFocusCategories: () {
-                // Return to selected category, or first if none/lost
-               final selected = _epgState.selectedCategory ?? 'All Channels';
-               final idx = categories.indexOf(selected);
-               if (idx >= 0) {
-                   _categoryFocusNodeForIndex(idx).requestFocus();
-               } else {
-                   _firstCategoryFocus.requestFocus();
-               }
+              // Return to selected category, or first if none/lost
+              final selected = _epgState.selectedCategory ?? 'All Channels';
+              final idx = categories.indexOf(selected);
+              if (idx >= 0) {
+                _categoryFocusNodeForIndex(idx).requestFocus();
+              } else {
+                _firstCategoryFocus.requestFocus();
+              }
             },
             onFocusCategoryAtIndex: null, // Disable direct index mapping
             onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => _firstProgramFocus.requestFocus(),
             onFocusProgramForChannel: (channel) =>
-                _programFocusNodeForChannel(channel).requestFocus(), // Removed index passing
-            channelFocusNodeForChannel: (channel, index) => _channelFocusNodeForChannel(channel, index),
+                _programFocusNodeForChannel(channel)
+                    .requestFocus(), // Removed index passing
+            channelFocusNodeForChannel: (channel, index) =>
+                _channelFocusNodeForChannel(channel, index),
             controller: _sidebarController,
           ),
         ),

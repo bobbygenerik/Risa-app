@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'media_kit_player_widget.dart';
 
 class ChewiePlayerWidget extends StatefulWidget {
   final String url;
@@ -34,6 +37,11 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Use MediaKit on Linux/desktop — video_player has no Linux backend
+    if (!kIsWeb && Platform.isLinux) {
+      return MediaKitPlayerWidget(url: widget.url, isLive: widget.isLive);
+    }
+
     if (_errorMessage != null) {
       return _buildErrorWidget(_errorMessage!);
     }
@@ -160,12 +168,12 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
       // Create controller with optimized settings for live TV
       _videoController = VideoPlayerController.networkUrl(
         uri,
-        formatHint: uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
+        formatHint: uri.toString().toLowerCase().contains('.m3u8') ? VideoFormat.hls : null,
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
         ),
         httpHeaders: {
-          'User-Agent': 'RisaTV/1.0',
+          'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
           'Connection': 'keep-alive',
           'Accept': '*/*',
         },

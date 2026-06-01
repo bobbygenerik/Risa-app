@@ -65,23 +65,25 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   @override
   void didUpdateWidget(ChannelLogoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only update if logo URL actually changed (not just widget rebuild)
-    if (widget.logoUrl != oldWidget.logoUrl) {
+    final logoChanged = widget.logoUrl != oldWidget.logoUrl;
+    final identityChanged = widget.channelName != oldWidget.channelName ||
+        widget.tvgId != oldWidget.tvgId;
+    // Reset recovery when the channel identity changes, even if the logo URL
+    // is unchanged or null, so list item reuse can re-enrich correctly.
+    if (logoChanged || identityChanged) {
       final newLogoUrl = _normalizeLogoUrl(widget.logoUrl);
-      // Only update state if logo URL actually changed
-      if (_effectiveLogoUrl != newLogoUrl) {
+      final shouldRefresh = _effectiveLogoUrl != newLogoUrl || identityChanged;
+      if (shouldRefresh) {
         _effectiveLogoUrl = newLogoUrl;
         _triedEnrichment = false;
         _recoveryEnrichmentScheduled = false;
         _triedFallbackUrl = false;
-        if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
-          if (widget.allowEnrichment) {
-            _enrichLogo();
-          }
+        if ((_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) &&
+            widget.allowEnrichment) {
+          _enrichLogo();
         }
       }
     }
-    // Don't reset enrichment on channel name changes - logo URL is what matters
   }
 
   Future<void> _enrichLogo() async {
@@ -176,6 +178,12 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     final shouldSkip = effectiveUrl != null &&
         (ImageFailureCache.shouldSkipLogo(effectiveUrl) ||
             ImageValidationService.isKnownInvalid(effectiveUrl));
+    if (shouldSkip) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _tryFallbackOrEnrich(effectiveUrl);
+      });
+    }
 
     return ClipRRect(
       borderRadius:

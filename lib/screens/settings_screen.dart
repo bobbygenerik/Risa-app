@@ -1230,7 +1230,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _handleUpdateEpg() async {
     _showMessage('Updating EPG...');
     final service = Provider.of<IncrementalEpgService>(context, listen: false);
-    await service.initialize();
+    await service.initialize(forceRefresh: true);
     if (!mounted) return;
     _showMessage('EPG update triggered.');
   }

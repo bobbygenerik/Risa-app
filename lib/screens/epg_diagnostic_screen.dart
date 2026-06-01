@@ -36,7 +36,13 @@ class EpgDiagnosticScreen extends StatefulWidget {
   State<EpgDiagnosticScreen> createState() => _EpgDiagnosticScreenState();
 }
 
-class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
+class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final List<FocusNode> _tabFocusNodes = List.generate(
+    2,
+    (index) => FocusNode(debugLabel: 'EpgDiagTabHeader_$index'),
+  );
   Future<Map<String, int>>? _statsFuture;
   int _lastChannelCount = -1;
   int _lastEpgCount = -1;
@@ -59,8 +65,10 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   static const int _pageSize = 100;
   static const int _scanChunkSize = 200;
   final FocusNode _reloadFocus = FocusNode(debugLabel: 'EpgReload');
+  final FocusNode _fullScanFocus = FocusNode(debugLabel: 'EpgFullScan');
   final FocusNode _configureFocus = FocusNode(debugLabel: 'EpgConfigure');
   final FocusNode _loadMoreFocus = FocusNode(debugLabel: 'EpgLoadMore');
+  final FocusNode _refreshFocus = FocusNode(debugLabel: 'EpgSystemRefresh');
   final List<FocusNode> _chipFocusNodes = List.generate(
     3,
     (index) => FocusNode(debugLabel: 'EpgMatchChip$index'),
@@ -69,6 +77,10 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshStats());
     WidgetsBinding.instance.addPostFrameCallback((_) => _requestInitialFocus());
   }
@@ -138,8 +150,10 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         offset += batch.length;
         for (final channel in batch) {
           final id = channel.epgLookupId;
-          final matched =
-              epgService.hasEpgMatch(id, channelName: channel.epgLookupName);
+          final matched = epgService.hasEpgMatch(
+            id,
+            channelName: channel.epgLookupNameFallback,
+          );
           final passes = _matchFilter == _MatchFilter.all ||
               (_matchFilter == _MatchFilter.matched && matched) ||
               (_matchFilter == _MatchFilter.unmatched && !matched);
@@ -172,13 +186,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     }
     _lastChannelCount = channelCount;
     _lastEpgCount = epgCount;
-    
+
     // Only refresh stats if enough time has passed to avoid rapid rebuilds
     final now = DateTime.now();
-    if (_lastRefreshAt != null && now.difference(_lastRefreshAt!).inSeconds < 2) {
+    if (_lastRefreshAt != null &&
+        now.difference(_lastRefreshAt!).inSeconds < 2) {
       return;
     }
-    
+
     // Defer state update to post-frame to avoid setState during build
     Future.microtask(() {
       if (mounted) _refreshStats();
@@ -186,8 +201,17 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   void _requestInitialFocus() {
-    if (_reloadFocus.hasFocus) return;
-    _reloadFocus.requestFocus();
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_reloadFocus.canRequestFocus) {
+        _reloadFocus.requestFocus();
+      } else {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _requestInitialFocus();
+        });
+      }
+    });
   }
 
   String _formatDuration(Duration duration) {
@@ -227,7 +251,10 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       if (batch.isEmpty) break;
       for (final channel in batch) {
         final id = channel.epgLookupId;
-        if (epgService.hasEpgMatch(id, channelName: channel.epgLookupName)) {
+        if (epgService.hasEpgMatch(
+          id,
+          channelName: channel.epgLookupNameFallback,
+        )) {
           matched++;
         }
       }
@@ -236,8 +263,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       setState(() {
         _fullScanMatched = matched;
         _fullScanTotal = totalChannels;
-        _fullScanProgress =
-            totalChannels == 0 ? 0.0 : (processed / totalChannels).clamp(0.0, 1.0);
+        _fullScanProgress = totalChannels == 0
+            ? 0.0
+            : (processed / totalChannels).clamp(0.0, 1.0);
       });
       // Yield to keep UI responsive.
       await Future.delayed(const Duration(milliseconds: 1));
@@ -260,11 +288,19 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       final epgService = context.read<IncrementalEpgService>();
 
       final totalChannels = await channelProvider.getChannelCountAsync();
+      final epgAvailable = epgService.availableChannels.length;
+      final loadedProgramChannels = epgService.loadedProgramChannelCount;
       if (totalChannels == 0) {
-        return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
+        return {
+          'matched': 0,
+          'total': 0,
+          'scanned': 0,
+          'epgChannels': epgAvailable,
+          'loadedProgramChannels': loadedProgramChannels,
+          'estimated': 0,
+        };
       }
 
-      final epgAvailable = epgService.availableChannels.length;
       if (mounted) {
         setState(() {
           _diagnosticChannelCount = totalChannels;
@@ -272,45 +308,87 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         });
       }
 
-      int mappingCount = 0;
-      // Estimate matches in-memory to avoid DB locks during heavy parsing
-      if (epgAvailable == 0) {
+      if (epgAvailable == 0 && loadedProgramChannels == 0) {
         return {
           'matched': 0,
           'scanned': totalChannels,
           'total': totalChannels,
           'epgChannels': epgAvailable,
+          'loadedProgramChannels': loadedProgramChannels,
+          'estimated': 0,
         };
-      } else {
-        final sampleSize = math.min(200, totalChannels);
-        try {
-          final sample =
-              channelProvider.getChannelSampleMapsByStride(sampleSize);
-          if (sample.isNotEmpty) {
-            final matched = epgService.estimateMatchesFast(sample);
-            // Guard against division by zero - use sample.length if not empty, else 1
-            final divisor = sample.isNotEmpty ? sample.length : 1;
-            mappingCount = matched * (totalChannels ~/ divisor);
-          }
-        } catch (e, st) {
-          debugLog('EPG Diagnostic: sampling failed: $e\n$st');
-          mappingCount = 0;
-        }
       }
 
-      // matched is count of mappings; scanned == total (no sampling)
+      final sampleLimit = math.min(1200, totalChannels);
+      var scanned = 0;
+      var matched = 0;
+      const batchSize = 300;
+      while (scanned < sampleLimit) {
+        final batch = await channelProvider.getChannelsPage(
+          offset: scanned,
+          limit: math.min(batchSize, sampleLimit - scanned),
+        );
+        if (batch.isEmpty) break;
+        for (final channel in batch) {
+          final id = channel.epgLookupId;
+          if (epgService.hasEpgMatch(
+            id,
+            channelName: channel.epgLookupNameFallback,
+          )) {
+            matched++;
+          }
+        }
+        scanned += batch.length;
+      }
+
+      final estimated = scanned < totalChannels ? 1 : 0;
+      final projectedMatched =
+          scanned == 0 ? 0 : ((matched / scanned) * totalChannels).round();
+
       return {
-        'matched': mappingCount,
-        'scanned': totalChannels,
+        'matched': estimated == 1 ? projectedMatched : matched,
+        'scanned': scanned,
         'total': totalChannels,
         'epgChannels': epgAvailable,
+        'loadedProgramChannels': loadedProgramChannels,
+        'estimated': estimated,
       };
     } catch (e, st) {
       debugLog('EPG Diagnostic: computeStats failed: $e\n$st');
-      return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
+      return {
+        'matched': 0,
+        'total': 0,
+        'scanned': 0,
+        'epgChannels': 0,
+        'loadedProgramChannels': 0,
+        'estimated': 0,
+      };
     } finally {
       _statsInFlight = false;
     }
+  }
+
+  String _epgStatusSummary(IncrementalEpgService epgService) {
+    final epgChannels = epgService.availableChannels.length;
+    final loadedPrograms = epgService.loadedProgramChannelCount;
+    if (epgService.isDownloading ||
+        epgService.isParsing ||
+        epgService.isLoading) {
+      return 'Loading';
+    }
+    if (epgChannels == 0 && loadedPrograms == 0) {
+      return 'No Data';
+    }
+    if (loadedPrograms == 0) {
+      return 'Partial';
+    }
+    if (epgChannels <= 10 && loadedPrograms > 25) {
+      return 'Loaded (cache-backed)';
+    }
+    if (epgChannels < 10) {
+      return 'Partial';
+    }
+    return 'Loaded';
   }
 
   Future<Map<String, String?>> _getEpgConfiguration() async {
@@ -346,71 +424,119 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
+    for (final node in _tabFocusNodes) {
+      node.dispose();
+    }
     _reloadFocus.dispose();
+    _fullScanFocus.dispose();
     _configureFocus.dispose();
     _loadMoreFocus.dispose();
+    _refreshFocus.dispose();
     for (final node in _chipFocusNodes) {
       node.dispose();
     }
     super.dispose();
   }
 
+  Widget _buildTabHeader(int index, String title) {
+    final isSelected = _tabController.index == index;
+    return TVFocusable(
+      focusNode: _tabFocusNodes[index],
+      onPressed: () {
+        _tabController.animateTo(index);
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isFocused
+                      ? Colors.white
+                      : (isSelected ? AppTheme.primaryBlue : Colors.transparent),
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Text(
+              title,
+              style: TextStyle(
+                color: isFocused
+                    ? Colors.white
+                    : (isSelected ? Colors.white : Colors.white60),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 16,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _writeDebugMarker('epg_diagnostic_build');
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: const Text('EPG Diagnostic'),
         backgroundColor: AppTheme.darkBackground,
-        appBar: AppBar(
-          title: const Text('EPG Diagnostic'),
-          backgroundColor: AppTheme.darkBackground,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TVFocusable(
+            borderRadius: BorderRadius.circular(20),
             onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                context.go('/home');
-              }
+              context.go('/settings');
             },
+            child: const Icon(Icons.arrow_back, color: Colors.white),
           ),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'EPG'),
-              Tab(text: 'System'),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildTabHeader(0, 'EPG'),
+              const SizedBox(width: 24),
+              _buildTabHeader(1, 'System'),
             ],
           ),
         ),
-        body: Consumer2<IncrementalEpgService, ChannelProvider>(
-          builder: (context, epgService, channelProvider, _) {
-            final totalChannels = channelProvider.channelCount;
-            final epgCount = epgService.availableChannels.length;
-            final isEpgBusy = epgService.isDownloading ||
-                epgService.isParsing ||
-                epgService.isLoading;
-            final displayChannels = _diagnosticChannelCount > 0
-                ? _diagnosticChannelCount
-                : totalChannels;
-            final displayEpg =
-                _diagnosticEpgCount > 0 ? _diagnosticEpgCount : epgCount;
-            _maybeRefreshStats(displayChannels, displayEpg, isEpgBusy,
-                channelProvider.isLoading);
-            _updatePageSignature(displayChannels, displayEpg);
-            if (_pageEntries.isEmpty &&
-                !_pageLoading &&
-                _pageHasMore &&
-                !isEpgBusy &&
-                !channelProvider.isLoading) {
-              // Defer loading to avoid build phase conflicts
-              Future.microtask(() {
-                if (mounted) {
-                  _loadNextMatchPage();
-                }
-              });
-            }
+      ),
+      body: Consumer2<IncrementalEpgService, ChannelProvider>(
+        builder: (context, epgService, channelProvider, _) {
+          final totalChannels = channelProvider.channelCount;
+          final epgCount = epgService.availableChannels.length;
+          final isEpgBusy = epgService.isDownloading ||
+              epgService.isParsing ||
+              epgService.isLoading;
+          final displayChannels = _diagnosticChannelCount > 0
+              ? _diagnosticChannelCount
+              : totalChannels;
+          final displayEpg =
+              _diagnosticEpgCount > 0 ? _diagnosticEpgCount : epgCount;
+          _maybeRefreshStats(displayChannels, displayEpg, isEpgBusy,
+              channelProvider.isLoading);
+          _updatePageSignature(displayChannels, displayEpg);
+          if (_pageEntries.isEmpty &&
+              !_pageLoading &&
+              _pageHasMore &&
+              !isEpgBusy &&
+              !channelProvider.isLoading) {
+            // Defer loading to avoid build phase conflicts
+            Future.microtask(() {
+              if (mounted) {
+                _loadNextMatchPage();
+              }
+            });
+          }
 
-            return TabBarView(
+          return TabBarView(
+            controller: _tabController,
               children: [
                 _buildEpgDiagnosticsTab(
                   context,
@@ -428,8 +554,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildEpgDiagnosticsTab(
@@ -442,9 +567,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     final isEpgBusy = epgService.isDownloading ||
         epgService.isParsing ||
         epgService.isLoading;
-    final fullScanPercent = _fullScanTotal == 0
-        ? 0.0
-        : (_fullScanMatched / _fullScanTotal) * 100.0;
+    final fullScanPercent =
+        _fullScanTotal == 0 ? 0.0 : (_fullScanMatched / _fullScanTotal) * 100.0;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: FocusTraversalGroup(
@@ -460,11 +584,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
+                        'EPG Status: ${_epgStatusSummary(epgService)}',
                         style: TextStyle(
-                          color: epgService.availableChannels.isNotEmpty
-                              ? AppTheme.accentGreen
-                              : AppTheme.accentOrange,
+                          color:
+                              _epgStatusSummary(epgService).startsWith('Loaded')
+                                  ? AppTheme.accentGreen
+                                  : _epgStatusSummary(epgService) == 'Partial'
+                                      ? AppTheme.accentOrange
+                                      : AppTheme.accentOrange,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -479,7 +606,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                 final messenger =
                                     ScaffoldMessenger.maybeOf(context);
                                 try {
-                                  await _writeDebugMarker('epg_reload_requested');
+                                  await _writeDebugMarker(
+                                      'epg_reload_requested');
                                   debugLog(
                                       'EPG: Force reload initiated from diagnostic screen');
 
@@ -490,10 +618,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                                   debugLog('EPG: Cleared EPG data');
 
                                   // Force fresh download and parse
-                                  await epgService.initialize(forceRefresh: true);
+                                  await epgService.initialize(
+                                      forceRefresh: true);
                                   debugLog('EPG: Reload completed');
 
-                                  await _writeDebugMarker('epg_reload_completed');
+                                  await _writeDebugMarker(
+                                      'epg_reload_completed');
                                   if (!mounted) return;
                                   _refreshStats();
                                   if (!mounted) return;
@@ -523,12 +653,15 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           SizedBox(
                             width: 140,
                             child: BrandPrimaryButton(
+                              focusNode: _fullScanFocus,
                               onPressed: () {
                                 if (_fullScanInFlight) return;
                                 unawaited(_runFullScan());
                               },
                               icon: Icons.find_in_page,
-                              label: _fullScanInFlight ? 'Scanning...' : 'Full Scan',
+                              label: _fullScanInFlight
+                                  ? 'Scanning...'
+                                  : 'Full Scan',
                               expand: true,
                               minHeight: 36,
                             ),
@@ -556,13 +689,15 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'EPG Channels: $displayEpg',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                  Text(
+                    'Channels With Program Data: ${epgService.loadedProgramChannelCount}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   Text(
                     'Playlist Channels: $displayChannels',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   FutureBuilder<Map<String, int>>(
                     future: _statsFuture,
@@ -589,6 +724,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                       final total = data['total'] ?? 0;
                       final scanned = data['scanned'] ?? 0;
                       final epgChannels = data['epgChannels'] ?? 0;
+                      final loadedProgramChannels =
+                          data['loadedProgramChannels'] ?? 0;
+                      final estimated = data['estimated'] == 1;
                       final matchRate =
                           total == 0 ? 0.0 : (matched / total) * 100.0;
                       return Column(
@@ -603,7 +741,9 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Matches: $matched / $total (${matchRate.toStringAsFixed(1)}%) '
-                            '($scanned scanned, $epgChannels guide entries)',
+                            '(${estimated ? "sampled/projection" : "actual scan"}, '
+                            '$scanned scanned, $epgChannels guide ids, '
+                            '$loadedProgramChannels channels with programs)',
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 12),
                           ),
@@ -896,58 +1036,56 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
   Widget _buildMatchEntryRow(_MatchEntry entry) {
     final statusColor = entry.matched ? Colors.green : Colors.orange;
-    return TVFocusable(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withAlpha(40),
-            width: 1,
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withAlpha(40),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            entry.matched ? Icons.check_circle : Icons.error,
+            color: statusColor,
+            size: 18,
           ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              entry.matched ? Icons.check_circle : Icons.error,
-              color: statusColor,
-              size: 18,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.channel.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ID: ${entry.id}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  entry.matched ? 'Matched' : 'No match found',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.channel.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'ID: ${entry.id}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    entry.matched ? 'Matched' : 'No match found',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -974,9 +1112,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               : AppTheme.cardBackground.withAlpha((0.85 * 255).round()),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? AppTheme.primaryBlue
-                : Colors.white.withAlpha(40),
+            color:
+                isSelected ? AppTheme.primaryBlue : Colors.white.withAlpha(40),
             width: 1,
           ),
         ),
@@ -1114,13 +1251,16 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() => _artworkDebugTick++);
-                      },
-                      child: const Text(
-                        'Refresh',
-                        style: TextStyle(color: AppTheme.primaryBlue),
+                    SizedBox(
+                      width: 100,
+                      child: BrandSecondaryButton(
+                        focusNode: _refreshFocus,
+                        onPressed: () {
+                          setState(() => _artworkDebugTick++);
+                        },
+                        label: 'Refresh',
+                        minHeight: 28,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1230,5 +1370,4 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       ),
     );
   }
-
 }

@@ -84,6 +84,13 @@ typedef ArtworkUpdateCallback = void Function();
 /// Service to manage artwork fetching, caching, and queuing for Live TV.
 /// Extracted from LiveTVScreen to reduce file size and improve maintainability.
 class LiveTvArtworkService {
+  static const Set<String> _blockedProgramArtworkHosts = {
+    'zap2it.tmsimg.com',
+    'zpmc.tmsimg.com',
+    'xplatinmedia.com',
+    'ngiss.t-online.de',
+  };
+
   LiveTvArtworkService({
     required this.onArtworkUpdate,
     bool? tmdbEnabled,
@@ -511,7 +518,8 @@ class LiveTvArtworkService {
         ? const Duration(milliseconds: 500)
         : const Duration(milliseconds: 100);
     _artworkThrottle ??= Timer(interval, _drainArtworkQueue);
-    debugLog('LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
+    debugLog(
+        'LiveTV artwork: Timer scheduled for drain in ${interval.inMilliseconds}ms');
   }
 
   Future<void> _drainArtworkQueue() async {
@@ -1034,7 +1042,12 @@ class LiveTvArtworkService {
   String _titleLogoCacheKey(Program program, Channel channel) {
     final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
     final isSports = _isSportsProgram(program, channel);
-    return '${isSports ? 'sports' : 'general'}|$normalized';
+    final channelHint = (channel.tvgId ?? channel.id).trim().isNotEmpty
+        ? (channel.tvgId ?? channel.id).trim()
+        : (channel.groupTitle?.trim().isNotEmpty == true
+            ? channel.groupTitle!.trim()
+            : channel.name);
+    return '${isSports ? 'sports' : 'general'}|$normalized|${_normalizeForFilter(channelHint)}';
   }
 
   Future<String?> _fetchFanartTitleLogo(Program program) async {
@@ -1431,11 +1444,7 @@ class LiveTvArtworkService {
     final base = _normalizeForFilter(_canonicalArtworkTitle(baseTitle));
     final channelForKey = channel ?? _programChannelLookup[program.id];
     if (channelForKey == null) return base;
-    final isNews = EPGMatchingUtils.isLikelyNewsTitle(baseTitle);
-    if (!_isGenericTitle(base) && !isNews) {
-      return base;
-    }
-    final channelId = channelForKey.tvgId ?? channelForKey.id;
+    final channelId = (channelForKey.tvgId ?? channelForKey.id).trim();
     if (channelId.isNotEmpty) {
       return '$base|${_normalizeForFilter(channelId)}';
     }
@@ -1469,8 +1478,10 @@ class LiveTvArtworkService {
   static final RegExp _nonWordWhitespaceRe = RegExp(r'[^\w\s]');
   static final RegExp _whitespaceRe = RegExp(r'\s+');
   static final RegExp _channelSeparatorsRe = RegExp(r'\s*[-:|]\s*');
-  static final RegExp _qualityKeywordsRe = RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false);
-  static final RegExp _networkKeywordsRe = RegExp(r'\b(tv|channel|network)\b', caseSensitive: false);
+  static final RegExp _qualityKeywordsRe =
+      RegExp(r'\b(hd|fhd|uhd|4k|sd|1080p|720p)\b', caseSensitive: false);
+  static final RegExp _networkKeywordsRe =
+      RegExp(r'\b(tv|channel|network)\b', caseSensitive: false);
 
   String _normalizeForFilter(String title) {
     return title
@@ -1610,22 +1621,39 @@ class LiveTvArtworkService {
     bool isEpgFallback = false,
   }) {
     if (url == null || url.isEmpty) return false;
+    final blockedHost = _blockedProgramArtworkHost(url);
+    if (blockedHost != null) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_blocked_host host=$blockedHost',
+      );
+      return false;
+    }
     if (ImageValidationService.isKnownInvalid(url)) return false;
-    
+
     // Always reject posters, even for EPG fallback
     if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
-    
+
     // For EPG fallback, we are more permissive with small images.
     if (!isEpgFallback) {
       if (ArtworkValidator.isLikelySmallImage(url)) return false;
     }
-    
+
     if (ArtworkValidator.isLikelyChannelLogoUrl(url)) return false;
     if (ArtworkValidator.isLikelyTitleLogoUrl(url)) return false;
     final channelLogo = channel.logoUrl;
     if (channelLogo != null && channelLogo == url) return false;
     if (_matchesChannelLogo(url, channel)) return false;
     return true;
+  }
+
+  String? _blockedProgramArtworkHost(String url) {
+    try {
+      final host = Uri.parse(url).host.toLowerCase();
+      if (_blockedProgramArtworkHosts.contains(host)) {
+        return host;
+      }
+    } catch (_) {}
+    return null;
   }
 
   bool _isValidTitleLogo(String? url, Channel channel) {

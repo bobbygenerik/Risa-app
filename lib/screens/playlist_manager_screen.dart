@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -13,6 +12,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/hash_utils.dart';
 
@@ -543,109 +543,70 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final focusNode =
         _playlistFocusNodes.length > index ? _playlistFocusNodes[index] : null;
 
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          final nextIndex = index + 1;
-          if (nextIndex < _playlistFocusNodes.length) {
-            _playlistFocusNodes[nextIndex].requestFocus();
-            return KeyEventResult.handled;
-          }
-        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          final prevIndex = index - 1;
-          if (prevIndex >= 0) {
-            _playlistFocusNodes[prevIndex].requestFocus();
-            return KeyEventResult.handled;
-          }
-        } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-            event.logicalKey == LogicalKeyboardKey.select ||
-            event.logicalKey == LogicalKeyboardKey.space) {
-          if (!isActive) {
-            _loadPlaylist(playlist);
-          }
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      onFocusChange: (hasFocus) {
-        if (hasFocus) {
-          Scrollable.ensureVisible(
-            focusNode?.context ?? context,
-            alignment: 0.2,
-            duration: const Duration(milliseconds: 180),
-          );
-        }
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          final borderColor =
-              isFocused ? AppTheme.focusBorder : Colors.transparent;
-          final boxShadow = isFocused
-              ? TVFocusStyle.focusedShadow
-              : TVFocusStyle.defaultShadow;
-
-          return AnimatedScale(
-            scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-            duration: TVFocusStyle.animationDuration,
-            curve: TVFocusStyle.animationCurve,
-            child: AnimatedContainer(
-              duration: TVFocusStyle.animationDuration,
-              curve: TVFocusStyle.animationCurve,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground,
-                borderRadius: BorderRadius.circular(16),
-                border:
-                    Border.all(color: borderColor, width: isFocused ? 3 : 1),
-                boxShadow: boxShadow,
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withAlpha((0.08 * 255).round()),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.sm),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: TVFocusable(
+                focusNode: focusNode,
+                borderRadius: BorderRadius.circular(12),
+                onPressed: () {
                   if (!isActive) {
                     _loadPlaylist(playlist);
                   }
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(AppSizes.md),
+                  padding: const EdgeInsets.all(AppSizes.sm),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 50,
-                        height: 50,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: isActive
                               ? AppTheme.primaryBlue
                               : AppTheme.primaryBlue
-                                  .withAlpha((0.35 * 255).round()),
+                                  .withAlpha((0.2 * 255).round()),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           playlist.type == 'm3u' ? Icons.link : Icons.cast,
                           color: Colors.white,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                       const SizedBox(width: AppSizes.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Row(
                               children: [
                                 Expanded(
                                   child: Text(
                                     playlist.name,
-                                    style: AppTypography.cardTitle(context),
+                                    style: AppTypography.cardTitle(context).copyWith(
+                                      fontSize: context.tvTextSize(16),
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (isActive)
+                                if (isActive) ...[
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
@@ -657,11 +618,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                                       'ACTIVE',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -670,57 +632,66 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                                   ? 'M3U Playlist'
                                   : 'Xtream Codes',
                               style: AppTypography.bodySecondary(context)
-                                  .copyWith(fontSize: context.tvTextSize(14)),
+                                  .copyWith(fontSize: context.tvTextSize(13)),
                             ),
                             if (playlist.type == 'xtream' &&
                                 playlist.server != null)
                               Text(
                                 playlist.server!,
-                                style: AppTypography.smallText(context),
+                                style: AppTypography.smallText(context).copyWith(
+                                  fontSize: context.tvTextSize(11),
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (!isActive)
-                            _buildPlaylistActionButton(
-                              icon: Icons.play_arrow,
-                              color: AppTheme.primaryBlue,
-                              tooltip: 'Load',
-                              onPressed: () => _loadPlaylist(playlist),
-                            ),
-                          _buildPlaylistActionButton(
-                            icon: Icons.edit,
-                            color: AppTheme.textPrimary,
-                            tooltip: 'Rename',
-                            onPressed: () => _editPlaylist(playlist),
-                          ),
-                          _buildPlaylistActionButton(
-                            icon: Icons.link,
-                            color: AppTheme.textPrimary,
-                            tooltip: 'Edit EPG URLs',
-                            onPressed: () => _editEpgUrls(playlist),
-                          ),
-                          _buildPlaylistActionButton(
-                            icon: Icons.delete,
-                            color: AppTheme.accentRed,
-                            tooltip: 'Delete',
-                            onPressed: () => _deletePlaylist(playlist, index),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
               ),
             ),
-          );
-        },
+            const SizedBox(width: 12),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isActive) ...[
+                    _buildPlaylistActionButton(
+                      icon: Icons.play_arrow,
+                      color: AppTheme.primaryBlue,
+                      tooltip: 'Load',
+                      onPressed: () => _loadPlaylist(playlist),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  _buildPlaylistActionButton(
+                    icon: Icons.edit,
+                    color: AppTheme.textPrimary,
+                    tooltip: 'Rename',
+                    onPressed: () => _editPlaylist(playlist),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildPlaylistActionButton(
+                    icon: Icons.link,
+                    color: AppTheme.textPrimary,
+                    tooltip: 'Edit EPG URLs',
+                    onPressed: () => _editEpgUrls(playlist),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildPlaylistActionButton(
+                    icon: Icons.delete,
+                    color: AppTheme.accentRed,
+                    tooltip: 'Delete',
+                    onPressed: () => _deletePlaylist(playlist, index),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -743,18 +714,26 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return AnimatedContainer(
+          return AnimatedScale(
+            scale: isFocused ? 1.1 : 1.0,
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
-              borderRadius: BorderRadius.circular(8),
-              border: isFocused ? Border.all(color: color, width: 2) : null,
-            ),
-            child: IconButton(
-              tooltip: tooltip,
-              icon: Icon(icon, color: color),
-              onPressed: onPressed,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
+                borderRadius: BorderRadius.circular(8),
+                border: isFocused ? Border.all(color: color, width: 2) : null,
+              ),
+              child: IconButton(
+                tooltip: tooltip,
+                icon: Icon(icon, color: color),
+                iconSize: 20,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: onPressed,
+              ),
             ),
           );
         },

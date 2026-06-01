@@ -2,9 +2,11 @@
 
 sub Init()
     ' Navigation
-    m.navBar = m.top.findNode("navBar")
-    m.tabList = m.top.findNode("tabList")
-    m.timeLabel = m.top.findNode("timeLabel")
+    m.sidebar = m.top.findNode("sidebar")
+    m.homeContainer = m.top.findNode("homeContainer")
+    m.homeScreen = m.top.findNode("homeScreen")
+    m.epgContainer = m.top.findNode("epgContainer")
+    m.epgScreen = m.top.findNode("epgScreen")
     
     ' Loading/Error
     m.loadingOverlay = m.top.findNode("loadingOverlay")
@@ -24,12 +26,13 @@ sub Init()
     m.channelGrid = m.top.findNode("channelGrid")
     
     ' Screens
-    m.moviesScreen = m.top.findNode("moviesScreen")
-    m.seriesScreen = m.top.findNode("seriesScreen")
     m.settingsScreen = m.top.findNode("settingsScreen")
+    m.moviesScreen = invalid
+    m.seriesScreen = invalid
     
     ' Video player
     m.videoPlayer = m.top.findNode("videoPlayer")
+    m.playerOverlay = invalid
     
     ' Overlays
     m.searchOverlay = m.top.findNode("searchOverlay")
@@ -38,16 +41,19 @@ sub Init()
     m.categoryMenu = m.top.findNode("categoryMenu")
     m.categoryList = m.top.findNode("categoryList")
     
-    ' Setup tab navigation
-    SetupNavTabs()
+    ' Setup sidebar navigation
+    m.sidebar.observeField("itemSelected", "onSidebarItemSelected")
+    m.sidebar.setFocus(true)
+    m.sidebar.isExpanded = true
+    
+    ' Home Screen observers
+    m.homeScreen.observeField("itemSelected", "onHomeItemSelected")
     
     ' Observers
     m.channelGrid.observeField("itemSelected", "onChannelSelected")
     m.channelGrid.observeField("itemFocused", "onChannelFocused")
     m.videoPlayer.observeField("state", "onVideoStateChange")
     m.categoryList.observeField("itemSelected", "onCategorySelected")
-    m.moviesScreen.observeField("movieSelected", "onMovieSelected")
-    m.seriesScreen.observeField("episodeSelected", "onEpisodeSelected")
     m.settingsScreen.observeField("settingsChanged", "onSettingsChanged")
     
     ' State
@@ -59,8 +65,8 @@ sub Init()
     m.favorites = []
     m.currentHeroIndex = 0
     m.searchText = ""
-    m.currentTab = 0 ' 0=Live TV, 1=Movies, 2=Series
-    m.currentView = "main"
+    m.currentSection = 2 ' 0=Search, 1=Guide(EPG), 2=Live TV, 3=Favorites, 4=Downloads, 5=Settings
+    m.currentView = "sidebar"
     
     ' Hero auto-scroll timer
     m.heroTimer = CreateObject("roSGNode", "Timer")
@@ -68,13 +74,7 @@ sub Init()
     m.heroTimer.repeat = true
     m.heroTimer.observeField("fire", "onHeroTimerFire")
     
-    ' Clock timer
-    m.clockTimer = CreateObject("roSGNode", "Timer")
-    m.clockTimer.duration = 60
-    m.clockTimer.repeat = true
-    m.clockTimer.observeField("fire", "updateClock")
-    m.clockTimer.control = "start"
-    updateClock()
+    ' Clocks removed in favor of sidebar UI.
     
     ' Load Xtream credentials from settings
     LoadXtreamCredentials()
@@ -82,48 +82,86 @@ sub Init()
     ' Load favorites
     LoadFavorites()
     
-    ' Start loading Live TV
-    LoadChannels()
-    StartHeroAutoScroll()
-end sub
-
-sub SetupNavTabs()
-    ' Create content for tab list
-    tabContent = CreateObject("roSGNode", "ContentNode")
-    
-    tab1 = CreateObject("roSGNode", "ContentNode")
-    tab1.title = "Live TV"
-    tabContent.appendChild(tab1)
-    
-    tab2 = CreateObject("roSGNode", "ContentNode")
-    tab2.title = "Movies"
-    tabContent.appendChild(tab2)
-    
-    tab3 = CreateObject("roSGNode", "ContentNode")
-    tab3.title = "Series"
-    tabContent.appendChild(tab3)
-    
-    m.tabList.content = tabContent
-    m.tabList.observeField("itemSelected", "onTabSelected")
-end sub
-
-sub updateClock()
-    dt = CreateObject("roDateTime")
-    dt.toLocalTime()
-    hours = dt.getHours()
-    mins = dt.getMinutes()
-    
-    ampm = "AM"
-    if hours >= 12
-        ampm = "PM"
-        if hours > 12 then hours = hours - 12
+    ' Check if playlist is configured — if not, go straight to Settings
+    registry = CreateObject("roRegistrySection", "Settings")
+    m3uUrl = registry.Read("m3u_url")
+    if m3uUrl = invalid or m3uUrl = ""
+        m.currentSection = 5 ' Settings
+        m.homeContainer.visible = false
+        m.settingsScreen.visible = true
+        m.settingsScreen.setFocus(true)
+        m.currentView = "settings"
+    else
+        LoadChannels()
+        StartHeroAutoScroll()
     end if
-    if hours = 0 then hours = 12
+end sub
+
+sub onSidebarItemSelected(event as object)
+    index = event.getData()
+    if index = m.currentSection then return
     
-    minStr = mins.toStr()
-    if mins < 10 then minStr = "0" + minStr
+    m.currentSection = index
+    m.heroTimer.control = "stop"
     
-    m.timeLabel.text = hours.toStr() + ":" + minStr + " " + ampm
+    m.homeContainer.visible = false
+    m.liveTVScreen.visible = false
+    m.epgContainer.visible = false
+    m.settingsScreen.visible = false
+    m.searchOverlay.visible = false
+    
+    if index = 0 ' Search
+        ShowSearch()
+    else if index = 1 ' Guide / EPG
+        m.epgContainer.visible = true
+    else if index = 2 ' Live TV
+        m.liveTVScreen.visible = true
+        m.heroTimer.control = "start"
+    else if index = 3 ' Favorites
+        m.liveTVScreen.visible = true
+        ShowFavoritesInGrid()
+    else if index = 4 ' Downloads
+        ' Show a simple message for now
+        m.homeContainer.visible = true
+    else if index = 5 ' Settings
+        m.settingsScreen.visible = true
+    end if
+    
+    m.sidebar.isExpanded = false
+    SetFocusToCurrentSection()
+end sub
+
+sub SetFocusToCurrentSection()
+    if m.currentSection = 0 ' Search
+        m.searchOverlay.setFocus(true)
+        m.currentView = "search"
+    else if m.currentSection = 1 ' Guide/EPG
+        m.epgScreen.setFocus(true)
+        m.currentView = "main"
+    else if m.currentSection = 9
+        m.settingsScreen.setFocus(true)
+        m.currentView = "settings"
+    end if
+end sub
+
+sub ShowFavoritesFilter()
+    if m.channels.count() = 0 then return
+    
+    content = CreateObject("roSGNode", "ContentNode")
+    row = content.createChild("ContentNode")
+    row.title = "Favorites"
+    
+    for each channel in m.channels
+        if IsFavorite(channel.url)
+            item = row.createChild("ContentNode")
+            item.title = channel.title
+            item.hdPosterUrl = channel.logo
+            item.url = channel.url
+        end if
+    end for
+    
+    m.channelGrid.content = content
+    m.channelGrid.visible = true
 end sub
 
 sub LoadXtreamCredentials()
@@ -182,7 +220,7 @@ sub StartHeroAutoScroll()
 end sub
 
 sub onHeroTimerFire()
-    if m.channels.count() > 0 and m.currentView = "main" and m.currentTab = 0
+    if m.channels.count() > 0 and m.currentView = "main" and m.currentSection = 2
         m.currentHeroIndex = (m.currentHeroIndex + 1) mod m.channels.count()
         UpdateHeroBanner(m.currentHeroIndex)
     end if
@@ -194,15 +232,56 @@ sub LoadChannels()
     
     registry = CreateObject("roRegistrySection", "Settings")
     m3uUrl = registry.Read("m3u_url")
-    if m3uUrl = "" or m3uUrl = invalid
-        ' Use default free IPTV list
-        m3uUrl = "https://iptv-org.github.io/iptv/index.m3u"
+    if m3uUrl = invalid or m3uUrl = ""
+        m.loadingOverlay.visible = false
+        m.errorLabel.text = "No playlist configured. Open Settings to add your M3U or Xtream URL."
+        m.errorLabel.visible = true
+        return
     end if
     
     m.loaderTask = CreateObject("roSGNode", "M3ULoaderTask")
     m.loaderTask.url = m3uUrl
     m.loaderTask.observeField("content", "onM3ULoaded")
     m.loaderTask.control = "RUN"
+    
+    epgUrl = registry.Read("epg_url")
+    if epgUrl <> "" and epgUrl <> invalid
+        m.epgTask = CreateObject("roSGNode", "EPGLoaderTask")
+        m.epgTask.url = epgUrl
+        m.epgTask.observeField("epgData", "onEPGLoaded")
+        m.epgTask.control = "RUN"
+    end if
+end sub
+
+sub onEPGLoaded(event as object)
+    epgData = event.getData()
+    if epgData <> invalid
+        m.epgScreen.epgData = epgData
+    end if
+end sub
+
+sub onHomeItemSelected(event as object)
+    selection = event.getData()
+    if type(selection) = "roArray" and selection.count() >= 2
+        rowIndex = selection[0]
+        itemIndex = selection[1]
+        
+        content = m.homeScreen.findNode("contentRowList").content
+        if content <> invalid and rowIndex >= 0 and rowIndex < content.getChildCount()
+            row = content.getChild(rowIndex)
+            if row <> invalid and itemIndex >= 0 and itemIndex < row.getChildCount()
+                item = row.getChild(itemIndex)
+                if item <> invalid and item.url <> invalid
+                    for each channel in m.channels
+                        if channel.url = item.url
+                            PlayChannel(channel)
+                            exit for
+                        end if
+                    end for
+                end if
+            end if
+        end if
+    end if
 end sub
 
 sub onM3ULoaded()
@@ -355,6 +434,9 @@ sub DisplayChannels()
     m.channelGrid.visible = true
     m.channelGrid.setFocus(true)
     m.currentView = "main"
+    
+    ' Pass channels to home screen
+    m.homeScreen.channels = m.channels
 end sub
 
 sub UpdateHeroBanner(index as integer)
@@ -430,7 +512,9 @@ sub PlayChannel(channel as object)
     m.moviesScreen.visible = false
     m.seriesScreen.visible = false
     m.settingsScreen.visible = false
-    m.navBar.visible = false
+    m.sidebar.visible = false
+    m.homeContainer.visible = false
+    m.epgContainer.visible = false
     
     videoContent = CreateObject("roSGNode", "ContentNode")
     videoContent.url = channel.url
@@ -453,7 +537,8 @@ sub PlayContent(content as object)
     m.moviesScreen.visible = false
     m.seriesScreen.visible = false
     m.settingsScreen.visible = false
-    m.navBar.visible = false
+    m.sidebar.visible = false
+    m.homeContainer.visible = false
     
     videoContent = CreateObject("roSGNode", "ContentNode")
     videoContent.url = content.url
@@ -493,58 +578,21 @@ end sub
 sub StopPlayback()
     m.videoPlayer.control = "stop"
     m.videoPlayer.visible = false
-    m.navBar.visible = true
+    m.sidebar.visible = true
     m.isPlaying = false
     
-    ' Return to current tab
-    ShowCurrentTab()
-end sub
-
-sub ShowCurrentTab()
-    m.liveTVScreen.visible = false
-    m.moviesScreen.visible = false
-    m.seriesScreen.visible = false
-    m.settingsScreen.visible = false
+    ' Trigger the current section to show again
+    temp = m.currentSection
+    m.currentSection = -1
     
-    if m.currentTab = 0
-        m.liveTVScreen.visible = true
-        m.channelGrid.setFocus(true)
-        m.heroTimer.control = "start"
-    else if m.currentTab = 1
-        m.moviesScreen.visible = true
-    else if m.currentTab = 2
-        m.seriesScreen.visible = true
-    end if
+    ' create a dummy event object mapped to our sidebar selection
+    evt = CreateObject("roAssociativeArray")
+    evt.getData = function() as integer: return m.currentSectionRef: end function
+    m.currentSectionRef = temp ' Need to set a ref for the dynamic method to catch
+    onSidebarItemSelected(evt)
     
-    m.currentView = "main"
-end sub
-
-sub onTabSelected(event as object)
-    index = event.getData()
-    if index = m.currentTab then return
-    
-    m.currentTab = index
-    m.heroTimer.control = "stop"
-    
-    m.liveTVScreen.visible = false
-    m.moviesScreen.visible = false
-    m.seriesScreen.visible = false
-    m.settingsScreen.visible = false
-    
-    if index = 0
-        ' Live TV
-        m.liveTVScreen.visible = true
-        m.channelGrid.setFocus(true)
-        m.heroTimer.control = "start"
-    else if index = 1
-        ' Movies
-        m.moviesScreen.visible = true
-    else if index = 2
-        ' Series
-        m.seriesScreen.visible = true
-    end if
-    
-    m.currentView = "main"
+    m.sidebar.setFocus(true)
+    m.sidebar.isExpanded = true
 end sub
 
 sub ShowSettings()
@@ -552,13 +600,16 @@ sub ShowSettings()
     m.liveTVScreen.visible = false
     m.moviesScreen.visible = false
     m.seriesScreen.visible = false
+    m.homeContainer.visible = false
+    m.epgContainer.visible = false
     m.settingsScreen.visible = true
     m.currentView = "settings"
 end sub
 
 sub HideSettings()
     m.settingsScreen.visible = false
-    ShowCurrentTab()
+    m.sidebar.setFocus(true)
+    m.sidebar.isExpanded = true
 end sub
 
 sub onSettingsChanged()
@@ -589,7 +640,8 @@ end sub
 
 sub HideSearch()
     m.searchOverlay.visible = false
-    ShowCurrentTab()
+    m.sidebar.setFocus(true)
+    m.sidebar.isExpanded = true
 end sub
 
 sub ShowCategories()
@@ -674,16 +726,20 @@ function onKeyEvent(key as string, press as boolean) as boolean
             return true
         end if
     else if m.currentView = "main"
-        if key = "options"
+        if key = "left"
+            m.sidebar.setFocus(true)
+            m.sidebar.isExpanded = true
+            return true
+        else if key = "options"
             ShowSearch()
             return true
-        else if key = "replay" and m.currentTab = 0
+        else if key = "replay" and m.currentSection = 2
             ShowCategories()
             return true
         else if key = "play"
             ShowSettings()
             return true
-        else if key = "info" and m.currentTab = 0
+        else if key = "info" and m.currentSection = 2
             ' Toggle favorite on current channel
             selection = m.channelGrid.itemFocused
             if type(selection) = "roArray" and selection.count() >= 2
@@ -704,14 +760,6 @@ function onKeyEvent(key as string, press as boolean) as boolean
                     end if
                 end if
             end if
-            return true
-        else if key = "left" and m.currentTab > 0
-            ' Navigate to previous tab
-            m.tabButtons.buttonSelected = m.currentTab - 1
-            return true
-        else if key = "right" and m.currentTab < 2
-            ' Navigate to next tab
-            m.tabButtons.buttonSelected = m.currentTab + 1
             return true
         end if
     end if

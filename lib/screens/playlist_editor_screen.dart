@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/channel_provider.dart';
 import '../utils/app_theme.dart';
-import 'package:iptv_player/widgets/compat_pop_scope.dart';
+
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
@@ -64,6 +66,19 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     _xtreamPasswordFocusNode.dispose();
     _updateFrequencyFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard(TextEditingController controller) async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      if (data != null && data.text != null && data.text!.isNotEmpty) {
+        controller.text = data.text!;
+        controller.selection =
+            TextSelection.collapsed(offset: controller.text.length);
+      }
+    } catch (_) {
+      // ignore
+    }
   }
 
   Future<void> _loadPlaylistData() async {
@@ -371,6 +386,15 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             contentPadding: EdgeInsets.symmetric(
                 horizontal: context.tvSpacing(16),
                 vertical: context.tvSpacing(16)),
+            suffixIcon: (kIsWeb || !(Platform.isLinux || Platform.isWindows || Platform.isMacOS))
+                ? null
+                : IconButton(
+                    icon: Icon(
+                      Icons.paste,
+                      size: context.tvIconSize(18),
+                    ),
+                    onPressed: () => _pasteFromClipboard(controller),
+                  ),
           ),
         ),
       ),
@@ -379,13 +403,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return CompatPopScope(
-      onWillPop: () async {
-        context.go('/home');
-        return false;
-      },
-      child: _buildContent(),
-    );
+    return _buildContent();
   }
 
   Widget _buildContent() {
