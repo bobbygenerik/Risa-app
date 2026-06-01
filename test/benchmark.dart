@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, depend_on_referenced_packages
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/services/local_db_service.dart';
@@ -28,7 +30,18 @@ void main() async {
 
     // Populate mock data
     final List<Map<String, dynamic>> channels = [];
-    final List<String> categories = ['News', 'Sports', 'Movies', 'Kids', 'Documentary', 'Music', 'Local', 'International', 'Premium', 'Adult'];
+    final List<String> categories = [
+      'News',
+      'Sports',
+      'Movies',
+      'Kids',
+      'Documentary',
+      'Music',
+      'Local',
+      'International',
+      'Premium',
+      'Adult'
+    ];
 
     for (int i = 0; i < 5000; i++) {
       channels.add({
@@ -66,14 +79,15 @@ void main() async {
         limit: 30,
       );
       final durationBatch = DateTime.now().difference(startBatch);
-      print('Batch approach took: ${durationBatch.inMicroseconds} microseconds');
+      print(
+          'Batch approach took: ${durationBatch.inMicroseconds} microseconds');
 
       bool match = true;
       for (final c in categories) {
         if (resultNPlusOne[c]!.length != resultBatch[c]!.length) match = false;
       }
       print('Results match: $match');
-    } catch(e) {
+    } catch (e) {
       print('Batch approach error: $e');
     }
   });

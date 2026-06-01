@@ -2,13 +2,11 @@
 """Fetch an Xtream playlist, discover the XMLTV feed, and match channels to EPG entries."""
 
 import argparse
-import json
 import re
-import ssl
 import sys
 import urllib.parse
-import urllib.request
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
+import requests
 from html import unescape
 from typing import Optional
 
@@ -16,10 +14,6 @@ HEADERS = {
     "User-Agent": "xtream-epg-matcher/1.0",
     "Accept": "*/*",
 }
-
-CTX = ssl.create_default_context()
-CTX.check_hostname = False
-CTX.verify_mode = ssl.CERT_NONE
 
 CONVERSIONS = {
     "one": "1",
@@ -55,40 +49,48 @@ def normalize(text: str) -> str:
 
 
 def fetch_json(url: str):
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=25, context=CTX) as response:
-        return json.loads(response.read().decode("utf-8", errors="replace"))
+    validate_http_url(url)
+    response = requests.get(url, headers=HEADERS, timeout=25)
+    response.raise_for_status()
+    return response.json()
 
 
 def fetch_bytes(url: str):
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30, context=CTX) as response:
-        return response.read()
+    validate_http_url(url)
+    response = requests.get(url, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    return response.content
 
 
 def probe_url(url: str, verbose: bool = False):
     try:
-        req = urllib.request.Request(url, headers=HEADERS)
-        with urllib.request.urlopen(req, timeout=25, context=CTX) as response:
-            status = getattr(response, "status", None) or response.getcode()
-            ctype = response.getheader("Content-Type") or ""
-            preview = response.read(4096)
-            text = preview.decode("utf-8", errors="replace").lstrip()
-            ok = (
-                status == 200
-                and (
-                    text.startswith("<?xml")
-                    or text.startswith("<tv")
-                    or "xml" in ctype.lower()
-                )
+        validate_http_url(url)
+        response = requests.get(url, headers=HEADERS, timeout=25)
+        ctype = response.headers.get("Content-Type") or ""
+        text = response.text[:4096].lstrip()
+        ok = (
+            response.status_code == 200
+            and (
+                text.startswith("<?xml")
+                or text.startswith("<tv")
+                or "xml" in ctype.lower()
             )
-            if verbose:
-                print(f"Probed {url} -> status={status}, ctype={ctype}, ok={ok}")
-            return ok, text[:400].replace("\n", " ")
+        )
+        if verbose:
+            print(
+                f"Probed {url} -> status={response.status_code}, ctype={ctype}, ok={ok}"
+            )
+        return ok, text[:400].replace("\n", " ")
     except Exception as exc:
         if verbose:
             print(f"Probe failed for {url}: {exc}")
         return False, str(exc)
+
+
+def validate_http_url(url: str):
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Only http/https URLs are supported")
 
 
 def build_mapping(xml_bytes: bytes):

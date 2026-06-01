@@ -3,10 +3,11 @@
 
 Usage: python3 tools/match_playlist_epg.py <server> <username> <password> <xmltv_url>
 """
-import sys, json, ssl, urllib.request, urllib.parse
+import sys, urllib.parse
 from html import unescape
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 import re
+import requests
 
 if len(sys.argv) < 5:
     print('Usage: match_playlist_epg.py <server> <username> <password> <xmltv_url>')
@@ -17,9 +18,6 @@ username = sys.argv[2]
 password = sys.argv[3]
 xmltv_url = sys.argv[4]
 
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
 headers = {'User-Agent': 'epg-matcher/1.0', 'Accept': '*/*'}
 
 CONVERSIONS = {
@@ -43,15 +41,23 @@ def normalize(text: str) -> str:
 
 
 def fetch_bytes(url):
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
-        return r.read()
+    _validate_http_url(url)
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.content
 
 
 def fetch_json(url):
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
-        return json.loads(r.read().decode('utf-8', errors='replace'))
+    _validate_http_url(url)
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def _validate_http_url(url):
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {'http', 'https'}:
+        raise ValueError('Only http/https URLs are supported')
 
 
 def build_xmltv_mapping(xml_bytes):

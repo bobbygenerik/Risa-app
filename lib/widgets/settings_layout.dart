@@ -94,18 +94,40 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     }
   }
 
-  void _scheduleMenuFocusRecovery({bool force = false}) {
-    if (_menuFocusRecoveryScheduled) return;
-    _menuFocusRecoveryScheduled = true;
+  void _scheduleMenuFocusRecovery({bool force = false, int attempt = 0}) {
+    if (attempt == 0) {
+      if (_menuFocusRecoveryScheduled) return;
+      _menuFocusRecoveryScheduled = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _menuFocusRecoveryScheduled = false;
-      if (!mounted) return;
+      if (!mounted) {
+        _menuFocusRecoveryScheduled = false;
+        return;
+      }
+      final selected = widget.selectedIndex < _menuFocusNodes.length
+          ? _menuFocusNodes[widget.selectedIndex]
+          : null;
+      // Success: the intended menu item holds focus, so we have a dpad anchor.
+      if (selected != null && selected.hasFocus) {
+        _menuFocusRecoveryScheduled = false;
+        return;
+      }
       final primaryFocus = FocusManager.instance.primaryFocus;
       final hasFocusedContext = primaryFocus?.context != null;
+      // When not forcing, don't yank focus away from content the user moved to.
       if (!force && hasFocusedContext) {
+        _menuFocusRecoveryScheduled = false;
         return;
       }
       requestMenuFocus();
+      // The initial request can drop while the route transition is still
+      // animating (primaryFocus stays null and the dpad has nothing to move
+      // from). Retry over a few frames until focus actually lands.
+      if (attempt < 8) {
+        _scheduleMenuFocusRecovery(force: force, attempt: attempt + 1);
+      } else {
+        _menuFocusRecoveryScheduled = false;
+      }
     });
   }
 
@@ -113,68 +135,35 @@ class _SettingsLayoutState extends State<SettingsLayout> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      resizeToAvoidBottomInset: true,
-      body: Container(
-        color: AppTheme.darkBackground,
-        child: AnimatedPadding(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          padding: EdgeInsets.only(
-            left: MediaQuery.of(context).padding.left +
-                AppSpacing.sidebarCollapsedWidth,
-            bottom: bottomInset,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left Pane: Sidebar
-              SizedBox(
-                width: 320, // Extended width for premium feel
-                child: Container(
-                  color: Colors.transparent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.showHeader && widget.headerTitle.isNotEmpty) ...[
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            24,
-                            context.spacingLg(),
-                            16,
-                            0,
-                          ),
-                          child: Text(
-                            widget.headerTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: AppTheme.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.5,
-                                ),
-                          ),
-                        ),
-                      ],
-
-                      // Allow menu to scroll when the keyboard is visible
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: widget.categories.length,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: context.spacingSm(),
-                          ),
-                          itemBuilder: (context, index) {
-                            return _buildMenuItem(index);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+    return Shortcuts(
+      shortcuts: widget.onBackToHome == null
+          ? const {}
+          : {
+              SingleActivator(LogicalKeyboardKey.escape): const ActivateIntent(),
+            },
+      child: Actions(
+        actions: widget.onBackToHome == null
+            ? const {}
+            : {
+                ActivateIntent: CallbackAction<ActivateIntent>(
+                  onInvoke: (_) {
+                    widget.onBackToHome!();
+                    return null;
+                  },
                 ),
+              },
+        child: Scaffold(
+          backgroundColor: AppTheme.darkBackground,
+          resizeToAvoidBottomInset: true,
+          body: Container(
+            color: AppTheme.darkBackground,
+            child: AnimatedPadding(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(
+                left: MediaQuery.of(context).padding.left +
+                    AppSpacing.sidebarCollapsedWidth,
+                bottom: bottomInset,
               ),
 
               // Right Pane: Content
@@ -195,12 +184,95 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                     },
                     child: Container(
                       color: Colors.transparent,
-                      child: widget.content,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.onBackToHome != null) _buildBackButton(),
+                          if (widget.showHeader &&
+                              widget.headerTitle.isNotEmpty) ...[
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                24,
+                                widget.onBackToHome != null ? 8 : context.spacingLg(),
+                                16,
+                                0,
+                              ),
+                              child: Text(
+                                widget.headerTitle,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      color: AppTheme.textPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.5,
+                                    ),
+                              ),
+                            ),
+                          ],
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: widget.categories.length,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: context.spacingSm(),
+                              ),
+                              itemBuilder: (context, index) {
+                                return _buildMenuItem(index);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  Expanded(
+                    child: FocusScope(
+                      autofocus: false,
+                      child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) {
+                            return KeyEventResult.ignored;
+                          }
+
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
+                            _menuFocusNodes[widget.selectedIndex]
+                                .requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: Container(
+                          color: Colors.transparent,
+                          child: widget.content,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: widget.onBackToHome,
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          label: const Text(
+            'Back',
+            style: TextStyle(color: AppTheme.textPrimary),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
         ),
       ),
@@ -213,6 +285,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
 
     return Focus(
       focusNode: _menuFocusNodes[index],
+      autofocus: widget.autoFocusOnShow && index == widget.selectedIndex,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
 

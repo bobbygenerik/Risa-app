@@ -12,9 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
-    pip install torch==2.1.0 openai-whisper onnx==1.14.1 onnx-tf==1.10.0 tensorflow==2.15.0 tensorflow-probability[tf]
+    pip install torch==2.1.0 openai-whisper onnx==1.14.1 onnx-tf==1.10.0 tensorflow==2.15.0 tensorflow-probability[tf] defusedxml==0.7.1 requests==2.32.5
 
 # Copy conversion scripts and models
 COPY tools/ /workspace/tools/
+
+RUN useradd --create-home appuser
+USER appuser
 
 CMD ["bash"]

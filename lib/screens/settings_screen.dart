@@ -27,6 +27,18 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/services/xtream_codes_service.dart';
+import 'package:iptv_player/services/xtream_credential_store.dart';
+import 'package:iptv_player/screens/settings/playlist_response_preview_screen.dart';
+
+part 'settings/settings_screen_ai.dart';
+part 'settings/settings_screen_content.dart';
+part 'settings/settings_screen_general.dart';
+part 'settings/settings_screen_handlers.dart';
+part 'settings/settings_screen_lifecycle.dart';
+part 'settings/settings_screen_navigation.dart';
+part 'settings/settings_screen_playback.dart';
+part 'settings/settings_screen_playlist.dart';
+part 'settings/settings_screen_recordings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -96,104 +108,24 @@ class _SettingsScreenState extends State<SettingsScreen>
   Map<String, int>? _xtreamPanelCounts;
   DateTime? _xtreamPanelCountsFetchedAt;
   bool _xtreamPanelCountsInFlight = false;
+  /// Cached so General tab [FutureBuilder] does not restart work every rebuild.
+  Future<List<dynamic>>? _generalPlaylistStatusFuture;
   FocusNode? _lastGeneralFocusNode;
   final SettingsLayoutController _layoutController = SettingsLayoutController();
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize text controllers
     _m3uUrlController = TextEditingController();
     _xtreamServerController = TextEditingController();
     _xtreamUsernameController = TextEditingController();
     _xtreamPasswordController = TextEditingController();
     _customEpgUrlController = TextEditingController();
     _secondaryEpgUrlController = TextEditingController();
-
-    // Add listeners
     _customEpgUrlController.addListener(_saveCustomEpgUrl);
     _secondaryEpgUrlController.addListener(_saveSecondaryEpgUrl);
-
     _registerGeneralFocusNodes();
     _loadSettingsSync();
-  }
-
-  Future<void> _loadSettingsSync() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-
-    setState(() {
-      _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
-      _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
-      _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
-      _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-      _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
-      _secondaryEpgUrlController.text =
-          prefs.getString('secondary_epg_url') ?? '';
-      _detectedEpgUrl = prefs.getString('epg_url') ?? '';
-      _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
-      _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
-      _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-      _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
-      _translationEnabled = prefs.getBool('translation_enabled') ?? false;
-      _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
-      _rememberPlaybackPosition =
-          prefs.getBool('remember_playback_position') ?? true;
-      _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
-      _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
-      final storedSurface = prefs.getString('exo_player_surface_type');
-      if (storedSurface != null && storedSurface != 'surface') {
-        unawaited(prefs.setString('exo_player_surface_type', 'surface'));
-      }
-      final storedBackend = prefs.getString('video_player_backend');
-      if (storedBackend == null || storedBackend == 'Auto') {
-        _videoPlayerBackend = 'VLC';
-        if (storedBackend == 'Auto') {
-          unawaited(prefs.setString('video_player_backend', 'VLC'));
-        }
-      } else {
-        _videoPlayerBackend = 'VLC';
-      }
-    });
-  }
-
-  void _saveCustomEpgUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_epg_url', _customEpgUrlController.text);
-  }
-
-  void _saveSecondaryEpgUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('secondary_epg_url', _secondaryEpgUrlController.text);
-  }
-
-  void _registerGeneralFocusNodes() {
-    final nodes = [
-      _m3uTabFocusNode,
-      _xtreamTabFocusNode,
-      _m3uUrlFocusNode,
-      _xtreamServerFocusNode,
-      _xtreamUsernameFocusNode,
-      _xtreamPasswordFocusNode,
-      _customEpgUrlFocusNode,
-      _secondaryEpgUrlFocusNode,
-      _loadM3uButtonFocusNode,
-      _loadXtreamButtonFocusNode,
-      _clearM3uButtonFocusNode,
-      _clearXtreamButtonFocusNode,
-      _updateEpgButtonFocusNode,
-      _clearEpgButtonFocusNode,
-      _browseStorageButtonFocusNode,
-    ];
-
-    for (final node in nodes) {
-      node.addListener(() {
-        if (node.hasFocus) {
-          _lastGeneralFocusNode = node;
-        }
-      });
-    }
   }
 
   @override
@@ -210,7 +142,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _customEpgUrlController.dispose();
     _secondaryEpgUrlController.removeListener(_saveSecondaryEpgUrl);
     _secondaryEpgUrlController.dispose();
-
     _m3uTabFocusNode.dispose();
     _xtreamTabFocusNode.dispose();
     _loadM3uButtonFocusNode.dispose();
@@ -223,7 +154,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _playbackFirstFocusNode.dispose();
     _aiFirstFocusNode.dispose();
     _contentScrollController.dispose();
-
     _customEpgUrlFocusNode.dispose();
     _secondaryEpgUrlFocusNode.dispose();
     super.dispose();
@@ -261,82 +191,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
     );
   }
-
-  void _handleCategorySelected(int index) {
-    if (_selectedIndex == index) return;
-    setState(() => _selectedIndex = index);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_contentScrollController.hasClients) {
-        _contentScrollController.jumpTo(0);
-      }
-    });
-  }
-
-  Future<void> _handleBackToHome() async {
-    final router = GoRouter.of(context);
-    final shouldLeave = await _confirmLeaveWhileLoading();
-    if (!context.mounted) {
-      return;
-    }
-    if (shouldLeave) {
-      router.go('/home');
-    }
-  }
-
-  Future<bool> _confirmLeaveWhileLoading() async {
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    if (!channelProvider.isLoading) {
-      return true;
-    }
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Playlist still saving'),
-          content: const Text(
-              'Saving is still in progress. Leaving now may interrupt it.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Stay'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Leave'),
-            ),
-          ],
-        );
-      },
-    );
-    return result ?? false;
-  }
-
-  void _requestContentFocus() {
-    if (_contentScrollController.hasClients) {
-      _contentScrollController.jumpTo(0);
-    }
-    FocusNode? target;
-    switch (_selectedIndex) {
-      case 0:
-        target = _lastGeneralFocusNode ??
-            (_playlistInputMethod == 0
-                ? _m3uTabFocusNode
-                : _xtreamTabFocusNode);
-        break;
-      case 1:
-        target = _playbackFirstFocusNode;
-        break;
-      case 2:
-        target = _aiFirstFocusNode;
-        break;
-      case 3:
-        target = _browseStorageButtonFocusNode;
-        break;
-    }
-    target?.requestFocus();
-  }
-
   @override
   bool handleContentFocusRequest() {
     _layoutController.requestMenuFocus();

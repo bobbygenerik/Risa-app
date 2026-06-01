@@ -1,13 +1,15 @@
-IMPORTANT: Place your RISA logo files here
+Source of truth: assets/images/risalogo.png
 
-Required files:
-1. logo.png - Full logo with text (1024x1024 or larger) - for app UI
-2. logo_icon.png - Icon only (1024x1024, square) - for app icon
+Regenerate every branded asset:
+  python3 tools/sync_brand_logos.py
+  dart run flutter_launcher_icons
 
-Steps:
-1. Save your RISA logo as: assets/images/logo.png
-2. Create a square icon version as: assets/images/logo_icon.png
-3. Run: flutter pub run flutter_launcher_icons
-4. Icons will be generated for Android and Web
+Outputs:
+- logo.png — sidebar expanded
+- logo_icon.png — sidebar collapsed (tighter crop)
+- Android: launch_image.png, tv_banner, croppedlogo2, mipmaps, adaptive foreground
+- web/icons, linux/runner/icon.png, roku/images/ (all channel + splash art)
 
-Current status: ✓ Logo files placed and app icons generated successfully!
+Legacy files (RISA-logo.png, RISA-logo-upscaled.png) are removed by sync — do not re-add.
+
+Rebuild APK/install to see all surfaces update on device.

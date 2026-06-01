@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/services/artwork/artwork_title_cache_isolate.dart';
 import 'package:iptv_player/services/fanart_service.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
@@ -22,67 +23,24 @@ import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 
-// ─────────────────────────────────────────────────────────────────────────
-// ISOLATE HELPERS FOR CACHE PERSISTENCE
-// ─────────────────────────────────────────────────────────────────────────
-
-/// Data class for title cache entries to pass to/from isolate.
-class _TitleCacheEntry {
-  final String key;
-  final String url;
-  final int timestamp;
-
-  _TitleCacheEntry({
-    required this.key,
-    required this.url,
-    required this.timestamp,
-  });
-}
-
-/// Data class for negative cache entries to pass to/from isolate.
-// Removed unused _NegativeCacheEntry class
-/// Parses title cache JSON in an isolate.
-List<_TitleCacheEntry> _parseTitleCacheJsonIsolate(String raw) {
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is! Map<String, dynamic>) return [];
-    final now = DateTime.now();
-    final entries = <_TitleCacheEntry>[];
-    decoded.forEach((key, value) {
-      String? url;
-      int? timestamp;
-      if (value is String) {
-        url = value;
-        timestamp = now.millisecondsSinceEpoch;
-      } else if (value is Map) {
-        final rawUrl = value['url'];
-        if (rawUrl is String && rawUrl.isNotEmpty) {
-          url = rawUrl;
-        }
-        final rawTs = value['ts'];
-        if (rawTs is int) {
-          timestamp = rawTs;
-        }
-      }
-      if (url != null && url.isNotEmpty && timestamp != null) {
-        entries.add(_TitleCacheEntry(key: key, url: url, timestamp: timestamp));
-      }
-    });
-    return entries;
-  } catch (e) {
-    return [];
-  }
-}
-
-/// Parses negative cache JSON in an isolate.
-// Removed unused isolate functions: _parseNegativeCacheJsonIsolate, _encodeTitleCacheJsonIsolate, _encodeNegativeCacheJsonIsolate
-// These were for future optimization but not currently used
+part 'artwork/artwork_service_cache.dart';
+part 'artwork/artwork_service_classify.dart';
+part 'artwork/artwork_service_fetch.dart';
+part 'artwork/artwork_service_hero.dart';
+part 'artwork/artwork_service_lifecycle.dart';
+part 'artwork/artwork_service_logos.dart';
+part 'artwork/artwork_service_negative.dart';
+part 'artwork/artwork_service_persistence.dart';
+part 'artwork/artwork_service_public.dart';
+part 'artwork/artwork_service_queue.dart';
+part 'artwork/artwork_service_state.dart';
+part 'artwork/artwork_service_titles.dart';
+part 'artwork/artwork_service_validation.dart';
 
 /// Callback signature for when artwork is updated.
 typedef ArtworkUpdateCallback = void Function();
 
 /// Service to manage artwork fetching, caching, and queuing for Live TV.
-/// Extracted from LiveTVScreen to reduce file size and improve maintainability.
 class LiveTvArtworkService {
   static const Set<String> _blockedProgramArtworkHosts = {
     'zap2it.tmsimg.com',
@@ -137,8 +95,6 @@ class LiveTvArtworkService {
   final Map<String, Channel> _programChannelLookup = {};
   final Set<String> _titleLogoRequests = {};
 
-  // Hero image tracking
-
   // Timers
   Timer? _artworkThrottle;
   Timer? _artworkTitleSaveDebounce;
@@ -152,7 +108,7 @@ class LiveTvArtworkService {
   bool _isIdle = false;
   bool _isDisposed = false;
 
-  // ── Diagnostic counters ──────────────────────────────────────────────
+  // Diagnostic counters
   int diagEnqueued = 0;
   int diagFetched = 0;
   int diagHits = 0;
@@ -186,19 +142,14 @@ class LiveTvArtworkService {
   static const int _maxProgramArtworkNegativeEntries = 200;
   static const int _maxProgramTitleLogoEntries = 100;
   static const Duration _programArtworkTitleTtl = Duration(hours: 12);
-  // Reduced from 30 min — too aggressive, blocks retries for content that
-  // may match on a different query title variant.
   static const Duration _artworkNegativeTtl = Duration(minutes: 8);
 
   // Cache keys — bump version to invalidate stale poster/logo entries
-  // v5: invalidate old caches that may contain poster URLs or logos
   static const String _programArtworkTitleCacheKey =
       'live_tv_program_artwork_title_cache_v5';
-  // v6: clear negative cache so everything gets a fresh chance
   static const String _programArtworkNegativeCacheKey =
       'live_tv_program_artwork_negative_cache_v6';
 
-  // Logging
   static const bool _logArtworkMatches = true;
 
   /// Initialize the service by loading cached data.

@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+part 'tmdb/tmdb_artwork.dart';
+
 class _CacheItem {
   final Map<String, dynamic> data;
   final DateTime expiry;
@@ -402,191 +404,12 @@ class TMDBService {
     return null;
   }
 
-  /// Returns the best available backdrop/poster URL for a given title.
-  /// Prefers TV results first, falling back to movie matches and heuristics.
-  static Future<String?> getBestBackdrop(String title, {int? year}) async {
-    await init();
-    final normalizedTitle = _normalizeTitle(title);
-    final cacheKey = _cacheKey('art:best', normalizedTitle, year: year);
-    final cached = _getFromCache(cacheKey);
-    if (cached != null && cached.containsKey('image')) {
-      final cachedImage = (cached['image'] as String?)?.trim();
-      if (cachedImage?.isNotEmpty == true) {
-        return cachedImage;
-      }
-      return null;
-    }
-
-    if (_processingRequests.contains(cacheKey)) {
-      final completer = Completer<String?>();
-      _pendingRequests.putIfAbsent(cacheKey, () => []).add(completer.complete);
-      return completer.future;
-    }
-
-    _processingRequests.add(cacheKey);
-    try {
-      var details = await _resolveTmdbBackdrop(normalizedTitle, year);
-
-      if (!_hasArtwork(details)) {
-        debugPrint('TMDB miss for "$normalizedTitle", trying heuristics.');
-        details ??= await _tryTeamHeuristic(normalizedTitle, year);
-        if (_hasArtwork(details)) {
-          debugPrint(
-              'Team heuristic returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
-        } else {
-          debugPrint(
-              'Team heuristic failed for "$normalizedTitle", querying OMDb fallback.');
-          details ??= await _tryOmdbFallback(normalizedTitle, year);
-          if (_hasArtwork(details)) {
-            debugPrint(
-                'OMDb fallback returned artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
-          } else {
-            debugPrint(
-                'OMDb fallback returned no artwork for "$normalizedTitle".');
-          }
-        }
-      } else {
-        debugPrint(
-            'TMDB found artwork for "$normalizedTitle": ${details!['backdrop'] ?? details['poster']}');
-      }
-
-      final image = _extractBackdropUrl(details);
-      _setCache(
-        cacheKey,
-        {'image': image},
-        ttl: image == null ? const Duration(hours: 1) : null,
-      );
-
-      final pending = _pendingRequests.remove(cacheKey);
-      if (pending != null) {
-        for (final callback in pending) {
-          callback(image);
-        }
-      }
-
-      return image;
-    } finally {
-      _processingRequests.remove(cacheKey);
-    }
-  }
-
-  static Future<Map<String, dynamic>?> _resolveTmdbBackdrop(
-      String normalizedTitle, int? year) async {
-    Map<String, dynamic>? details;
-    final tvTitle = normalizedTitle.length <= 4
-        ? '$normalizedTitle channel'
-        : normalizedTitle;
-    details = await getTVDetails(tvTitle, year: year);
-    details ??= await getMovieDetails(normalizedTitle, year: year);
-    return details;
-  }
-
-  static Future<Map<String, dynamic>?> _tryOmdbFallback(
-      String normalizedTitle, int? year) async {
-    final seriesResult =
-        await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
-    if (_hasArtwork(seriesResult)) return seriesResult;
-    final movieResult =
-        await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
-    if (_hasArtwork(movieResult)) return movieResult;
-    return null;
-  }
-
-  static bool _hasArtwork(Map<String, dynamic>? details) {
-    // Only count backdrops — posters are portrait and not used for landscape cards.
-    final backdrop = (details?['backdrop'] as String?)?.trim();
-    return backdrop?.isNotEmpty == true;
-  }
-
-  static String? _extractBackdropUrl(Map<String, dynamic>? details) {
-    final backdrop = (details?['backdrop'] as String?)?.trim();
-    if (backdrop?.isNotEmpty == true) return backdrop;
-    // Do NOT fall back to poster — portrait images cause visual corruption
-    // on landscape cards and get rejected at render time anyway.
-    return null;
-  }
-
-  static List<String> _extractSportsTeams(String title) {
-    final normalized = title.toLowerCase();
-    const separators = [' vs ', ' vs. ', ' v ', ' at ', ' @ ', ' vs/', ' - '];
-    for (final separator in separators) {
-      if (normalized.contains(separator)) {
-        final parts = normalized.split(separator);
-        if (parts.length >= 2) {
-          return parts
-              .take(2)
-              .map((segment) => segment.trim())
-              .where((segment) => segment.isNotEmpty)
-              .toList();
-        }
-      }
-    }
-    return [];
-  }
-
-  static Future<Map<String, dynamic>?> _tryTeamHeuristic(
-      String title, int? year) async {
-    final teams = _extractSportsTeams(title);
-    if (teams.isEmpty) return null;
-    for (final team in teams) {
-      final normalizedTeam = _normalizeTitle(team);
-      final tvMatch = await getTVDetails(normalizedTeam, year: year);
-      if (_hasArtwork(tvMatch)) return tvMatch;
-      final movieMatch = await getMovieDetails(normalizedTeam, year: year);
-      if (_hasArtwork(movieMatch)) return movieMatch;
-    }
-    return null;
-  }
-
-  /// Batch fetch artwork for multiple titles at once.
-  /// Returns a map of title -> image URL (or null if not found).
-  /// This reduces API rate limiting issues.
+  static Future<String?> getBestBackdrop(String title, {int? year}) =>
+      tmdbGetBestBackdrop(title, year: year);
   static Future<Map<String, String?>> getBestBackdropBatch(
-    List<String> titles, {
-    int? year,
-  }) async {
-    await init();
-    final results = <String, String?>{};
+    List<String> titles, {int? year}) =>
+      tmdbGetBestBackdropBatch(titles, year: year);
 
-    // First check cache
-    final uncached = <String>[];
-    for (final title in titles) {
-      final cacheKey = _cacheKey('art:best', title, year: year);
-      final cached = _getFromCache(cacheKey);
-      if (cached != null && cached.containsKey('image')) {
-        results[title] = (cached['image'] as String?)?.isNotEmpty == true
-            ? cached['image'] as String
-            : null;
-      } else {
-        uncached.add(title);
-      }
-    }
-
-    // Fetch uncached in parallel with rate limiting
-    if (uncached.isNotEmpty) {
-      // Process in chunks of 5 to avoid rate limiting
-      const chunkSize = 5;
-      for (var i = 0; i < uncached.length; i += chunkSize) {
-        final chunk = uncached.skip(i).take(chunkSize).toList();
-        final futures =
-            chunk.map((title) => getBestBackdrop(title, year: year));
-        final chunkResults = await Future.wait(futures);
-
-        for (var j = 0; j < chunk.length; j++) {
-          results[chunk[j]] = chunkResults[j];
-        }
-
-        // Small delay between chunks to respect rate limits
-        if (i + chunkSize < uncached.length) {
-          await Future.delayed(const Duration(milliseconds: 200));
-        }
-      }
-    }
-
-    return results;
-  }
-
-  /// Initialize TMDBService (loads disk cache). Call once during app startup.
   static Future<void> init() async {
     if (_cacheLoaded) return;
     _cacheLoadFuture ??= _loadCacheFromDisk();

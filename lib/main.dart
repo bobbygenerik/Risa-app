@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:iptv_player/l10n/gen/app_localizations.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,65 +61,21 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/services/prewarm_service.dart';
+import 'package:iptv_player/services/sqlite_platform_init.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_cache_config.dart';
+import 'package:iptv_player/utils/linux_keyboard_workarounds.dart';
 import 'package:iptv_player/services/clock_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:media_kit/media_kit.dart';
 
+part 'app/app_startup.dart';
+part 'app/app_error_ui.dart';
+part 'app/app_router.dart';
+part 'app/my_app_lifecycle.dart';
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 const bool _enablePrewarm = false;
-
-class _DeviceMemoryInfo {
-  final bool isLowMemory;
-  _DeviceMemoryInfo({required this.isLowMemory});
-}
-
-Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
-  try {
-    if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
-
-    // Simple heuristic: assume low memory if running on older Android (pre-8.0).
-    // Shield TV devices (2–3 GB RAM) are NOT low-memory and should not be
-    // treated as such — the old override was degrading artwork loading on one
-    // of the most common IPTV devices.
-    if (Platform.isAndroid) {
-      final info = await Process.run('getprop', ['ro.build.version.sdk']);
-      final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
-      return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
-    }
-
-    return _DeviceMemoryInfo(isLowMemory: false);
-  } catch (e) {
-    return _DeviceMemoryInfo(isLowMemory: false);
-  }
-}
-
-/// Single compiled RegExp for error suppression — O(1) amortized instead of
-/// O(n) linear scan through individual `.contains()` checks.
-final _suppressedErrorPattern = RegExp(
-  [
-    r'429',
-    r'rate limit',
-    r'HttpException',
-    r'SocketException',
-    r'ClientException',
-    r'RenderFlex overflowed',
-    r'overflowed by',
-    r'Invalid image data',
-    r'Image data',
-    r'Failed to load network image',
-    r'NetworkImageLoadException',
-    r'HandshakeException',
-    r'Connection closed',
-    r'Connection reset',
-  ].map(RegExp.escape).join('|'),
-  caseSensitive: false,
-);
-
-bool _shouldSuppressError(String errorStr) {
-  return _suppressedErrorPattern.hasMatch(errorStr);
-}
 
 void main() {
   StartupProbe.mark('main() entry');
@@ -129,9 +86,13 @@ void main() {
       // the guarded zone can cause a "bindings initialized in a
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
+      installLinuxKeyboardWorkarounds();
       StartupProbe.mark('Flutter bindings initialized');
+      MediaKit.ensureInitialized();
+      StartupProbe.mark('MediaKit initialized');
+      initializeSqliteForPlatform();
+      StartupProbe.mark('SQLite platform initialized');
       unawaited(CrashLogger.instance.init());
-
 
       // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
@@ -153,11 +114,13 @@ void main() {
       if (memoryInfo.isLowMemory) {
         // Balanced cache for Shield/low-memory devices
         PaintingBinding.instance.imageCache.maximumSize = 80;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            100 << 20; // 100MB
         StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
       } else {
         PaintingBinding.instance.imageCache.maximumSize = 150;
-        PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20; // 200MB
+        PaintingBinding.instance.imageCache.maximumSizeBytes =
+            200 << 20; // 200MB
         StartupProbe.mark('Image cache limits configured (NORMAL)');
       }
 
@@ -247,143 +210,6 @@ void main() {
   );
 }
 
-/// Global error handler for reporting and displaying errors
-class _ErrorHandler {
-  static final _errorNotifier = ValueNotifier<_AppError?>(null);
-  static _AppError? _pendingError;
-  static bool _errorDispatchScheduled = false;
-
-  static void reportError(Object error, StackTrace stack) {
-    // Filter out HTTP 429 (rate limit) errors from image loading
-    // These are handled gracefully by error widgets, no need to show a global error
-    final errorString = error.toString();
-    if (_shouldSuppressError(errorString)) {
-      debugLog('Suppressed network/image error: $error');
-      return;
-    }
-
-    debugLog('Unhandled app error: $error');
-    debugLog(stack.toString());
-    _pendingError = _AppError(error, stack);
-
-    final binding = WidgetsBinding.instance;
-
-    if (_errorDispatchScheduled) {
-      return;
-    }
-
-    _errorDispatchScheduled = true;
-    binding.addPostFrameCallback((_) {
-      _errorDispatchScheduled = false;
-      final pending = _pendingError;
-      if (pending == null) {
-        return;
-      }
-      _pendingError = null;
-      _errorNotifier.value = pending;
-    });
-    // Optional: Could send error to analytics/crash service in production
-  }
-
-  static Widget wrapWithErrorListener(Widget child) {
-    return ValueListenableBuilder<_AppError?>(
-      valueListenable: _errorNotifier,
-      builder: (context, appError, _) {
-        if (appError != null) {
-          return _GlobalErrorScreen(
-            error: appError,
-            onDismiss: () => _errorNotifier.value = null,
-          );
-        }
-        return child;
-      },
-    );
-  }
-}
-
-class _AppError {
-  final Object error;
-  final StackTrace stack;
-  _AppError(this.error, this.stack);
-}
-
-class _GlobalErrorScreen extends StatelessWidget {
-  final _AppError error;
-  final VoidCallback onDismiss;
-  const _GlobalErrorScreen({required this.error, required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en', ''),
-      ],
-      theme: AppTheme.darkTheme,
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline,
-                    color: Colors.redAccent, size: 80),
-                const SizedBox(height: 24),
-                Text(
-                  'Something went wrong',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  error.error.toString(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: Colors.redAccent),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Focus(
-                  autofocus: false,
-                  child: Builder(
-                    builder: (context) {
-                      final isFocused = Focus.of(context).hasFocus;
-                      return AnimatedScale(
-                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                        duration: TVFocusStyle.animationDuration,
-                        child: AnimatedContainer(
-                          duration: TVFocusStyle.animationDuration,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: isFocused
-                                ? TVFocusStyle.focusedShadow
-                                : TVFocusStyle.defaultShadow,
-                          ),
-                          child: ElevatedButton(
-                            onPressed: onDismiss,
-                            child: const Text('Dismiss'),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -397,26 +223,7 @@ class _MyAppState extends State<MyApp> {
   // ignore: unused_field
   bool _hasPlaylist = false;
   bool _prewarmStarted = false;
-
-  void _runDeferred(
-    FutureOr<void> Function() action, {
-    Duration delay = Duration.zero,
-  }) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final future = delay == Duration.zero
-          ? Future.microtask(action)
-          : Future.delayed(delay, action);
-      _pendingDeferredOperations.add(future);
-      future.whenComplete(() => _pendingDeferredOperations.remove(future));
-    });
-  }
-
-  Future<bool> _shouldInitTranscriptionServices() async {
-    final prefs = await SharedPreferences.getInstance();
-    return (prefs.getBool('transcription_enabled') ?? false) ||
-        (prefs.getBool('translation_enabled') ?? false);
-  }
+  final Set<Future> _pendingDeferredOperations = {};
 
   @override
   void initState() {
@@ -425,217 +232,6 @@ class _MyAppState extends State<MyApp> {
     _setupAndroidAutoListener();
     StartupProbe.mark('MyAppState initState');
     _initialize();
-  }
-
-  void _enableJankLogging() {
-    SchedulerBinding.instance.addTimingsCallback((timings) {
-      for (final timing in timings) {
-        final buildMs = timing.buildDuration.inMilliseconds;
-        final rasterMs = timing.rasterDuration.inMilliseconds;
-        final totalMs = buildMs + rasterMs;
-        if (totalMs >= 50) {
-          debugLog(
-              'JANK: frame total=${totalMs}ms build=${buildMs}ms raster=${rasterMs}ms vsync=${timing.vsyncOverhead.inMilliseconds}ms');
-        }
-      }
-    });
-  }
-
-  void _setupAndroidAutoListener() {
-    if (!Platform.isAndroid) return;
-
-    const channel = MethodChannel('com.streamhub.iptv/auto_play');
-    channel.setMethodCallHandler((call) async {
-      if (call.method == 'playChannel') {
-        final url = call.arguments['url'] as String?;
-        final name = call.arguments['name'] as String?;
-        final id = call.arguments['id'] as String?;
-
-        if (url != null && name != null) {
-          // Create a Channel object and navigate to player
-          final channel = Channel(
-            id: id ?? 'auto_$url',
-            name: name,
-            url: url,
-            tvgId: id,
-            logoUrl: null,
-            groupTitle: 'Android Auto',
-          );
-
-          // Capture context before async operations
-          final context = _rootNavigatorKey.currentContext;
-          if (context != null) {
-            // Wait for router to be ready and navigate
-            await Future.delayed(const Duration(milliseconds: 500));
-
-            if (mounted) {
-              // ignore: use_build_context_synchronously
-              await GoRouter.of(context).push('/player', extra: channel);
-            }
-          }
-        }
-      }
-    });
-  }
-
-  Future<void> _initialize() async {
-    try {
-      // Start the clock service for centralized time management
-      ClockService().start();
-
-      StartupProbe.mark('MyApp initialization: FastStartup init start');
-      await FastStartupService.instance.initialize();
-      StartupProbe.mark('MyApp initialization: FastStartup init finished');
-
-      unawaited(TMDBService.init().catchError((error, stack) {
-        debugLog('TMDBService.init() failed during startup: $error');
-      }));
-      StartupProbe.mark('MyApp initialization: clear old playlists');
-      await _clearOldPlaylists();
-      StartupProbe.mark('MyApp initialization: playlists cleared');
-      StartupProbe.mark('MyApp initialization: check disclaimer');
-      await _checkDisclaimer();
-      StartupProbe.mark('MyApp initialization: disclaimer checked');
-      StartupProbe.mark('MyApp initialization: check/load playlist');
-      await _checkAndLoadPlaylist();
-      StartupProbe.mark('MyApp initialization: playlist check finished');
-    } catch (error, stack) {
-      debugLog('Initialization error: $error');
-      debugLog('$stack');
-    } finally {
-      if (mounted) {
-        StartupProbe.mark('MyApp initialization: complete');
-      }
-    }
-  }
-
-  Future<void> _clearOldPlaylists() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Check if this is a new install or updated version
-    final lastVersion = prefs.getString('app_version');
-    const currentVersion =
-        '2.0.2'; // Increment this when you want to clear old data
-
-    if (lastVersion != currentVersion) {
-      // Only clear cache files, preserve user settings
-      await prefs.remove('cached_playlist');
-      await prefs.remove('cache_timestamp');
-
-      // Don't clear user's playlist URLs and EPG settings
-      // await prefs.remove('playlist_type');
-      // await prefs.remove('m3u_url');
-      // await prefs.remove('xtream_server');
-      // await prefs.remove('xtream_username');
-      // await prefs.remove('xtream_password');
-
-      // Save new version
-      await prefs.setString('app_version', currentVersion);
-
-      debugLog(
-          'Cleared cache data - preserved user settings - new version: $currentVersion');
-    }
-  }
-
-  Future<void> _checkDisclaimer() async {
-    // Disclaimer removed from startup - now available in settings
-    setState(() {
-      _disclaimerAccepted = true;
-    });
-  }
-
-  Future<void> _checkAndLoadPlaylist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final playlistType = prefs.getString('playlist_type');
-
-    if (playlistType == null) {
-      await prefs.remove('cached_playlist');
-      await prefs.remove('cache_timestamp');
-      return;
-    }
-
-    // Try to auto-load the saved playlist
-    try {
-      String? playlistUrl;
-
-      if (playlistType == 'm3u') {
-        playlistUrl = prefs.getString('m3u_url');
-      } else if (playlistType == 'xtream') {
-        final server = prefs.getString('xtream_server');
-        final username = prefs.getString('xtream_username');
-        final password = prefs.getString('xtream_password');
-
-        if (server != null && username != null && password != null) {
-          // Build playlist URL and computed EPG URL using Uri for safety
-          try {
-            final cleaned = server.trim();
-            Uri baseUri = Uri.parse(cleaned);
-            if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse(
-                  'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
-            }
-            final playlistUri = baseUri.replace(
-                path: (baseUri.path.trim().isEmpty)
-                    ? 'get.php'
-                    : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
-                queryParameters: {
-                  'username': username.replaceAll(' ', ''),
-                  'password': password.replaceAll(' ', ''),
-                  'type': 'm3u_plus',
-                });
-            playlistUrl = playlistUri.toString();
-
-            // Computed EPG URL
-            final epgUri = baseUri.replace(
-              path: (baseUri.path.trim().isEmpty)
-                  ? 'xmltv.php'
-                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
-              queryParameters: {
-                'username': username.replaceAll(' ', ''),
-                'password': password.replaceAll(' ', ''),
-              },
-            );
-            await prefs.setString('epg_url', epgUri.toString());
-            debugLog(
-                'Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
-          } catch (e) {
-            debugLog('Main: Could not compute/save epg_url: $e');
-            try {
-              final cleaned2 = server.trim();
-              Uri fallbackBase = Uri.parse(cleaned2);
-              if (fallbackBase.scheme.isEmpty || fallbackBase.host.isEmpty) {
-                fallbackBase = Uri.parse(
-                    'https://${cleaned2.replaceAll(RegExp(r'^https?://'), '')}');
-              }
-              final fallbackUri = fallbackBase.replace(
-                path: (fallbackBase.path.trim().isEmpty)
-                    ? 'get.php'
-                    : '${fallbackBase.path.replaceAll(RegExp(r'^/'), '')}/get.php',
-                queryParameters: {
-                  'username': username.replaceAll(' ', ''),
-                  'password': password.replaceAll(' ', ''),
-                  'type': 'm3u_plus',
-                  'output': 'ts'
-                },
-              );
-              playlistUrl = fallbackUri.toString();
-            } catch (e) {
-              debugLog('main: Xtream fallback URI construction failed (credentials not logged)');
-              playlistUrl = '';
-            }
-          }
-        }
-      }
-
-      if (playlistUrl != null && playlistUrl.isNotEmpty) {
-        // Will be loaded by ChannelProvider after it's created
-        setState(() {
-          _hasPlaylist = true;
-        });
-      }
-    } catch (error, stack) {
-      debugLog('Failed to auto-load playlist: $error');
-      debugLog('$stack');
-    }
   }
 
   @override

@@ -1,253 +1,31 @@
-import 'package:iptv_player/utils/debug_helper.dart';
-import 'package:iptv_player/l10n/gen/app_localizations.dart';
 import 'dart:async';
-import 'dart:collection';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 
-import 'package:iptv_player/widgets/cached_image.dart';
-import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
-import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/program.dart';
-import 'package:iptv_player/widgets/brand_button.dart';
-import 'package:iptv_player/widgets/horizontal_channel_row.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/widgets/go_to_settings_button.dart';
-
-import 'package:iptv_player/services/live_tv_artwork_service.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
-
-import 'package:iptv_player/utils/epg_matching_utils.dart';
-import 'package:iptv_player/utils/program_classifier.dart';
-
-import 'package:iptv_player/widgets/brand_badge.dart';
-import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
-import 'package:iptv_player/widgets/brand_fallback_background.dart';
-import 'package:iptv_player/widgets/channel_logo_widget.dart';
-import 'package:iptv_player/utils/app_icons.dart';
-import 'package:iptv_player/utils/app_spacing.dart';
-import 'package:iptv_player/services/timer_service.dart';
-import 'package:iptv_player/widgets/skeleton_loader.dart';
-import 'package:iptv_player/widgets/shimmer.dart';
-import 'package:iptv_player/widgets/hero_panel.dart';
-import 'package:iptv_player/services/focus_pool_service.dart';
-import 'package:iptv_player/widgets/live_tv/epg_channel_selector_dialog.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_bindings_builder.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_bootstrap.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_epg_batch.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_epg_mapping_actions.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_focus_actions.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_initial_focus.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_player_launcher.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_resume_refresh.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_route_hooks.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_row_builders.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_screen_config.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_screen_content.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_screen_deps.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_scroll_navigation.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_scroll_prefetch.dart';
 
-import 'package:iptv_player/utils/memory_manager.dart';
-import 'package:iptv_player/services/http_client_service.dart';
-import 'package:iptv_player/services/image_validation_service.dart';
-import 'package:iptv_player/utils/network_error_logger.dart';
-import 'package:iptv_player/utils/image_url_helper.dart';
-import 'package:iptv_player/utils/image_load_probe.dart';
-import 'package:iptv_player/utils/image_failure_cache.dart';
-
-import 'package:iptv_player/utils/snackbar_helper.dart';
-import 'package:iptv_player/utils/artwork_diagnostics.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:iptv_player/utils/artwork_validator.dart';
-
-class _HeroCandidate {
-  final Channel channel;
-  final Program? program;
-  final String heroImage;
-
-  const _HeroCandidate({
-    required this.channel,
-    this.program,
-    required this.heroImage,
-  });
-}
-
-/// Centralized timer management to prevent memory leaks and simplify lifecycle handling
-class _TimerManager {
-  final Map<String, Timer> _timers = {};
-
-  /// Starts a new timer, cancelling any existing timer with the same key
-  void start(String key, Duration duration, void Function() callback) {
-    _timers[key]?.cancel();
-    _timers[key] = Timer(duration, callback);
-  }
-
-  /// Starts a periodic timer, cancelling any existing timer with the same key
-  void startPeriodic(String key, Duration duration, void Function() callback) {
-    _timers[key]?.cancel();
-    _timers[key] = Timer.periodic(duration, (_) => callback());
-  }
-
-  /// Cancels a specific timer by key
-  void cancel(String key) {
-    _timers[key]?.cancel();
-    _timers.remove(key);
-  }
-
-  /// Cancels all timers
-  void cancelAll() {
-    for (final timer in _timers.values) {
-      timer.cancel();
-    }
-    _timers.clear();
-  }
-
-  /// Debounces a callback, cancelling any pending timer with the same key
-  void debounce(String key, Duration duration, void Function() callback) {
-    _timers[key]?.cancel();
-    _timers[key] = Timer(duration, () {
-      _timers.remove(key);
-      callback();
-    });
-  }
-
-  /// Checks if a timer is active
-  bool isActive(String key) =>
-      _timers.containsKey(key) && _timers[key]!.isActive;
-}
-
-class _LandscapeGuardedImage extends StatefulWidget {
-  const _LandscapeGuardedImage({
-    required this.url,
-    required this.imageProvider,
-    required this.fit,
-    this.alignment = Alignment.center,
-    required this.fallback,
-    required this.probeTag,
-  });
-
-  final String url;
-  final ImageProvider imageProvider;
-  final BoxFit fit;
-  final Alignment alignment;
-  final Widget fallback;
-  final String probeTag;
-
-  @override
-  State<_LandscapeGuardedImage> createState() => _LandscapeGuardedImageState();
-}
-
-class _LandscapeGuardedImageState extends State<_LandscapeGuardedImage> {
-  ImageStream? _stream;
-  ImageInfo? _info;
-  late final ImageStreamListener _streamListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _streamListener = ImageStreamListener(
-      _handleImage,
-      onError: (error, stackTrace) {
-        if (!mounted) return;
-        ImageFailureCache.recordFailure(widget.url, error);
-        ImageValidationService.markInvalid(widget.url);
-        setState(() {
-          _info = null;
-        });
-      },
-    );
-    _resolveImage();
-  }
-
-  @override
-  void didUpdateWidget(covariant _LandscapeGuardedImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.imageProvider != widget.imageProvider) {
-      _resolveImage();
-    }
-  }
-
-  void _resolveImage() {
-    _stream?.removeListener(_streamListener);
-    _info = null;
-    final stream = widget.imageProvider.resolve(
-      const ImageConfiguration(),
-    );
-    _stream = stream;
-    stream.addListener(_streamListener);
-  }
-
-  void _handleImage(ImageInfo info, bool sync) {
-    if (!mounted) return;
-    setState(() {
-      _info = info;
-    });
-  }
-
-  @override
-  void dispose() {
-    _stream?.removeListener(_streamListener);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final info = _info;
-    if (info == null) {
-      return widget.fallback;
-    }
-    final width = info.image.width;
-    final height = info.image.height;
-    final bool isHero = widget.probeTag.contains('hero');
-    // Cards: reject portrait (aspect < 1.0) — no posters ever.
-    // Hero: require 1.3:1 minimum to ensure proper widescreen look.
-    // NOTE: Do NOT call markInvalid() here — a portrait aspect ratio is a
-    // composition issue, not a broken URL. Permanently blacklisting the URL
-    // prevents any future attempt to use it (e.g. after a different program
-    // airs on the same channel). Record the portrait hit for diagnostics only.
-    if (isHero && width / height < 1.3) {
-      ImageFailureCache.recordPortrait(widget.url);
-      ImageLoadProbe.recordFailure(
-        widget.url,
-        widget.probeTag,
-        Exception('Portrait artwork rejected (hero)'),
-      );
-      return widget.fallback;
-    }
-    if (!isHero && width / height < 1.0) {
-      ImageFailureCache.recordPortrait(widget.url);
-      ImageLoadProbe.recordFailure(
-        widget.url,
-        widget.probeTag,
-        Exception('Portrait artwork rejected'),
-      );
-      return widget.fallback;
-    }
-    ImageFailureCache.recordSuccess(widget.url);
-    ImageValidationService.markValid(widget.url);
-    ImageLoadProbe.recordSuccess(widget.url, widget.probeTag);
-    return Image(
-      image: widget.imageProvider,
-      fit: widget.fit,
-      alignment: widget.alignment,
-      gaplessPlayback: true,
-    );
-  }
-}
-
-class _EpgCardData {
-  final Program? program;
-  final bool hasUsableData;
-  final bool isLoading;
-
-  _EpgCardData({
-    required this.program,
-    required this.hasUsableData,
-    required this.isLoading,
-  });
-}
-
-/// A focused Live TV screen. Shows a hero for the currently airing program
-/// on a featured channel, plus channel rows below.
+/// Live TV: hero for the current program plus channel rows.
 class LiveTVScreen extends StatefulWidget {
   const LiveTVScreen({super.key});
 
@@ -454,60 +232,41 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _artworkService = LiveTvArtworkService(
-      onArtworkUpdate: () {
-        if (!mounted) return;
-        // Throttle hero image rebuilds to ~10fps — burst artwork results (e.g. batch TMDB
-        // fetch completing) would otherwise drive ValueListenableBuilder at unbounded rate.
-        if (_heroArtworkDebounce?.isActive != true) {
-          _heroArtworkVersion.value++;
-          _heroArtworkDebounce =
-              Timer(const Duration(milliseconds: 100), () {});
-        }
-        // Debounce a full setState for card row artwork updates (more expensive).
-        if (_artworkRebuildDebounce?.isActive == true) return;
-        _artworkRebuildDebounce = Timer(const Duration(milliseconds: 500), () {
-          if (mounted) setState(() {});
-        });
-      },
+    _deps = LiveTvBootstrap.create(
+      context: context,
+      isMounted: () => mounted,
+      setState: setState,
+      prefetchEpgForRow: _prefetchEpgForRow,
+      prefetchRowArtwork: _prefetchRowArtworkForChannels,
     );
-    _artworkService.initialize();
-    // Initialize scroll controller
-    _scrollController = ScrollController();
-    _scrollController.addListener(_handleScrollPrefetch);
-
-    unawaited(_loadLiveTvSnapshot());
-
-    // Get focus nodes from pool
-    _watchButtonFocus = _focusPool.getFocusNode(
-      'live_tv_watch',
-      debugLabel: 'Live TV Watch',
-    );
-    _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings',
-        debugLabel: 'Live TV Settings');
-    _firstChannelFocus = _focusPool.getFocusNode(
-      'live_tv_first_card',
-      debugLabel: 'Live TV First Card',
-    );
-    _firstFeaturedFocus = _focusPool.getFocusNode(
-      'live_tv_featured_card',
-      debugLabel: 'Live TV Featured Card',
-    );
-    _skeletonFocus = _focusPool.getFocusNode('live_tv_skeleton',
-        debugLabel: 'Live TV Skeleton');
+    _deps.scrollController.addListener(_handleScrollPrefetch);
+    unawaited(_deps.snapshotSession.load());
     FocusManager.instance.addListener(_handleFocusChange);
-    _startIdleTimer();
-    // Start carousel once the widget is built - will be updated when channels load
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(0);
-        }
-        _startCarouselIfNeeded();
-        _requestInitialFocus();
-        _requestCategoryPrefetch();
-        _startFeaturedRotation();
-      },
+    _deps.idleController.start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      LiveTvBootstrap.onFirstFrame(_deps);
+      _requestInitialFocus();
+      _requestCategoryPrefetch();
+      _deps.heroCarousel.startRotation();
+    });
+  }
+
+  LiveTvBindingsBuilder get _bindingsBuilder => LiveTvBindingsBuilder(
+        deps: _deps,
+        context: context,
+        isMounted: () => mounted,
+        requestNavigationFocus: requestNavigationFocus,
+        onOpenPlayer: _openChannelPlayer,
+        onShowEpgSelector: _showEpgChannelSelector,
+      );
+
+  void _prefetchEpgForRow(String category, List<Channel> channels) {
+    LiveTvEpgBatch.prefetchCategoryRow(
+      category: category,
+      channels: channels,
+      prefetchedCategories: _deps.epgPrefetchedRows,
+      isMounted: () => mounted,
+      getEpgService: () => context.read<IncrementalEpgService>(),
     );
   }
 
@@ -824,134 +583,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _requestCategoryPrefetch() {
-    if (_categoryPrefetchRequested) return;
-    if (_categoryNames.isNotEmpty || _loadingCategories) return;
-    _categoryPrefetchRequested = true;
-    unawaited(_prefetchInitialRows());
+    final s = _deps.categoryState;
+    if (s.prefetchRequested || s.names.isNotEmpty || s.loading) return;
+    s.prefetchRequested = true;
+    unawaited(_deps.categoryCoordinator.prefetchInitialRows());
   }
 
-  void _startIdleTimer() {
-    _idleTimer ??= Timer.periodic(_idleCheckInterval, (_) => _checkIdleState());
+  void _handleFocusChange() => _deps.idleController.markInteraction();
+
+  void _handleScrollPrefetch() {
+    LiveTvScrollPrefetch.handle(
+      scrollController: _deps.scrollController,
+      categoryState: _deps.categoryState,
+      coordinator: _deps.categoryCoordinator,
+      context: context,
+      onUserScroll: () {
+        _deps.userHasScrolled = true;
+        _deps.idleController.markInteraction();
+      },
+      setState: (fn) => setState(fn),
+      safeScrollOffset: LiveTvScrollNavigation.safeOffset(_deps.scrollController),
+      categoryPrefetchExtent: LiveTvScreenConfig.categoryPrefetchExtent,
+      categoryChunkSize: LiveTvScreenConfig.categoryChunkSize,
+      prefetchWindowRows: LiveTvScreenConfig.prefetchWindowRows,
+    );
   }
 
-  void _stopIdleTimer() {
-    _idleTimer?.cancel();
-    _idleTimer = null;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    FocusManager.instance.removeListener(_handleFocusChange);
+    LiveTvBootstrap.dispose(_deps);
+    super.dispose();
   }
 
-  void _handleFocusChange() {
-    _markInteraction();
-  }
+  @override
+  bool get wantKeepAlive => true;
 
-  void _markInteraction() {
-    _lastInteractionAt = DateTime.now();
-    if (_isIdle) {
-      _exitIdleMode();
-    }
-  }
-
-  void _checkIdleState() {
-    if (!mounted) return;
-    if (_isOpeningPlayer) return;
-    final idleFor = DateTime.now().difference(_lastInteractionAt);
-    if (!_isIdle && idleFor >= _idleThreshold) {
-      _enterIdleMode();
-    }
-  }
-
-  void _enterIdleMode() {
-    _isIdle = true;
-    _artworkService.enterIdleMode();
-    MemoryManager.checkMemoryPressure();
-  }
-
-  void _exitIdleMode() {
-    _isIdle = false;
-    _artworkService.exitIdleMode();
-  }
-
-  double _safeScrollOffset() {
-    if (!_scrollController.hasClients) return 0.0;
-    try {
-      return _scrollController.positions.first.pixels;
-    } catch (e) {
-      debugLog('LiveTvScreen: safeScrollOffset failed: $e');
-      return 0.0;
-    }
-  }
-
-  void _startSkeletonWatchdog() {
-    if (_skeletonWatchdog != null) return;
-    _skeletonWatchdog =
-        Timer.periodic(_skeletonWatchInterval, (_) => _checkSkeletonStuck());
-  }
-
-  void _stopSkeletonWatchdog() {
-    _skeletonWatchdog?.cancel();
-    _skeletonWatchdog = null;
-  }
-
-  void _markSkeletonVisibility(bool showing) {
-    if (_isSkeletonVisible == showing) return;
-    _isSkeletonVisible = showing;
-    if (showing) {
-      _skeletonShownAt ??= DateTime.now();
-      _startSkeletonWatchdog();
-      return;
-    }
-    // Successfully showing content - remember this to prevent skeleton flicker
-    _hasShownContent = true;
-    _skeletonShownAt = null;
-    _recoveryInFlight = false;
-    _stopSkeletonWatchdog();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {});
-    });
-  }
-
-  void _checkSkeletonStuck() {
-    if (!mounted || !_isSkeletonVisible) return;
-    final shownAt = _skeletonShownAt;
-    if (shownAt == null) return;
-    if (DateTime.now().difference(shownAt) < _skeletonStuckThreshold) return;
-    _triggerStuckRecovery();
-  }
-
-  Future<void> _triggerStuckRecovery({bool userInitiated = false}) async {
-    if (!mounted || _recoveryInFlight) return;
-    final now = DateTime.now();
-    if (!userInitiated &&
-        _lastRecoveryAttempt != null &&
-        now.difference(_lastRecoveryAttempt!) < const Duration(seconds: 12)) {
-      return;
-    }
-    _recoveryInFlight = true;
-    _lastRecoveryAttempt = now;
-    try {
-      final channelProvider =
-          Provider.of<ChannelProvider>(context, listen: false);
-      _loadingCategories = false;
-      _categoryPrefetchRequested = false;
-      unawaited(channelProvider.getAllCategoryNamesAsync());
-      unawaited(channelProvider.getFilteredChannelsAsync(limit: 40));
-      unawaited(_prefetchInitialRows());
-      if (mounted) {
-        setState(() {});
-      }
-    } finally {
-      _recoveryInFlight = false;
-    }
-  }
-
-  void _refreshOnResume() {
-    if (!mounted) return;
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    _categoryPrefetchRequested = false;
-    unawaited(channelProvider.getAllCategoryNamesAsync());
-    unawaited(channelProvider.getFilteredChannelsAsync(limit: 40));
-    _requestCategoryPrefetch();
+  void _replaceCategories(List<String> categories) {
+    _deps.categoryCoordinator.replaceCategories(categories);
+    _deps.artworkRetry.start();
   }
 
   @override
@@ -1408,83 +1079,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (retryLoad && !removeCategory) {
           Future.delayed(const Duration(seconds: 2), () {
             if (!mounted) return;
-            if (!_categoryNameSet.contains(category)) return;
-            if (_categoryChannelLoading.contains(category)) return;
-            if (_categoryChannelCache.containsKey(category)) return;
-            _enqueueCategoryLoad(category);
+            _requestCategoryPrefetch();
           });
-        }
+        });
+        return;
       }
+      LiveTvResumeRefresh.refresh(
+        channelProvider: context.read<ChannelProvider>(),
+        categoryState: _deps.categoryState,
+        requestCategoryPrefetch: _requestCategoryPrefetch,
+      );
     }
-  }
-
-  void _notifyCategoryRow(String category) {
-    final notifier = _categoryRowNotifiers[category];
-    if (notifier != null) {
-      notifier.value++;
-    }
-  }
-
-  void _replaceCategories(List<String> categories) {
-    final next = List<String>.from(categories);
-    final nextSet = next.toSet();
-    _categoryNames = next;
-    _categoryNameSet
-      ..clear()
-      ..addAll(nextSet);
-    _visibleCategoryCount = _categoryNames.length;
-    _lastPrefetchAnchor = -1;
-    _purgeCategoryState(nextSet);
-    _startArtworkRetryWindow();
-  }
-
-  void _purgeCategoryState(Set<String> keep) {
-    _categoryChannelCache.removeWhere((key, _) => !keep.contains(key));
-    _categoryOffsets.removeWhere((key, _) => !keep.contains(key));
-    _categoryHasMore.removeWhere((key, _) => !keep.contains(key));
-    _categoryChannelLoading.removeWhere((key) => !keep.contains(key));
-    _categoryLoadQueue.removeWhere((key) => !keep.contains(key));
-    _categoryAppendQueue.removeWhere((key) => !keep.contains(key));
-    _categoryRowNotifiers.removeWhere((key, _) => !keep.contains(key));
-    _rowScrollControllers.removeWhere((key, _) => !keep.contains(key));
-    _rowScrollInitialized.removeWhere((key) => !keep.contains(key));
-  }
-
-  void _removeCategoryRow(String category) {
-    final removed = _categoryNameSet.remove(category);
-    if (!removed) return;
-    _categoryNames.remove(category);
-    _purgeCategoryState(_categoryNameSet);
-    if (_visibleCategoryCount > _categoryNames.length) {
-      _visibleCategoryCount = _categoryNames.length;
-    }
-    _lastPrefetchAnchor = -1;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final provider = Provider.of<ChannelProvider>(context);
-
-    // Refresh categories if we have channels but no categories loaded,
-    // or if we have fewer categories than the provider knows about
-    if (provider.hasChannels && !_loadingCategories) {
-      final providerCategories = provider.getAllCategoryNames();
-      if (providerCategories.isEmpty) {
-        _maybeRefreshCategories(provider.channelCount);
-      } else if (_categoryNames.isEmpty ||
-          !listEquals(_categoryNames, providerCategories)) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _replaceCategories(providerCategories);
-          setState(() {});
-        });
-      }
-    }
-
+    final provider = context.read<ChannelProvider>();
+    LiveTvRouteHooks.handleDependencyCategories(
+      provider: provider,
+      categoryState: _deps.categoryState,
+      isMounted: () => mounted,
+      onEmptyCategories: (count) => LiveTvRouteHooks.maybeRefreshEmptyCategories(
+        channelCount: count,
+        categoryState: _deps.categoryState,
+        requestCategoryPrefetch: _requestCategoryPrefetch,
+      ),
+      onReplace: _replaceCategories,
+      requestRebuild: () => setState(() {}),
+    );
     final routePath = GoRouterState.of(context).uri.path;
-    if (_lastRoutePath == routePath) return;
-    _lastRoutePath = routePath;
+    if (_deps.lastRoutePath == routePath) return;
+    _deps.lastRoutePath = routePath;
     if (routePath == '/home') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
@@ -1506,102 +1132,65 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _resetRowScrollOffsets() {
-    for (final controller in _rowScrollControllers.values) {
-      if (controller.hasClients) {
-        controller.jumpTo(0);
-      }
+    for (final c in _deps.categoryResources.rowScrollControllers.values) {
+      if (c.hasClients) c.jumpTo(0);
     }
   }
 
   @override
   bool handleContentFocusRequest() {
-    return _focusPrimaryAction();
-  }
-
-  bool _focusPrimaryAction() {
     if (!mounted) return false;
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
+    return LiveTvFocusActions.focusPrimaryAction(
+      channelProvider: context.read<ChannelProvider>(),
+      settingsButtonFocus: _deps.settingsButtonFocus,
+      firstChannelFocus: _deps.firstChannelFocus,
+      watchButtonFocus: _deps.watchButtonFocus,
     );
-    if (channelProvider.channels.isEmpty) {
-      _settingsButtonFocus.requestFocus();
-      return true;
-    }
-    // Prefer first channel card like major streaming apps
-    if (_firstChannelFocus.canRequestFocus) {
-      _firstChannelFocus.requestFocus();
-    } else {
-      _watchButtonFocus.requestFocus();
-    }
-    return true;
   }
 
   void _goToSettings() {
-    final router = GoRouter.of(context);
-    unawaited(Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) router.go('/settings');
-    }));
+    if (!mounted) return;
+    context.go('/settings');
   }
 
-  void _scrollToHeroPeekOnFocus() {
-    if (!_userHasScrolled) return;
-    if (!mounted || !_scrollController.hasClients) return;
-    final heroHeight = context.heroHeight();
-    final targetOffset = heroHeight * 0.2;
-    if (_safeScrollOffset() >= targetOffset) return;
-    _scrollController.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
+  Future<void> _openChannelPlayer(Channel channel) async {
+    if (_deps.openingPlayer.value) return;
+    await LiveTvPlayerLauncher.open(
+      context: context,
+      channel: channel,
+      artworkService: _deps.artworkService,
+      categoryState: _deps.categoryState,
+      categoryCoordinator: _deps.categoryCoordinator,
+      timerManager: _deps.timerManager,
+      isMounted: () => mounted,
+      setSuspendHeroBackground: (v) => _deps.suspendHeroBackground = v,
+      setOpeningPlayer: (v) => _deps.openingPlayer.value = v,
+      startFeaturedRotation: _deps.heroCarousel.startRotation,
     );
   }
 
-  void _startCarouselIfNeeded() {
-    // Register carousel timer (8 seconds)
-    _timerService.registerCustomCallback('live_tv_carousel', 8, () {
-      _nextHero();
-    });
-    // Focus is managed by navigation bar - don't auto-focus content
-  }
-
-  void _nextHero() {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
+  void _showEpgChannelSelector(Channel channel) {
+    LiveTvEpgMappingActions.showAndApply(
+      context: context,
+      channel: channel,
+      epgService: context.read<IncrementalEpgService>(),
+      isMounted: () => mounted,
+      onChanged: () {
+        if (mounted) setState(() {});
+      },
     );
-    if (!channelProvider.hasChannels) return;
-    _featuredChannelId = null;
-    final heroCount =
-        _lastHeroCandidateCount > 0 ? _lastHeroCandidateCount : null;
-    setState(() {
-      // Cycle through ready hero candidates when available.
-      final divisor = heroCount ?? channelProvider.channelCount;
-      _featuredIndex = (_featuredIndex + 1) % divisor;
-    });
-  }
-
-  void _prevHero() {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
-    if (!channelProvider.hasChannels) return;
-    _featuredChannelId = null;
-    final heroCount =
-        _lastHeroCandidateCount > 0 ? _lastHeroCandidateCount : null;
-    setState(() {
-      final divisor = heroCount ?? channelProvider.channelCount;
-      _featuredIndex = (_featuredIndex - 1 + divisor) % divisor;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    _restoreCardFocusIfMissing();
-    final bool shouldScrollFirst =
-        _scrollController.hasClients && _safeScrollOffset() > 100;
+    LiveTvFocusActions.restoreCardFocusIfMissing(
+      lastFocusedCardKey: _deps.lastFocusedCardKey,
+      cardFocusCache: _deps.cardFocusCache,
+      isMounted: () => mounted,
+    );
+    final shouldScrollFirst =
+        LiveTvScrollNavigation.shouldScrollToTopFirst(_deps.scrollController);
     return PopScope(
       canPop: !shouldScrollFirst,
       onPopInvokedWithResult: (didPop, result) {
@@ -3928,113 +3517,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               _focusedIndexBySection[sectionKey] = -1;
             }
           },
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent) {
-              if (event.logicalKey == LogicalKeyboardKey.select ||
-                  event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.space) {
-                _openChannelPlayer(channel);
-                return KeyEventResult.handled;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                if (isFirstRow) {
-                  if (_scrollController.hasClients) {
-                    _scrollController.animateTo(
-                      0.0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                    );
-                  }
-                  if (_watchButtonFocus.canRequestFocus) {
-                    _watchButtonFocus.requestFocus();
-                  }
-                  return KeyEventResult.handled;
-                }
-                // Let Flutter handle focus traversal naturally
-                return KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                // Let Flutter handle focus traversal naturally
-                return KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
-                  index == 0) {
-                if (rowScrollController.hasClients &&
-                    rowScrollController.offset >
-                        rowScrollController.position.minScrollExtent + 1) {
-                  rowScrollController.animateTo(
-                    rowScrollController.position.minScrollExtent,
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                  );
-                  return KeyEventResult.handled;
-                }
-                // Only open sidebar if we are at the start of the list
-                final moved = requestNavigationFocus();
-                return moved ? KeyEventResult.handled : KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
-                  event.logicalKey == LogicalKeyboardKey.info ||
-                  event.logicalKey == LogicalKeyboardKey.keyM) {
-                _showEpgChannelSelector(channel);
-                return KeyEventResult.handled;
-              }
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Selector<IncrementalEpgService, _EpgCardData>(
-            selector: (context, epgService) {
-              // Always try to get program data, even during loading if available
-              // This prevents flickering by showing data as soon as it's ready
-              final channelId = channel.epgLookupId;
-              final program = epgService.getCurrentProgram(
-                channelId,
-                channelName: channel.epgLookupNameFallback,
-                groupTitle: channel.groupTitle,
-              );
-              return _EpgCardData(
-                program: program,
-                hasUsableData: epgService.hasUsableData,
-                isLoading: epgService.isParsing || epgService.isDownloading,
-              );
-            },
-            builder: (context, epgData, _) {
-              final isFocused = Focus.of(context).hasFocus;
-              final epgService =
-                  Provider.of<IncrementalEpgService>(context, listen: false);
-
-              // Load EPG for focused channel or if we have usable data but no program yet
-              if (isFocused &&
-                  epgData.program == null &&
-                  epgData.hasUsableData) {
-                unawaited(epgService.ensureChannelLoaded(
-                  channel.epgLookupId,
-                  channelName: channel.epgLookupNameFallback,
-                ));
-              }
-
-              return GestureDetector(
-                onTap: () => _openChannelPlayer(channel),
-                onLongPress: () => _showEpgChannelSelector(channel),
-                child: AnimatedScale(
-                  scale: isFocused ? 1.05 : 1.0,
-                  duration: TVFocusStyle.animationDuration,
-                  curve: TVFocusStyle.animationCurve,
-                  alignment: Alignment.topCenter,
-                  child: _buildCardContent(
-                    context,
-                    channel,
-                    epgData.program,
-                    isFocused,
-                    cardWidth,
-                    cardHeight,
-                    allowPrefetch,
-                    isFirstRow: isFirstRow,
-                  ),
-                ),
-              );
-            },
-          ),
+          buildHero: (ctx, featured, channels, _) =>
+              _rows.fullScreenHero(ctx, featured, channels),
         ),
       ),
     );

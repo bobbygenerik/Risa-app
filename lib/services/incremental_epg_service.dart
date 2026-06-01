@@ -1,17 +1,34 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:collection';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:xml/xml_events.dart';
+import 'package:iptv_player/models/epg/catchup_info.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/services/epg/epg_channel_batch_loader.dart';
+import 'package:iptv_player/services/epg/epg_channel_list_loader.dart';
+import 'package:iptv_player/services/epg/epg_channel_matcher.dart';
+import 'package:iptv_player/services/epg/epg_file_cache.dart';
+import 'package:iptv_player/services/epg/epg_manual_mapping_facade.dart';
+import 'package:iptv_player/services/epg/epg_manual_mapping_facade_deps.dart';
+import 'package:iptv_player/services/epg/epg_manual_mappings_store.dart';
+import 'package:iptv_player/services/epg/epg_normalize_cache.dart';
+import 'package:iptv_player/services/epg/epg_display_names_store.dart';
+import 'package:iptv_player/services/epg/epg_normalized_mapping_store.dart';
+import 'package:iptv_player/services/epg/epg_public_api.dart';
+import 'package:iptv_player/services/epg/epg_refresh_coordinator.dart';
+import 'package:iptv_player/services/epg/epg_program_db_loader.dart';
+import 'package:iptv_player/services/epg/epg_program_ingest.dart';
+import 'package:iptv_player/services/epg/epg_program_query.dart';
+import 'package:iptv_player/services/epg/epg_secondary_loader.dart';
+import 'package:iptv_player/services/epg/epg_service_init.dart';
+import 'package:iptv_player/services/epg/epg_service_init_deps.dart';
 import 'package:iptv_player/services/local_db_service.dart';
-import 'package:iptv_player/services/smart_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:iptv_player/utils/epg_matching_utils.dart';
+
+part 'epg/epg_service_bindings.dart';
+part 'epg/epg_service_runtime.dart';
+part 'epg/epg_service_api.dart';
 
 // dart:async already provides unawaited()
 
@@ -19,21 +36,13 @@ import 'package:iptv_player/utils/epg_matching_utils.dart';
 // via graceful aborts and user-facing `_error` messages to preserve
 // last-known-good EPG state.
 
-class CatchupInfo {
-  final String streamId;
-  final int durationHours;
-  const CatchupInfo({required this.streamId, required this.durationHours});
-}
-
 class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
-  static const bool _enableLenientParserFallback = true;
   final Set<String> _availableChannels = {};
   final Map<String, String?> _internalToEpgIdMapping = {};
   Map<String, List<String>>?
       _normalizedAvailableChannels; // normalizedId -> [originalId1, originalId2]
-  final Set<String> _epgIdsRaw = {};
-  final Map<String, String> _epgIdsLowerToRaw = {};
-  Map<String, List<String>> _epgDisplayNamesById = {};
+  late final EpgChannelMatcher _channelMatcher;
+  final EpgFileCache _fileCache = EpgFileCache();
 
   final bool _enableMatchingDiagnostics = kDebugMode;
   bool _isLoading = false;
@@ -42,6 +51,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool _externalDbBusy = false;
   String? _error;
   String? _epgUrl;
+  String? _secondaryEpgUrl;
   bool _hasParsed = false;
   bool _initInFlight = false;
   bool _refreshInFlight = false;
@@ -52,21 +62,30 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   String _epgProgressLabel = '';
   int _lastParseDurationMs = 60000;
   Timer? _parseProgressTimer;
-  DateTime? _lastMappingsLoad;
-  DateTime? _lastInitAttempt;
   DateTime? _lastDownloadTime; // Track when last download completed
+  DateTime? _lastSecondaryDownloadTime;
+  bool _secondaryMergeInFlight = false;
   Set<String> _allowedChannelIdsNormalized = {};
   int _allowedChannelCount = 0;
-  int _epgFutureHours = 12;
-  // Reduced window for faster cold starts while keeping timezone buffer.
-  static const int _initialFutureHours = 6;
-  // 8-hour window covers global timezones (UTC-12 to UTC+14) for 6-hour viewing window
-  static const int _fullFutureHours = 8;
-  // Reduced past/future windows for faster parsing
-  static const int _epgPastWindowHours = 2;
-  static const int _epgFutureWindowHours = 8;
+  int _epgFutureHours = _initialFutureHours;
+  // Wide window so a single parse covers more than a full day; the cached
+  // window no longer ages out before the next download/parse cycle. Initial
+  // equals full so the legacy window-extension re-parse stays a no-op — the
+  // freshness timer handles staleness instead.
+  static const int _initialFutureHours = 36;
+  static const int _fullFutureHours = 36;
+  // Past/future windows kept on disk so DB reads (which re-slice with a fresh
+  // `now`) keep finding the current program well past parse time.
+  static const int _epgPastWindowHours = 6;
+  static const int _epgFutureWindowHours = 36;
   bool _extendedWindowScheduled = false;
   bool _extendingWindow = false;
+  // Freshness tracking so the cached EPG window is re-sliced after a day
+  // rollover or long idle, keeping "current program" resolution accurate.
+  DateTime? _lastInitCompletedAt;
+  Timer? _freshnessTimer;
+  static const Duration _freshnessCheckInterval = Duration(minutes: 15);
+  static const Duration _freshnessMaxAge = Duration(hours: 6);
   Map<String, CatchupInfo> _catchupByNormalizedId = {};
   Map<String, int> _catchupHoursByNormalizedId = {};
   String? _xtreamServer;
@@ -86,22 +105,47 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   // Playback mode: suspend all notifications during video to prevent jitter
   bool _playbackActive = false;
 
+  EpgManualMappingFacade get _mappingFacade =>
+      _manualMappingFacade ??= EpgManualMappingFacade(
+        deps: EpgManualMappingFacadeDeps(
+          manualMappingsStore: _manualMappingsStore,
+          internalToEpgIdMapping: _internalToEpgIdMapping,
+          programsByChannel: _programsByChannel,
+          availableChannels: _availableChannels,
+          isDbDisabled: () => _dbDisabled,
+          db: _db,
+          publicApi: _publicApi,
+          handleDbError: _handleDbError,
+          notifyListeners: notifyListeners,
+          ensureChannelLoaded: (channelId, {channelName}) =>
+              _channelBatchLoader.ensureChannelLoaded(
+                channelId,
+                channelName: channelName,
+              ),
+          catchupByNormalizedId: () => _catchupByNormalizedId,
+          xtreamServer: () => _xtreamServer,
+          xtreamUsername: () => _xtreamUsername,
+          xtreamPassword: () => _xtreamPassword,
+          channelBatchLoader: _channelBatchLoader,
+          stopParseProgressTimer: _stopParseProgressTimer,
+          restoreDbIfClosed: _restoreDbIfClosed,
+          getPrefs: SharedPreferences.getInstance,
+        ),
+      );
+
   /// Override notifyListeners to prevent "setState after dispose" crashes
   /// and throttle notifications for performance
   @override
   void notifyListeners() {
     if (_disposed) return;
-    // Skip all notifications during video playback to prevent UI jitter
     if (_playbackActive) return;
 
-    // Use a wider throttle window while actively parsing EPG data
     final interval =
         _isParsing ? _notifyThrottleIntervalParsing : _notifyThrottleInterval;
 
     final now = DateTime.now();
     if (_lastNotifyTime != null &&
         now.difference(_lastNotifyTime!) < interval) {
-      // Schedule a delayed notification if not already pending
       if (!_notifyPending) {
         _notifyPending = true;
         Future.delayed(interval, () {
@@ -121,20 +165,26 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
-  final Map<String, int> _lastProgramIndexByChannel = {};
-  static const int _channelFailureThreshold = 3;
-  final Map<String, int> _channelFailureCounts = {};
-  final Set<String> _loggedMissingEpgIds = {};
-  final Set<String> _loggedMissingProgramChannels = {};
-  final Set<String> _attemptedLoads =
-      {}; // Track IDs we've already tried to load from DB
   final LocalDbService _db = LocalDbService.instance;
-  final Map<String, String> _manualMappings = {};
-  static const String _manualMappingsKey = 'epg_manual_mappings';
+  late final EpgProgramDbLoader _programDbLoader;
+  late final EpgProgramIngest _programIngest;
+  late final EpgProgramQuery _programQuery;
+  late final EpgChannelBatchLoader _channelBatchLoader;
+  late final EpgChannelListLoader _channelListLoader;
+  late final EpgRefreshCoordinator _refreshCoordinator;
+  late final EpgSecondaryLoader _secondaryLoader;
+  late final EpgServiceInit _serviceInit;
+  late final EpgPublicApi _publicApi;
+  final EpgManualMappingsStore _manualMappingsStore =
+      EpgManualMappingsStore(db: LocalDbService.instance);
+  final EpgNormalizedMappingStore _normalizedMappingStore =
+      EpgNormalizedMappingStore();
+  final EpgDisplayNamesStore _displayNamesStore = EpgDisplayNamesStore();
   String? _playlistIdentity;
+  EpgManualMappingFacade? _manualMappingFacade;
 
   IncrementalEpgService() {
-    WidgetsBinding.instance.addObserver(this);
+    wireEpgServiceModules(this);
   }
 
   // Provider-style alias map (normalized) to bridge common naming drift
@@ -160,16 +210,8 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   );
 
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
-  static const String _epgCacheTimeKey = 'epg_cache_time';
-  static const String _epgCacheUrlKey = 'epg_cache_url';
-  static const String _epgCacheBackupFileName = 'epg_cache_backup.xml.gz';
-  static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
-  static const int _defaultCacheHours = 6;
-  Duration _cacheDuration = const Duration(hours: _defaultCacheHours);
-  static const Duration _forceRefreshCooldown = Duration(minutes: 1);
-  DateTime? _lastForceRefreshRequested;
 
   bool get isLoading => _isLoading;
   bool get isDownloading => _isDownloading;
@@ -199,7 +241,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   bool get isDbReady => _db.isReady;
   bool get isDbDisabled => _dbDisabled;
   bool get isDbClosedDetected => _dbClosedDetected;
-  Duration get cacheDuration => _cacheDuration;
+  Duration get cacheDuration => _fileCache.cacheDuration;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
   bool get isReady =>
       _hasParsed &&
@@ -212,7 +254,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   int get catchupChannelCount => _catchupByNormalizedId.length;
 
   /// Returns true if programs are actively being loaded from DB
-  bool get isBatchLoading => _pendingBatch.isNotEmpty || _batchTimer != null;
+  bool get isBatchLoading => _channelBatchLoader.isBatchLoading;
 
   /// Returns true if we have any loaded programs
   bool get hasLoadedPrograms =>
@@ -359,218 +401,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _invalidateProgramIndexCache() {
-    _lastProgramIndexByChannel.clear();
+    _programQuery.invalidateIndexCache();
   }
 
   /// Quick startup initialization that prioritizes cached data
-  Future<void> quickStart() async {
-    // CRITICAL: Early return if we already have data - prevents re-parsing on navigation
-    if (_hasParsed || hasLoadedPrograms) {
-      debugLog(
-          'EPG: quickStart skipped (already have data: hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, channels=${_programsByChannel.length})');
-      return;
-    }
-
-    if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
-      debugLog('EPG: quickStart skipped (already loading)');
-      return; // Already initializing
-    }
-
-    debugLog('EPG: Quick start initialization');
-
-    try {
-      // Try to load cached normalized mapping immediately for fast channel matching
-      await _loadNormalizedMappingFromPrefs();
-
-      // Initialize with progressive loading for fast startup
-      await _initializeProgressively(forceRefresh: false);
-    } catch (e) {
-      debugLog('EPG: Quick start failed: $e');
-    }
-  }
+  Future<void> quickStart() => _serviceInit.quickStart();
 
   /// Force refresh EPG data with improved error handling
-  Future<void> forceRefresh() async {
-    debugLog('EPG: Force refresh requested');
-    await _initializeProgressively(forceRefresh: true);
-  }
-
-  /// Progressive initialization: load current day first, then remaining days in background
-  Future<void> _initializeProgressively({bool forceRefresh = false}) async {
-    await _restoreDbIfClosed();
-    if (!forceRefresh &&
-        (_isLoading || _isDownloading || _isParsing || _initInFlight)) {
-      debugLog('EPG: Progressive init skipped (already loading or in flight)');
-      return;
-    }
-    // CRITICAL: Don't re-initialize if we already have loaded programs OR if we're currently parsing
-    // Check both _hasParsed AND hasLoadedPrograms to catch all cases
-    if (!forceRefresh && (hasLoadedPrograms || _hasParsed || _isParsing)) {
-      debugLog(
-          'EPG: Progressive init skipped (hasParsed=$_hasParsed, hasPrograms=$hasLoadedPrograms, isParsing=$_isParsing, channels=${_programsByChannel.length})');
-      return;
-    }
-    if (forceRefresh && _lastForceRefreshRequested != null) {
-      final since = DateTime.now().difference(_lastForceRefreshRequested!);
-      if (since < _forceRefreshCooldown && hasLoadedPrograms) {
-        debugLog(
-            'EPG: Force refresh skipped (cooldown ${since.inMinutes}m, programs loaded)');
-        return;
-      }
-    }
-
-    final now = DateTime.now();
-    if (!forceRefresh &&
-        _lastInitAttempt != null &&
-        now.difference(_lastInitAttempt!).inSeconds < 3) {
-      debugLog('EPG: Progressive init skipped (throttled)');
-      return;
-    }
-    _lastInitAttempt = now;
-    if (forceRefresh) {
-      _lastForceRefreshRequested = now;
-    }
-    _initInFlight = true;
-
-    try {
-      debugLog('EPG: Starting progressive EPG initialization...');
-
-      // Initialize DB with timeout
-      try {
-        await _db.init().timeout(const Duration(seconds: 5));
-      } catch (e) {
-        debugLog('EPG: DB init failed (continuing without DB cache): $e');
-        _handleDbError(e);
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // Load user's EPG cache duration preference
-      final userCacheHours =
-          prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
-      _cacheDuration = Duration(hours: userCacheHours);
-      debugLog('EPG: Using cache duration of $userCacheHours hours');
-
-      // Get EPG URL
-      final customEpgUrl = prefs.getString('custom_epg_url');
-      final storedEpgUrl = prefs.getString('epg_url');
-      _epgUrl = customEpgUrl;
-      if (_epgUrl == null || _epgUrl!.isEmpty) {
-        _epgUrl = storedEpgUrl;
-      }
-      _epgUrl = _epgUrl?.trim();
-
-      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
-        final normalized = _normalizeEpgUrl(_epgUrl!);
-        if (normalized != _epgUrl) {
-          _epgUrl = normalized;
-          if (customEpgUrl != null && customEpgUrl.isNotEmpty) {
-            await prefs.setString('custom_epg_url', normalized);
-          } else if (storedEpgUrl != null && storedEpgUrl.isNotEmpty) {
-            await prefs.setString('epg_url', normalized);
-          }
-        }
-
-        final uri = Uri.tryParse(_epgUrl!);
-        final scheme = uri?.scheme ?? '';
-        final schemeValid =
-            scheme.isNotEmpty && _schemeValidRe.hasMatch(scheme);
-        if (uri == null || !schemeValid) {
-          _error = 'Invalid EPG URL';
-          debugLog('EPG: Invalid URL configured: $_epgUrl');
-          _resetLoadingState();
-          notifyListeners();
-          return;
-        }
-      }
-
-      await _handleCacheUrlChange(prefs);
-      await _loadManualMappings(prefs);
-      _applyManualMappings();
-      _epgFutureHours = _initialFutureHours;
-      _extendedWindowScheduled = false;
-      _extendingWindow = false;
-
-      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
-        debugLog('EPG: Progressive initialization with URL: $_epgUrl');
-
-        // Try loading persisted normalized mapping early
-        await _loadNormalizedMappingFromPrefs();
-        await loadMappingsFromDb();
-
-        // Start with current-day-only parse for faster cold starts
-        // We'll load the full window in the background afterward.
-        await _loadChannelList(
-          forceRefresh: forceRefresh,
-          allowStaleCache: !forceRefresh,
-          currentDayOnly: true,
-        );
-
-        // Load remaining days in background
-        unawaited(_loadRemainingDaysInBackground());
-      } else {
-        debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
-        _error = 'No EPG URL configured';
-        _resetLoadingState();
-        notifyListeners();
-      }
-
-      debugLog(
-          'EPG: Progressive init complete - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
-    } catch (e) {
-      debugLog('EPG: Progressive initialization error: $e');
-      _error = 'Failed to initialize EPG service: $e';
-      _resetLoadingState();
-      notifyListeners();
-    } finally {
-      _initInFlight = false;
-      if (_pendingAllowedRefresh &&
-          _allowedChannelIdsNormalized.isNotEmpty &&
-          !_isLoading &&
-          !_isDownloading &&
-          !_isParsing) {
-        _pendingAllowedRefresh = false;
-        unawaited(_initializeProgressively(forceRefresh: false));
-      }
-    }
-  }
-
-  /// Load remaining days in background (non-blocking)
-  Future<void> _loadRemainingDaysInBackground() async {
-    try {
-      debugLog('EPG: Loading remaining EPG days in background...');
-
-      // Small delay to let current day render first
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // CRITICAL: Check if we already have data loaded to avoid redundant work
-      // Also check if we're currently loading to prevent duplicate background loads
-      if ((hasLoadedPrograms && _programsByChannel.length > 100) ||
-          _isLoading ||
-          _isParsing) {
-        debugLog(
-            'EPG: Skipping background load - already have ${_programsByChannel.length} channels (isLoading=$_isLoading, isParsing=$_isParsing)');
-        return;
-      }
-
-      final start = DateTime.now();
-      await _loadChannelList(
-        forceRefresh: false,
-        allowStaleCache: true,
-        fromBackgroundRefresh: true,
-        currentDayOnly: false,
-      );
-      debugLog(
-          'EPG: Background EPG load took ${DateTime.now().difference(start).inMilliseconds}ms');
-
-      debugLog('EPG: ✓ Full EPG loaded in background');
-      // CRITICAL: Notify listeners so UI knows EPG data is ready
-      notifyListeners();
-    } catch (e) {
-      debugLog('EPG: Background EPG loading error: $e');
-      // Don't update error state as current day is already loaded
-    }
-  }
+  Future<void> forceRefresh() => _serviceInit.forceRefresh();
 
   /// Check if EPG service has usable data available
   bool get hasUsableData {
@@ -579,314 +417,50 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         _availableChannels.isNotEmpty;
   }
 
-  String _normalizeEpgUrl(String input) {
-    var url = input.trim();
-    url = url.replaceAll('\uFEFF', '');
-    while (url.startsWith('"') || url.startsWith("'")) {
-      url = url.substring(1);
-    }
-    while (url.endsWith('"') || url.endsWith("'")) {
-      url = url.substring(0, url.length - 1);
-    }
-    final httpIndex = url.indexOf(_httpSchemeRe);
-    if (httpIndex > 0) {
-      url = url.substring(httpIndex);
-    }
-    if (url.startsWith('//')) {
-      url = 'https:$url';
-    }
-    if (!url.contains('://')) {
-      url = 'https://$url';
-    }
-    return url;
-  }
-
-  bool _looksLikeGzip(List<int> bytes) {
-    return bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
-  }
-
-  Future<String> _readDecodedPrefix(File file, {int maxBytes = 16384}) async {
-    final buffer = <int>[];
-    final stream = file.openRead();
-    final decoded = file.path.toLowerCase().endsWith('.gz')
-        ? stream.transform(gzip.decoder)
-        : stream;
-    await for (final chunk in decoded) {
-      buffer.addAll(chunk);
-      if (buffer.length >= maxBytes) break;
-    }
-    return utf8.decode(buffer, allowMalformed: true).trimLeft().toLowerCase();
-  }
-
-  void setAllowedChannelIds(Set<String> channelIds,
-      {bool triggerRefresh = false}) {
-    // Standardize IDs for filtering - helps with targeted EPG parsing
-    final normalized =
-        channelIds.map((id) => normalizeForAllowedId(id)).toSet();
-    if (_allowedChannelIdsNormalized.length == normalized.length &&
-        _allowedChannelIdsNormalized.containsAll(normalized)) {
-      debugLog('EPG: Allowed channel set unchanged; skipping refresh.');
-      return;
-    }
-    _allowedChannelIdsNormalized = normalized;
-    _allowedChannelCount = _allowedChannelIdsNormalized.length;
-    debugLog(
-        'EPG: Allowed channel set size: ${_allowedChannelIdsNormalized.length}');
-    _internalToEpgIdMapping.clear(); // Clear cache when selection changes
-    if (triggerRefresh) {
-      if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
-        _pendingAllowedRefresh = true;
-      } else {
-        unawaited(initialize(forceRefresh: false));
-      }
-    }
-  }
-
-  void setCatchupConfig(Map<String, CatchupInfo> config,
-      {bool triggerRefresh = false}) {
-    _catchupByNormalizedId = config;
-    _catchupHoursByNormalizedId =
-        config.map((key, value) => MapEntry(key, value.durationHours));
-    if (triggerRefresh) {
-      if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
-        _pendingAllowedRefresh = true;
-      } else {
-        unawaited(initialize(forceRefresh: false));
-      }
-    }
-  }
-
-  void setXtreamCredentials(
-      {required String serverUrl,
-      required String username,
-      required String password}) {
-    _xtreamServer = serverUrl;
-    _xtreamUsername = username;
-    _xtreamPassword = password;
-  }
-
-  void setPlaylistIdentity(String? identity) {
-    final normalized = identity?.trim();
-    final next =
-        (normalized != null && normalized.isNotEmpty) ? normalized : null;
-    if (next == _playlistIdentity) return;
-    _playlistIdentity = next;
-    _manualMappings.clear();
-    unawaited(() async {
-      final prefs = await SharedPreferences.getInstance();
-      await _loadManualMappings(prefs);
-      _applyManualMappings();
-      notifyListeners();
-    }());
-  }
-
   Future<void> initialize({bool forceRefresh = false}) async {
-    // Use progressive initialization for better startup performance
-    await _initializeProgressively(forceRefresh: forceRefresh);
+    await _serviceInit.initialize(forceRefresh: forceRefresh);
+    _lastInitCompletedAt = DateTime.now();
+    _startFreshnessTimer();
+  }
+
+  void _startFreshnessTimer() {
+    _freshnessTimer ??=
+        Timer.periodic(_freshnessCheckInterval, (_) => _maybeRefreshForFreshness());
+  }
+
+  /// Re-slice the cached EPG window after a day rollover or long idle so the
+  /// current program stays accurate without a full network re-download. A DB
+  /// reload recomputes its window from a fresh `now`, so this is cheap unless
+  /// the on-disk cache itself has expired.
+  void _maybeRefreshForFreshness() {
+    if (_disposed) return;
+    final last = _lastInitCompletedAt;
+    if (last == null) return;
+    if (_initInFlight || _isLoading || _isDownloading || _isParsing) return;
+    if (_playbackActive) return;
+    final now = DateTime.now();
+    final dayChanged = now.day != last.day ||
+        now.month != last.month ||
+        now.year != last.year;
+    final tooOld = now.difference(last) >= _freshnessMaxAge;
+    if (!dayChanged && !tooOld) return;
+    debugLog(
+        'EPG: Freshness refresh (dayChanged=$dayChanged tooOld=$tooOld, lastInit=$last)');
+    unawaited(initialize(forceRefresh: false));
   }
 
   Future<void> clearAllData(
-      {bool clearUrls = true, bool clearSavedPlaylists = true}) async {
-    _resetLoadingState();
-    _error = null;
-    _hasParsed = false;
-    _epgUrl = null;
-    _pendingAllowedRefresh = false;
-    _extendedWindowScheduled = false;
-    _extendingWindow = false;
-    _lastDownloadTime =
-        null; // Reset download timestamp to allow fresh download
-    _availableChannels.clear();
-    _attemptedLoads.clear();
-    _resetEpgIdIndex();
-    _internalToEpgIdMapping.clear();
-    _normalizedAvailableChannels = null;
-
-    _normalizeCache.clear();
-    _manualMappings.clear();
-    _programsByChannel.clear();
-    _lastProgramIndexByChannel.clear();
-    _channelFailureCounts.clear();
-    _loggedMissingEpgIds.clear();
-    _loggedMissingProgramChannels.clear();
-    _invalidateProgramIndexCache();
-    _resetMatchDiagnostics();
-    notifyListeners();
-
-    try {
-      await _db.clearEpg();
-    } catch (e) {
-      debugLog('EPG: Failed to clear DB cache: $e');
-    }
-
-    try {
-      final cacheFile = await _getCacheFile();
-      if (await cacheFile.exists()) await cacheFile.delete();
-    } catch (e) {
-      debugLog('EPG: Failed to delete cache file: $e');
-    }
-
-    try {
-      final backupFile = await _getCacheBackupFile();
-      if (await backupFile.exists()) await backupFile.delete();
-    } catch (e) {
-      debugLog('EPG: Failed to delete cache backup: $e');
-    }
-
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/${_normalizedMapFileNameForPlaylist()}');
-      if (await file.exists()) await file.delete();
-      if (_normalizedMapFileNameForPlaylist() != _normalizedMapFileName) {
-        final legacy = File('${dir.path}/$_normalizedMapFileName');
-        if (await legacy.exists()) await legacy.delete();
-      }
-    } catch (e) {
-      debugLog('EPG: Failed to delete normalized mapping file: $e');
-    }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_epgCacheTimeKey);
-      await prefs.remove(_epgCacheUrlKey);
-      await prefs.remove(_manualMappingsKey);
-      final scopedKey = _manualMappingsStorageKey();
-      if (scopedKey != _manualMappingsKey) {
-        await prefs.remove(scopedKey);
-      }
-      if (clearUrls) {
-        await prefs.remove('custom_epg_url');
-        await prefs.remove('epg_url');
-        await prefs.remove('secondary_epg_url');
-      }
-
-      final keys = prefs.getKeys();
-      for (final key in keys) {
-        if (key.startsWith('m3u_epg_url_') ||
-            key.startsWith('m3u_secondary_epg_') ||
-            key.startsWith('xtream_epg_url_') ||
-            key.startsWith('xtream_secondary_epg_')) {
-          await prefs.remove(key);
-        }
-      }
-
-      if (clearSavedPlaylists) {
-        final playlistsJson = prefs.getString('saved_playlists');
-        if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
-          final List<dynamic> decoded = jsonDecode(playlistsJson);
-          final updated = decoded.map((entry) {
-            final map = Map<String, dynamic>.from(entry as Map);
-            map['epgUrl'] = null;
-            map['epgUrlSecondary'] = null;
-            return map;
-          }).toList();
-          await prefs.setString('saved_playlists', jsonEncode(updated));
-        }
-      }
-    } catch (e) {
-      debugLog('EPG: Failed to clear EPG prefs: $e');
-    }
-  }
-
-  Future<void> _handleCacheUrlChange(SharedPreferences prefs) async {
-    final currentUrl = _epgUrl ?? '';
-    final cachedUrl = prefs.getString(_epgCacheUrlKey) ?? '';
-    if (currentUrl.isEmpty) return;
-    if (cachedUrl.isNotEmpty && cachedUrl != currentUrl) {
-      debugLog(
-          'EPG: URL changed; clearing cache (old=$cachedUrl, new=$currentUrl)');
-      await prefs.remove(_epgCacheTimeKey);
-      await prefs.setString(_epgCacheUrlKey, currentUrl);
-      try {
-        final cacheFile = await _getCacheFile();
-        if (await cacheFile.exists()) await cacheFile.delete();
-      } catch (e) {
-        debugLog('EPG: Failed to delete cache file: $e');
-      }
-      await _saveNormalizedMappingToPrefs(null);
-      _normalizedAvailableChannels = null;
-
-      _availableChannels.clear();
-      _resetEpgIdIndex();
-      _internalToEpgIdMapping.clear();
-      _programsByChannel.clear();
-      _invalidateProgramIndexCache();
-      _hasParsed = false;
-    } else if (cachedUrl.isEmpty) {
-      await prefs.setString(_epgCacheUrlKey, currentUrl);
-    }
-  }
-
-  Future<void> _loadManualMappings(SharedPreferences prefs) async {
-    try {
-      final key = _manualMappingsStorageKey();
-      var jsonStr = prefs.getString(key);
-      if (jsonStr == null || jsonStr.trim().isEmpty) {
-        if (key != _manualMappingsKey) {
-          jsonStr = prefs.getString(_manualMappingsKey);
-        }
-      }
-      if (jsonStr == null || jsonStr.trim().isEmpty) return;
-      final Map<String, dynamic> decoded = jsonDecode(jsonStr);
-      _manualMappings
-        ..clear()
-        ..addAll(decoded.map(
-          (key, value) => MapEntry(key, value.toString()),
-        ));
-      if (key != _manualMappingsKey) {
-        await prefs.setString(key, jsonEncode(_manualMappings));
-      }
-    } catch (e) {
-      debugLog('EPG: Failed to load manual mappings: $e');
-    }
-  }
-
-  Future<void> _saveManualMappings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _manualMappingsStorageKey(),
-        jsonEncode(_manualMappings),
+      {bool clearUrls = true, bool clearSavedPlaylists = true}) =>
+      _serviceInit.clearAllData(
+        clearUrls: clearUrls,
+        clearSavedPlaylists: clearSavedPlaylists,
       );
-    } catch (e) {
-      debugLog('EPG: Failed to save manual mappings: $e');
-    }
-  }
 
-  void _applyManualMappings() {
-    if (_manualMappings.isEmpty) return;
-    _manualMappings.forEach((channelId, epgId) {
-      if (channelId.isEmpty || epgId.isEmpty) return;
-      _internalToEpgIdMapping[channelId] = epgId;
-      _registerAvailableChannel(epgId);
-    });
-  }
+  Future<File> _getCacheFile() => _fileCache.getCacheFile();
 
-  Future<void> _saveNormalizedMappingToPrefs(
-      Map<String, List<String>>? mapping) async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/${_normalizedMapFileNameForPlaylist()}');
-      if (mapping == null || mapping.isEmpty) {
-        if (await file.exists()) await file.delete();
-        return;
-      }
-      final jsonStr = await compute(json.encode, mapping);
-      await file.writeAsString(jsonStr);
-      debugLog(
-          'EPG: Saved normalized mapping (${mapping.length} entries) to ${file.path}');
-    } catch (e) {
-      debugLog('EPG: Failed to save normalized mapping: $e');
-    }
-  }
+  Future<void> _purgeCacheFiles() => _fileCache.purgeCacheFiles();
 
-  String _manualMappingsStorageKey() {
-    final identity = _playlistIdentity?.trim();
-    if (identity == null || identity.isEmpty) {
-      return _manualMappingsKey;
-    }
-    return '${_manualMappingsKey}_$identity';
-  }
+  Future<void> _backupCacheFile() => _fileCache.backupCacheFile();
 
   String _normalizedMapFileNameForPlaylist() {
     final identity = _playlistIdentity?.trim();
@@ -2989,144 +2563,10 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   String? _buildCatchupUrl(String epgId, int startTs, int endTs,
-      {required int nowMs}) {
-    final normalized = normalizeForFilter(epgId);
-    final info = _catchupByNormalizedId[normalized];
-    if (info == null || info.durationHours <= 0) return null;
-    if (endTs >= nowMs) return null;
-    final earliest = nowMs - (info.durationHours * 3600000);
-    if (endTs < earliest) return null;
+          {required int nowMs}) =>
+      _mappingFacade.buildCatchupUrl(epgId, startTs, endTs, nowMs: nowMs);
 
-    final server = _xtreamServer;
-    final username = _xtreamUsername;
-    final password = _xtreamPassword;
-    if (server == null ||
-        server.isEmpty ||
-        username == null ||
-        username.isEmpty ||
-        password == null ||
-        password.isEmpty) {
-      return null;
-    }
-
-    final durationMinutes = ((endTs - startTs) / 60000).ceil();
-    if (durationMinutes <= 0) return null;
-
-    final startUtc =
-        DateTime.fromMillisecondsSinceEpoch(startTs, isUtc: false).toUtc();
-    final startStr = _formatCatchupTime(startUtc);
-    final base =
-        server.endsWith('/') ? server.substring(0, server.length - 1) : server;
-    return '$base/timeshift.php?username=$username&password=$password&stream=${info.streamId}&start=$startStr&duration=$durationMinutes';
-  }
-
-  String _formatCatchupTime(DateTime dtUtc) {
-    String pad(int v) => v.toString().padLeft(2, '0');
-    final year = dtUtc.year.toString().padLeft(4, '0');
-    final month = pad(dtUtc.month);
-    final day = pad(dtUtc.day);
-    final hour = pad(dtUtc.hour);
-    final minute = pad(dtUtc.minute);
-    final second = pad(dtUtc.second);
-    return '$year-$month-$day:$hour-$minute-$second';
-  }
-
-  Future<void> loadChannelBatch(List<String> channelIds) async {
-    // No-op in optimized version as all programs are loaded during init
-    // but we can ensure they are available in _programsByChannel
-    if (!_hasParsed) {
-      await initialize();
-    } else {
-      // Small delay to allow batching if caller expects it
-      await Future.delayed(Duration.zero);
-      notifyListeners();
-    }
-  }
-
-  String _normalize(String text) {
-    final cached = _normalizeCache[text];
-    if (cached != null) return cached;
-    if (_normalizeCache.length > 50000) {
-      _normalizeCache.clear();
-    }
-    final normalized = EPGMatchingUtils.normalizeChannelName(text);
-    _normalizeCache[text] = normalized;
-    return normalized;
-  }
-
-  List<EpgMatchCandidate> _matchCandidates = [];
-
-  // ... (keep existing fields)
-
-  void _rebuildFuzzyCandidates() {
-    final candidates = <EpgMatchCandidate>[];
-
-    // 1. Add candidates from Display Names (preferred)
-    if (_epgDisplayNamesById.isNotEmpty) {
-      for (final entry in _epgDisplayNamesById.entries) {
-        final epgId = entry.key;
-        if (epgId.isEmpty) continue;
-
-        // Add the ID itself as a candidate (often generic but useful fallback)
-        candidates.add(EpgMatchCandidate(
-          id: epgId,
-          displayName: epgId,
-        ));
-
-        // Add all <display-name> entries from XML
-        for (final name in entry.value) {
-          if (name.trim().isNotEmpty) {
-            candidates.add(EpgMatchCandidate(
-              id: epgId,
-              displayName: name,
-            ));
-          }
-        }
-      }
-    }
-    // 2. Fallback: If no display names recorded, use available channel IDs
-    else if (_availableChannels.isNotEmpty) {
-      for (final id in _availableChannels) {
-        if (id.isEmpty) continue;
-        candidates.add(EpgMatchCandidate(
-          id: id,
-          displayName: id,
-        ));
-      }
-    } else {
-      // Last resort: use normalized mapping keys
-      if (_normalizedAvailableChannels != null) {
-        for (final entry in _normalizedAvailableChannels!.entries) {
-          for (final id in entry.value) {
-            candidates.add(EpgMatchCandidate(
-              id: id,
-              displayName: id,
-            ));
-          }
-        }
-      }
-    }
-
-    _matchCandidates = candidates;
-    debugLog(
-        'EPG: Rebuilt fuzzy match index with ${_matchCandidates.length} candidates.');
-  }
-
-  void _resetEpgIdIndex() {
-    _epgIdsRaw.clear();
-    _epgIdsLowerToRaw.clear();
-    _epgDisplayNamesById.clear();
-    _matchCandidates = [];
-  }
-
-  // ... (keep _indexEpgIdRaw, _rebuildEpgIdIndexFromIds etc) ...
-
-  String? _matchRawEpgId(String channelId) {
-    final trimmed = channelId.trim();
-    if (trimmed.isEmpty || _epgIdsRaw.isEmpty) return null;
-    if (_epgIdsRaw.contains(trimmed)) return trimmed;
-    return _epgIdsLowerToRaw[trimmed.toLowerCase()];
-  }
+  String _normalize(String text) => EpgManualMappingFacade.normalize(text);
 
   void _resetMatchDiagnostics() {} // Keep empty for now
   void _logMatchDiagnostics({String context = 'EPG'}) {}
@@ -4346,21 +3786,18 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _mappingFacade.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      unawaited(_restoreDbIfClosed());
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      // Cancel timers when app is backgrounded to prevent errors
-      _batchTimer?.cancel();
-      _batchTimer = null;
+      _maybeRefreshForFreshness();
     }
   }
 
   @override
   void dispose() {
     _disposed = true;
-    _batchTimer?.cancel();
-    _stopParseProgressTimer();
+    _freshnessTimer?.cancel();
+    _freshnessTimer = null;
+    _mappingFacade.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

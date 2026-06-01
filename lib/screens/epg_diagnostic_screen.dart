@@ -15,6 +15,11 @@ import 'dart:math' as math;
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 
+part 'epg_diagnostic/epg_diagnostic_stats.dart';
+part 'epg_diagnostic/epg_diagnostic_epg_tab.dart';
+part 'epg_diagnostic/epg_diagnostic_widgets.dart';
+part 'epg_diagnostic/epg_diagnostic_system_tab.dart';
+
 enum _MatchFilter { all, matched, unmatched }
 
 class _MatchEntry {
@@ -51,6 +56,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen>
   int _artworkDebugTick = 0;
   bool _statsInFlight = false;
   DateTime? _lastRefreshAt;
+  bool _wasEpgBusy = false;
   bool _fullScanInFlight = false;
   int _fullScanMatched = 0;
   int _fullScanTotal = 0;
@@ -168,12 +174,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen>
     }
 
     if (!mounted) return;
-    setState(() {
-      _pageEntries.addAll(next);
-      _pageOffset = offset;
-      _pageHasMore = _pageOffset < totalChannels;
-      _pageLoading = false;
-    });
+    _lastChannelCount = -1;
+    _lastEpgCount = -1;
+    _refreshStats();
+    _resetPagedMatches();
+    unawaited(_loadNextMatchPage());
   }
 
   void _maybeRefreshStats(

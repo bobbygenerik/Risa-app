@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -69,7 +71,8 @@ void main() {
     print('==========================');
     print('Items inserted: ${channelCount * programsPerChannel}');
     print('Time taken:     ${stopwatch.elapsedMilliseconds}ms');
-    print('Avg per item:   ${(stopwatch.elapsedMicroseconds / (channelCount * programsPerChannel)).toStringAsFixed(2)}µs');
+    print(
+        'Avg per item:   ${(stopwatch.elapsedMicroseconds / (channelCount * programsPerChannel)).toStringAsFixed(2)}µs');
     print('==========================\n');
 
     // 3. Verify

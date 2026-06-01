@@ -1,7 +1,8 @@
 /// Configuration for TheSportsDB artwork lookups.
 class TheSportsDbConfig {
   /// Use TheSportsDB test key (`1`) or replace with your own for higher rate limits.
-  static const String apiKey = '123';
+  static const String apiKey =
+      String.fromEnvironment('THESPORTSDB_API_KEY', defaultValue: '3');
 
   /// URL template for searching events by name.
   ///

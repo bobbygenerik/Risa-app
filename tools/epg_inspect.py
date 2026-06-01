@@ -5,8 +5,9 @@ build normalized keys and print counts + examples.
 Usage: python3 tools/epg_inspect.py <xmltv_url>
 """
 import sys
-import urllib.request
-import xml.etree.ElementTree as ET
+import urllib.parse
+import requests
+import defusedxml.ElementTree as ET
 from html import unescape
 
 CONVERSIONS = {
@@ -35,9 +36,12 @@ def normalize(text: str) -> str:
 
 
 def fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={'User-Agent': 'epg-inspector/1.0'})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read()
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {'http', 'https'}:
+        raise ValueError('Only http/https URLs are supported')
+    resp = requests.get(url, headers={'User-Agent': 'epg-inspector/1.0'}, timeout=30)
+    resp.raise_for_status()
+    return resp.content
 
 
 def parse_channels(xml_bytes: bytes):

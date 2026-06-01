@@ -16,12 +16,14 @@ class ContentFocusProvider extends InheritedWidget {
     required this.registerFocusCallback,
     required this.unregisterFocusCallback,
     this.requestNavFocus,
+    this.isNavExpanded = false,
     required super.child,
   });
 
   final int Function(ContentFocusCallback callback) registerFocusCallback;
   final void Function(int token) unregisterFocusCallback;
   final bool Function()? requestNavFocus;
+  final bool isNavExpanded;
 
   static ContentFocusProvider? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<ContentFocusProvider>();
@@ -34,7 +36,8 @@ class ContentFocusProvider extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(covariant ContentFocusProvider oldWidget) => false;
+  bool updateShouldNotify(covariant ContentFocusProvider oldWidget) =>
+      oldWidget.isNavExpanded != isNavExpanded;
 }
 
 /// Helper mixin for screens that want to cooperate with the shell's focus

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 import sys
-import json
-import ssl
-import urllib.request
 import urllib.parse
-import socket
+import requests
 
 if len(sys.argv) < 4:
     print("Usage: xtream_probe.py <server> <username> <password>")
@@ -16,10 +13,6 @@ password = sys.argv[3]
 
 api_base = server + '/player_api.php'
 
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
     'Accept': '*/*'
@@ -27,28 +20,32 @@ headers = {
 
 
 def fetch_json(url):
-    req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=20, context=ctx) as r:
-            data = r.read()
-            return json.loads(data.decode('utf-8', errors='replace'))
+        validate_http_url(url)
+        response = requests.get(url, headers=headers, timeout=20)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
         print(f"ERROR fetching JSON {url}: {e}")
         return None
 
 
 def probe_url(url, timeout=15):
-    req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-            status = getattr(r, 'status', None) or r.getcode()
-            ctype = r.getheader('Content-Type') or ''
-            preview = r.read(4096)
-            text = preview.decode('utf-8', errors='replace').lstrip()
-            ok = (status == 200) and (text.startswith('<?xml') or text.startswith('<tv') or 'xml' in ctype.lower())
-            return {'url': url, 'status': status, 'content_type': ctype, 'preview': text[:400].replace('\n',' '), 'ok': ok}
+        validate_http_url(url)
+        response = requests.get(url, headers=headers, timeout=timeout)
+        ctype = response.headers.get('Content-Type') or ''
+        text = response.text[:4096].lstrip()
+        ok = (response.status_code == 200) and (text.startswith('<?xml') or text.startswith('<tv') or 'xml' in ctype.lower())
+        return {'url': url, 'status': response.status_code, 'content_type': ctype, 'preview': text[:400].replace('\n',' '), 'ok': ok}
     except Exception as e:
         return {'url': url, 'error': str(e), 'ok': False}
+
+
+def validate_http_url(url):
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {'http', 'https'}:
+        raise ValueError('Only http/https URLs are supported')
 
 
 print('XTREAM PROBE')

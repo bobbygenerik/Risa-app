@@ -1,325 +1,59 @@
-import 'dart:convert';
-import '../providers/playlist_isolate.dart';
-import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:io';
-import 'dart:math' as math;
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:iptv_player/utils/startup_probe.dart';
-import 'package:iptv_player/utils/performance_monitor.dart';
-import 'package:iptv_player/utils/hash_utils.dart';
 import '../models/channel.dart';
-import 'package:iptv_player/models/saved_playlist.dart';
 // M3U parsing is handled via `playlist_isolate.dart` (streaming/isolate helpers).
 // Keep the local import commented out to avoid unused-import warnings while
 // migration completes.
 // import '../services/m3u_parser_service.dart';
-import '../services/xtream_codes_service.dart';
-import 'package:http/http.dart' as http;
 import 'package:iptv_player/services/local_db_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
-import 'package:iptv_player/services/smart_cache_service.dart';
-import 'playlist_loader.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../utils/throttled_notifier.dart';
+import 'channel/channel_category_cache.dart';
+import 'channel/channel_db_recovery.dart';
+import 'channel/channel_epg_integration.dart';
+import 'channel/channel_xtream_epg_map.dart';
+import 'channel/channel_xtream_service.dart';
+import 'channel/channel_xtream_service_deps.dart';
+import 'channel/channel_auto_load.dart';
+import 'channel/channel_auto_load_deps.dart';
+import 'channel/channel_playlist_loader.dart';
+import 'channel/channel_playlist_loader_deps.dart';
+import 'channel/channel_query_service.dart';
+import 'channel/channel_query_service_deps.dart';
+import 'channel/channel_playlist_persistence.dart';
+import 'channel/channel_playlist_persistence_deps.dart';
+import 'channel/channel_index_cache.dart';
+import 'channel/channel_index_cache_deps.dart';
+import 'channel/channel_access.dart';
+import 'channel/channel_access_deps.dart';
 
-/// Isolate function to extract unique category names only (fast)
-/// Preserves the order categories first appear in the playlist
-List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
-  final List<String> categories = [];
-  final Set<String> seen = {};
-  for (final title in groupTitles) {
-    final trimmed = title?.trim() ?? '';
-    final category = trimmed.isEmpty ? 'Uncategorized' : trimmed;
-    if (!seen.contains(category)) {
-      seen.add(category);
-      // Add Uncategorized at the end
-      if (category != 'Uncategorized') {
-        categories.add(category);
-      }
-    }
-  }
-  // Add Uncategorized at the end if it exists
-  if (seen.contains('Uncategorized')) {
-    categories.add('Uncategorized');
-  }
-  return categories;
-}
+export 'channel/channel_playlist_cache.dart' show clearPlaylistCache;
 
-/// Isolate function to rebuild channel caches (expensive work off main thread)
-/// Returns a map with 'indexById', 'indicesByGroup', 'lowerNames', 'lowerGroups'
-Map<String, dynamic> _rebuildChannelCachesInIsolate(
-    List<Map<String, dynamic>> channelMaps) {
-  final Map<String, int> indexById = {};
-  final Map<String, List<int>> indicesByGroup = {};
-  final List<String> lowerNames = List<String>.filled(channelMaps.length, '');
-  final List<String> lowerGroups = List<String>.filled(channelMaps.length, '');
-
-  for (int i = 0; i < channelMaps.length; i++) {
-    final map = channelMaps[i];
-    final id = (map['id'] ?? '').toString();
-    if (id.isNotEmpty) {
-      indexById[id] = i;
-    }
-    final name = (map['name'] as String?) ?? '';
-    final normalizedName = name.toLowerCase();
-    lowerNames[i] = normalizedName;
-    final rawGroup = (map['groupTitle'] ?? '').toString();
-    final group = rawGroup.trim().toLowerCase();
-    lowerGroups[i] = group;
-    final groupKey = group.isNotEmpty ? group : 'uncategorized';
-    (indicesByGroup[groupKey] ??= []).add(i);
-  }
-
-  return {
-    'indexById': indexById,
-    'indicesByGroup': indicesByGroup,
-    'lowerNames': lowerNames,
-    'lowerGroups': lowerGroups,
-  };
-}
-
-List<int> _filterCategoryIndicesInIsolate(Map<String, dynamic> args) {
-  final titles = args['titles'] as List<String?>? ?? const [];
-  final category = args['category'] as String? ?? 'Uncategorized';
-  final offset = args['offset'] as int? ?? 0;
-  final limit = args['limit'] as int? ?? 0;
-  final indices = <int>[];
-  if (limit <= 0) return indices;
-  int matched = 0;
-  for (int i = 0; i < titles.length; i++) {
-    final title = titles[i] ?? 'Uncategorized';
-    if (title != category) continue;
-    if (matched < offset) {
-      matched++;
-      continue;
-    }
-    indices.add(i);
-    if (indices.length >= limit) break;
-  }
-  return indices;
-}
-
-List<int> _filterChannelIndicesInIsolate(Map<String, dynamic> args) {
-  final titles = args['titles'] as List<String?>? ?? const [];
-  final ids = args['ids'] as List<String?>? ?? const [];
-  final hidden = args['hidden'] as List<bool>? ?? const [];
-  final category = args['category'] as String?;
-  final favoriteIds = (args['favoriteIds'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toSet() ??
-      const <String>{};
-  final excludeHidden = args['excludeHidden'] as bool? ?? true;
-  final offset = args['offset'] as int? ?? 0;
-  final limit = args['limit'] as int? ?? 0;
-  final indices = <int>[];
-  if (limit <= 0) return indices;
-  int matched = 0;
-  for (int i = 0; i < titles.length; i++) {
-    if (excludeHidden && i < hidden.length && hidden[i]) {
-      continue;
-    }
-    if (category != null) {
-      final title = titles[i] ?? 'Uncategorized';
-      if (title != category) continue;
-    }
-    if (favoriteIds.isNotEmpty) {
-      final id = i < ids.length ? ids[i] : null;
-      if (id == null || !favoriteIds.contains(id)) {
-        continue;
-      }
-    }
-    if (matched < offset) {
-      matched++;
-      continue;
-    }
-    indices.add(i);
-    if (indices.length >= limit) break;
-  }
-  return indices;
-}
-
-/// Clear both SharedPreferences and file-based playlist cache
-Future<void> clearPlaylistCache() async {
-  final prefs = await SharedPreferences.getInstance();
-  // Remove SharedPreferences cache
-  await prefs.remove('cached_playlist');
-  await prefs.remove('cache_timestamp');
-  await prefs.remove('playlist_cache_version');
-  // Remove file-based cache
-  final cacheFilePath =
-      prefs.getString(ChannelProvider._playlistCacheFilePathKey);
-  if (cacheFilePath != null) {
-    final file = File(cacheFilePath);
-    if (await file.exists()) {
-      await file.delete();
-    }
-    await prefs.remove(ChannelProvider._playlistCacheFilePathKey);
-  }
-  // Remove JSON preview cache
-  debugLog('ChannelProvider: Playlist cache cleared');
-}
+part 'channel/channel_provider_bindings.dart';
+part 'channel/channel_provider_api.dart';
+part 'channel/channel_provider_glue.dart';
 
 class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   static final RegExp _httpPrefixRe = RegExp(r'^https?://');
   static final RegExp _leadingSlashRe = RegExp(r'^/');
-  static final RegExp _trailingSlashRe = RegExp(r'/$');
-  static final RegExp _leadingSlashesRe = RegExp(r'^/+');
 
-  static const String _playlistCacheFileName = 'playlist_cache.m3u';
-  static const String _playlistCacheFilePathKey = 'cached_playlist_file';
-  static const int _playlistCacheVersion = 3;
-  static const String _epgMapSignaturePrefix = 'epg_map_signature_';
-  static const String _epgMapCountPrefix = 'epg_map_count_';
-  static const String _categoryCachePrefix = 'category_cache_';
   // Debug preview capture size (unused after refactor)
 
   // Store raw channel data as maps to avoid expensive conversion on main thread
-  List<Map<String, dynamic>> _channelMaps = [];
+  final List<Map<String, dynamic>> _channelMaps = [];
   // Cache of converted Channel objects (populated on-demand)
   final Map<int, Channel> _channelCache = {};
-  Map<String, int> _channelIndexById = {};
-  Map<String, List<int>> _channelIndicesByGroup = {};
-  List<String> _channelLowerNames = [];
-  List<String> _channelLowerGroups = [];
-
-  void _buildIndicesForChunk(List<Map<String, dynamic>> chunk, int startIndex) {
-    for (var i = 0; i < chunk.length; i++) {
-      final map = chunk[i];
-      final absIndex = startIndex + i;
-      final id = (map['id'] ?? '').toString();
-      if (id.isNotEmpty) {
-        _channelIndexById[id] = absIndex;
-      }
-
-      final name = (map['name'] as String?) ?? '';
-      _channelLowerNames.add(name.toLowerCase());
-
-      final rawGroup = (map['groupTitle'] ?? '').toString();
-      final group = rawGroup.trim().toLowerCase();
-      _channelLowerGroups.add(group);
-
-      final groupKey = group.isNotEmpty ? group : 'uncategorized';
-      (_channelIndicesByGroup[groupKey] ??= []).add(absIndex);
-    }
-  }
-
-  /// Lightweight sync cache rebuild for small playlists or when isolate not available
-  void _rebuildChannelCachesSync() {
-    _channelIndexById.clear();
-    _channelIndicesByGroup.clear();
-    _channelLowerNames = List<String>.filled(_channelMaps.length, '');
-    _channelLowerGroups = List<String>.filled(_channelMaps.length, '');
-    for (int i = 0; i < _channelMaps.length; i++) {
-      final map = _channelMaps[i];
-      final id = (map['id'] ?? '').toString();
-      if (id.isNotEmpty) {
-        _channelIndexById[id] = i;
-      }
-      final name = (map['name'] as String?) ?? '';
-      _channelLowerNames[i] = name.toLowerCase();
-      final rawGroup = (map['groupTitle'] ?? '').toString();
-      final group = rawGroup.trim().toLowerCase();
-      _channelLowerGroups[i] = group;
-      final groupKey = group.isNotEmpty ? group : 'uncategorized';
-      (_channelIndicesByGroup[groupKey] ??= []).add(i);
-    }
-  }
-
-  /// Async cache rebuild that uses isolate for large playlists (>1000 channels)
-  Future<void> _rebuildChannelCachesAsync() async {
-    if (_channelMaps.length < 1000) {
-      // Small playlist - do it synchronously (faster than isolate overhead)
-      _rebuildChannelCachesSync();
-      return;
-    }
-
-    final start = DateTime.now();
-    try {
-      final result =
-          await compute(_rebuildChannelCachesInIsolate, _channelMaps);
-      _channelIndexById = Map<String, int>.from(result['indexById'] as Map);
-      _channelIndicesByGroup = (result['indicesByGroup'] as Map).map(
-        (k, v) => MapEntry(k as String, List<int>.from(v as List)),
-      );
-      _channelLowerNames = List<String>.from(result['lowerNames'] as List);
-      _channelLowerGroups = List<String>.from(result['lowerGroups'] as List);
-      debugLog(
-          'ChannelProvider: Async cache rebuild took ${DateTime.now().difference(start).inMilliseconds}ms');
-    } catch (e) {
-      debugLog(
-          'ChannelProvider: Async cache rebuild failed, falling back to sync: $e');
-      _rebuildChannelCachesSync();
-    }
-  }
-
-  /// Compatibility wrapper - calls async version (non-blocking for large playlists)
-  void _refreshSmartChannelCache({bool allowConversion = true}) {
-    if (_channelMaps.isEmpty) return;
-    unawaited(() async {
-      try {
-        final smartCache = SmartCacheService.instance;
-        if (allowConversion && _channelMaps.length <= 5000) {
-          final channels = _channelMaps.map((m) => Channel.fromMap(m)).toList();
-          await smartCache.cacheChannelData(channels, overwriteDb: false);
-        } else {
-          final signature = _signatureFromChannelMaps(_channelMaps);
-          await smartCache.markChannelCacheFresh(
-            channelCount: _channelMaps.length,
-            signature: signature,
-          );
-        }
-      } catch (e) {
-        debugLog('ChannelProvider: Smart cache refresh failed: $e');
-      }
-    }());
-  }
-
-  String _signatureFromChannelMaps(List<Map<String, dynamic>> maps) {
-    if (maps.isEmpty) return 'empty';
-    final sampleCount = math.min(4, maps.length);
-    final buffer = StringBuffer()..write('count:${maps.length}');
-    for (var i = 0; i < sampleCount; i++) {
-      final m = maps[i];
-      buffer
-        ..write('|')
-        ..write(m['id'] ?? '')
-        ..write(':')
-        ..write(m['name'] ?? '');
-    }
-    final last = maps.last;
-    buffer
-      ..write('|last:')
-      ..write(last['id'] ?? '')
-      ..write(':')
-      ..write(last['name'] ?? '');
-    return fnv1aHex(buffer.toString());
-  }
+  final Map<String, int> _channelIndexById = {};
+  final Map<String, List<int>> _channelIndicesByGroup = {};
+  final List<String> _channelLowerNames = [];
+  final List<String> _channelLowerGroups = [];
 
   final List<Channel> _favoriteChannels = [];
   bool get isBackgroundSyncing => _isBackgroundSyncing;
-  // bool get isLoading => _isLoading; // Already defined/handled? No, standard pattern is private field public getter.
-  // But conflict was "The name 'isLoading' is already defined".
-  // Original file had `bool _isLoading = false`.
-  // I added `bool get isLoading => _isLoading`.
-  // Wait, if I have `get isLoading` AND `_isLoading`, that's fine.
-  // BUT the error says `The name 'isLoading' is already defined`.
-  // Maybe I have `bool isLoading = false` somewhere?
-  // Let's strip the getters I added and trust the file structure?
-  // Or maybe I added them twice.
-  // I'll revert to just the fields and check if getters exist elsewhere.
-  // Actually, I'll delete the block I added and inspect.
-  // The block I added was:
-  // bool get isLoading => _isLoading;
-  // bool get isBackgroundSyncing => _isBackgroundSyncing;
-  // bool _isLoading = false;
-  // bool _isBackgroundSyncing = false;
-
-  // I'll replace it with just the fields and ONE set of getters if needed.
-  // PROBABLY just the fields for now.
   bool _isLoading = false;
   bool _isBackgroundSyncing = false;
   String? _errorMessage;
@@ -335,10 +69,14 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   String? _currentEpgMapSignature;
   String? _currentEpgMapSignatureKey;
   String? _currentEpgMapCountKey;
-  String? _categoryCacheKey;
-  bool _categoryCacheLoaded = false;
-  bool _xtreamEpgMapLoaded = false;
-  static const String _xtreamEpgMapFileName = 'xtream_epg_map.json';
+  final ChannelCategoryCache _categoryCache = ChannelCategoryCache();
+  final ChannelXtreamEpgMapStore _xtreamEpgMapStore = ChannelXtreamEpgMapStore();
+  late final ChannelDbRecovery _dbRecovery =
+      ChannelDbRecovery(_createDbRecoveryDeps());
+  late final ChannelEpgIntegration _epgIntegration =
+      ChannelEpgIntegration(_createEpgIntegrationDeps());
+  late final ChannelXtreamService _xtreamService =
+      ChannelXtreamService(_createXtreamServiceDeps());
   bool _dbReady = false;
   bool _dbDisabled = false;
   bool _autoLoadInProgress = false;
@@ -346,66 +84,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   DateTime? _lastDbRecoveryTime;
   bool _dbClosedRecoveryInFlight = false;
   bool _noPlaylistConfigured = false;
-  bool _xtreamLiveMetadataLoaded = false;
-  String? _xtreamLiveMetadataKey;
-  bool _epgRefreshPending = false;
   bool _epgAllowedChannelsFromDbInFlight = false;
   final LocalDbService _db = LocalDbService.instance;
-  String? _extractStreamIdFromUrl(String url) {
-    if (url.isEmpty) return null;
-    try {
-      final uri = Uri.parse(url);
-      final segments =
-          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return null;
-      var last = segments.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
-    } catch (e) {
-      debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final clean = url.split('?').first;
-      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
-      if (parts.isEmpty) return null;
-      var last = parts.last;
-      final dotIndex = last.indexOf('.');
-      if (dotIndex > 0) {
-        last = last.substring(0, dotIndex);
-      }
-      return last.isNotEmpty ? last : null;
-    }
-  }
 
   // TMDB enrichment service for background genre enrichment
   final bool _isEnriching = false;
   bool get isEnriching => _isEnriching;
-  List<Map<String, dynamic>> getChannelSampleMaps(int limit) {
-    if (_channelMaps.isEmpty || limit <= 0) return const [];
-    final count = limit.clamp(0, _channelMaps.length);
-    return _channelMaps
-        .take(count)
-        .map((m) => Map<String, dynamic>.from(m))
-        .toList();
-  }
-
-  List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
-    if (_channelMaps.isEmpty || limit <= 0) return const [];
-    final total = _channelMaps.length;
-    final count =
-        limit.clamp(1, total); // Ensure count >= 1 to prevent division by zero
-    if (count <= 0) return const []; // Extra safety check
-    final step = (total / count).ceil().clamp(1, total);
-    final sampled = <Map<String, dynamic>>[];
-    for (int i = 0; i < total && sampled.length < count; i += step) {
-      sampled.add(Map<String, dynamic>.from(_channelMaps[i]));
-    }
-    if (sampled.isEmpty && _channelMaps.isNotEmpty) {
-      sampled.add(Map<String, dynamic>.from(_channelMaps.first));
-    }
-    return sampled;
-  }
 
   // Cached category list (lightweight - just strings)
   List<String>? _cachedCategories;
@@ -425,188 +109,21 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     return getAllCategoryNamesAsync();
   }
 
-  // Playlist loader manages download+isolate parsing and supports cancellation
-  PlaylistLoader _playlistLoader = PlaylistLoader();
+  late final ChannelQueryService _channelQueryService =
+      ChannelQueryService(_createQueryServiceDeps());
 
-  int? _asInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value);
-    return null;
-  }
+  late final ChannelPlaylistLoader _channelPlaylistLoader =
+      ChannelPlaylistLoader(_createPlaylistLoaderDeps());
+  late final ChannelAutoLoad _channelAutoLoad =
+      ChannelAutoLoad(_createAutoLoadDeps());
+  late final ChannelPlaylistPersistence _channelPlaylistPersistence =
+      ChannelPlaylistPersistence(_createPlaylistPersistenceDeps());
+  late final ChannelIndexCache _channelIndexCache =
+      ChannelIndexCache(_createIndexCacheDeps());
+  late final ChannelAccess _channelAccess =
+      ChannelAccess(_createChannelAccessDeps());
 
-  String _playlistCountsKey(SharedPreferences prefs, String? playlistUrl) {
-    final keySource = prefs.getString('active_playlist_id')?.trim();
-    final keyBase = (keySource != null && keySource.isNotEmpty)
-        ? keySource
-        : (playlistUrl?.trim().isNotEmpty == true
-            ? playlistUrl!.trim()
-            : 'default');
-    return 'playlist_counts_${Uri.encodeComponent(keyBase)}';
-  }
-
-  Future<String?> _ensureStablePlaylistIdentity(
-    SharedPreferences prefs, {
-    String? playlistUrl,
-  }) async {
-    final type = prefs.getString('playlist_type') ?? 'm3u';
-    final normalizedType = type.trim().toLowerCase();
-    String? server;
-    String? username;
-    String? url = playlistUrl;
-    if (normalizedType == 'xtream') {
-      server = prefs.getString('xtream_server');
-      username = prefs.getString('xtream_username');
-      url ??= server;
-    } else {
-      url ??= prefs.getString('m3u_url');
-    }
-
-    final stableId = stablePlaylistId(
-      type: normalizedType,
-      url: url,
-      server: server,
-      username: username,
-    );
-
-    final activeId = prefs.getString('active_playlist_id');
-    if (activeId != stableId) {
-      await prefs.setString('active_playlist_id', stableId);
-    }
-
-    await _migrateSavedPlaylistIds(
-      prefs,
-      normalizedType: normalizedType,
-      url: url,
-      server: server,
-      username: username,
-      stableId: stableId,
-    );
-
-    _epgService?.setPlaylistIdentity(stableId);
-    return stableId;
-  }
-
-  Future<void> _migrateSavedPlaylistIds(
-    SharedPreferences prefs, {
-    required String normalizedType,
-    required String? url,
-    required String? server,
-    required String? username,
-    required String stableId,
-  }) async {
-    final playlistsJson = prefs.getString('saved_playlists');
-    if (playlistsJson == null || playlistsJson.trim().isEmpty) return;
-    final List<dynamic> decoded = jsonDecode(playlistsJson);
-    final saved = decoded
-        .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
-        .toList();
-
-    var updated = false;
-    final next = <SavedPlaylist>[];
-    for (final playlist in saved) {
-      final type = playlist.type.trim().toLowerCase();
-      final matches = type == normalizedType &&
-          (type == 'xtream'
-              ? (playlist.server ?? '').trim().toLowerCase() ==
-                      (server ?? '').trim().toLowerCase() &&
-                  (playlist.username ?? '').trim().toLowerCase() ==
-                      (username ?? '').trim().toLowerCase()
-              : playlist.url.trim().toLowerCase() ==
-                  (url ?? '').trim().toLowerCase());
-      if (matches && playlist.id != stableId) {
-        next.add(SavedPlaylist(
-          id: stableId,
-          name: playlist.name,
-          type: playlist.type,
-          url: playlist.url,
-          server: playlist.server,
-          username: playlist.username,
-          password: playlist.password,
-          epgUrl: playlist.epgUrl,
-          epgUrlSecondary: playlist.epgUrlSecondary,
-          addedDate: playlist.addedDate,
-        ));
-        updated = true;
-      } else {
-        next.add(playlist);
-      }
-    }
-
-    if (updated) {
-      await prefs.setString(
-        'saved_playlists',
-        jsonEncode(next.map((p) => p.toJson()).toList()),
-      );
-    }
-  }
-
-  Future<void> _persistPlaylistCounts({
-    required SharedPreferences prefs,
-    required String? playlistUrl,
-    required int channelCount,
-  }) async {
-    try {
-      final key = _playlistCountsKey(prefs, playlistUrl);
-      final payload = json.encode({
-        'channels': channelCount,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      await prefs.setString(key, payload);
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to persist playlist counts: $e');
-    }
-  }
-
-  Map<String, int>? _loadPlaylistCounts({
-    required SharedPreferences prefs,
-    required String? playlistUrl,
-  }) {
-    try {
-      final key = _playlistCountsKey(prefs, playlistUrl);
-      final stored = prefs.getString(key);
-      if (stored == null || stored.trim().isEmpty) return null;
-      final decoded = json.decode(stored) as Map<String, dynamic>;
-      final channels = _asInt(decoded['channels']) ?? 0;
-      return {
-        'channels': channels,
-      };
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to read playlist counts: $e');
-      return null;
-    }
-  }
-
-  Future<bool> _setWakeLock(bool enable) async {
-    try {
-      if (enable) {
-        await WakelockPlus.enable();
-      } else {
-        await WakelockPlus.disable();
-      }
-      return true;
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to set wakelock: $e');
-      return false;
-    }
-  }
-
-  Future<void> _ensureDb() async {
-    if (_dbDisabled) return;
-    try {
-      await _db.init();
-      _dbReady = true;
-      // Prime count if DB already has data
-      try {
-        _channelCountDb = await _db.channelCount();
-      } catch (e) {
-        debugLog('ChannelProvider: DB channelCount query failed: $e');
-      }
-    } catch (e) {
-      _dbReady = false;
-      debugLog('ChannelProvider: DB init failed: $e');
-    }
-  }
+  Future<void> _ensureDb() => _dbRecovery.ensureDb();
 
   // Throttle notifyListeners for performance - max once per 250ms
   // Increased from 100ms to reduce UI jank on large playlists
@@ -660,15 +177,7 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     notifyListeners(); // Use throttled version
   }
 
-  bool _isReadOnlyDbError(Object error) {
-    final message = error.toString().toLowerCase();
-    // Must mention 'database' to avoid false positives from Dart collection
-    // errors (e.g. "Unsupported operation: read-only" from unmodifiable maps).
-    if (!message.contains('database')) return false;
-    return message.contains('read-only') ||
-        message.contains('read only') ||
-        message.contains('readonly');
-  }
+  void _handleDbError(Object error) => _dbRecovery.handleDbError(error);
 
   void _recoverReadOnlyDb(Object error) {
     if (!_isReadOnlyDbError(error) || _dbReadOnlyRecoveryInFlight) {
@@ -933,39 +442,12 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     String? playlistUrl,
     String? epgUrl,
     String? reason,
-  }) async {
-    final cachedJson = prefs.getString('flutter.cached_playlist') ??
-        prefs.getString('cached_playlist');
-    if (cachedJson == null || cachedJson.trim().isEmpty) {
-      return false;
-    }
-
-    try {
-      final decoded = await compute(jsonDecode, cachedJson) as List<dynamic>;
-      if (decoded.isEmpty) {
-        return false;
-      }
-
-      final restored = <Map<String, dynamic>>[];
-      for (final item in decoded) {
-        if (item is Map) {
-          restored.add(Map<String, dynamic>.from(item));
-        }
-      }
-      if (restored.isEmpty) {
-        return false;
-      }
-
-      _channelMaps = restored;
-      _channelCache.clear();
-      await _rebuildChannelCachesAsync();
-      _channelCountDb = _channelMaps.length;
-
-      await _setCurrentEpgMapSignature(
+  }) =>
+      _channelAccess.restoreChannelsFromPrefsCache(
         prefs: prefs,
         playlistUrl: playlistUrl,
         epgUrl: epgUrl,
-        channelCount: _channelMaps.length,
+        reason: reason,
       );
 
       _invalidateCategoryCaches();
@@ -1459,254 +941,13 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
     }
   }
 
-  void _scheduleEpgRefresh({bool forceRefresh = false}) {
-    final service = _epgService;
-    if (service == null) return;
-    if (service.isLoading || service.isDownloading || service.isParsing) return;
-
-    unawaited(service.initialize(forceRefresh: forceRefresh).catchError((e) {
-      debugLog('ChannelProvider: EPG refresh failed: $e');
-    }));
-  }
-
-  /// Build and persist channel->EPG mapping in the background (full scan)
-  Future<void> _buildEpgMapping() async {
-    if (_epgService == null) return;
-    if (_channelMaps.isEmpty) return;
-    if (await _tryReuseEpgMapping()) {
-      return;
-    }
-
-    // Wait briefly for EPG availability
-    for (int i = 0; i < 5; i++) {
-      if (!_epgService!.isLoading &&
-          !_epgService!.isParsing &&
-          _epgService!.availableChannels.isNotEmpty) {
-        break;
-      }
-      await Future.delayed(const Duration(seconds: 1));
-    }
-    if (_epgService!.availableChannels.isEmpty) {
-      debugLog('ChannelProvider: Skipping EPG mapping - no EPG channels');
-      return;
-    }
-
-    const int batchSize = 500;
-    const int yieldEvery = 50; // Increased frequency to prevent UI jank
-    final Map<String, String> batch = {};
-    int totalChannels = 0;
-    int channelsWithTvgId = 0;
-    int idBasedMatches = 0;
-    _epgService?.resetMatchDiagnostics();
-
-    for (int i = 0; i < _channelMaps.length; i++) {
-      final map = _channelMaps[i];
-      totalChannels++;
-      final tvgId = (map['tvgId'] as String?)?.trim() ?? '';
-      final id = (map['id'] as String?)?.trim() ?? '';
-      final url = (map['url'] as String?)?.trim() ?? '';
-      final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
-      final channelNameForLookup =
-          (_extractTvgNameFromAttributes(map['attributes']) ??
-                  (map['name'] as String?) ??
-                  '')
-              .trim();
-      if (channelId.isEmpty) continue;
-
-      if (tvgId.isNotEmpty) {
-        channelsWithTvgId++;
-      }
-
-      final epgId = _epgService!.resolveEpgId(
-        channelId,
-        channelName:
-            channelNameForLookup.isNotEmpty ? channelNameForLookup : null,
-        cache: true,
-        allowLoose: true,
-      );
-      if (epgId != null) {
-        batch[channelId] = epgId;
-        if (tvgId.isNotEmpty) {
-          idBasedMatches++;
-        }
-      }
-
-      if (_dbReady && batch.length >= batchSize) {
-        try {
-          await _db.upsertEpgMapping(Map<String, String>.from(batch));
-          batch.clear();
-        } catch (e) {
-          debugLog('ChannelProvider: Failed to persist EPG mapping batch: $e');
-          _handleDbError(e);
-        }
-        await Future.delayed(Duration.zero);
-      }
-
-      if (!_dbReady && i > 0 && i % yieldEvery == 0) {
-        await Future.delayed(Duration.zero);
-      }
-    }
-
-    if (_dbReady && batch.isNotEmpty) {
-      try {
-        await _db.upsertEpgMapping(batch);
-      } catch (e) {
-        debugLog(
-            'ChannelProvider: Failed to persist final EPG mapping batch: $e');
-        _handleDbError(e);
-      }
-    }
-
-    debugLog('ChannelProvider: Completed EPG mapping build');
-    debugLog(
-        'ChannelProvider: EPG mapping stats - total=$totalChannels tvgId=$channelsWithTvgId idMatches=$idBasedMatches');
-    _epgService?.logMatchDiagnostics();
-    if (_dbReady) {
-      try {
-        await _epgService?.loadMappingsFromDb();
-      } catch (e) {
-        debugLog(
-            'ChannelProvider: Failed to load mappings into EPG service: $e');
-        _handleDbError(e);
-      }
-    }
-
-    await _persistEpgMappingSignature();
-  }
-
-  Future<bool> _tryReuseEpgMapping() async {
-    if (!_dbReady) return false;
-    if (_currentEpgMapSignature == null || _currentEpgMapSignatureKey == null) {
-      return false;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString(_currentEpgMapSignatureKey!);
-      if (stored == null || stored != _currentEpgMapSignature) {
-        return false;
-      }
-      final count = await _db.mappingCount();
-      if (count <= 0) return false;
-      _currentEpgMapCountKey ??= _currentEpgMapSignatureKey!
-          .replaceFirst(_epgMapSignaturePrefix, _epgMapCountPrefix);
-      debugLog(
-          'ChannelProvider: Reusing persisted EPG mapping ($count entries)');
-      await _epgService?.loadMappingsFromDb();
-      return true;
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to reuse EPG mapping: $e');
-      _handleDbError(e);
-      return false;
-    }
-  }
-
-  Future<void> _persistEpgMappingSignature() async {
-    if (_currentEpgMapSignature == null ||
-        _currentEpgMapSignatureKey == null ||
-        !_dbReady) {
-      return;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final count = await _db.mappingCount();
-      _currentEpgMapCountKey ??= _currentEpgMapSignatureKey!
-          .replaceFirst(_epgMapSignaturePrefix, _epgMapCountPrefix);
-      await prefs.setString(
-          _currentEpgMapSignatureKey!, _currentEpgMapSignature!);
-      await prefs.setInt(_currentEpgMapCountKey!, count);
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to persist EPG map signature: $e');
-      _handleDbError(e);
-    }
-  }
-
-  Future<void> _setCurrentEpgMapSignature({
-    required SharedPreferences prefs,
-    required String? playlistUrl,
-    required String? epgUrl,
-    required int channelCount,
-    String? channelsFile,
-  }) async {
-    await _ensureStablePlaylistIdentity(prefs, playlistUrl: playlistUrl);
-    final keySource = prefs.getString('active_playlist_id')?.trim();
-    final keyBase = (keySource != null && keySource.isNotEmpty)
-        ? keySource
-        : (playlistUrl?.trim().isNotEmpty == true
-            ? playlistUrl!.trim()
-            : 'default');
-    final signatureKey =
-        '$_epgMapSignaturePrefix${Uri.encodeComponent(keyBase)}';
-    _currentEpgMapSignatureKey = signatureKey;
-    _currentEpgMapCountKey =
-        '$_epgMapCountPrefix${Uri.encodeComponent(keyBase)}';
-    _categoryCacheKey = '$_categoryCachePrefix${Uri.encodeComponent(keyBase)}';
-    _categoryCacheLoaded = false;
-    _currentEpgMapSignature = await _computeEpgMapSignature(
-      playlistUrl: playlistUrl,
-      epgUrl: epgUrl,
-      channelCount: channelCount,
-      channelsFile: channelsFile,
-    );
-  }
-
-  Future<void> _loadCachedCategoriesFromPrefs() async {
-    if (_categoryCacheLoaded || _categoryCacheKey == null) return;
-    _categoryCacheLoaded = true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getStringList(_categoryCacheKey!);
-      if (cached != null && cached.isNotEmpty) {
-        _cachedCategories = _normalizeCategories(cached);
-        _notifyListenersSafe();
-      }
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to load cached categories: $e');
-    }
-  }
-
-  Future<void> _persistCachedCategories() async {
-    if (_categoryCacheKey == null || _cachedCategories == null) return;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_categoryCacheKey!, _cachedCategories!);
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to persist cached categories: $e');
-    }
-  }
-
-  Future<String> _computeEpgMapSignature({
-    required String? playlistUrl,
-    required String? epgUrl,
-    required int channelCount,
-    String? channelsFile,
-  }) async {
-    final buffer = StringBuffer();
-    buffer.write(playlistUrl?.trim() ?? '');
-    buffer.write('|');
-    buffer.write(epgUrl?.trim() ?? '');
-    buffer.write('|');
-    buffer.write(channelCount);
-    if (channelsFile != null && channelsFile.isNotEmpty) {
-      final file = File(channelsFile);
-      if (await file.exists()) {
-        try {
-          final stat = await file.stat();
-          buffer.write('|');
-          buffer.write(stat.size);
-          buffer.write('|');
-          buffer.write(stat.modified.millisecondsSinceEpoch);
-        } catch (e) {
-          debugLog('ChannelProvider: file stat for signature failed: $e');
-        }
-      }
-    }
-    return buffer.toString();
-  }
+  Future<void> _loadCachedCategoriesFromPrefs() =>
+      _channelQueryService.loadCachedCategoriesFromPrefs();
 
   /// Public API to cancel any in-progress playlist load.
   void cancelPlaylistLoad() {
     try {
-      _playlistLoader.cancelCurrent();
+      _channelPlaylistLoader.cancelCurrent();
     } catch (e) {
       debugLog('ChannelProvider: cancelPlaylistLoad failed: $e');
     }
@@ -1718,318 +959,11 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   }
 
   // Watch count tracking (channelId -> count)
-  Map<String, int> _watchCounts = {};
-
-  /// Get channel count without converting all channels
-  int get channelCount => _dbReady ? _channelCountDb : _channelMaps.length;
+  final Map<String, int> _watchCounts = {};
   int _channelCountDb = 0;
-  Future<int> getChannelCountAsync() async {
-    if (!_dbReady && !_dbDisabled) {
-      try {
-        await _ensureDb();
-      } catch (e) {
-        debugLog(
-            'ChannelProvider: ensureDb in getChannelCountAsync failed: $e');
-      }
-    }
-    if (_dbReady) {
-      try {
-        final dbCount = await _db.channelCount();
-        _channelCountDb = dbCount;
-        if (_channelMaps.isNotEmpty && _channelCountDb < _channelMaps.length) {
-          _channelCountDb = _channelMaps.length;
-        }
-        return _channelCountDb;
-      } catch (e) {
-        debugLog('ChannelProvider: DB channel count failed: $e');
-        _handleDbError(e);
-      }
-    }
-    return _channelMaps.length;
-  }
-
-  /// Quick check if there are any channels (no conversion needed)
-  bool get hasChannels => _dbReady
-      ? (_channelCountDb > 0 || _channelMaps.isNotEmpty)
-      : _channelMaps.isNotEmpty;
-
-  /// Public accessor for virtualized lists
-  Channel getChannelAt(int index) => _getChannelAt(index);
-
-  /// Async paged channels for UI (DB-backed when available)
-  Future<List<Channel>> getChannelsPage(
-      {int offset = 0, int limit = 50}) async {
-    if (_dbReady) {
-      try {
-        final rows = await _db.getChannelsPage(offset: offset, limit: limit);
-        if (rows.isNotEmpty) {
-          return rows.map((m) => Channel.fromMap(m)).toList();
-        }
-        if (_channelMaps.isNotEmpty) {
-          final slice = _channelMaps.skip(offset).take(limit).toList();
-          return slice.map((m) => Channel.fromMap(m)).toList();
-        }
-        return const [];
-      } catch (e) {
-        debugLog('ChannelProvider: DB channel page failed: $e');
-        _handleDbError(e);
-      }
-    }
-
-    final slice = _channelMaps.skip(offset).take(limit).toList();
-    return slice.map((m) => Channel.fromMap(m)).toList();
-  }
-
-  Future<Map<String, List<Channel>>> getGroupedChannelsAsync(
-      {int categoryLimit = 15, int channelLimit = 30}) async {
-    if (_dbReady) {
-      try {
-        final categories = await _db.getCategories(limit: categoryLimit);
-        final result = <String, List<Channel>>{};
-        if (categories.isNotEmpty) {
-          final rowsByCategory = await _db.getChannelsForCategoriesPage(
-            categories,
-            offset: 0,
-            limit: channelLimit,
-          );
-          for (final c in categories) {
-            final rows = rowsByCategory[c] ?? const [];
-            result[c] = rows.map((m) => Channel.fromMap(m)).toList();
-          }
-        }
-        return result;
-      } catch (e) {
-        debugLog('ChannelProvider: DB grouped channels failed: $e');
-        _handleDbError(e);
-      }
-    }
-
-    // Fallback to existing in-memory method
-    return getGroupedChannels();
-  }
-
-  /// Get channels - returns limited list for UI to prevent freezing
-  List<Channel> get channels {
-    // Return a preview list. Use getChannelAt() for full lists.
-    final limit = _channelMaps.length < 30 ? _channelMaps.length : 30;
-    return List.generate(limit, (i) => _getChannelAt(i));
-  }
 
   /// Get specific channel by index
-  Channel _getChannelAt(int index) {
-    if (index < 0 || index >= _channelMaps.length) {
-      throw RangeError.index(index, _channelMaps, 'index');
-    }
-
-    // Track cache performance
-    final wasInCache = _channelCache.containsKey(index);
-
-    final channel = _channelCache.putIfAbsent(index, () {
-      return Channel.fromMap(_channelMaps[index]);
-    });
-
-    // Debug log occasionally
-    if (!wasInCache && _channelCache.length % 500 == 0) {
-      debugLog('ChannelProvider: Channel cache size: ${_channelCache.length}');
-    }
-
-    return channel;
-  }
-
-  /// Get channel maps for virtual scrolling (memory efficient)
-  List<Map<String, dynamic>> getChannelMapsForUI({int limit = 50}) {
-    final actualLimit =
-        _channelMaps.length < limit ? _channelMaps.length : limit;
-    return _channelMaps.take(actualLimit).toList();
-  }
-
-  /// Get channel maps for category (virtual scrolling)
-  List<Map<String, dynamic>> getChannelMapsForCategory(String category,
-      {int limit = 50}) {
-    final result = <Map<String, dynamic>>[];
-    final lowerCategory = category.toLowerCase();
-    final indices = _channelIndicesByGroup[lowerCategory] ?? const [];
-    for (final i in indices) {
-      if (result.length >= limit) break;
-      result.add(_channelMaps[i]);
-    }
-    return result;
-  }
-
-  /// Find a channel by ID (lazy conversion)
-  Channel? getChannelById(String id) {
-    final index = _channelIndexById[id];
-    if (index != null) {
-      return _getChannelAt(index);
-    }
-    return null;
-  }
-
-  /// Get filtered channels for EPG/search (with limit for performance)
-  List<Channel> getFilteredChannels({
-    String? category,
-    Set<String>? favoriteIds,
-    bool excludeHidden = true,
-    int limit = 500,
-  }) {
-    final result = <Channel>[];
-    final lowerCategory = category?.toLowerCase();
-    Iterable<int> indices;
-
-    if (lowerCategory != null) {
-      final grouped = _channelIndicesByGroup[lowerCategory];
-      if ((grouped == null || grouped.isEmpty) && _channelMaps.isNotEmpty) {
-        return _scanCategoryFallback(
-          category!,
-          offset: 0,
-          limit: limit,
-        );
-      }
-      indices = grouped ?? const [];
-    } else {
-      indices = Iterable<int>.generate(_channelMaps.length);
-    }
-
-    for (final i in indices) {
-      if (excludeHidden &&
-          i < _channelMaps.length &&
-          _channelMaps[i]['isHidden'] == true) {
-        continue;
-      }
-      if (favoriteIds != null) {
-        final channelId = _channelMaps[i]['id'] as String?;
-        if (channelId == null || !favoriteIds.contains(channelId)) {
-          continue;
-        }
-      }
-      if (result.length >= limit) break;
-      result.add(_getChannelAt(i));
-    }
-    return result;
-  }
-
-  Future<List<Channel>> getFilteredChannelsAsync({
-    String? category,
-    Set<String>? favoriteIds,
-    bool excludeHidden = true,
-    int limit = 500,
-    int offset = 0,
-  }) async {
-    // Fallback to isolate filtering when DB not ready or favorites filtering
-    if (!_dbReady || favoriteIds != null) {
-      try {
-        final indices = await compute(_filterChannelIndicesInIsolate, {
-          'titles': _getCategoryTitleCache(),
-          'ids': _getChannelIdCache(),
-          'hidden': _getHiddenFlagCache(),
-          'category': category,
-          'favoriteIds': favoriteIds?.toList() ?? const [],
-          'excludeHidden': excludeHidden,
-          'limit': limit,
-          'offset': offset,
-        });
-        if (indices.isEmpty) return const [];
-        return indices.map(_getChannelAt).toList();
-      } catch (e) {
-        debugLog(
-            'ChannelProvider: compute(_filterChannelIndicesInIsolate) failed: $e');
-        return const [];
-      }
-    }
-
-    // Use category paging or general paging
-    if (category != null) {
-      return getChannelsForCategoryAsync(
-        category,
-        offset: offset,
-        limit: limit,
-      );
-    }
-
-    try {
-      final rows = await _db.getChannelsPage(offset: offset, limit: limit);
-      final result = <Channel>[];
-      for (final m in rows) {
-        if (excludeHidden && m['isHidden'] == true) continue;
-        result.add(Channel.fromMap(m));
-      }
-      return result;
-    } catch (e) {
-      debugLog('ChannelProvider: DB filtered fetch failed: $e');
-      return getFilteredChannels(
-          category: category,
-          favoriteIds: favoriteIds,
-          excludeHidden: excludeHidden,
-          limit: limit);
-    }
-  }
-
-  /// Get next channel in the list (for channel surfing)
-  Channel? getNextChannel(String currentChannelId) {
-    for (int i = 0; i < _channelMaps.length; i++) {
-      if (_channelMaps[i]['id'] == currentChannelId) {
-        final nextIndex = (i + 1) % _channelMaps.length;
-        return _getChannelAt(nextIndex);
-      }
-    }
-    return null;
-  }
-
-  /// Get previous channel in the list (for channel surfing)
-  Channel? getPreviousChannel(String currentChannelId) {
-    for (int i = 0; i < _channelMaps.length; i++) {
-      if (_channelMaps[i]['id'] == currentChannelId) {
-        final prevIndex = (i - 1 + _channelMaps.length) % _channelMaps.length;
-        return _getChannelAt(prevIndex);
-      }
-    }
-    return null;
-  }
-
-  List<Channel> get favoriteChannels => _favoriteChannels;
-  double get loadingProgress => _loadingProgress;
-  String get loadingStatus => _loadingStatus;
-  bool get isColdStartLoad => _isColdStartLoad;
-
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get noPlaylistConfigured => _noPlaylistConfigured;
-  bool get hasLoadedPlaylist => _hasLoadedPlaylist;
-  String? get lastM3UContent => _lastM3UContent; // Expose for debugging
-  bool get isDbReady => _dbReady;
-  bool get isDbDisabled => _dbDisabled;
-  bool get isDbReadOnlyRecoveryInFlight => _dbReadOnlyRecoveryInFlight;
-  int get dbChannelCount => _channelCountDb;
-
-  /// Get channels sorted by watch count (most watched first) - limited
-  List<Channel> get mostWatchedChannels {
-    // Sort indices by watch count, then convert limited number
-    final indices = List.generate(_channelMaps.length, (i) => i);
-    indices.sort((a, b) {
-      final aId = _channelMaps[a]['id'] as String? ?? '';
-      final bId = _channelMaps[b]['id'] as String? ?? '';
-      final aCount = _watchCounts[aId] ?? 0;
-      final bCount = _watchCounts[bId] ?? 0;
-      return bCount.compareTo(aCount);
-    });
-    // Only return top 50 most watched
-    return indices.take(50).map((i) => _getChannelAt(i)).toList();
-  }
-
-  /// Track when a channel is watched
-  Future<void> incrementWatchCount(String channelId) async {
-    _watchCounts[channelId] = (_watchCounts[channelId] ?? 0) + 1;
-    notifyListeners();
-
-    // Persist watch counts
-    unawaited((() async {
-      final prefs = await SharedPreferences.getInstance();
-      final watchCountsJson =
-          _watchCounts.map((k, v) => MapEntry(k, v.toString()));
-      await prefs.setString(
-          'channel_watch_counts', json.encode(watchCountsJson));
-    })());
-  }
+  Channel _getChannelAt(int index) => _channelAccess.getChannelAt(index);
 
   /// Load watch counts from storage
   Future<void> _loadWatchCounts() async {
@@ -2634,369 +1568,15 @@ class ChannelProvider extends ChangeNotifier with ThrottledNotifier {
   // NOTE: Background cache refresh removed - file-based caching is now used exclusively
   // The cache is refreshed when the user loads a playlist from network
 
-  /// Load channels from M3U URL
-  Future<void> loadPlaylistFromUrl(String url) async {
-    PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
-    PerformanceMonitor.trackMemoryUsage('Before playlist load');
-    _lastPlaylistUrl = url;
-    _noPlaylistConfigured = false;
-
-    try {
-      await _loadPlaylistFromUrlImpl(url);
-      PerformanceMonitor.trackChannelLoad(
-          _channelMaps.length, DateTime.now().difference(DateTime.now()));
-    } catch (e) {
-      // If we get an SSL/TLS handshake error, retry with direct HttpClient
-      if (e.toString().contains('HandshakeException') ||
-          e.toString().contains('WRONG_VERSION_NUMBER') ||
-          e.toString().contains('CERTIFICATE_VERIFY_FAILED')) {
-        debugLog(
-            'ChannelProvider: Handshake error detected, retrying with direct HttpClient: $e');
-        await _loadPlaylistWithDirectClient(url);
-      } else {
-        rethrow;
-      }
-    }
-  }
-
-  /// Implementation of loadPlaylistFromUrl using standard http.Client
-  Future<void> _loadPlaylistFromUrlImpl(String url,
-      {bool isBackground = false}) async {
-    PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
-
-    if (!isBackground) {
-      _isLoading = true;
-      _isColdStartLoad = _channelMaps.isEmpty;
-      _errorMessage = null;
-      _lastM3UContent = null; // Clear old content
-      notifyListeners();
-      _errorMessage = null;
-      _lastM3UContent = null; // Clear old content
-      notifyListeners();
-    } else {
-      _isBackgroundSyncing = true;
-      notifyListeners(); // Notify so UI can show the indicator
-      debugLog('ChannelProvider: Running background playlist update...');
-    }
-
-    try {
-      await _setWakeLock(true);
-      debugLog(
-          'ChannelProvider: Loading playlist from URL: $url (using PlaylistLoader)');
-      // Cancel any prior loader job
-      _playlistLoader.cancelCurrent();
-      _playlistLoader = PlaylistLoader();
-
-      final List<Map<String, dynamic>> loadingTarget =
-          isBackground ? [] : _channelMaps;
-
-      if (!isBackground) {
-        _loadingStatus = 'Starting download...';
-        _loadingProgress = 0.0;
-        notifyListeners();
-
-        _channelMaps.clear();
-        _channelCache.clear();
-        // FIX: Clear indices too to prevent "wrong category" bugs
-        _channelIndexById.clear();
-        _channelIndicesByGroup.clear();
-        _channelLowerNames.clear();
-        _channelLowerGroups.clear();
-        _invalidateCategoryCaches();
-        _channelCountDb = 0;
-      }
-
-      DateTime lastUiUpdate = DateTime.now();
-
-      final parsed =
-          await _playlistLoader.loadFromUrl(url, onProgress: (count) {
-        if (!isBackground) {
-          _loadingStatus = 'Parsing playlist: $count channels';
-          _loadingProgress = 0.5 + (count / 20000).clamp(0.0, 0.45);
-          // Progress updates also throttle
-          final now = DateTime.now();
-          if (now.difference(lastUiUpdate).inMilliseconds > 500) {
-            lastUiUpdate = now;
-            notifyListeners();
-          }
-        }
-      }, onChannelsChunk: (chunk) {
-        // Use a new list to avoid concurrent modification issues if UI is reading _channelMaps
-        loadingTarget.addAll(chunk);
-
-        // FIX: Incrementally update indices for the new chunk so categories work immediately
-        if (!isBackground) {
-          final startIndex = loadingTarget.length - chunk.length;
-          _buildIndicesForChunk(chunk, startIndex);
-        }
-
-        // Critical: Update UI immediately if this is the first "page" of content
-        // But do NOT set _isLoading=false yet, or the UI might think we are fully done!
-        // We only start showing content, but keep the loading spinner/progress bar active if desired.
-        // Actually, for "progressive loading", we want to switch to the main view but keep a small indicator.
-        // For now, let's just notify.
-
-        // Timer-based throttling for subsequent updates to prevent UI freezing
-        // Updates at most twice per second
-        final now = DateTime.now();
-        final bool shouldUpdate =
-            now.difference(lastUiUpdate).inMilliseconds > 500;
-
-        if (loadingTarget.length >= 200 &&
-            (shouldUpdate || loadingTarget.length % 2000 == 0)) {
-          // Invalidating caches ensures getAllCategoryNames() sees new groups from this chunk
-          if (!isBackground) {
-            _channelCountDb = loadingTarget.length;
-            _invalidateCategoryCaches();
-            lastUiUpdate = now;
-            // FIX: Use safe notify to avoid "Build scheduled during frame"
-            _notifyListenersSafe();
-          } else {
-            // For background, we don't update UI progressively to avoid jank/flash
-            // We swill swap at the end.
-          }
-        }
-
-        // NOTE: DB writes are now DEFERRED to after UI is shown for faster startup
-        // See _deferredDbInsert() call after playlist load completes
-      });
-
-      var channelsFile = parsed['channelsFile'] as String?;
-
-      if (channelsFile != null && channelsFile.isNotEmpty) {
-        final staged = await _stageChannelsJsonl(channelsFile);
-        if (staged != null && staged.isNotEmpty) {
-          channelsFile = staged;
-          parsed['channelsFile'] = staged;
-        }
-      }
-
-      // Validate parsed result
-      if ((channelsFile == null || channelsFile.isEmpty) &&
-          (parsed['channels'] == null ||
-              (parsed['channels'] as List).isEmpty)) {
-        _errorMessage =
-            'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
-        _isLoading = false;
-        notifyListeners();
-        throw Exception('Parsed playlist is empty or invalid');
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-
-      // Extract and save EPG URL if found
-      final epgUrl = parsed['epgUrl'] as String?;
-      if (epgUrl != null && epgUrl.isNotEmpty) {
-        final oldUrl = prefs.getString('epg_url');
-        final urlChanged = oldUrl != epgUrl;
-        debugLog(
-            'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
-        await prefs.setString('epg_url', epgUrl);
-        if (_epgService != null) {
-          debugLog(
-              'ChannelProvider: Initializing EPG service with URL from M3U');
-          _scheduleEpgRefresh(forceRefresh: urlChanged);
-        }
-      }
-
-      if (!isBackground) {
-        _loadingStatus = 'Finishing up...';
-        _loadingProgress = 0.8;
-        notifyListeners();
-      }
-
-      // M3U channels are already loaded via onChannelsChunk
-      // Just ensure DB is up to date and set the signature
-      await _setCurrentEpgMapSignature(
-        prefs: prefs,
-        playlistUrl: url,
-        epgUrl: epgUrl,
-        channelCount: parsed['channelCount'] as int? ?? loadingTarget.length,
-        channelsFile: channelsFile,
-      );
-      await _applyXtreamEpgMapFromCache();
-      // _updateEpgAllowedChannels(); // MOVED: Must be called after _channelMaps is finalized (swapped)
-      unawaited(_primeXtreamLiveMetadata(url));
-
-      // Android Auto Cache: Skip if playlist is massive to avoid UI freezes.
-      // Copying 50k+ items to an isolate or encoding them on the main thread is too expensive.
-      if (loadingTarget.length < 15000) {
-        try {
-          final playlistJson = json.encode(loadingTarget);
-          await prefs.setString('flutter.cached_playlist', playlistJson);
-        } catch (e) {
-          debugLog(
-              'ChannelProvider: SharedPreferences playlist cache write failed: $e');
-        }
-      } else {
-        debugLog(
-            'ChannelProvider: Playlist too large for SharedPreferences cache (Android Auto), skipping string encode.');
-      }
-
-      _cachedCategories = null;
-      unawaited(_computeCategoriesAsync());
-
-      debugLog(
-          'ChannelProvider: Parsed ${loadingTarget.length} channels (isolate)');
-
-      // Use async cache rebuild for large playlists (runs in isolate)
-      unawaited(_rebuildChannelCachesAsync());
-
-      if (!isBackground) {
-        _loadingStatus = 'Finalizing...';
-        _loadingProgress = 0.95;
-        notifyListeners();
-      } else {
-        // SWAP the list now that we are done!
-        _channelMaps.clear();
-        _channelMaps.addAll(loadingTarget);
-        _channelCountDb = _channelMaps.length;
-        _invalidateCategoryCaches();
-        notifyListeners();
-      }
-
-      final dir = await getApplicationDocumentsDirectory();
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final cacheFile = File('${dir.path}/$_playlistCacheFileName');
-
-      // Write to the cache file immediately so future cold starts can use it
-      if (loadingTarget.isNotEmpty) {
-        try {
-          final jsonString = json.encode(loadingTarget);
-          await cacheFile.writeAsString(jsonString);
-          await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
-          await prefs.setInt('cache_timestamp', now);
-          await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
-          debugLog('ChannelProvider: Correctly persisted file cache to disk.');
-        } catch (e) {
-          debugLog('ChannelProvider: Failed to write cacheFile to disk: $e');
-        }
-      }
-
-      if (!isBackground) {
-        _loadingProgress = 1.0;
-        _isLoading = false;
-        _hasLoadedPlaylist = true;
-        _isColdStartLoad = false;
-      } else {
-        _isBackgroundSyncing = false;
-      }
-
-      notifyListeners();
-
-      // DEFERRED: Write all channels to DB in background AFTER UI is shown
-      // This dramatically improves perceived startup time
-      unawaited(_deferredDbInsert());
-
-      // Update EPG allowed channels only now that _channelMaps is fully settled (swapped/populated)
-      _updateEpgAllowedChannels();
-
-      _refreshSmartChannelCache();
-
-      PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
-      PerformanceMonitor.trackMemoryUsage('After playlist load');
-      debugLog(
-          'ChannelProvider: Loaded ${loadingTarget.length} channels, cache size: ${_channelCache.length}');
-
-      _scheduleEpgRefresh(forceRefresh: false);
-      unawaited(_buildEpgMapping());
-      // Persist playlist entry for Manage Playlists
-      unawaited(_upsertSavedPlaylist(sourceUrl: url, epgUrl: epgUrl));
-      unawaited(_persistPlaylistCounts(
-        prefs: prefs,
-        playlistUrl: url,
-        channelCount: loadingTarget.length,
-      ));
-    } catch (e, stackTrace) {
-      debugLog('ChannelProvider: Error loading playlist: $e');
-      debugLog('ChannelProvider: Stack trace: $stackTrace');
-
-      _loadingProgress = 0.0;
-      _loadingStatus = '';
-      var shouldRethrow = false;
-
-      // Provide more helpful error messages
-      if (e.toString().contains('HandshakeException') ||
-          e.toString().contains('WRONG_VERSION_NUMBER') ||
-          e.toString().contains('wrong version number')) {
-        _errorMessage = 'SSL/TLS Handshake Error\n\n'
-            'Technical details:\n$e\n\n'
-            'Possible causes:\n'
-            '• Server requires specific TLS version\n'
-            '• SSL certificate is invalid or expired\n'
-            '• Firewall or proxy blocking connection\n\n'
-            'The app is configured to accept all certificates.\n'
-            'This is a server-side compatibility issue.';
-      } else if (e.toString().contains('SocketException')) {
-        final socketError = e.toString();
-        _errorMessage = 'Connection Error: Unable to reach server.\n\n'
-            'Details: $socketError\n\n'
-            'Check your internet connection and server URL.';
-      } else if (e.toString().contains('timeout')) {
-        _errorMessage =
-            'Timeout Error: Playlist took too long to download (90 second limit).\n\n'
-            'This could mean:\n'
-            '• The playlist is very large\n'
-            '• Your internet connection is slow\n'
-            '• The server is overloaded\n\n'
-            'Try again in a few moments.';
-      } else if (e.toString().contains('FormatException')) {
-        _errorMessage =
-            'Invalid playlist file or format. The playlist could not be parsed.\n\n'
-            'Please check that your playlist URL is correct and the file is not empty or corrupted.';
-      } else if (e.toString().contains('Empty playlist file')) {
-        // Already handled above
-      } else if (e.toString().contains('Parsed playlist is empty or invalid')) {
-        // Already handled above
-      } else {
-        _errorMessage = e.toString();
-        shouldRethrow = true;
-      }
-
-      // If network/parsing fails and we have no visible data, try SharedPreferences
-      // cache before surfacing a hard failure.
-      if (!isBackground && _channelMaps.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        final restored = await _restoreChannelsFromPrefsCache(
-          prefs: prefs,
-          playlistUrl:
-              (_lastPlaylistUrl?.isNotEmpty ?? false) ? _lastPlaylistUrl : url,
-          epgUrl:
-              prefs.getString('custom_epg_url') ?? prefs.getString('epg_url'),
-          reason: 'network error recovery',
-        );
-        if (restored) {
-          _errorMessage =
-              'Network error while refreshing playlist. Showing cached channels.';
-          notifyListeners();
-          return;
-        }
-      }
-
-      if (!isBackground) {
-        _isLoading = false;
-        _isColdStartLoad = false;
-      } else {
-        _isBackgroundSyncing = false;
-      }
-      notifyListeners();
-      if (shouldRethrow) {
-        rethrow;
-      }
-    } finally {
-      await _setWakeLock(false);
-    }
-  }
-
   /// Background Sync: Updates channel list without blocking UI
-  Future<void> _backgroundSync(
-      {required SharedPreferences prefs, required String? url}) async {
-    if (url == null || url.isEmpty) return;
-    debugLog('ChannelProvider: Starting background sync for $url');
+  Future<void> _backgroundSync({
+    required SharedPreferences prefs,
+    required String? url,
+  }) =>
+      _channelPlaylistLoader.backgroundSync(prefs: prefs, url: url);
 
-    // Use a separate lock/flag to avoid conflicting with initial load?
-    // reuse loadPlaylistFromUrl but we need to be careful about not resetting UI state
-    // if _isLoading is false (which it is, since we showed DB data).
+  Future<void> _computeCategoriesAsync() =>
+      _channelQueryService.computeCategoriesAsync();
 
     // Ideally we want a "silent" load.
     // For now, let's call loadPlaylistFromUrl but modify it to handle "silent" updates?

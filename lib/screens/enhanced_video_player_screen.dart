@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../utils/debug_helper.dart';
+import '../utils/url_redactor.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
@@ -15,7 +16,9 @@ import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
-import '../utils/memory_manager.dart';
+part 'enhanced_video_player/enhanced_video_player_lifecycle.dart';
+part 'enhanced_video_player/enhanced_video_player_controls.dart';
+part 'enhanced_video_player/enhanced_video_player_subtitles.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
@@ -39,7 +42,6 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   State<EnhancedVideoPlayerScreen> createState() =>
       _EnhancedVideoPlayerScreenState();
 }
-
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   final FocusNode _playerFocusNode =
       FocusNode(debugLabel: 'video_player_focus');
@@ -51,38 +53,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   BoxFit _videoFit = BoxFit.contain;
   Timer? _controlsHideTimer;
   EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
-  bool _playerReady = false;
-  bool _playerLoadScheduled = false;
+
+  void _updatePlayerState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+  bool _videoSurfaceReady = false;
   final bool _videoUnavailable = false;
 
   @override
   void initState() {
     super.initState();
     _initializePlayer();
-    _schedulePlayerWarmup();
-    // Suppress EPG notifyListeners() during playback to prevent UI rebuilds
-    // that cause frame drops while video is playing.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        FocusScope.of(context).requestFocus(_playerFocusNode);
-        try {
-          context.read<EpgBloc>().add(const EpgSetPlaybackMode(true));
-        } catch (_) {}
-      }
+      if (!mounted) return;
+      try {
+        context.read<EpgBloc>().add(const EpgSetPlaybackMode(true));
+      } catch (_) {}
     });
   }
 
-  IntegratedTranscriptionService? _transcriptionServiceRef;
-  VoidCallback? _transcriptionListener;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final service = Provider.of<IntegratedTranscriptionService>(context);
-    if (_transcriptionServiceRef != service) {
-      // Remove old listener
-      if (_transcriptionServiceRef != null && _transcriptionListener != null) {
-        _transcriptionServiceRef!.removeListener(_transcriptionListener!);
+  void _onVideoSurfaceReady() {
+    if (!mounted || _videoSurfaceReady) return;
+    setState(() => _videoSurfaceReady = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        FocusScope.of(context).requestFocus(_playerFocusNode);
       }
       _transcriptionServiceRef = service;
       _transcriptionListener = () {
@@ -111,9 +107,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } catch (_) {}
     _playerFocusNode.dispose();
     try {
-      if (_transcriptionServiceRef != null && _transcriptionListener != null) {
-        _transcriptionServiceRef!.removeListener(_transcriptionListener!);
-      }
       _controlsHideTimer?.cancel();
     } catch (e) {
       debugLog('Error disposing video player: $e');
@@ -202,6 +195,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         focusNode: _playerFocusNode,
         autofocus: true,
         onKeyEvent: (node, event) {
+          // Absorb keys while ExoPlayer initializes — setState here ANRs on TV.
+          if (!_videoSurfaceReady) return KeyEventResult.handled;
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.select ||
                 event.logicalKey == LogicalKeyboardKey.enter ||
@@ -210,19 +205,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               return KeyEventResult.handled;
             }
           }
-          // Show controls on any key event
           _showControlsAndAutoHide();
           return KeyEventResult.ignored;
         },
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: _toggleControls,
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                   children: [
                     // Player fills the available area
-                    if (_playerReady)
-                      Positioned.fill(
+                    Positioned.fill(
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
@@ -263,12 +257,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                               ),
                           ],
                         ),
-                      )
-                    else
-                      const Positioned.fill(
-                        child: Center(
-                          child: CircularProgressIndicator(),
-                        ),
                       ),
                     // Live subtitle overlay positioned at bottom center
                     if (_subtitleMode == EnhancedSubtitleMode.liveTranslation)
@@ -287,8 +275,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         bottom: 80,
                         child: _buildRegularSubtitleOverlay(),
                       ),
-                    // Modern streaming controls
-                    if (_showControls && !_isLoading) _buildModernControls(),
+                    if (_videoSurfaceReady && _showControls) _buildModernControls(),
                     // Guide overlay
                     if (_showGuide) _buildGuideOverlay(),
                   ],
@@ -811,3 +798,4 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 }
 
 enum EnhancedSubtitleMode { off, regular, liveTranslation }
+

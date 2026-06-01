@@ -40,15 +40,18 @@ class BrandPrimaryButton extends StatefulWidget {
 class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
   bool _focused = false;
 
-  @override
-  Widget build(BuildContext context) {
+  bool _isFocused() =>
+      widget.focusNode != null ? widget.focusNode!.hasFocus : _focused;
+
+  Widget _buildButton(BuildContext context) {
     const baseColor = AppTheme.primaryBlue;
     final isInteractive = !widget.isDisabled && !widget.isLoading;
+    final focused = _isFocused();
     final effectiveColor =
         isInteractive ? baseColor : baseColor.withValues(alpha: 0.5);
     final resolvedColor =
-        _focused ? Colors.white.withValues(alpha: 0.9) : effectiveColor;
-    final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
+        focused ? Colors.white.withValues(alpha: 0.9) : effectiveColor;
+    final labelColor = focused ? AppTheme.darkBackground : Colors.white;
 
     final resolvedPadding = widget.padding.resolve(Directionality.of(context));
     final scaledPadding = EdgeInsets.fromLTRB(
@@ -68,7 +71,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         borderRadius:
             BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
         boxShadow:
-            _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+            focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
       ),
       padding: scaledPadding,
       child: widget.isLoading
@@ -92,7 +95,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
               children: [
                 if (widget.icon != null) ...[
                   AnimatedScale(
-                    scale: _focused ? 1.15 : 1.0,
+                    scale: focused ? 1.15 : 1.0,
                     duration: TVFocusStyle.animationDuration,
                     child: context.iconSm(widget.icon!, color: labelColor),
                   ),
@@ -116,42 +119,56 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             ),
     );
 
+    Widget detector = FocusableActionDetector(
+      enabled: isInteractive,
+      focusNode: widget.focusNode,
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            if (isInteractive) widget.onPressed();
+            return null;
+          },
+        ),
+      },
+      onShowFocusHighlight: widget.focusNode == null
+          ? (v) => setState(() => _focused = v)
+          : null,
+      onFocusChange: widget.focusNode == null
+          ? (v) => setState(() => _focused = v)
+          : null,
+      mouseCursor: isInteractive
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.forbidden,
+      child: AnimatedScale(
+        scale: focused ? 1.05 : 1.0,
+        duration: AppDurations.fast,
+        curve: Curves.easeOutCubic,
+        child: GestureDetector(
+          onTap: isInteractive ? widget.onPressed : null,
+          child: content,
+        ),
+      ),
+    );
+
     return Semantics(
       button: true,
       enabled: isInteractive,
       label: widget.label,
-      child: FocusableActionDetector(
-        enabled: isInteractive,
-        focusNode: widget.focusNode,
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-        },
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              if (isInteractive) widget.onPressed();
-              return null;
-            },
-          ),
-        },
-        onShowFocusHighlight: (v) => setState(() => _focused = v),
-        onFocusChange: (v) => setState(() => _focused = v),
-        mouseCursor: isInteractive
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.forbidden,
-        child: AnimatedScale(
-          scale: _focused ? 1.05 : 1.0,
-          duration: AppDurations.fast,
-          curve: Curves.easeOutCubic,
-          child: GestureDetector(
-            onTap: isInteractive ? widget.onPressed : null,
-            child: content,
-          ),
-        ),
-      ),
+      child: widget.focusNode != null
+          ? ListenableBuilder(
+              listenable: widget.focusNode!,
+              builder: (context, _) => detector,
+            )
+          : detector,
     );
   }
+
+  @override
+  Widget build(BuildContext context) => _buildButton(context);
 }
 
 /// Secondary brand button: transparent fill, gradient outline, white text

@@ -301,8 +301,10 @@ Future<bool> testHTTPRequests() async {
 Future<bool> testTMDBAPI() async {
   try {
     final client = HttpClient();
-    final request = await client.getUrl(Uri.parse(
-        "https://api.themoviedb.org/3/movie/550?api_key=d98ee3033187dff844095fcff7873e21"));
+    const apiKey = String.fromEnvironment('TMDB_API_KEY');
+    if (apiKey.isEmpty) return false;
+    final request = await client.getUrl(
+        Uri.parse("https://api.themoviedb.org/3/movie/550?api_key=$apiKey"));
     final response = await request.close();
     final body = await response.transform(utf8.decoder).join();
     final data = jsonDecode(body);

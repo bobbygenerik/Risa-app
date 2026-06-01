@@ -3,8 +3,15 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/url_redactor.dart';
 import '../models/channel.dart';
 import '../utils/hash_utils.dart';
+
+part 'm3u/m3u_parser_channel_list.dart';
+part 'm3u/m3u_parser_stream_maps.dart';
+part 'm3u/m3u_parser_helpers.dart';
+part 'm3u/m3u_parser_utils.dart';
+
 
 // Top-level function for isolate-based M3U parsing.
 Future<Map<String, dynamic>> parseM3UInIsolate(String content) async {
@@ -35,7 +42,7 @@ class M3UParserService {
     if (match != null) {
       _epgUrl = match.group(1);
       if (_epgUrl != null) {
-        debugLog('M3UParser: Captured EPG URL: $_epgUrl');
+        debugLog('M3UParser: Captured EPG URL: ${redactUrl(_epgUrl!)}');
         return true;
       }
     }

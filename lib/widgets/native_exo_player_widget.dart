@@ -12,6 +12,7 @@ class NativeExoPlayerWidget extends StatefulWidget {
   final bool autoPlay;
   final Widget? fallback;
   final VoidCallback? onReady;
+  final VoidCallback? onPlaybackReady;
   final ValueChanged<String>? onError;
   final ValueChanged<String>? onStateChanged;
 
@@ -22,6 +23,7 @@ class NativeExoPlayerWidget extends StatefulWidget {
     this.autoPlay = true,
     this.fallback,
     this.onReady,
+    this.onPlaybackReady,
     this.onError,
     this.onStateChanged,
   });
@@ -53,7 +55,10 @@ class NativeExoPlayerWidgetState extends State<NativeExoPlayerWidget> {
     switch (call.method) {
       case 'onPlaybackStateChanged':
         final state = call.arguments['state'] as String?;
-        if (state != null) widget.onStateChanged?.call(state);
+        if (state != null) {
+          widget.onStateChanged?.call(state);
+          if (state == 'ready') widget.onPlaybackReady?.call();
+        }
         break;
       case 'onPlayerError':
         final error = call.arguments['error'] as String? ?? 'Unknown error';
@@ -158,6 +163,7 @@ class NativeExoPlayerWidgetState extends State<NativeExoPlayerWidget> {
         'videoUrl': widget.url,
         'surfaceType': 'surface', // SurfaceView — no GPU copy per frame
         'muted': false,
+        'autoPlay': widget.autoPlay,
       },
       creationParamsCodec: const StandardMessageCodec(),
       onPlatformViewCreated: _onPlatformViewCreated,

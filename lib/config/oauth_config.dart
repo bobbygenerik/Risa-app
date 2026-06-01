@@ -6,10 +6,10 @@ class OAuthConfig {
 
   // TMDB API Key (for program metadata)
   // Get from: https://www.themoviedb.org/settings/api
-  static const String tmdbApiKey = 'd98ee3033187dff844095fcff7873e21';
+  static const String tmdbApiKey = String.fromEnvironment('TMDB_API_KEY');
 
   /// Check if TMDB is configured
   static bool get isTmdbConfigured {
-    return tmdbApiKey != 'YOUR_TMDB_API_KEY';
+    return tmdbApiKey.isNotEmpty;
   }
 }

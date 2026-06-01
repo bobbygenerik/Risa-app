@@ -1,8 +1,10 @@
 package com.risa.app
 
 import android.app.PictureInPictureParams
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -54,6 +56,7 @@ class MainActivity : FlutterActivity() {
     // creating logs for transient startup exceptions. Will be cleared shortly
     // after `onCreate` finishes.
     private val _suppressCrashFileWrites = AtomicBoolean(true)
+    private var playStreamResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -77,6 +80,76 @@ class MainActivity : FlutterActivity() {
                     "forceSurfaceView" -> {
                         val success = VideoPlayerConfig.configureSurfaceView(this@MainActivity)
                         result.success(success)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.risa.app/memory")
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
+                when (call.method) {
+                    "trimForPlayback" -> {
+                        onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL)
+                        System.gc()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.risa.app/player")
+            .setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
+                when (call.method) {
+                    "openExternal" -> {
+                        val url = call.argument<String>("url")
+                        if (url.isNullOrBlank()) {
+                            result.error("NO_URL", "Stream URL is required", null)
+                            return@setMethodCallHandler
+                        }
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(Uri.parse(url), "video/*")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        val handlers = listOf(
+                            "org.videolan.vlc",
+                            "com.stremio.one",
+                            null,
+                        )
+                        for (pkg in handlers) {
+                            try {
+                                intent.setPackage(pkg)
+                                startActivity(intent)
+                                result.success(
+                                    mapOf(
+                                        "started" to true,
+                                        "handler" to (pkg ?: "default"),
+                                    )
+                                )
+                                return@setMethodCallHandler
+                            } catch (_: ActivityNotFoundException) {
+                                continue
+                            }
+                        }
+                        result.error("NO_HANDLER", "No external player installed", null)
+                    }
+                    "playStream" -> {
+                        val url = call.argument<String>("url")
+                        if (url.isNullOrBlank()) {
+                            result.error("NO_URL", "Stream URL is required", null)
+                            return@setMethodCallHandler
+                        }
+                        if (playStreamResult != null) {
+                            result.error("BUSY", "Playback already starting", null)
+                            return@setMethodCallHandler
+                        }
+                        playStreamResult = result
+                        val intent = Intent(this@MainActivity, NativePlayerActivity::class.java)
+                        intent.putExtra(NativePlayerActivity.EXTRA_URL, url)
+                        call.argument<String>("title")?.let {
+                            intent.putExtra(NativePlayerActivity.EXTRA_TITLE, it)
+                        }
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(intent, REQUEST_NATIVE_PLAYER)
                     }
                     else -> result.notImplemented()
                 }
@@ -413,6 +486,22 @@ class MainActivity : FlutterActivity() {
         handleAndroidAutoIntent()
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQUEST_NATIVE_PLAYER) {
+            val pending = playStreamResult
+            playStreamResult = null
+            pending?.success(
+                mapOf(
+                    "completed" to true,
+                    "resultCode" to resultCode,
+                )
+            )
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
     override fun onDestroy() {
         stopPlaybackCapture()
         transcriptionSink = null
@@ -439,6 +528,10 @@ class MainActivity : FlutterActivity() {
         super.onUserLeaveHint()
         // Do NOT auto-enter PiP on home button press
         // PiP should only be triggered manually via the PiP button in video player
+    }
+
+    companion object {
+        private const val REQUEST_NATIVE_PLAYER = 9101
     }
 }
 

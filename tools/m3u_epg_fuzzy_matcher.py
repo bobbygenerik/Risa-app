@@ -7,7 +7,7 @@ Usage:
 import argparse
 import re
 import sys
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 

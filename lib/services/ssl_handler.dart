@@ -10,7 +10,7 @@ class SSLHandler {
   /// Initialize SSL handler with saved preferences
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _allowAllCertificates = prefs.getBool('ssl_allow_all') ?? true;
+    _allowAllCertificates = prefs.getBool('ssl_allow_all') ?? false;
     final hosts = prefs.getStringList('ssl_trusted_hosts') ?? [];
     _trustedHosts.addAll(hosts);
   }
@@ -18,7 +18,7 @@ class SSLHandler {
   /// Check if a certificate should be accepted
   static bool shouldAcceptCertificate(
       X509Certificate cert, String host, int port) {
-    // If user has enabled "allow all" mode (default for IPTV compatibility)
+    // If user has explicitly enabled "allow all" mode for IPTV compatibility.
     if (_allowAllCertificates) return true;
 
     // Check if host is in trusted list
