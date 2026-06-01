@@ -49,7 +49,8 @@ class ChannelXtreamService {
       return last.isNotEmpty ? last : null;
     } catch (e) {
       debugLog('ChannelProvider: extractStreamIdFromUrl parse failed: $e');
-      final clean = url.split('?').first;
+      final qIndex = url.indexOf('?');
+      final clean = qIndex == -1 ? url : url.substring(0, qIndex);
       final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
       if (parts.isEmpty) return null;
       var last = parts.last;

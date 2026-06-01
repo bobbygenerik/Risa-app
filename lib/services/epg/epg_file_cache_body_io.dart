@@ -42,7 +42,10 @@ Future<String?> _writeEpgResponseToFile({
   final isGzipHeader = encHeader.contains('gzip');
   final isDeflateHeader =
       encHeader.contains('deflate') || encHeader.contains('zlib');
-  final isGzipExt = epgUrl.toLowerCase().split('?').first.endsWith('.gz');
+
+  final epgQIndex = epgUrl.indexOf('?');
+  final cleanEpgUrl = epgQIndex == -1 ? epgUrl : epgUrl.substring(0, epgQIndex);
+  final isGzipExt = cleanEpgUrl.toLowerCase().endsWith('.gz');
 
   final sink = file.openWrite();
   ByteConversionSink? gzipSink;
