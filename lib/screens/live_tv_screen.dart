@@ -260,12 +260,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         AutomaticKeepAliveClientMixin<LiveTVScreen>,
         ContentFocusRegistrant<LiveTVScreen>,
         WidgetsBindingObserver {
-  static final RegExp _epgRe = RegExp(r'\bEPG\b', caseSensitive: false);
-  static final RegExp _trailingSlashRe = RegExp(r'/+$');
-  static final RegExp _nonAlphaNumRe = RegExp(r'[^A-Za-z0-9]+');
-  static final RegExp _whitespaceRe = RegExp(r'\s+');
-  static final RegExp _articlesRe = RegExp(r'^(the|a|an)\s+');
-  static final RegExp _nonAlphanumericSpaceRe = RegExp(r'[^a-z0-9\s]');
+  static const Set<String> _blockedProgramArtworkHosts = {
+    'zap2it.tmsimg.com',
+    'zpmc.tmsimg.com',
+    'xplatinmedia.com',
+    'ngiss.t-online.de',
+  };
 
   int _featuredIndex = 0;
   final TimerService _timerService = TimerService();
@@ -321,7 +321,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   static const int _rowInitialFetch = 12;
   static const int _rowFetchStep = 16;
 
-  static const String _liveTvSnapshotKey = 'live_tv_snapshot_v1';
+  static const String _liveTvSnapshotKey = 'live_tv_snapshot_v2';
   static const Duration _liveTvSnapshotTtl = Duration(hours: 6);
   static const int _liveTvSnapshotCategoryLimit = 6;
   static const int _liveTvSnapshotRowLimit = 12;
@@ -514,7 +514,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Helper: replace the word 'EPG' with 'data' in the status (second) line.
   String? _replaceEpgWithData(String? s) {
     if (s == null) return null;
-    return s.replaceAll(_epgRe, 'data').trim();
+    return s
+        .replaceAll(RegExp(r'\bEPG\b', caseSensitive: false), 'data')
+        .trim();
   }
 
   Future<String?> _readPlaylistIdentity() async {
@@ -579,6 +581,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               channelNumber: c['channelNumber'] as int?,
               language: c['language'] as String?,
               country: c['country'] as String?,
+              attributes: c['attributes'] is Map
+                  ? Map<String, String>.from(c['attributes'] as Map)
+                  : null,
             );
             channels.add(channel);
             final programsRaw = c['programs'];
@@ -622,15 +627,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _categoryChannelCache
         ..clear()
         ..addAll(cache);
-      // OPTIMIZATION: Manually map entries to dictionaries directly instead of
-      // creating intermediate `MapEntry` collections via chained iterables,
-      // thereby reducing short-lived object allocations during snapshot re-renders.
-      _categoryOffsets.clear();
-      _categoryHasMore.clear();
-      for (final entry in cache.entries) {
-        _categoryOffsets[entry.key] = entry.value.length;
-        _categoryHasMore[entry.key] = entry.value.length >= _liveTvSnapshotRowLimit;
-      }
+      _categoryOffsets
+        ..clear()
+        ..addEntries(cache.entries
+            .map((entry) => MapEntry(entry.key, entry.value.length)));
+      _categoryHasMore
+        ..clear()
+        ..addEntries(cache.entries.map((entry) => MapEntry(
+            entry.key, entry.value.length >= _liveTvSnapshotRowLimit)));
       // Show all snapshot categories, not limited to _liveTvSnapshotCategoryLimit
       _visibleCategoryCount = _categoryNames.length;
 
@@ -726,28 +730,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           in _categoryNames.take(_liveTvSnapshotCategoryLimit)) {
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) continue;
-        final prefetchChannels = <Channel>[];
-        final prefetchLimit = channels.length < _liveTvSnapshotRowLimit ? channels.length : _liveTvSnapshotRowLimit;
-        for (var i = 0; i < prefetchLimit; i++) {
-          prefetchChannels.add(channels[i]);
-        }
         _prefetchRowArtworkForChannels(
-          prefetchChannels,
+          channels.take(_liveTvSnapshotRowLimit).toList(),
           limit: 15,
         );
         final payload = <Map<String, dynamic>>[];
         for (final channel in channels.take(_liveTvSnapshotRowLimit)) {
           final programs = _snapshotProgramsForChannel(channel, epgService);
-          final programPayload = <Map<String, dynamic>>[];
-          for (final program in programs) {
-            programPayload.add({
-              'startTs': program.startTime.millisecondsSinceEpoch,
-              'endTs': program.endTime.millisecondsSinceEpoch,
-              'title': program.title,
-              'description': program.description,
-              'imageUrl': program.imageUrl,
-            });
-          }
+          final programPayload = programs
+              .map((program) => {
+                    'startTs': program.startTime.millisecondsSinceEpoch,
+                    'endTs': program.endTime.millisecondsSinceEpoch,
+                    'title': program.title,
+                    'description': program.description,
+                    'imageUrl': program.imageUrl,
+                  })
+              .toList();
           payload.add({
             'id': channel.id,
             'name': channel.name,
@@ -758,6 +756,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             'channelNumber': channel.channelNumber,
             'language': channel.language,
             'country': channel.country,
+            if (channel.attributes != null && channel.attributes!.isNotEmpty)
+              'attributes': channel.attributes,
             if (programPayload.isNotEmpty) 'programs': programPayload,
           });
         }
@@ -780,36 +780,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
 
-  void _requestInitialFocus() {
-    if (_initialFocusRequested) return;
+  void _requestInitialFocus({bool force = false}) {
+    if (_initialFocusRequested && !force) return;
     _initialFocusRequested = true;
-    _tryInitialFocus();
+    _tryInitialFocus(force: force);
   }
 
-  void _tryInitialFocus() {
+  void _tryInitialFocus({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // FIX: Don't steal focus if the user is already focused on something else (like the Sidebar),
-      // unless this is a fresh cold start of the app.
       final channelProvider = context.read<ChannelProvider>();
       final currentFocus = FocusManager.instance.primaryFocus;
+      final focusLabel = currentFocus?.debugLabel ?? '';
 
-      // If we are NOT in cold start and the user already has focus SOMEWHERE
-      // (either in this screen or in the sidebar), respect it.
-      if (!channelProvider.isColdStartLoad &&
+      // Only respect existing focus if not forced and it is actively on the sidebar or menu to prevent stealing.
+      // If focus is null, on the rootScope, or is a leftover vacuum node, we must focus Home content.
+      if (!force &&
+          !channelProvider.isColdStartLoad &&
           currentFocus != null &&
           currentFocus.context != null &&
-          currentFocus != FocusManager.instance.rootScope) {
-        // Just return, let the user navigate naturally (e.g. D-pad Right from sidebar)
+          currentFocus != FocusManager.instance.rootScope &&
+          (focusLabel.toLowerCase().contains('sidebar') ||
+              focusLabel.toLowerCase().contains('menu') ||
+              focusLabel.toLowerCase().contains('settingsmenu'))) {
         return;
       }
 
       // Start with Watch Now button for better UX - user sees hero first
       if (_watchButtonFocus.canRequestFocus) {
         _watchButtonFocus.requestFocus();
-      } else if (_firstFeaturedFocus.canRequestFocus) {
-        _firstFeaturedFocus.requestFocus();
       } else if (_firstChannelFocus.canRequestFocus) {
         _firstChannelFocus.requestFocus();
       } else if (_skeletonFocus.canRequestFocus) {
@@ -817,7 +817,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       } else {
         // None of the focus nodes are ready yet, retry after a short delay
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) _tryInitialFocus();
+          if (mounted) _tryInitialFocus(force: force);
         });
       }
     });
@@ -1150,7 +1150,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     required bool allowCategoryPaging,
   }) {
     if (isFirstRow && index == 0) {
-      return allowCategoryPaging ? _firstChannelFocus : _firstFeaturedFocus;
+      return _firstChannelFocus;
     }
     final channelId = channel.epgLookupId;
     final key = '$sectionKey|$channelId|$index';
@@ -1263,13 +1263,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _prefetchInitialCategoryRows() async {
     if (_categoryNames.isEmpty) return;
     final end = math.min(_initialCategoryPrefetchCount, _categoryNames.length);
-
-    // OPTIMIZATION: Use manual loop to avoid intermediate iterable allocations
-    // from `.take().toList()`, reducing GC pressure during initial load.
-    final categories = <String>[];
-    for (var i = 0; i < end; i++) {
-      categories.add(_categoryNames[i]);
-    }
+    final categories = _categoryNames.take(end).toList();
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
     try {
@@ -1498,7 +1492,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         }
         _resetRowScrollOffsets();
         _initialFocusRequested = false;
-        _requestInitialFocus();
+        _requestInitialFocus(force: true);
         // DON'T force category refresh on navigation back - data is already loaded
         // Only refresh if we truly have no categories at all
         if (provider.hasChannels &&
@@ -2074,14 +2068,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // Fill remaining slots with random channels for variety
-    // OPTIMIZATION: Replacing `.where().toList()` filter chain directly avoids
-    // an allocation block when calculating random features.
-    final availableChannels = <Channel>[];
-    for (final channel in fallbackChannels) {
-      if (!addedChannelIds.contains(channel.epgLookupId)) {
-        availableChannels.add(channel);
-      }
-    }
+    final availableChannels = fallbackChannels
+        .where((channel) => !addedChannelIds.contains(channel.epgLookupId))
+        .toList();
 
     // Shuffle for randomness
     availableChannels.shuffle(math.Random());
@@ -2192,14 +2181,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       BuildContext context, List<Channel> allChannels) {
     final channelProvider =
         Provider.of<ChannelProvider>(context, listen: false);
-
-    // OPTIMIZATION: Manual slice via loop replaces `.take().toList()`, averting
-    // creation of temporary Iterables when rebuilding the UI row components.
-    final recentChannels = <Channel>[];
-    final maxLimit = channelProvider.mostWatchedChannels.length < 8 ? channelProvider.mostWatchedChannels.length : 8;
-    for (var i = 0; i < maxLimit; i++) {
-      recentChannels.add(channelProvider.mostWatchedChannels[i]);
-    }
+    final recentChannels = channelProvider.mostWatchedChannels.take(8).toList();
 
     if (recentChannels.isEmpty) return const SizedBox.shrink();
 
@@ -2290,12 +2272,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final epgService = context.read<IncrementalEpgService>();
     final heroCandidates = _buildHeroCandidates(allChannels, epgService);
-    final epgHeroCandidates = <_HeroCandidate>[];
-    for (final candidate in heroCandidates) {
-      if (candidate.program != null) {
-        epgHeroCandidates.add(candidate);
-      }
-    }
+    final epgHeroCandidates =
+        heroCandidates.where((candidate) => candidate.program != null).toList();
     // FIX: Don't block the entire screen just because EPG isn't loaded!
     // If no EPG data, just show the first channel as "hero" with a placeholder.
     // The user can still navigate and watch channels.
@@ -2314,12 +2292,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ];
     _lastHeroCandidateCount = selectionPool.length;
     _prefetchTitleLogosForCandidates(selectionPool);
-    final selectionPoolChannels = <Channel>[];
-    for (final candidate in selectionPool) {
-      selectionPoolChannels.add(candidate.channel);
-    }
     _prefetchRowArtworkForChannels(
-      selectionPoolChannels,
+      selectionPool.map((candidate) => candidate.channel).toList(),
       limit: 15,
     );
     // Removed state mutation of _featuredIndex from build method to avoid infinite loops
@@ -2374,15 +2348,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 ),
               ),
             ),
-            SliverPadding(
-              padding: EdgeInsets.only(
-                left: 0,
-                right: rightInset,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _buildFeaturedRow(context, allChannels),
-              ),
-            ),
+
             // Category rows removed - users access full channel list via Guide tab
             SliverToBoxAdapter(
               child: SizedBox(height: context.spacingXl()),
@@ -2458,7 +2424,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        height: 200,
+                        height: 260,
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -2466,8 +2432,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               end: Alignment.topCenter,
                               colors: [
                                 AppTheme.darkBackground,
+                                AppTheme.darkBackground.withValues(alpha: 0.78),
                                 AppTheme.darkBackground.withValues(alpha: 0.0),
                               ],
+                              stops: const [0.0, 0.42, 1.0],
                             ),
                           ),
                         ),
@@ -2486,25 +2454,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
           // Content Background Gradient (behind channel rows)
-          // Start just above the peeking card row.
+          // Start inside the first row zone so the hero stays clean up to the
+          // cards instead of darkening the space above them.
           Positioned(
-            top: contentTop +
-                _rowTitleBlockHeight(context) +
-                context.spacingXs(),
+            top: contentTop + context.spacingSm(),
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppTheme.darkBackground,
+                    AppTheme.darkBackground.withValues(alpha: 0.0),
+                    AppTheme.darkBackground.withValues(alpha: 0.92),
                     AppTheme.darkBackground,
                     AppTheme.darkBackground,
                   ],
-                  stops: [0.0, 0.3, 1.0],
+                  stops: const [0.0, 0.1, 0.3, 1.0],
                 ),
               ),
             ),
@@ -2562,18 +2530,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                     ),
                   ),
-                SliverPadding(
-                  padding: EdgeInsets.only(
-                    left: 0,
-                    right: rightInset,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: KeyedSubtree(
-                      key: const ValueKey<String>('live_tv_featured_row'),
-                      child: _buildFeaturedRow(context, allChannels),
-                    ),
-                  ),
-                ),
+
                 // Continue Watching row
                 SliverPadding(
                   padding: EdgeInsets.only(left: 0, right: rightInset),
@@ -3014,8 +2971,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              // Focus the first card in the featured row, not a regular category row
-              _firstFeaturedFocus.requestFocus();
+              // Focus the first card in the first channel row
+              _firstChannelFocus.requestFocus();
               return KeyEventResult.handled;
             }
           }
@@ -3166,6 +3123,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool isEpgFallback = false,
   }) {
     if (url == null || url.isEmpty) return false;
+    final blockedHost = _blockedProgramArtworkHost(url);
+    if (blockedHost != null) {
+      _logArtworkDecision(
+        'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_blocked_host host=$blockedHost',
+      );
+      return false;
+    }
     if (ImageValidationService.isKnownInvalid(url)) {
       _logArtworkDecision(
         'LiveTV artwork: source=${source ?? "unknown"} program="${programTitle ?? "unknown"}" url=$url result=reject_invalid_cached',
@@ -3228,6 +3192,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return true;
   }
 
+  String? _blockedProgramArtworkHost(String url) {
+    try {
+      final host = Uri.parse(url).host.toLowerCase();
+      if (_blockedProgramArtworkHosts.contains(host)) {
+        return host;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   bool _isValidTitleLogo(String? url, Channel channel) {
     if (url == null || url.isEmpty) return false;
     final channelLogo = channel.logoUrl;
@@ -3286,7 +3260,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     try {
       final uri = Uri.parse(url);
       final host = uri.host.toLowerCase();
-      final path = uri.path.replaceAll(_trailingSlashRe, '').toLowerCase();
+      final path = uri.path.replaceAll(RegExp(r'/+$'), '').toLowerCase();
       if (host.isEmpty) return path;
       return '$host$path';
     } catch (e) {
@@ -3397,11 +3371,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         allowFetch: false,
       );
 
-      candidates.add(_HeroCandidate(
-        channel: channel,
-        program: program,
-        heroImage: heroImage ?? '',
-      ));
+      // Only include candidates with actual landscape artwork — shows without
+      // art look unprofessional in the hero and should be skipped entirely.
+      if (heroImage != null && heroImage.isNotEmpty) {
+        candidates.add(_HeroCandidate(
+          channel: channel,
+          program: program,
+          heroImage: heroImage,
+        ));
+      }
     }
 
     // Sort: candidates with programs first for a professional look
@@ -3412,11 +3390,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
 
     // Limit to top 15 after sorting
-    final result = <_HeroCandidate>[];
-    final maxLimit = candidates.length < 15 ? candidates.length : 15;
-    for (var i = 0; i < maxLimit; i++) {
-      result.add(candidates[i]);
-    }
+    final result = candidates.take(15).toList();
     _cachedHeroCandidates = result;
     _heroCandidatesCacheValid = true;
     return result;
@@ -3817,19 +3791,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (!mounted) return;
       final epgService =
           Provider.of<IncrementalEpgService>(context, listen: false);
-      // ⚡ Bolt: Performance Optimization
-      // Fused chained iterable operations (.map().where().toList()) into a single
-      // manual loop to prevent intermediate object allocations during post-frame callbacks.
-      final channelIds = <String>[];
-      final channelNames = <String>[];
-      for (final c in channels) {
-        final id = c.epgLookupId;
-        if (id.isNotEmpty) {
-          channelIds.add(id);
-        }
-        channelNames.add(c.epgLookupNameFallback);
-      }
-
+      final channelIds = channels
+          .map((c) => c.epgLookupId)
+          .where((id) => id.isNotEmpty)
+          .toList();
+      final channelNames =
+          channels.map((c) => c.epgLookupNameFallback).toList();
       if (channelIds.isEmpty) return;
       unawaited(epgService.ensureChannelsLoadedBatch(
         channelIds,
@@ -4408,7 +4375,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (rawGroup.isEmpty) {
       return 'LIVE TV';
     }
-    final cleaned = rawGroup.replaceAll(_nonAlphaNumRe, ' ').trim();
+    final cleaned = rawGroup.replaceAll(RegExp(r'[^A-Za-z0-9]+'), ' ').trim();
     if (cleaned.isEmpty) {
       return 'LIVE TV';
     }
@@ -4422,7 +4389,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       'uk',
       'ca',
     };
-    final tokens = cleaned.split(_whitespaceRe);
+    final tokens = cleaned.split(RegExp(r'\s+'));
     String? pick;
     for (final token in tokens) {
       final lower = token.toLowerCase();
@@ -4620,9 +4587,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // strip non-alphanumeric characters, collapse whitespace.
     if (title.isEmpty) return title;
     var s = title.toLowerCase().trim();
-    s = s.replaceAll(_articlesRe, '');
-    s = s.replaceAll(_nonAlphanumericSpaceRe, ' ');
-    s = s.replaceAll(_whitespaceRe, ' ').trim();
+    s = s.replaceAll(RegExp(r'^(the|a|an)\s+'), '');
+    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     return s;
   }
 
@@ -4862,8 +4829,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Align(
                 alignment: Alignment.centerRight,
                 child: FractionallySizedBox(
-                  widthFactor:
-                      0.85, // Wider canvas to compensate for containment shrinking
+                  widthFactor: 0.94,
                   heightFactor: 1.0,
                   child: ShaderMask(
                     shaderCallback: (bounds) {
@@ -4886,8 +4852,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     child: CachedNetworkImage(
                       imageUrl: normalizedHeroUrl,
                       httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit
-                          .contain, // Prevent vertical cropping on extreme landscape posters
+                      fit: BoxFit.cover,
                       alignment: Alignment.centerRight,
                       filterQuality: FilterQuality.high,
                       memCacheWidth: cacheWidth,
@@ -4899,7 +4864,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             _LandscapeGuardedImage(
                               url: normalizedHeroUrl,
                               imageProvider: imageProvider,
-                              fit: BoxFit.contain, // Match parent
+                              fit: BoxFit.cover,
                               alignment: Alignment.centerRight,
                               fallback: heroFallback,
                               probeTag: 'hero_backdrop',
@@ -5268,19 +5233,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   double _contentTopForLayout(
       BuildContext context, double heroHeight, double cardPeek) {
     return heroHeight - cardPeek;
-  }
-
-  double _rowTitleBlockHeight(BuildContext context) {
-    final style = AppTypography.caption(context).copyWith(
-      fontWeight: FontWeight.w600,
-    );
-    final painter = TextPainter(
-      text: TextSpan(text: 'Ag', style: style),
-      maxLines: 1,
-      textScaler: MediaQuery.of(context).textScaler,
-      textDirection: TextDirection.ltr,
-    )..layout();
-    return painter.height + (context.spacingXs() * 0.5);
   }
 
   int _initialRowVisibleCount(
