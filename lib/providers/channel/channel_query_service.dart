@@ -57,8 +57,7 @@ class ChannelQueryService {
           return rows.map((m) => Channel.fromMap(m)).toList();
         }
         if (_deps.channelMaps.isNotEmpty) {
-          final slice = _deps.channelMaps.skip(offset).take(limit).toList();
-          return slice.map((m) => Channel.fromMap(m)).toList();
+          return _channelsPageFromMemory(offset: offset, limit: limit);
         }
         return const [];
       } catch (e) {
@@ -67,8 +66,30 @@ class ChannelQueryService {
       }
     }
 
-    final slice = _deps.channelMaps.skip(offset).take(limit).toList();
-    return slice.map((m) => Channel.fromMap(m)).toList();
+    return _channelsPageFromMemory(offset: offset, limit: limit);
+  }
+
+  List<Channel> _channelsPageFromMemory({
+    required int offset,
+    required int limit,
+  }) {
+    if (offset < 0) {
+      throw RangeError.range(offset, 0, null, 'offset');
+    }
+    if (limit < 0) {
+      throw RangeError.range(limit, 0, null, 'limit');
+    }
+    if (limit == 0 || offset >= _deps.channelMaps.length) {
+      return const [];
+    }
+
+    final remaining = _deps.channelMaps.length - offset;
+    final count = remaining < limit ? remaining : limit;
+    return List<Channel>.generate(
+      count,
+      (i) => Channel.fromMap(_deps.channelMaps[offset + i]),
+      growable: false,
+    );
   }
 
   Future<Map<String, List<Channel>>> getGroupedChannelsAsync({
