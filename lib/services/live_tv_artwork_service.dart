@@ -141,12 +141,12 @@ class LiveTvArtworkService {
   static const int _maxProgramArtworkTitleEntries = 2000;
   static const int _maxProgramArtworkNegativeEntries = 200;
   static const int _maxProgramTitleLogoEntries = 100;
-  static const Duration _programArtworkTitleTtl = Duration(hours: 12);
+  static const Duration _programArtworkTitleTtl = Duration(days: 30);
   static const Duration _artworkNegativeTtl = Duration(minutes: 8);
 
   // Cache keys — bump version to invalidate stale poster/logo entries
   static const String _programArtworkTitleCacheKey =
-      'live_tv_program_artwork_title_cache_v5';
+      'live_tv_program_artwork_title_cache_v6';
   static const String _programArtworkNegativeCacheKey =
       'live_tv_program_artwork_negative_cache_v6';
 

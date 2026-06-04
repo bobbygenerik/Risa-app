@@ -20,11 +20,28 @@ extension LiveTvArtworkServicePublic on LiveTvArtworkService {
   String? getArtworkByTitle(Program program, [Channel? channel]) {
     if (!_isTitleCacheEligible(program)) return null;
     final key = _titleCacheKey(program, channel);
+    final url = _validArtworkByTitleKey(key, program, channel);
+    if (url != null) return url;
+    if (!_canUseGlobalTitleCache(program, channel)) return null;
+    return _validArtworkByTitleKey(
+      _globalTitleCacheKey(program, channel),
+      program,
+      channel,
+    );
+  }
+
+  String? _validArtworkByTitleKey(
+    String key,
+    Program program,
+    Channel? channel,
+  ) {
+    if (key.isEmpty) return null;
     final url = _programArtworkByTitle[key];
     if (url == null || url.isEmpty) return null;
     final timestamp = _programArtworkByTitleTimestamps[key];
     if (timestamp == null ||
-        DateTime.now().difference(timestamp) > LiveTvArtworkService._programArtworkTitleTtl) {
+        DateTime.now().difference(timestamp) >
+            LiveTvArtworkService._programArtworkTitleTtl) {
       _programArtworkByTitle.remove(key);
       _programArtworkByTitleTimestamps.remove(key);
       _programArtworkTitleOrder.remove(key);
@@ -62,13 +79,18 @@ extension LiveTvArtworkServicePublic on LiveTvArtworkService {
 
     // Check by title cache
     if (_isTitleCacheEligible(program)) {
-      final byTitle = _programArtworkByTitle[_titleCacheKey(program, channel)];
+      final byTitle = getArtworkByTitle(program, channel);
       if (byTitle != null && byTitle.isNotEmpty) return true;
     }
 
-    // Check EPG-provided image URL
-    if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
-      // EPG provides an image - consider ready
+    // Check EPG-provided image URL, but never allow posters/logos to block fetch.
+    if (_isValidProgramArtwork(
+      program.imageUrl,
+      channel,
+      programTitle: program.title,
+      source: 'epg_ready',
+      isEpgFallback: true,
+    )) {
       return true;
     }
 

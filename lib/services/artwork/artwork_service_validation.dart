@@ -62,7 +62,7 @@ extension LiveTvArtworkServiceValidation on LiveTvArtworkService {
     String? source,
   }) {
     if (url == null || url.isEmpty) return false;
-    if (!preferLandscape) return true;
+    if (_isLikelyPosterUrl(url)) return false;
     return _isLikelyLandscapeUrl(url);
   }
 

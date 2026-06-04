@@ -7,6 +7,7 @@ import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
 import 'package:iptv_player/screens/live_tv/artwork/guarded_artwork_image.dart';
 import 'package:iptv_player/screens/live_tv/artwork_url_guard.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_card_fallbacks.dart';
+import 'package:iptv_player/screens/live_tv/live_tv_hero_fallbacks.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
@@ -62,7 +63,7 @@ class LiveTvHeroContent extends StatelessWidget {
           builder: (context, constraints) {
             final rawHero = heroImage?.trim() ?? '';
             if (rawHero.isEmpty) {
-              return LiveTvCardFallbacks.gradientPlaceholder();
+              return LiveTvHeroFallbacks.forProgram(channel, program);
             }
 
             final normalizedHeroUrl = LiveTvArtworkUrlGuard.normalizeArtworkUrl(
@@ -76,7 +77,7 @@ class LiveTvHeroContent extends StatelessWidget {
                   normalizedHeroUrl,
                   slot: ArtworkSlot.hero,
                 )) {
-              return LiveTvCardFallbacks.gradientPlaceholder();
+              return LiveTvHeroFallbacks.forProgram(channel, program);
             }
 
             ImageLoadProbe.recordAttempt(normalizedHeroUrl, 'hero_image');

@@ -9,7 +9,10 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
   }) {
     debugLog(
         'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=${LiveTvArtworkService._fanartEnabled} sports=${LiveTvArtworkService._sportsDbEnabled} tvdb=$_tvdbEnabled)');
-    if (!(_tmdbEnabled || LiveTvArtworkService._fanartEnabled || LiveTvArtworkService._sportsDbEnabled || _tvdbEnabled)) {
+    if (!(_tmdbEnabled ||
+        LiveTvArtworkService._fanartEnabled ||
+        LiveTvArtworkService._sportsDbEnabled ||
+        _tvdbEnabled)) {
       diagSkipServicesDisabled++;
       debugLog(
         'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
@@ -83,15 +86,24 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
 
     final channel = _programChannelLookup[program.id];
     final titleKey = _titleCacheKey(program, channel);
+    final globalTitleKey = _canUseGlobalTitleCache(program, channel)
+        ? _globalTitleCacheKey(program, channel)
+        : '';
     final cachedByTitle = getArtworkByTitle(program, channel);
     if (cachedByTitle != null && cachedByTitle.isNotEmpty) {
       if (ImageValidationService.isKnownInvalid(cachedByTitle)) {
         _removeProgramArtworkTitle(titleKey);
+        if (globalTitleKey.isNotEmpty) {
+          _removeProgramArtworkTitle(globalTitleKey);
+        }
       } else if (await ImageValidationService.isValid(cachedByTitle)) {
         _setProgramArtwork(program.id, cachedByTitle);
         return cachedByTitle;
       } else {
         _removeProgramArtworkTitle(titleKey);
+        if (globalTitleKey.isNotEmpty) {
+          _removeProgramArtworkTitle(globalTitleKey);
+        }
       }
     }
 
@@ -177,11 +189,7 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
       preferLandscape: true,
     );
     if (landscape != null && landscape.isNotEmpty) return landscape;
-    return _fetchSportsImageInternal(
-      program,
-      channel,
-      preferLandscape: false,
-    );
+    return null;
   }
 
   Future<String?> _fetchSportsImageInternal(
@@ -258,10 +266,7 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
       preferLandscape: true,
     );
     if (landscape != null && landscape.isNotEmpty) return landscape;
-    return _fetchRegularImageInternal(
-      program,
-      preferLandscape: false,
-    );
+    return null;
   }
 
   Future<String?> _fetchRegularImageInternal(

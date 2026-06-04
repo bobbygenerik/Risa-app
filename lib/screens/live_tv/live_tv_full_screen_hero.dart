@@ -86,7 +86,9 @@ class LiveTvFullScreenHero extends StatelessWidget {
     final rightInset = context.spacingLg();
     final activeChannel = selection.activeChannel;
     final currentProgram = selection.program;
-    final showHeroChrome = selection.hasArtwork;
+    final showHeroChrome = selection.hasArtwork ||
+        currentProgram != null ||
+        activeChannel.name.trim().isNotEmpty;
     final navProvider =
         context.dependOnInheritedWidgetOfExactType<ContentFocusProvider>();
     final hideHeroChrome =

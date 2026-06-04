@@ -3,6 +3,7 @@ part of '../live_tv_artwork_service.dart';
 extension LiveTvArtworkServiceCache on LiveTvArtworkService {
   void _setProgramArtwork(String key, String value) {
     if (value.isEmpty) return;
+    if (!_isLikelyLandscapeUrl(value)) return;
     _registerProgramArtworkEntry(key, value);
     _scheduleArtworkUiRefresh();
   }
@@ -24,8 +25,13 @@ extension LiveTvArtworkServiceCache on LiveTvArtworkService {
     Channel? channel,
   ]) {
     if (value.isEmpty) return;
+    if (!_isLikelyLandscapeUrl(value)) return;
     if (!_isTitleCacheEligible(program)) return;
     _registerProgramArtworkTitle(_titleCacheKey(program, channel), value);
+    if (_canUseGlobalTitleCache(program, channel)) {
+      _registerProgramArtworkTitle(
+          _globalTitleCacheKey(program, channel), value);
+    }
   }
 
   void _registerProgramArtworkTitle(String key, String value) {
@@ -78,19 +84,27 @@ extension LiveTvArtworkServiceCache on LiveTvArtworkService {
   }
 
   int _programArtworkEntryLimit() {
-    return MemoryManager.isLowMemory ? 200 : LiveTvArtworkService._maxProgramArtworkEntries;
+    return MemoryManager.isLowMemory
+        ? 200
+        : LiveTvArtworkService._maxProgramArtworkEntries;
   }
 
   int _programArtworkTitleLimit() {
-    return MemoryManager.isLowMemory ? 200 : LiveTvArtworkService._maxProgramArtworkTitleEntries;
+    return MemoryManager.isLowMemory
+        ? 200
+        : LiveTvArtworkService._maxProgramArtworkTitleEntries;
   }
 
   int _programArtworkNegativeLimit() {
-    return MemoryManager.isLowMemory ? 100 : LiveTvArtworkService._maxProgramArtworkNegativeEntries;
+    return MemoryManager.isLowMemory
+        ? 100
+        : LiveTvArtworkService._maxProgramArtworkNegativeEntries;
   }
 
   int _programTitleLogoLimit() {
-    return MemoryManager.isLowMemory ? 50 : LiveTvArtworkService._maxProgramTitleLogoEntries;
+    return MemoryManager.isLowMemory
+        ? 50
+        : LiveTvArtworkService._maxProgramTitleLogoEntries;
   }
 
   void _scheduleArtworkUiRefresh() {

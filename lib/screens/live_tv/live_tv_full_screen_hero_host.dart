@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
@@ -85,8 +84,6 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
   bool _sideEffectsScheduled = false;
   List<LiveTvHeroCandidate>? _cachedHeroCandidates;
   LiveTvHeroSelection? _cachedSelection;
-  List<LiveTvHeroCandidate>? _cachedSelectionPool;
-  LiveTvHeroCandidate? _cachedSelectedHero;
   String? _cachedHeroImageUrl;
   int _cachedChannelsLen = -1;
   int _cachedFeaturedIndex = -1;
@@ -155,20 +152,24 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
       heroCandidates: heroCandidates,
     );
     _cachedHeroCandidates = heroCandidates;
-    _cachedSelectionPool = resolved.selectionPool;
-    _cachedSelectedHero = resolved.selectedHero;
     _cachedChannelsLen = widget.allChannels.length;
     _cachedFeaturedIndex = widget.featuredIndex;
     _cachedProgramCount = epgService.loadedProgramChannelCount;
 
     final selected = resolved.selectedHero;
+    final fallbackProgram = selected?.program ??
+        epgService.getCurrentProgram(
+          widget.featuredChannel.epgLookupId,
+          channelName: widget.featuredChannel.epgLookupNameFallback,
+          groupTitle: widget.featuredChannel.groupTitle,
+        );
     final heroUrl = selected?.heroImage;
     _cachedHeroImageUrl =
         (heroUrl != null && heroUrl.isNotEmpty) ? heroUrl : null;
 
     _cachedSelection = LiveTvHeroSelection(
       activeChannel: resolved.selection.activeChannel,
-      program: resolved.selection.program,
+      program: resolved.selection.program ?? fallbackProgram,
       candidateCount: resolved.selection.candidateCount,
       selectedHero: selected,
       hasArtwork: selected != null && _cachedHeroImageUrl != null,

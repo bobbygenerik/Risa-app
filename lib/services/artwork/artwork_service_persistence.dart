@@ -4,7 +4,8 @@ extension LiveTvArtworkServicePersistence on LiveTvArtworkService {
   Future<void> _loadProgramArtworkTitleCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(LiveTvArtworkService._programArtworkTitleCacheKey);
+      final raw =
+          prefs.getString(LiveTvArtworkService._programArtworkTitleCacheKey);
       if (raw == null || raw.isEmpty) return;
 
       // Parse JSON off the main thread using compute()
@@ -20,12 +21,15 @@ extension LiveTvArtworkServicePersistence on LiveTvArtworkService {
         final url = entry.url;
         final timestamp = DateTime.fromMillisecondsSinceEpoch(entry.timestamp);
 
-        // Skip poster URLs that may have been cached before stricter validation
-        if (_isLikelyPosterUrl(url)) {
-          debugLog('LiveTV artwork: skipping poster URL from disk cache: $url');
+        // Skip poster/logo/portrait URLs cached before stricter validation.
+        if (!_isLikelyLandscapeUrl(url)) {
+          debugLog(
+            'LiveTV artwork: skipping non-landscape URL from disk cache: $url',
+          );
           continue;
         }
-        if (now.difference(timestamp) > LiveTvArtworkService._programArtworkTitleTtl) {
+        if (now.difference(timestamp) >
+            LiveTvArtworkService._programArtworkTitleTtl) {
           continue;
         }
 

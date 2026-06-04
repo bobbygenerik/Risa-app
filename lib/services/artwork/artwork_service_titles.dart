@@ -20,6 +20,24 @@ extension LiveTvArtworkServiceTitles on LiveTvArtworkService {
     return '$base|$hint';
   }
 
+  String _globalTitleCacheKey(Program program, [Channel? channel]) {
+    final baseTitle =
+        _stripEpisodeTitleForLookup(program, channel, program.title);
+    final base = _normalizeForFilter(_canonicalArtworkTitle(baseTitle));
+    return base.isEmpty ? '' : 'global|$base';
+  }
+
+  bool _canUseGlobalTitleCache(Program program, [Channel? channel]) {
+    if (!_isTitleCacheEligible(program)) return false;
+    final base = _globalTitleCacheKey(program, channel);
+    if (base.isEmpty) return false;
+    final canonical = base.replaceFirst('global|', '');
+    if (_isGenericTitle(canonical)) return false;
+    if (_isSportsProgram(program, channel)) return false;
+    if (channel != null && _isNewsProgram(program, channel)) return false;
+    return true;
+  }
+
   String _canonicalArtworkTitle(String title) {
     return EPGMatchingUtils.normalizeForArtwork(title);
   }

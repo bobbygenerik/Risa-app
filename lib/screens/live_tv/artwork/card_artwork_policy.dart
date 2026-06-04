@@ -34,8 +34,7 @@ class CardArtworkPolicy {
       );
     }
 
-    if (!isEpgFallback &&
-        !ArtworkValidator.isLikelyLandscapeUrl(url, strict: false)) {
+    if (!ArtworkValidator.isLikelyLandscapeUrl(url, strict: false)) {
       reject('reject_not_landscape');
       return false;
     }
