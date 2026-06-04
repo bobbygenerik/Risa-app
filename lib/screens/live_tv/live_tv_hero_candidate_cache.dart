@@ -112,11 +112,14 @@ class LiveTvHeroSelection {
   final Program? program;
   final int candidateCount;
   final LiveTvHeroCandidate? selectedHero;
+
   /// True only when the hero is showing a channel with validated backdrop art.
   final bool hasArtwork;
 }
 
 class LiveTvHeroSelectionResolver {
+  static const int minArtworkPoolSize = 3;
+
   static ({
     LiveTvHeroSelection selection,
     List<LiveTvHeroCandidate> selectionPool,
@@ -132,22 +135,26 @@ class LiveTvHeroSelectionResolver {
           (c) =>
               c.program != null &&
               c.heroImage.isNotEmpty &&
-              !ImageFailureCache.shouldSkip(c.heroImage, slot: ArtworkSlot.hero),
+              !ImageFailureCache.shouldSkip(c.heroImage,
+                  slot: ArtworkSlot.hero),
         )
         .toList();
 
     final candidateCount = selectionPool.length;
+    final useArtworkPool = candidateCount >= minArtworkPoolSize;
+    final fallbackCount = allChannels.isEmpty ? 0 : allChannels.length;
+    final rotationCount = useArtworkPool ? candidateCount : fallbackCount;
 
-    final selectedHero = candidateCount == 0
-        ? null
-        : selectionPool[featuredIndex % candidateCount];
+    final selectedHero =
+        !useArtworkPool ? null : selectionPool[featuredIndex % candidateCount];
+    final fallbackChannel = allChannels.isEmpty
+        ? featuredChannel
+        : allChannels[featuredIndex % allChannels.length];
 
     final selection = LiveTvHeroSelection(
-      // activeChannel is only shown when [hasArtwork]; placeholder avoids ABC-style
-      // fallbacks while the artwork pool is still empty.
-      activeChannel: selectedHero?.channel ?? featuredChannel,
+      activeChannel: selectedHero?.channel ?? fallbackChannel,
       program: selectedHero?.program,
-      candidateCount: candidateCount,
+      candidateCount: rotationCount,
       selectedHero: selectedHero,
       hasArtwork: selectedHero != null,
     );

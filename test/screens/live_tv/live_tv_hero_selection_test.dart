@@ -41,11 +41,59 @@ void main() {
           program: program,
           heroImage: '',
         ),
+        LiveTvHeroCandidate(
+          channel: channelB,
+          program: program,
+          heroImage: 'https://example.com/backdrop-b.jpg',
+        ),
+        LiveTvHeroCandidate(
+          channel: channelA,
+          program: program,
+          heroImage: 'https://example.com/backdrop-c.jpg',
+        ),
+      ],
+    );
+
+    expect(resolved.selectionPool, hasLength(3));
+    expect(resolved.selection.activeChannel, channelA);
+    expect(resolved.selection.program, program);
+  });
+
+  test('cold hero art pool rotates fallback channel by featured index', () {
+    final resolved = LiveTvHeroSelectionResolver.resolve(
+      featuredChannel: channelA,
+      allChannels: [channelA, channelB],
+      featuredIndex: 1,
+      heroCandidates: const [],
+    );
+
+    expect(resolved.selectionPool, isEmpty);
+    expect(resolved.selection.activeChannel, channelB);
+    expect(resolved.selection.program, isNull);
+    expect(resolved.selection.hasArtwork, isFalse);
+    expect(resolved.selection.candidateCount, 2);
+  });
+
+  test('too-small art pool still rotates fallback channels while cache warms',
+      () {
+    final resolved = LiveTvHeroSelectionResolver.resolve(
+      featuredChannel: channelA,
+      allChannels: [channelA, channelB],
+      featuredIndex: 1,
+      heroCandidates: [
+        LiveTvHeroCandidate(
+          channel: channelA,
+          program: program,
+          heroImage: 'https://example.com/backdrop.jpg',
+        ),
       ],
     );
 
     expect(resolved.selectionPool, hasLength(1));
-    expect(resolved.selection.activeChannel, channelA);
-    expect(resolved.selection.program, program);
+    expect(resolved.selectedHero, isNull);
+    expect(resolved.selection.activeChannel, channelB);
+    expect(resolved.selection.program, isNull);
+    expect(resolved.selection.hasArtwork, isFalse);
+    expect(resolved.selection.candidateCount, 2);
   });
 }

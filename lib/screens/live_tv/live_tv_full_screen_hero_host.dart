@@ -157,11 +157,12 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     _cachedProgramCount = epgService.loadedProgramChannelCount;
 
     final selected = resolved.selectedHero;
+    final fallbackChannel = resolved.selection.activeChannel;
     final fallbackProgram = selected?.program ??
         epgService.getCurrentProgram(
-          widget.featuredChannel.epgLookupId,
-          channelName: widget.featuredChannel.epgLookupNameFallback,
-          groupTitle: widget.featuredChannel.groupTitle,
+          fallbackChannel.epgLookupId,
+          channelName: fallbackChannel.epgLookupNameFallback,
+          groupTitle: fallbackChannel.groupTitle,
         );
     final heroUrl = selected?.heroImage;
     _cachedHeroImageUrl =
