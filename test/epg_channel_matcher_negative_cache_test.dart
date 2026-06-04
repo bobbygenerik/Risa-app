@@ -67,4 +67,31 @@ void main() {
     expect(m.findBestEpgId('x', 'Channel Two'), 'epg.two');
     expect(m.findBestEpgId('x', 'Channel One'), 'epg.one');
   });
+
+  test('callsign tier bridges verbose US tvg-id to network+callsign EPG id', () {
+    final m = _matcher();
+    m.rebuildEpgIdIndexFromIds(['CBSWBZ.us', 'CBSWPRI.us', 'FOXWFXT.us']);
+
+    expect(m.findBestEpgId('cbs4wbzboston.us', 'WBZ4'), 'CBSWBZ.us');
+    expect(
+        m.findBestEpgId('cbs12wpriprovidence.us', 'CBS12 WPRI'), 'CBSWPRI.us');
+  });
+
+  test('callsign tier uses the network to break a shared-callsign tie', () {
+    final m = _matcher();
+    m.rebuildEpgIdIndexFromIds(['NBCWJAR.us', 'ABCWJAR.us']);
+
+    expect(
+      m.findBestEpgId('nbc10wjarprovidence.us', 'NBC10 WJAR'),
+      'NBCWJAR.us',
+    );
+  });
+
+  test('callsign tier ignores non-US channels', () {
+    final m = _matcher();
+    m.rebuildEpgIdIndexFromIds(['CBSWBZ.us']);
+    // A UK channel that happens to contain a callsign-shaped token must not
+    // bridge to a US station.
+    expect(m.findBestEpgId('skysports.uk', 'WBZ Sports'), isNull);
+  });
 }
