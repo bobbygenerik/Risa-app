@@ -32,6 +32,26 @@ class LiveTvHeroContent extends StatelessWidget {
   final bool suspendBackground;
   final void Function(String url)? onBackdropRejected;
 
+  // Covers the fitWidth letterbox bars by painting solid dark over the top/
+  // bottom edges, then a soft fade into the image. Bottom band is taller (it
+  // sits under the info panel). Foreground overlay, not a ShaderMask, to avoid
+  // the per-frame saveLayer that made the rotation crossfade janky.
+  static final _verticalFade = BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        AppTheme.darkBackground,
+        AppTheme.darkBackground,
+        AppTheme.darkBackground.withAlpha(0),
+        AppTheme.darkBackground.withAlpha(0),
+        AppTheme.darkBackground,
+        AppTheme.darkBackground,
+      ],
+      stops: const [0.0, 0.10, 0.20, 0.72, 0.94, 1.0],
+    ),
+  );
+
   static final _heroGradient = BoxDecoration(
     gradient: LinearGradient(
       begin: Alignment.topCenter,
@@ -96,12 +116,15 @@ class LiveTvHeroContent extends StatelessWidget {
               child: Align(
                 alignment: Alignment.topRight,
                 child: FractionallySizedBox(
-                  widthFactor: 0.94,
+                  widthFactor: 0.82,
                   heightFactor: 1.0,
-                  child: CachedNetworkImage(
+                  child: DecoratedBox(
+                    position: DecorationPosition.foreground,
+                    decoration: _verticalFade,
+                    child: CachedNetworkImage(
                     imageUrl: normalizedHeroUrl,
                     httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fitWidth,
                     alignment: Alignment.center,
                     filterQuality: FilterQuality.medium,
                     memCacheWidth: cacheWidth,
@@ -111,7 +134,7 @@ class LiveTvHeroContent extends StatelessWidget {
                         url: normalizedHeroUrl,
                         imageProvider: imageProvider,
                         slot: ArtworkSlot.hero,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.fitWidth,
                         alignment: Alignment.center,
                         fallback: LiveTvCardFallbacks.gradientPlaceholder(),
                         probeTag: 'hero_backdrop',
@@ -131,6 +154,7 @@ class LiveTvHeroContent extends StatelessWidget {
                     },
                     fadeInDuration: const Duration(milliseconds: 300),
                     useOldImageOnUrlChange: true,
+                    ),
                   ),
                 ),
               ),

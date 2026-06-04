@@ -189,22 +189,6 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
       if (featuredChannels.length >= targetFeaturedCount) break;
     }
 
-    if (featuredChannels.length < targetFeaturedCount) {
-      for (final channel in availableChannels) {
-        if (featuredChannels.length >= targetFeaturedCount) break;
-        final channelId = channel.epgLookupId;
-        if (addedChannelIds.contains(channelId)) continue;
-        if (epgService.shouldHideChannel(
-          channelId,
-          channelName: channel.epgLookupNameFallback,
-        )) {
-          continue;
-        }
-        featuredChannels.add(channel);
-        addedChannelIds.add(channelId);
-      }
-    }
-
     if (missingChannelIds.isNotEmpty) {
       final capturedIds = missingChannelIds.toList();
       final capturedNames = List<String?>.from(missingChannelNames);
