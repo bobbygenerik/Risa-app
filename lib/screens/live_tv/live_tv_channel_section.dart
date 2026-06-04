@@ -85,7 +85,7 @@ class LiveTvChannelSectionBindings {
     if (isFirstRow && index == 0) {
       return allowCategoryPaging ? firstChannelFocus : firstFeaturedFocus;
     }
-    return cardFocusCache.nodeForCard(sectionKey, channel, index);
+    return cardFocusCache.nodeForCard(sectionKey, channel);
   }
 
   bool shouldPrefetchArt(
@@ -191,19 +191,12 @@ class LiveTvChannelSection extends StatelessWidget {
         channelName: channel.epgLookupNameFallback,
         groupTitle: channel.groupTitle,
       );
-      // Only surface a channel that has a show airing right now. A null program
-      // means EPG hasn't loaded for it yet — schedule a lazy load so it can
-      // appear on a later rebuild once data arrives.
       if (program == null) {
         missingIds.add(channelId);
         missingNames.add(channel.epgLookupNameFallback);
-        continue;
-      }
-      if (!program.isCurrentlyPlaying) {
-        continue;
       }
 
-      if (isFirstRow && program.title.isNotEmpty) {
+      if (isFirstRow && program != null && program.title.isNotEmpty) {
         final displayTitle =
             bindings.artworkResolver.displayProgramTitle(program, channel);
         final normalizedTitle =
@@ -293,6 +286,7 @@ class LiveTvChannelSection extends StatelessWidget {
             sectionKey: sectionKey,
             controller: rowController,
             itemCount: filteredChannels.length,
+            itemKey: (i) => ValueKey('card_${filteredChannels[i].id}'),
             cardWidth: cardWidth,
             cardGap: context.cardGap(),
             padding: EdgeInsets.only(
@@ -341,8 +335,8 @@ class LiveTvChannelSection extends StatelessWidget {
                 onOpenPlayer: bindings.onOpenPlayer,
                 onShowEpgSelector: bindings.onShowEpgSelector,
                 onItemFocus: null,
-                onFocusIndexChanged: (key, idx, hasFocus) => bindings
-                    .onCardFocusChanged(key, idx, channel.epgLookupId, hasFocus),
+                onFocusIndexChanged: (key, idx, hasFocus) =>
+                    bindings.onCardFocusChanged(key, idx, channel.id, hasFocus),
                 onScrollToHeroPeek: bindings.onScrollToHeroPeek,
                 requestNavigationFocus: bindings.requestNavigationFocus,
                 displayTitle: bindings.artworkResolver.displayProgramTitle,

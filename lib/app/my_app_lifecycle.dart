@@ -74,32 +74,31 @@ extension MyAppLifecycle on _MyAppState {
 
   Future<void> _initialize() async {
     try {
-      // Start the clock service for centralized time management
       ClockService().start();
 
-      StartupProbe.mark('MyApp initialization: FastStartup init start');
-      await FastStartupService.instance.initialize();
-      StartupProbe.mark('MyApp initialization: FastStartup init finished');
-
-      unawaited(TMDBService.init().catchError((error, stack) {
-        debugLog('TMDBService.init() failed during startup: $error');
-      }));
+      // Light prefs work only — DB/cache services run after first frame.
       StartupProbe.mark('MyApp initialization: clear old playlists');
       await _clearOldPlaylists();
       StartupProbe.mark('MyApp initialization: playlists cleared');
-      StartupProbe.mark('MyApp initialization: check disclaimer');
       await _checkDisclaimer();
       StartupProbe.mark('MyApp initialization: disclaimer checked');
-      StartupProbe.mark('MyApp initialization: check/load playlist');
       await _checkAndLoadPlaylist();
       StartupProbe.mark('MyApp initialization: playlist check finished');
+
+      _runDeferred(() async {
+        StartupProbe.mark('MyApp initialization: FastStartup init start');
+        await FastStartupService.instance.initialize();
+        StartupProbe.mark('MyApp initialization: FastStartup init finished');
+        unawaited(TMDBService.init().catchError((error, stack) {
+          debugLog('TMDBService.init() failed during startup: $error');
+        }));
+        if (mounted) {
+          StartupProbe.mark('MyApp initialization: complete');
+        }
+      });
     } catch (error, stack) {
       debugLog('Initialization error: $error');
       debugLog('$stack');
-    } finally {
-      if (mounted) {
-        StartupProbe.mark('MyApp initialization: complete');
-      }
     }
   }
 

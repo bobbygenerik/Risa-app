@@ -36,6 +36,17 @@ class EpgServiceInit {
       return;
     }
 
+    final prefs = await SharedPreferences.getInstance();
+    final customEpgUrl = prefs.getString('custom_epg_url');
+    final storedEpgUrl = prefs.getString('epg_url');
+    final configuredUrl = (customEpgUrl != null && customEpgUrl.isNotEmpty)
+        ? customEpgUrl
+        : storedEpgUrl;
+    if (configuredUrl == null || configuredUrl.trim().isEmpty) {
+      debugLog('EPG: quickStart deferred — no URL yet (waiting for playlist)');
+      return;
+    }
+
     debugLog('EPG: Quick start initialization');
 
     try {
@@ -183,7 +194,6 @@ class EpgServiceInit {
         unawaited(loadRemainingDaysInBackground());
       } else {
         debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
-        _deps.setError('No EPG URL configured');
         _deps.resetLoadingState();
         _deps.notifyListeners();
       }

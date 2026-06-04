@@ -117,8 +117,25 @@ extension EpgDiagnosticStats on _EpgDiagnosticScreenState {
   }
 
   void _requestInitialFocus() {
-    if (_reloadFocus.hasFocus) return;
-    _reloadFocus.requestFocus();
+    if (_diagnosticFocusEstablished) return;
+    if (_reloadFocus.hasFocus) {
+      _diagnosticFocusEstablished = true;
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _diagnosticFocusEstablished) return;
+      _reloadFocus.requestFocus();
+      _diagnosticFocusEstablished = true;
+    });
+  }
+
+  void _focusPrimaryDiagnosticAction() {
+    if (_selectedTab == 0) {
+      _reloadFocus.requestFocus();
+    } else {
+      _systemTabFocus.requestFocus();
+    }
+    _diagnosticFocusEstablished = true;
   }
 
   String _formatDuration(Duration duration) {

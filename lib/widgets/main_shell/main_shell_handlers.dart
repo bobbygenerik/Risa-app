@@ -91,12 +91,21 @@ void _handleRouteChange() {
   final location = _routeInfoProvider?.value.uri.toString();
   if (location == null || location == _lastLocation) return;
   _lastLocation = location;
-  _lastNavTime = DateTime.now(); // Track when navigation occurred
+  _lastNavTime = DateTime.now();
   _sidebarKey.currentState?.collapse();
+
+  // Don't steal focus back to content while the user is in the sidebar.
+  if (_shouldDeferShellContentFocus()) {
+    return;
+  }
 
   // Settings manages its own menu focus (autoFocusOnShow). Skip shell focus here
   // to avoid competing post-frame focus work during Live TV → Settings.
   if (!location.startsWith('/settings')) {
+    // Live TV re-seats its own focus when returning to /home.
+    if (location == '/home' || location.endsWith('/home')) {
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _requestContentFocus();
@@ -147,6 +156,10 @@ void _unregisterContentFocusCallback(int token) {
 
 bool _requestContentFocus() {
   debugLog('content_focus: Shell requesting content focus');
+  if (_shouldDeferShellContentFocus()) {
+    debugLog('content_focus: Skipped — sidebar owns focus');
+    return false;
+  }
   _sidebarKey.currentState?.collapse();
 
   // Try callback first
@@ -218,6 +231,11 @@ KeyEventResult _handleGlobalKeyEvent(FocusNode node, KeyEvent event) {
 
   // Handle left arrow key - open sidebar if focused on content at left edge
   if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+    final location = GoRouterState.of(context).uri.path;
+    if (location == '/settings') {
+      return KeyEventResult.ignored;
+    }
+
     // If we're focused on content (not sidebar), try to open sidebar
     if (currentFocus != null &&
         !_isFocusInSidebar(currentFocus) &&

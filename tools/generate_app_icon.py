@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate app icon for Risa IPTV Player
-Colors: Primary Blue #2E3192, Accent Pink #E61E6E
+Colors: Primary Cyan #00BFF3, Accent Pink #FF3D9A
 """
 
 from PIL import Image, ImageDraw, ImageFont
@@ -12,8 +12,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 # App colors
-PRIMARY_BLUE = (46, 49, 146)  # #2E3192
-ACCENT_PINK = (230, 30, 110)  # #E61E6E
+PRIMARY_BLUE = (0, 191, 243)  # #00BFF3
+ACCENT_PINK = (255, 61, 154)  # #FF3D9A
 WHITE = (255, 255, 255)
 
 def create_icon(size):

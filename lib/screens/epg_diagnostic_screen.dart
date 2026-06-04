@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -65,8 +66,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   static const int _pageSize = 100;
   static const int _scanChunkSize = 200;
   final FocusNode _reloadFocus = FocusNode(debugLabel: 'EpgReload');
+  final FocusNode _fullScanFocus = FocusNode(debugLabel: 'EpgFullScan');
   final FocusNode _configureFocus = FocusNode(debugLabel: 'EpgConfigure');
   final FocusNode _loadMoreFocus = FocusNode(debugLabel: 'EpgLoadMore');
+  final FocusNode _backFocus = FocusNode(debugLabel: 'EpgDiagBack');
+  final FocusNode _epgTabFocus = FocusNode(debugLabel: 'EpgDiagTabEpg');
+  final FocusNode _systemTabFocus = FocusNode(debugLabel: 'EpgDiagTabSystem');
+  int _selectedTab = 0;
+  bool _diagnosticFocusEstablished = false;
   final List<FocusNode> _chipFocusNodes = List.generate(
     3,
     (index) => FocusNode(debugLabel: 'EpgMatchChip$index'),
@@ -90,8 +97,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   @override
   void dispose() {
     _reloadFocus.dispose();
+    _fullScanFocus.dispose();
     _configureFocus.dispose();
     _loadMoreFocus.dispose();
+    _backFocus.dispose();
+    _epgTabFocus.dispose();
+    _systemTabFocus.dispose();
     for (final node in _chipFocusNodes) {
       node.dispose();
     }
@@ -100,14 +111,32 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   @override
   Widget build(BuildContext context) {
     _writeDebugMarker('epg_diagnostic_build');
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: const Text('EPG Diagnostic'),
         backgroundColor: AppTheme.darkBackground,
-        appBar: AppBar(
-          title: const Text('EPG Diagnostic'),
-          backgroundColor: AppTheme.darkBackground,
-          leading: IconButton(
+        leading: Focus(
+          focusNode: _backFocus,
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.goBack) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go('/home');
+              }
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              _epgTabFocus.requestFocus();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
               if (Navigator.canPop(context)) {
@@ -117,63 +146,89 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               }
             },
           ),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'EPG'),
-              Tab(text: 'System'),
-            ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: Row(
+                children: [
+                  _buildDiagnosticTabButton(
+                    index: 0,
+                    label: 'EPG',
+                    focusNode: _epgTabFocus,
+                    neighborFocus: _systemTabFocus,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildDiagnosticTabButton(
+                    index: 1,
+                    label: 'System',
+                    focusNode: _systemTabFocus,
+                    neighborFocus: _epgTabFocus,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        body: Consumer2<IncrementalEpgService, ChannelProvider>(
-          builder: (context, epgService, channelProvider, _) {
-            final totalChannels = channelProvider.channelCount;
-            final epgCount = epgService.availableChannels.length;
-            final isEpgBusy = epgService.isDownloading ||
-                epgService.isParsing ||
-                epgService.isLoading;
-            final displayChannels = _diagnosticChannelCount > 0
-                ? _diagnosticChannelCount
-                : totalChannels;
-            final displayEpg =
-                _diagnosticEpgCount > 0 ? _diagnosticEpgCount : epgCount;
-            _maybeRefreshStats(displayChannels, displayEpg, isEpgBusy,
-                channelProvider.isLoading);
-            if (_wasEpgBusy && !isEpgBusy) {
-              _onEpgLoadFinished();
-            }
-            _wasEpgBusy = isEpgBusy;
-            _updatePageSignature(displayChannels, displayEpg);
-            if (_pageEntries.isEmpty &&
-                !_pageLoading &&
-                _pageHasMore &&
-                !isEpgBusy &&
-                !channelProvider.isLoading) {
-              // Defer loading to avoid build phase conflicts
-              Future.microtask(() {
-                if (mounted) {
-                  _loadNextMatchPage();
-                }
-              });
-            }
+      ),
+      body: Consumer2<IncrementalEpgService, ChannelProvider>(
+        builder: (context, epgService, channelProvider, _) {
+          final totalChannels = channelProvider.channelCount;
+          final epgCount = epgService.availableChannels.length;
+          final isEpgBusy = epgService.isDownloading ||
+              epgService.isParsing ||
+              epgService.isLoading;
+          final displayChannels = _diagnosticChannelCount > 0
+              ? _diagnosticChannelCount
+              : totalChannels;
+          final displayEpg =
+              _diagnosticEpgCount > 0 ? _diagnosticEpgCount : epgCount;
+          _maybeRefreshStats(displayChannels, displayEpg, isEpgBusy,
+              channelProvider.isLoading);
+          if (_wasEpgBusy && !isEpgBusy) {
+            _onEpgLoadFinished();
+          }
+          _wasEpgBusy = isEpgBusy;
+          _updatePageSignature(displayChannels, displayEpg);
+          if (_pageEntries.isEmpty &&
+              !_pageLoading &&
+              _pageHasMore &&
+              !isEpgBusy &&
+              !channelProvider.isLoading) {
+            Future.microtask(() {
+              if (mounted) {
+                _loadNextMatchPage();
+              }
+            });
+          }
 
-            return TabBarView(
-              children: [
-                _buildEpgDiagnosticsTab(
+          return IndexedStack(
+            index: _selectedTab,
+            children: [
+              FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: _buildEpgDiagnosticsTab(
                   context,
                   epgService,
                   channelProvider,
                   displayChannels,
                   displayEpg,
                 ),
-                _buildSystemDiagnosticsTab(
+              ),
+              FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: _buildSystemDiagnosticsTab(
                   context,
                   epgService,
                   channelProvider,
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

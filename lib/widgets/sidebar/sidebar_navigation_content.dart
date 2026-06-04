@@ -14,9 +14,7 @@ Widget _buildSidebarContent() {
                   padding: const EdgeInsets.only(top: 4, bottom: 4),
                   child: Center(
                     child: Image(
-                      image: AssetImage(_isExpanded
-                          ? 'assets/images/logo.png'
-                          : 'assets/images/logo_icon.png'),
+                      image: const AssetImage('assets/images/newrisalogo.png'),
                       height: _isExpanded ? 28 : 20,
                       filterQuality: FilterQuality.medium,
                       gaplessPlayback: true,

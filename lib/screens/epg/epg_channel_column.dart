@@ -103,8 +103,23 @@ class EpgChannelColumn extends StatelessWidget {
             onFocusCategoryAtIndex: null,
             onFocusRefresh: () => refreshButtonFocus.requestFocus(),
             onFocusPrograms: () => firstProgramFocus.requestFocus(),
-            onFocusProgramForChannel: (channel) =>
-                programFocusNodeForChannel(channel).requestFocus(),
+            onFocusProgramForChannel: (channel) {
+              final node = programFocusNodeForChannel(channel);
+              node.requestFocus();
+              // A bare requestFocus does not scroll the target into view, so if
+              // the timeline was scrolled the focused cell lands off-screen
+              // ("focus went somewhere I couldn't see"). Bring it back.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final ctx = node.context;
+                if (ctx != null) {
+                  Scrollable.ensureVisible(
+                    ctx,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                  );
+                }
+              });
+            },
             channelFocusNodeForChannel: channelFocusNodeForChannel,
             controller: sidebarController,
           ),

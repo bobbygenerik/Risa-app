@@ -4,32 +4,30 @@ import 'package:flutter/material.dart';
 enum BackdropFilterMode { auto, on, off }
 
 class AppTheme {
-  // Brand Colors (updated to match croppedlogo2.jpg dominant blue)
-  // Using deep blue from logo palette
-  static const Color primaryBlue = Color(0xFF2E3192);
-  static const Color richBlack = Color(0xFF080808); // Cinema-grade Rich Black
-  static const Color darkBackground = Color(
-      0xFF111316); // Deep charcoal base for premium TV contrast
+  // Brand colors sampled from assets/images/newrisalogo.png.
+  static const Color primaryBlue = Color(0xFF00BFF3);
+  static const Color richBlack = Color(0xFF010313);
+  static const Color darkBackground = Color(0xFF010313);
   static const Color cardBackground = Color(0x00000000); // fully transparent
   static const Color dialogBackground =
-      Color(0xFF1E1E2E); // Solid dark for dialogs/popups
+      Color(0xFF070A1F); // Solid dark for dialogs/popups
   static const Color sidebarBackground =
-      Color(0xFF111316); // Match scrim for seamless appearance
+      Color(0xFF010313); // Match logo and native splash background
   static const Color textPrimary =
       Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
   static const Color textTertiary = Color(0xFF808080);
 
   // Accent Colors
-  static const Color accentOrange = Color(0xFFFF6B35);
+  static const Color accentOrange = Color(0xFFFF7A3D);
   static const Color accentGreen = Color(0xFF4CAF50);
   static const Color accentRed = Color(0xFFE53935);
   // Brand secondary from logo tail (pinkish/reddish)
-  static const Color accentPink = Color(0xFFE61E6E);
+  static const Color accentPink = Color(0xFFFF3D9A);
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [primaryBlue, Color(0xFF2E3192)],
+    colors: [primaryBlue, Color(0xFF0B7CFF), Color(0xFF8D5CFF), accentPink],
   );
 
   // Common opacity variants
@@ -259,7 +257,7 @@ class AppTheme {
         activeTrackColor: primaryBlue,
         inactiveTrackColor: highlight,
         thumbColor: textPrimary,
-        overlayColor: Color(0x2900A8E8),
+        overlayColor: Color(0x2900BFF3),
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: primaryBlue,

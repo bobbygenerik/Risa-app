@@ -11,7 +11,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 # App colors - consistent with dark theme
-DARK_BACKGROUND = (28, 28, 30)  # #1C1C1E - main app background
+DARK_BACKGROUND = (1, 3, 19)  # #010313 - logo/app background
 
 def create_icon(size, logo_path):
     """Create app icon using the lone logo"""

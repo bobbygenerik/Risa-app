@@ -157,6 +157,8 @@ class _MainShellState extends State<MainShell> {
       },
       child: Focus(
         focusNode: _globalFocusNode,
+        canRequestFocus: false,
+        skipTraversal: true,
         onKeyEvent: _handleGlobalKeyEvent,
         child: Scaffold(
           backgroundColor: Colors.transparent,
@@ -328,11 +330,13 @@ class _MainShellState extends State<MainShell> {
                     onExpandRegistration: (_) {},
                     onExpansionChanged: (isExpanded) {
                       if (_isSidebarExpanded == isExpanded) return;
-                      // Defer to avoid setState during build.
+                      _isSidebarExpanded = isExpanded;
+                      // Defer rebuild only; keep focus guard in sync immediately.
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (!mounted) return;
                         if (_isSidebarExpanded != isExpanded) {
-                          _updateShellState(() => _isSidebarExpanded = isExpanded);
+                          _updateShellState(
+                              () => _isSidebarExpanded = isExpanded);
                         }
                       });
                     },
@@ -347,9 +351,19 @@ class _MainShellState extends State<MainShell> {
   }
 
 
+  bool _isSidebarExpandedForFocus() {
+    return _isSidebarExpanded ||
+        (_sidebarKey.currentState?.isExpanded ?? false);
+  }
+
+  bool _shouldDeferShellContentFocus() {
+    final primary = FocusManager.instance.primaryFocus;
+    return _isSidebarExpandedForFocus() ||
+        (primary != null && _isFocusInSidebar(primary));
+  }
+
   void _updateShellState(VoidCallback fn) {
     if (!mounted) return;
     setState(fn);
   }
 }
-

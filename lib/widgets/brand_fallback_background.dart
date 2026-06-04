@@ -10,12 +10,12 @@ class BrandBackgroundPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF0A1929), Color(0xFF1A2332)],
+        colors: [Color(0xFF010313), Color(0xFF070A1F)],
       ).createShader(rect);
     canvas.drawRect(rect, basePaint);
 
     final magentaPaint = Paint()
-      ..color = const Color(0xFFA23464).withValues(alpha: 0.08);
+      ..color = const Color(0xFFFF3D9A).withValues(alpha: 0.08);
     final magentaPath = Path()
       ..moveTo(size.width, size.height)
       ..lineTo(size.width, size.height * 0.4)
@@ -24,7 +24,7 @@ class BrandBackgroundPainter extends CustomPainter {
     canvas.drawPath(magentaPath, magentaPaint);
 
     final bluePaint = Paint()
-      ..color = const Color(0xFF2E6DB3).withValues(alpha: 0.15);
+      ..color = const Color(0xFF00BFF3).withValues(alpha: 0.15);
     final bluePath = Path()
       ..moveTo(0, 0)
       ..lineTo(size.width * 0.7, 0)

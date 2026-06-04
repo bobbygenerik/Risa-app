@@ -47,6 +47,14 @@ class EpgProgramIngest {
     try {
       int processed = 0;
       final yieldClock = Stopwatch()..start();
+      // Coalesce listener notifications during ingest. Each notifyListeners
+      // rebuilds the entire Live TV tree (every Selector card + per-section
+      // getCurrentProgram scans); firing it on every yield produced 100-575ms
+      // builds and GC churn on the UI isolate (measured via VM timeline). We
+      // still yield often so the isolate breathes, but notify at most ~once
+      // per notifyIntervalMs.
+      const notifyIntervalMs = 400;
+      final notifyClock = Stopwatch()..start();
       await for (final line in file
           .openRead()
           .transform(utf8.decoder)
@@ -141,7 +149,11 @@ class EpgProgramIngest {
                 processed % 1000 == 0 &&
                 yieldClock.elapsedMilliseconds >= 100)) {
           await Future.delayed(const Duration(milliseconds: 0));
-          _deps.notifyListeners();
+          if (processed == 500 ||
+              notifyClock.elapsedMilliseconds >= notifyIntervalMs) {
+            _deps.notifyListeners();
+            notifyClock.reset();
+          }
           yieldClock.reset();
         }
       }

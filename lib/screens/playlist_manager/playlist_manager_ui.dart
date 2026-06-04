@@ -205,6 +205,9 @@ extension PlaylistManagerUi on _PlaylistManagerScreenState {
             _playlistFocusNodes[prevIndex].requestFocus();
             return KeyEventResult.handled;
           }
+        } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          FocusScope.of(context).previousFocus();
+          return KeyEventResult.handled;
         } else if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {

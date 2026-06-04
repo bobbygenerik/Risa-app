@@ -1,6 +1,79 @@
 part of '../epg_diagnostic_screen.dart';
 
 extension EpgDiagnosticWidgets on _EpgDiagnosticScreenState {
+  Widget _buildDiagnosticTabButton({
+    required int index,
+    required String label,
+    required FocusNode focusNode,
+    required FocusNode neighborFocus,
+  }) {
+    final isSelected = _selectedTab == index;
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight && index == 0) {
+          neighborFocus.requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index == 1) {
+          neighborFocus.requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          setState(() => _selectedTab = index);
+          _focusPrimaryDiagnosticAction();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select) {
+          setState(() => _selectedTab = index);
+          _focusPrimaryDiagnosticAction();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedTab = index);
+              focusNode.requestFocus();
+            },
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.25)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isFocused || isSelected
+                      ? AppTheme.primaryBlue
+                      : Colors.white24,
+                  width: isFocused ? 2 : 1,
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected || isFocused
+                      ? Colors.white
+                      : Colors.white70,
+                  fontWeight:
+                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   String _formatEpgStatus(IncrementalEpgService epgService) {
     // Use the label directly if available (shows MB for chunked downloads)
     final label = epgService.epgProgressLabel;
@@ -115,35 +188,70 @@ extension EpgDiagnosticWidgets on _EpgDiagnosticScreenState {
     required String label,
     required _MatchFilter filter,
     required FocusNode focusNode,
+    FocusNode? leftFocus,
+    FocusNode? rightFocus,
   }) {
     final isSelected = _matchFilter == filter;
-    return TVFocusable(
+    return Focus(
       focusNode: focusNode,
-      onPressed: () {
-        setState(() {
-          _matchFilter = filter;
-          _resetPagedMatches();
-        });
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+            leftFocus != null) {
+          leftFocus.requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+            rightFocus != null) {
+          rightFocus.requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select) {
+          setState(() {
+            _matchFilter = filter;
+            _resetPagedMatches();
+          });
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.primaryBlue
-              : AppTheme.cardBackground.withAlpha((0.85 * 255).round()),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color:
-                isSelected ? AppTheme.primaryBlue : Colors.white.withAlpha(40),
-            width: 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white70,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          ),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _matchFilter = filter;
+            _resetPagedMatches();
+          });
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryBlue
+                    : AppTheme.cardBackground.withAlpha((0.85 * 255).round()),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isFocused || isSelected
+                      ? AppTheme.primaryBlue
+                      : Colors.white.withAlpha(40),
+                  width: isFocused ? 2 : 1,
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected || isFocused ? Colors.white : Colors.white70,
+                  fontWeight:
+                      isSelected || isFocused ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

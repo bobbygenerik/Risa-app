@@ -6,23 +6,65 @@ class _DeviceMemoryInfo {
 }
 
 Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
-  try {
-    if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
+  // Supported Android targets are API 26+; avoid a getprop subprocess on every cold start.
+  return _DeviceMemoryInfo(isLowMemory: false);
+}
 
-    // Simple heuristic: assume low memory if running on older Android (pre-8.0).
-    // Shield TV devices (2–3 GB RAM) are NOT low-memory and should not be
-    // treated as such — the old override was degrading artwork loading on one
-    // of the most common IPTV devices.
-    if (Platform.isAndroid) {
-      final info = await Process.run('getprop', ['ro.build.version.sdk']);
-      final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
-      return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
+void _configureImageCacheLimits(_DeviceMemoryInfo memoryInfo) {
+  ImageFailureCache.setAggressiveMode(memoryInfo.isLowMemory);
+  if (memoryInfo.isLowMemory) {
+    PaintingBinding.instance.imageCache.maximumSize = 80;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20;
+    StartupProbe.mark('Image cache limits configured (LOW MEMORY)');
+    PaintingBinding.instance.imageCache.clear();
+    try {
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    } catch (e) {
+      debugLog('main: clearLiveImages failed: $e');
     }
-
-    return _DeviceMemoryInfo(isLowMemory: false);
-  } catch (e) {
-    return _DeviceMemoryInfo(isLowMemory: false);
+    StartupProbe.mark('Low-memory image cache cleanup completed');
+  } else {
+    PaintingBinding.instance.imageCache.maximumSize = 150;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20;
+    StartupProbe.mark('Image cache limits configured (NORMAL)');
   }
+}
+
+/// Heavy startup work deferred until after the first Flutter frame (native splash dismisses).
+Future<void> _completeDeferredStartup() async {
+  StartupProbe.mark('Deferred startup begin');
+  unawaited(CrashLogger.instance.init());
+
+  final memoryInfo = await _getDeviceMemoryInfo();
+  _configureImageCacheLimits(memoryInfo);
+
+  await SSLHandler.init();
+  StartupProbe.mark('SSL handler configured');
+
+  HttpClientService().initialize();
+  StartupProbe.mark('HTTP client service initialized');
+
+  if (!kIsWeb && Platform.isAndroid) {
+    TVFocusHelper.setIsAndroidTV(true);
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    StartupProbe.mark('Preferred orientations locked (Android)');
+  }
+
+  _ensureMediaKitIfNeeded();
+  initializeSqliteForPlatform();
+  StartupProbe.mark('SQLite platform initialized');
+
+  StartupProbe.mark('Deferred startup complete');
+}
+
+/// media_kit + libmpv are bundled for Linux desktop only (see media_kit_libs_linux).
+void _ensureMediaKitIfNeeded() {
+  if (kIsWeb || !Platform.isLinux) return;
+  MediaKit.ensureInitialized();
+  StartupProbe.mark('MediaKit initialized (Linux)');
 }
 
 /// Single compiled RegExp for error suppression — O(1) amortized instead of

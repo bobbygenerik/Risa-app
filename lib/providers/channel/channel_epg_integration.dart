@@ -65,6 +65,8 @@ class ChannelEpgIntegration {
   ChannelEpgIntegration(this.deps);
 
   final ChannelEpgIntegrationDeps deps;
+  bool _epgRefreshPending = false;
+  bool _epgRefreshForce = false;
 
   static const String epgMapSignaturePrefix = 'epg_map_signature_';
   static const String epgMapCountPrefix = 'epg_map_count_';
@@ -193,11 +195,26 @@ class ChannelEpgIntegration {
   void scheduleEpgRefresh({bool forceRefresh = false}) {
     final service = deps.getEpgService();
     if (service == null) return;
+    if (forceRefresh) {
+      _epgRefreshForce = true;
+    }
     if (service.isLoading || service.isDownloading || service.isParsing) {
+      _epgRefreshPending = true;
+      debugLog('ChannelProvider: EPG refresh queued (service busy)');
       return;
     }
 
-    unawaited(service.initialize(forceRefresh: forceRefresh).catchError((e) {
+    final force = forceRefresh || _epgRefreshForce;
+    _epgRefreshPending = false;
+    _epgRefreshForce = false;
+
+    unawaited(service.initialize(forceRefresh: force).whenComplete(() {
+      if (!_epgRefreshPending) return;
+      _epgRefreshPending = false;
+      final retryForce = _epgRefreshForce;
+      _epgRefreshForce = false;
+      scheduleEpgRefresh(forceRefresh: retryForce);
+    }).catchError((e) {
       debugLog('ChannelProvider: EPG refresh failed: $e');
     }));
   }

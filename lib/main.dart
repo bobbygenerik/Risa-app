@@ -86,62 +86,10 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       installLinuxKeyboardWorkarounds();
       StartupProbe.mark('Flutter bindings initialized');
-      MediaKit.ensureInitialized();
-      StartupProbe.mark('MediaKit initialized');
-      initializeSqliteForPlatform();
-      StartupProbe.mark('SQLite platform initialized');
-      unawaited(CrashLogger.instance.init());
 
-      // Initialize centralized image cache configuration
       ImageCacheConfig.initialize();
       StartupProbe.mark('Image cache config initialized');
-
-      // Optimize image cache for IPTV with conservative but functional limits
-      final memoryInfo = await _getDeviceMemoryInfo();
-      ImageFailureCache.setAggressiveMode(memoryInfo.isLowMemory);
-      if (memoryInfo.isLowMemory) {
-        // Balanced cache for Shield/low-memory devices
-        PaintingBinding.instance.imageCache.maximumSize = 80;
-        PaintingBinding.instance.imageCache.maximumSizeBytes =
-            100 << 20; // 100MB
-        StartupProbe.mark('Image cache limits configured (SHIELD/LOW MEMORY)');
-      } else {
-        PaintingBinding.instance.imageCache.maximumSize = 150;
-        PaintingBinding.instance.imageCache.maximumSizeBytes =
-            200 << 20; // 200MB
-        StartupProbe.mark('Image cache limits configured (NORMAL)');
-      }
-
-      // Cleanup for low-memory/Shield devices
-      if (memoryInfo.isLowMemory) {
-        // Clear any existing image cache
-        PaintingBinding.instance.imageCache.clear();
-        try {
-          PaintingBinding.instance.imageCache.clearLiveImages();
-        } catch (e) {
-          debugLog('main: clearLiveImages failed: $e');
-        }
-        StartupProbe.mark('Shield memory cleanup completed');
-      }
-
-      // Initialize SSL handler for IPTV providers with certificate issues
-      await SSLHandler.init();
       HttpOverrides.global = IPTVHttpOverrides();
-      StartupProbe.mark('SSL handler configured');
-
-      // Initialize HTTP client service with connection pooling
-      HttpClientService().initialize();
-      StartupProbe.mark('HTTP client service initialized');
-
-      // Always lock landscape orientation on Android devices.
-      if (!kIsWeb && Platform.isAndroid) {
-        TVFocusHelper.setIsAndroidTV(true);
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]);
-        StartupProbe.mark('Preferred orientations locked (Android)');
-      }
 
       FlutterError.onError = (FlutterErrorDetails details) {
         final errorStr = details.exception.toString();
@@ -182,9 +130,11 @@ void main() {
         return true;
       };
 
-      // Launch main app directly without startup progress widget
-      StartupProbe.mark('Launching main app directly');
+      StartupProbe.mark('Launching main app (first frame priority)');
       runApp(const MyApp());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_completeDeferredStartup());
+      });
     },
     (error, stack) {
       // Optionally log error to a service

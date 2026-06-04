@@ -10,8 +10,8 @@ class LiveTvFocusCache {
   final Map<String, FocusNode> _nodes = {};
   final Queue<String> _order = Queue<String>();
 
-  FocusNode nodeForCard(String sectionKey, Channel channel, int index) {
-    final key = keyFor(sectionKey, channel, index);
+  FocusNode nodeForCard(String sectionKey, Channel channel) {
+    final key = keyFor(sectionKey, channel);
     final existing = _nodes[key];
     if (existing != null) return existing;
 
@@ -28,8 +28,12 @@ class LiveTvFocusCache {
 
   FocusNode? nodeForKey(String key) => _nodes[key];
 
-  String keyFor(String sectionKey, Channel channel, int index) {
-    return '$sectionKey|${channel.epgLookupId}|$index';
+  // Keyed by stable channel identity, not list position. The filtered channel
+  // list grows/reorders as EPG streams in; an index-based key reassigned a
+  // channel's FocusNode whenever its slot shifted, so D-pad focus visibly
+  // jumped to whatever channel landed on the old index.
+  String keyFor(String sectionKey, Channel channel) {
+    return '$sectionKey|${channel.id}';
   }
 
   void dispose() {

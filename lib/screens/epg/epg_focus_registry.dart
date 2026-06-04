@@ -43,7 +43,11 @@ class EpgFocusNodeRegistry {
     if (index == 0) {
       return _firstChannelFocus;
     }
-    final key = '${_focusKeyForChannel(channel)}_$index';
+    // Key by stable channel identity, not list position. The grid's left-arrow
+    // returns focus via this map; an index-based key handed back a stale/foreign
+    // node whenever the channel list shifted during EPG load, sending focus to
+    // an off-screen or wrong row.
+    final key = _focusKeyForChannel(channel);
     final existing = _channelFocusNodes[key];
     if (existing != null) return existing;
     final node = FocusNode(debugLabel: 'EPGChannel:$key');

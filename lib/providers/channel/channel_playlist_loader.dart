@@ -157,6 +157,7 @@ class ChannelPlaylistLoader {
           'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)',
         );
         await prefs.setString('epg_url', epgUrl);
+        await prefs.setString('custom_epg_url', epgUrl);
         if (deps.getEpgService() != null) {
           debugLog(
             'ChannelProvider: Initializing EPG service with URL from M3U',

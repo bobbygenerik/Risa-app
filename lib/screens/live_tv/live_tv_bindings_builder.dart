@@ -64,10 +64,11 @@ class LiveTvBindingsBuilder {
         userHasScrolled: deps.userHasScrolled,
         isMounted: isMounted,
       ),
-      onCardFocusChanged: (key, idx, epgId, hasFocus) {
+      onCardFocusChanged: (key, idx, channelId, hasFocus) {
         if (hasFocus) {
           deps.focusedIndexBySection[key] = idx;
-          deps.lastFocusedCardKey = '$key|$epgId|$idx';
+          // Must match LiveTvFocusCache.keyFor so focus restore finds the node.
+          deps.lastFocusedCardKey = '$key|$channelId';
         } else if (deps.focusedIndexBySection[key] == idx) {
           deps.focusedIndexBySection[key] = -1;
         }

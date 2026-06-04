@@ -43,6 +43,7 @@ class SettingsLayout extends StatefulWidget {
 class _SettingsLayoutState extends State<SettingsLayout> {
   final List<FocusNode> _menuFocusNodes = [];
   bool _menuFocusRecoveryScheduled = false;
+  bool _initialMenuFocusEstablished = false;
 
   @override
   void initState() {
@@ -51,7 +52,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     for (int i = 0; i < widget.categories.length; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu_$i'));
     }
-    _scheduleMenuFocusRecovery(force: widget.autoFocusOnShow);
+    _scheduleMenuFocusRecovery(forInitialShow: widget.autoFocusOnShow);
     widget.controller?._bind(requestMenuFocus);
   }
 
@@ -94,7 +95,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     }
   }
 
-  void _scheduleMenuFocusRecovery({bool force = false, int attempt = 0}) {
+  void _scheduleMenuFocusRecovery({bool forInitialShow = false, int attempt = 0}) {
     if (attempt == 0) {
       if (_menuFocusRecoveryScheduled) return;
       _menuFocusRecoveryScheduled = true;
@@ -104,28 +105,42 @@ class _SettingsLayoutState extends State<SettingsLayout> {
         _menuFocusRecoveryScheduled = false;
         return;
       }
+
+      // Never yank focus back to the menu after the user moved into content.
+      if (_initialMenuFocusEstablished && !forInitialShow) {
+        _menuFocusRecoveryScheduled = false;
+        return;
+      }
+
       final selected = widget.selectedIndex < _menuFocusNodes.length
           ? _menuFocusNodes[widget.selectedIndex]
           : null;
-      // Success: the intended menu item holds focus, so we have a dpad anchor.
       if (selected != null && selected.hasFocus) {
+        _initialMenuFocusEstablished = true;
         _menuFocusRecoveryScheduled = false;
         return;
       }
+
       final primaryFocus = FocusManager.instance.primaryFocus;
       final hasFocusedContext = primaryFocus?.context != null;
-      // When not forcing, don't yank focus away from content the user moved to.
-      if (!force && hasFocusedContext) {
+      if (!forInitialShow && hasFocusedContext) {
         _menuFocusRecoveryScheduled = false;
         return;
       }
+
       requestMenuFocus();
-      // The initial request can drop while the route transition is still
-      // animating (primaryFocus stays null and the dpad has nothing to move
-      // from). Retry over a few frames until focus actually lands.
-      if (attempt < 8) {
-        _scheduleMenuFocusRecovery(force: force, attempt: attempt + 1);
+
+      if (forInitialShow &&
+          attempt < 8 &&
+          (primaryFocus?.context == null || selected?.hasFocus != true)) {
+        _scheduleMenuFocusRecovery(
+          forInitialShow: true,
+          attempt: attempt + 1,
+        );
       } else {
+        if (selected?.hasFocus == true) {
+          _initialMenuFocusEstablished = true;
+        }
         _menuFocusRecoveryScheduled = false;
       }
     });
@@ -290,12 +305,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
             return KeyEventResult.handled;
           }
         } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          // Pass focus to content area - use explicit target when available
           if (widget.onRequestContentFocus != null) {
             widget.onRequestContentFocus!();
           } else {
             FocusScope.of(context).nextFocus();
           }
+          _initialMenuFocusEstablished = true;
           return KeyEventResult.handled;
         } else if (event.logicalKey == LogicalKeyboardKey.goBack) {
           if (widget.onBackToHome != null) {

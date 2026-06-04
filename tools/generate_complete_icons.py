@@ -8,7 +8,7 @@ import os
 import sys
 
 # App colors - consistent with dark theme
-DARK_BACKGROUND = (28, 28, 30)  # #1C1C1E - main app background
+DARK_BACKGROUND = (1, 3, 19)  # #010313 - logo/app background
 
 # Get project root directory
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

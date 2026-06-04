@@ -10,6 +10,7 @@ class HorizontalChannelRow extends StatefulWidget {
   final double cardWidth;
   final VoidCallback? onLoadMore;
   final String sectionKey;
+  final Key Function(int index)? itemKey;
 
   const HorizontalChannelRow({
     super.key,
@@ -21,6 +22,7 @@ class HorizontalChannelRow extends StatefulWidget {
     required this.cardWidth,
     required this.sectionKey,
     this.onLoadMore,
+    this.itemKey,
   });
 
   @override
@@ -78,7 +80,8 @@ class _HorizontalChannelRowState extends State<HorizontalChannelRow> {
               true, // Keep cards alive to avoid image flicker
           itemBuilder: (context, index) {
             return KeyedSubtree(
-              key: ValueKey('${widget.sectionKey}_item_$index'),
+              key: widget.itemKey?.call(index) ??
+                  ValueKey('${widget.sectionKey}_item_$index'),
               child: widget.itemBuilder(context, index),
             );
           },

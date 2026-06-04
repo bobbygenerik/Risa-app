@@ -97,6 +97,7 @@ extension EpgDiagnosticEpgTab on _EpgDiagnosticScreenState {
                           SizedBox(
                             width: 140,
                             child: BrandPrimaryButton(
+                              focusNode: _fullScanFocus,
                               onPressed: () {
                                 if (_fullScanInFlight) return;
                                 unawaited(_runFullScan());
@@ -390,16 +391,20 @@ extension EpgDiagnosticEpgTab on _EpgDiagnosticScreenState {
                         label: 'All',
                         filter: _MatchFilter.all,
                         focusNode: _chipFocusNodes[0],
+                        rightFocus: _chipFocusNodes[1],
                       ),
                       _buildMatchFilterChip(
                         label: 'Matched',
                         filter: _MatchFilter.matched,
                         focusNode: _chipFocusNodes[1],
+                        leftFocus: _chipFocusNodes[0],
+                        rightFocus: _chipFocusNodes[2],
                       ),
                       _buildMatchFilterChip(
                         label: 'Unmatched',
                         filter: _MatchFilter.unmatched,
                         focusNode: _chipFocusNodes[2],
+                        leftFocus: _chipFocusNodes[1],
                       ),
                     ],
                   ),

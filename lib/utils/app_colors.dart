@@ -18,15 +18,15 @@ class AppColors {
   static const Color info = AppTheme.primaryBlue;
 
   // UI element colors
-  static const Color border = Color(0xFF2A2A2A);
-  static const Color borderLight = Color(0xFF404040);
+  static const Color border = Color(0xFF18203A);
+  static const Color borderLight = Color(0xFF29345C);
   static const Color overlay = Color(0x80000000);
   static const Color overlayLight = Color(0x40000000);
 
   // Card and container colors
-  static const Color cardDark = Color(0xFF1E1E2E);
-  static const Color cardMedium = Color(0xFF2A2A3E);
-  static const Color cardLight = Color(0xFF404040);
+  static const Color cardDark = Color(0xFF070A1F);
+  static const Color cardMedium = Color(0xFF0D1230);
+  static const Color cardLight = Color(0xFF1A2446);
 
   // Progress and loading colors
   static const Color progressBackground = Color(0x4DFFFFFF);
@@ -47,21 +47,21 @@ class AppColors {
   static const Color badgeError = Colors.red;
 
   // EPG specific colors
-  static const Color epgLive = Color(0xFF4A4FC9);
+  static const Color epgLive = Color(0xFF0B7CFF);
   static const Color epgCatchup = Color(0xFFCC5A2D);
-  static const Color epgBackground = Color(0x662A2A3E);
+  static const Color epgBackground = Color(0x660D1230);
 
   // Gradient backgrounds
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2A2A3E), Color(0xFF1A1A2E), AppTheme.cardBackground],
+    colors: [Color(0xFF0D1230), Color(0xFF070A1F), AppTheme.cardBackground],
   );
 
   static const LinearGradient channelCardFallbackGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF22609B), Color(0xFFA23464)],
+    colors: [Color(0xFF00BFF3), Color(0xFFFF3D9A)],
   );
 
   static const BoxDecoration channelCardFallbackDecoration = BoxDecoration(
@@ -71,7 +71,7 @@ class AppColors {
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A1A2E), AppTheme.darkBackground],
+    colors: [Color(0xFF070A1F), AppTheme.darkBackground],
   );
 
   static const LinearGradient fadeGradient = LinearGradient(

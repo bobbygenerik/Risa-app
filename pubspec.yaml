@@ -81,12 +81,12 @@ flutter:
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
-  image_path: "assets/images/risalogo.png"
-  # Match app dark theme background for adaptive icon
-  adaptive_icon_background: "#1C1C1E"
-  adaptive_icon_foreground: "assets/images/risalogo.png"
+  image_path: "assets/images/newrisalogo.png"
+  # Match the real logo background.
+  adaptive_icon_background: "#010313"
+  adaptive_icon_foreground: "assets/images/newrisalogo.png"
   web:
     generate: true
-    image_path: "assets/images/risalogo.png"
-    background_color: "#1C1C1E"
-    theme_color: "#1C1C1E"
+    image_path: "assets/images/newrisalogo.png"
+    background_color: "#010313"
+    theme_color: "#010313"

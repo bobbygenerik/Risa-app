@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate all Risa brand images from assets/images/risalogo.png."""
+"""Regenerate all Risa brand images from assets/images/newrisalogo.png."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from PIL import Image
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(SCRIPT_DIR)
-SRC = os.path.join(ROOT, "assets", "images", "risalogo.png")
+SRC = os.path.join(ROOT, "assets", "images", "newrisalogo.png")
 ASSETS = os.path.join(ROOT, "assets", "images")
 ANDROID_RES = os.path.join(ROOT, "android", "app", "src", "main", "res")
-DARK = (28, 28, 30, 255)
+DARK = (1, 3, 19, 255)
 
 
 def load_source() -> Image.Image:
@@ -73,14 +73,6 @@ def main() -> None:
     print(f"Source: {SRC}")
     logo = load_source()
 
-    print("Flutter assets...")
-    save_png(fit_on_canvas(logo, 1024, padding_ratio=0.08), os.path.join(ASSETS, "logo.png"))
-    icon_src = center_crop_square(logo)
-    save_png(
-        fit_on_canvas(icon_src, 1024, padding_ratio=0.06),
-        os.path.join(ASSETS, "logo_icon.png"),
-    )
-
     print("Android...")
     save_png(
         compose_banner(logo, 320, 180),
@@ -90,8 +82,9 @@ def main() -> None:
         compose_banner(logo, 1024, 576),
         os.path.join(ANDROID_RES, "drawable", "croppedlogo2.jpg"),
     )
+    # Small splash bitmap — shown until Flutter's first frame; keep it light.
     save_png(
-        fit_on_canvas(logo, 1024, padding_ratio=0.1),
+        compose_banner(logo, 640, 360),
         os.path.join(ANDROID_RES, "drawable-nodpi", "launch_image.png"),
     )
 
@@ -161,6 +154,8 @@ def main() -> None:
     save_png(compose_banner(logo, 1280, 100), os.path.join(roku, "screensaver_title.png"))
 
     legacy_assets = [
+        os.path.join(ASSETS, "logo.png"),
+        os.path.join(ASSETS, "logo_icon.png"),
         os.path.join(ASSETS, "RISA-logo.png"),
         os.path.join(ASSETS, "RISA-logo-upscaled.png"),
     ]

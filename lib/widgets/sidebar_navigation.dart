@@ -105,7 +105,18 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       _activeTabIndex = newIndex;
 
       _setExpanded(false, defer: true);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
+      // The route just changed, so we re-seat focus on the active tab as a
+      // fallback. That focus is programmatic — it must not trip the
+      // onFocusChange auto-expand, or navigating away would leave the sidebar
+      // open whenever content isn't focusable yet (e.g. mid EPG load).
+      _suppressAutoExpandOnInitialFocus = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focusActiveTab();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _suppressAutoExpandOnInitialFocus = false;
+        });
+      });
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
         widget.onNavFocusRegistration != null) {
@@ -133,17 +144,27 @@ class SidebarNavigationState extends State<SidebarNavigation> {
 
   void _setExpanded(bool value, {bool defer = false}) {
     if (_isExpanded == value) return;
+    final preserveIndex = _activeTabIndex.clamp(0, _tabs.length - 1);
+    void apply() {
+      if (!mounted || _isExpanded == value) return;
+      _updateSidebarState(() => _isExpanded = value);
+      widget.onExpansionChanged?.call(value);
+      if (value) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final node = _tabFocusNodes[preserveIndex];
+          if (!node.hasFocus && node.canRequestFocus) {
+            node.requestFocus();
+          }
+        });
+      }
+    }
+
     if (defer) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_isExpanded == value) return;
-        _updateSidebarState(() => _isExpanded = value);
-        widget.onExpansionChanged?.call(value);
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => apply());
       return;
     }
-    _updateSidebarState(() => _isExpanded = value);
-    widget.onExpansionChanged?.call(value);
+    apply();
   }
 
   void _expandSidebar() {
@@ -210,11 +231,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
 
   void _navigateToTab(int targetIndex) {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _tabFocusNodes[targetIndex].requestFocus();
-    });
+    _tabFocusNodes[targetIndex].requestFocus();
   }
 
   @override
