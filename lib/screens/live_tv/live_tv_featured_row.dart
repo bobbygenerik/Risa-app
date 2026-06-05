@@ -30,8 +30,17 @@ class LiveTvFeaturedRow extends StatefulWidget {
 }
 
 class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
+  static const int _targetFeaturedCount = 10;
+  // Retry budget: EPG can stay in a loading/parsing state for a long time on
+  // cold start (on-demand channel loads + secondary merge), so we cannot wait
+  // for an "EPG ready" signal — it may never arrive. Instead we accumulate
+  // cards across retries and latch once we hit the target or exhaust the
+  // budget (~25 * 400ms ≈ 10s).
+  static const int _maxRetries = 25;
+
   bool _initialized = false;
   bool _computeScheduled = false;
+  int _retries = 0;
   List<Channel> _stableChannels = [];
   // Fixed per-session seed so retry passes evaluate fallback channels in the
   // same order — cards fill in as EPG warms up instead of reshuffling.
@@ -88,7 +97,11 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
     final epgService = context.read<IncrementalEpgService>();
     final mostWatched = channelProvider.mostWatchedChannels;
 
-    final featuredChannels = <Channel>[];
+    // Accumulate across retries: seed with channels already chosen so the row
+    // only ever grows toward the target. This prevents the visible card count
+    // from regressing (e.g. 10 -> 3) as "current program" results shift while
+    // EPG keeps warming up.
+    final featuredChannels = <Channel>[..._stableChannels];
     final addedChannelIds = <String>{};
     final featuredProgramTitles = <String>{};
     final missingChannelIds = <String>{};
@@ -102,8 +115,24 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
         .toSet();
     addedChannelIds.addAll(continueWatchingIds);
 
+    // Register already-chosen channels (and their current program titles) so
+    // they are not re-added and so title dedup still holds across retries.
+    for (final channel in _stableChannels) {
+      addedChannelIds.add(channel.epgLookupId);
+      final program = epgService.getCurrentProgram(
+        channel.epgLookupId,
+        channelName: channel.epgLookupNameFallback,
+        groupTitle: channel.groupTitle,
+      );
+      if (program != null) {
+        featuredProgramTitles.add(LiveTvFormatters.normalizeTitleForFilter(
+            widget.artworkResolver.displayProgramTitle(program, channel)));
+      }
+    }
+
     final maxMostWatched = math.min(mostWatched.length, 6);
     for (var i = 0; i < maxMostWatched; i++) {
+      if (featuredChannels.length >= _targetFeaturedCount) break;
       final channel = mostWatched[i];
       final channelId = channel.epgLookupId;
       if (addedChannelIds.contains(channelId)) continue;
@@ -149,8 +178,7 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
         .toList();
     availableChannels.shuffle(math.Random(_shuffleSeed));
 
-    const targetFeaturedCount = 10;
-    final remainingSlots = targetFeaturedCount - featuredChannels.length;
+    final remainingSlots = _targetFeaturedCount - featuredChannels.length;
     final randomCount = math.min(remainingSlots, availableChannels.length);
 
     for (var i = 0; i < randomCount; i++) {
@@ -189,7 +217,7 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
 
       featuredChannels.add(channel);
       addedChannelIds.add(channelId);
-      if (featuredChannels.length >= targetFeaturedCount) break;
+      if (featuredChannels.length >= _targetFeaturedCount) break;
     }
 
     if (missingChannelIds.isNotEmpty) {
@@ -206,17 +234,24 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
 
     if (!mounted) return;
 
-    final epgReady = !epgService.isLoading &&
-        !epgService.isParsing &&
-        !epgService.isDownloading;
+    _retries++;
+    final reachedTarget = featuredChannels.length >= _targetFeaturedCount;
+    final budgetExhausted = _retries >= _maxRetries;
     setState(() {
       _stableChannels = List<Channel>.from(featuredChannels);
-      _initialized = featuredChannels.length >= 5 && epgReady;
+      // Latch once we have a full row, or once the retry budget runs out (so
+      // we settle on the best-so-far rather than recomputing forever, since
+      // EPG may never report "ready"). Require at least one card to latch.
+      _initialized =
+          (reachedTarget || budgetExhausted) && featuredChannels.isNotEmpty;
     });
+    debugLog(
+        'LiveTV Featured: compute -> cards=${featuredChannels.length} '
+        'retries=$_retries initialized=$_initialized '
+        'missing=${missingChannelIds.length}');
 
-    // If EPG programs weren't broadly in memory yet, the row may have latched
-    // onto only the handful of channels that had a current program. Retry
-    // shortly so cards fill in as EPG warms up, instead of freezing on one card.
+    // Not full yet and still within budget: retry shortly so cards accumulate
+    // as EPG programs land in memory, instead of freezing on a partial row.
     if (!_initialized && mounted) {
       Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted && !_initialized) _computeFeaturedChannels();
