@@ -275,10 +275,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Don't reclaim card focus while the nav rail is expanded — the user has
+    // moved to the sidebar, and the kept-alive rebuilds would otherwise steal
+    // focus back to the cards during a transient-null frame.
+    final navExpanded =
+        ContentFocusProvider.maybeOf(context)?.isNavExpanded ?? false;
     LiveTvFocusActions.restoreCardFocusIfMissing(
       lastFocusedCardKey: _deps.lastFocusedCardKey,
       cardFocusCache: _deps.cardFocusCache,
       isMounted: () => mounted,
+      suppress: navExpanded,
     );
     final shouldScrollFirst =
         LiveTvScrollNavigation.shouldScrollToTopFirst(_deps.scrollController);

@@ -259,15 +259,14 @@ Widget _buildSidebarRow({
   final row = Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      // Cursor accent bar on the leading edge. Use white (not brand blue) so
-      // the focus cursor never reads the same as the active-route blue.
+      // Cursor accent bar on the leading edge.
       AnimatedContainer(
         duration: SidebarNavigationState._focusDuration,
         curve: TVFocusStyle.animationCurve,
         width: 4,
         height: 32,
         decoration: BoxDecoration(
-          color: isFocused ? Colors.white : Colors.transparent,
+          color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
           borderRadius: const BorderRadius.only(
             topRight: Radius.circular(4),
             bottomRight: Radius.circular(4),

@@ -10,7 +10,16 @@ class LiveTvFocusActions {
     required String? lastFocusedCardKey,
     required LiveTvFocusCache cardFocusCache,
     required bool Function() isMounted,
+    bool suppress = false,
   }) {
+    // The Live TV screen is kept alive and rebuilds constantly during cold
+    // start (featured-row retry, 2s category reloads). Each rebuild posts this
+    // restore, which grabs a card whenever primaryFocus is momentarily null.
+    // If the user has moved to the sidebar, that transient-null window let the
+    // restore yank focus back to the cards ~a couple seconds later. When the
+    // nav rail owns focus (suppress), never reclaim — the rail is the user's
+    // current location.
+    if (suppress) return;
     if (lastFocusedCardKey == null) return;
     final node = cardFocusCache.nodeForKey(lastFocusedCardKey);
     if (node == null || !node.canRequestFocus) return;

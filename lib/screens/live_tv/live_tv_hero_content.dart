@@ -102,10 +102,19 @@ class LiveTvHeroContent extends StatelessWidget {
 
             ImageLoadProbe.recordAttempt(normalizedHeroUrl, 'hero_image');
             final dpr = MediaQuery.of(context).devicePixelRatio;
-            final cacheWidth =
-                math.min(2500, (constraints.maxWidth * dpr).round());
+            // Decode to the actual rendered footprint, not the full viewport.
+            // The backdrop only occupies the right 82% of the width (see the
+            // FractionallySizedBox below), and the top/bottom ~26% is painted
+            // over by _verticalFade + the parent scrim. Decoding at 2500x1500
+            // forced a ~14MB bitmap decode right at the rotation crossfade,
+            // which is what dropped frames ("laggy sometimes" = cache miss /
+            // GC). Sizing to the rendered area cuts decode cost ~3-4x while
+            // staying above the on-screen pixel count, so there's no visible
+            // quality loss on a 1080p panel.
+            final renderWidth = constraints.maxWidth * 0.82;
+            final cacheWidth = math.min(1600, (renderWidth * dpr).round());
             final cacheHeight =
-                math.min(1500, (constraints.maxHeight * dpr).round());
+                math.min(900, (constraints.maxHeight * dpr).round());
 
             // Full-bleed art. The soft left-edge fade is provided by the parent
             // scrim in LiveTvFullScreenHero (solid darkBackground over the left
