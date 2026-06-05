@@ -73,53 +73,75 @@ extension EpgFileCacheSecondary on EpgFileCache {
 
     debugLog('EPG: Downloading secondary EPG...');
     final downloadStart = DateTime.now();
+    // dragtvplus-style providers behind Cloudflare return intermittent 5xx
+    // (520) and occasional HTML error bodies. A single miss must not blank US
+    // locals for the whole session, so retry transient failures with backoff
+    // while still failing fast on permanent errors (4xx auth/not-found).
+    const maxAttempts = 3;
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 90)
       ..autoUncompress = false
       ..badCertificateCallback = (cert, host, port) => true;
 
     try {
-      final request = await client.getUrl(Uri.parse(normalizedUrl));
-      request.headers.set(
-        'User-Agent',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      );
-      request.headers.add('Accept-Encoding', 'gzip, deflate');
-      final response = await request.close();
-      if (response.statusCode != 200) {
-        debugLog('EPG: Secondary fetch failed: HTTP ${response.statusCode}');
-        return lastDownloadTime;
-      }
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (attempt > 1) {
+          await Future.delayed(Duration(seconds: 2 * (attempt - 1)));
+          debugLog('EPG: Secondary download retry $attempt/$maxAttempts...');
+        }
+        try {
+          final request = await client.getUrl(Uri.parse(normalizedUrl));
+          request.headers.set(
+            'User-Agent',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          );
+          request.headers.add('Accept-Encoding', 'gzip, deflate');
+          final response = await request.close();
+          if (response.statusCode != 200) {
+            await response.drain<void>().catchError((_) {});
+            debugLog(
+                'EPG: Secondary fetch failed: HTTP ${response.statusCode}');
+            // 5xx is transient (Cloudflare 520 etc.); 4xx is permanent.
+            if (response.statusCode >= 500 && attempt < maxAttempts) continue;
+            return lastDownloadTime;
+          }
 
-      final file = await getSecondaryCacheFile();
-      final streamError = await _writeEpgResponseToFile(
-        response: response,
-        file: file,
-        epgUrl: normalizedUrl,
-        contentLength: response.contentLength,
-        onProgress: (_, {label}) {},
-      );
-      if (streamError != null) {
-        debugLog('EPG: Secondary download body error: $streamError');
-        if (await file.exists()) await file.delete();
-        return lastDownloadTime;
-      }
+          final file = await getSecondaryCacheFile();
+          final streamError = await _writeEpgResponseToFile(
+            response: response,
+            file: file,
+            epgUrl: normalizedUrl,
+            contentLength: response.contentLength,
+            onProgress: (_, {label}) {},
+          );
+          if (streamError != null) {
+            debugLog('EPG: Secondary download body error: $streamError');
+            if (await file.exists()) await file.delete();
+            // A 200 with an HTML/empty body is usually a transient edge error.
+            if (attempt < maxAttempts) continue;
+            return lastDownloadTime;
+          }
 
-      final validationError = await _epgValidateDownloadedFile(file);
-      if (validationError != null) {
-        debugLog('EPG: Secondary validation failed: $validationError');
-        if (await file.exists()) await file.delete();
-        return lastDownloadTime;
-      }
+          final validationError = await _epgValidateDownloadedFile(file);
+          if (validationError != null) {
+            debugLog('EPG: Secondary validation failed: $validationError');
+            if (await file.exists()) await file.delete();
+            if (attempt < maxAttempts) continue;
+            return lastDownloadTime;
+          }
 
-      final now = DateTime.now();
-      await prefs.setString(secondaryCacheTimeKey, now.toIso8601String());
-      await prefs.setString(secondaryCacheUrlKey, normalizedUrl);
-      debugLog(
-          'EPG: Secondary download complete (${(await file.length()) ~/ 1024} KB, ${DateTime.now().difference(downloadStart).inMilliseconds}ms)');
-      return now;
-    } catch (e) {
-      debugLog('EPG: Secondary download failed: $e');
+          final now = DateTime.now();
+          await prefs.setString(secondaryCacheTimeKey, now.toIso8601String());
+          await prefs.setString(secondaryCacheUrlKey, normalizedUrl);
+          debugLog(
+              'EPG: Secondary download complete (${(await file.length()) ~/ 1024} KB, ${DateTime.now().difference(downloadStart).inMilliseconds}ms)');
+          return now;
+        } catch (e) {
+          debugLog('EPG: Secondary download attempt $attempt failed: $e');
+          if (attempt < maxAttempts) continue;
+          return lastDownloadTime;
+        }
+      }
       return lastDownloadTime;
     } finally {
       client.close();

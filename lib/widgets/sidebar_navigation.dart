@@ -151,9 +151,17 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       widget.onExpansionChanged?.call(value);
       if (value) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
+          if (!mounted || !_isExpanded) return;
+          // Land focus on the active tab whenever focus is not already on one
+          // of the rail's nodes. Previously we only checked the single
+          // preserveIndex node, so if focus had drifted off the rail entirely
+          // (e.g. expand triggered programmatically while primaryFocus was
+          // null or on a disposed content node) nothing reclaimed it and the
+          // rail expanded with no visible cursor.
           final node = _tabFocusNodes[preserveIndex];
-          if (!node.hasFocus && node.canRequestFocus) {
+          final focusOnRail =
+              _tabFocusNodes.any((n) => n.hasFocus) || _settingsFocusNode.hasFocus;
+          if (!focusOnRail && node.canRequestFocus) {
             node.requestFocus();
           }
         });

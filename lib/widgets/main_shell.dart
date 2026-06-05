@@ -330,15 +330,10 @@ class _MainShellState extends State<MainShell> {
                     onExpandRegistration: (_) {},
                     onExpansionChanged: (isExpanded) {
                       if (_isSidebarExpanded == isExpanded) return;
-                      _isSidebarExpanded = isExpanded;
-                      // Defer rebuild only; keep focus guard in sync immediately.
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        if (_isSidebarExpanded != isExpanded) {
-                          _updateShellState(
-                              () => _isSidebarExpanded = isExpanded);
-                        }
-                      });
+                      // setState updates the field synchronously (keeping the
+                      // focus guard in sync) and schedules a rebuild so the
+                      // sidebar scrim animates in/out.
+                      _updateShellState(() => _isSidebarExpanded = isExpanded);
                     },
                   ),
                 ),
