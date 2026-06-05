@@ -97,6 +97,10 @@ Future<Map<String, dynamic>> parseEpgInIsolate(
   final allowedList = (args['allowedChannels'] as List<dynamic>? ?? const [])
       .map((e) => e.toString())
       .toSet();
+  final excludeChannels =
+      (args['excludeChannels'] as List<dynamic>? ?? const [])
+          .map((e) => e.toString())
+          .toSet();
   final nowMs = args['nowMs'] as int? ?? 0;
   final futureEndMs = args['futureEndMs'] as int? ?? 0;
   final currentDayOnly = args['currentDayOnly'] as bool? ?? false;
@@ -216,6 +220,7 @@ Future<Map<String, dynamic>> parseEpgInIsolate(
           normalizeCached,
           channelIcons: channelIcons,
           channelHashes: channelHashes,
+          excludeChannels: excludeChannels.isEmpty ? null : excludeChannels,
         );
         inProgramme = false;
       }
@@ -291,6 +296,7 @@ Future<Map<String, dynamic>> parseEpgInIsolate(
       normalizedChannels: normalizedChannels,
       displayNamesById: displayNamesById,
       channelHashes: channelHashes,
+      excludeChannels: excludeChannels.isEmpty ? null : excludeChannels,
     );
   }
 

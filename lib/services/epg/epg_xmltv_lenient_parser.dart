@@ -197,6 +197,7 @@ void processXmltvProgrammeEvents(
   String Function(String input) normalize, {
   Map<String, String>? channelIcons,
   Map<String, int>? channelHashes,
+  Set<String>? excludeChannels,
 }) {
   final startEvent = events.first as XmlStartElementEvent;
 
@@ -226,6 +227,15 @@ void processXmltvProgrammeEvents(
   channelIds.add(channelId);
   if (normalizedChannelId.isNotEmpty) {
     normalizedChannels.putIfAbsent(normalizedChannelId, () => []).add(channelId);
+  }
+
+  // Skip programmes for channels already covered by the primary EPG. The
+  // channel id is still registered above so the callsign bridge sees it, but
+  // we never build/encode/write the (redundant) programme body — this avoids
+  // jsonEncode churn for ~96% of secondary programmes and the OOM cascade it
+  // triggered on cold start.
+  if (excludeChannels != null && excludeChannels.contains(channelId)) {
+    return;
   }
 
   if (!shouldIncludeProgramme(
@@ -341,6 +351,7 @@ Future<int> runLenientEpgParse({
   required Map<String, List<String>> normalizedChannels,
   required Map<String, List<String>> displayNamesById,
   required Map<String, int> channelHashes,
+  Set<String>? excludeChannels,
 }) async {
   final stream =
       rawStreamProvider().transform(const Utf8Decoder(allowMalformed: true));
@@ -402,6 +413,13 @@ Future<int> runLenientEpgParse({
         final stopStr =
             extractXmltvAttribute(block, 'stop', attrRegexCache)?.trim() ?? '';
         if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) {
+          return;
+        }
+        // Skip programmes for channels already covered by the primary EPG.
+        // Channel metadata is still captured by the channel-drain block above,
+        // so the callsign bridge is unaffected; we just avoid building/encoding
+        // the redundant programme body.
+        if (excludeChannels != null && excludeChannels.contains(channelId)) {
           return;
         }
         totalProgrammes++;

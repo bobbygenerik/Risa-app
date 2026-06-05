@@ -113,9 +113,17 @@ class EpgSecondaryLoader {
           now.subtract(Duration(hours: _pastWindowHours));
       final windowEnd = now.add(Duration(hours: _futureWindowHours));
 
+      // Channels already covered by the primary EPG are redundant. Exclude
+      // them at parse time so their (~96% of all) programmes are never
+      // jsonEncoded or written to the temp file — this was the allocation
+      // churn that evicted the image cache (no artwork) and spiked transient
+      // memory into an lmkd OOM cascade on cold start.
+      final excludeChannels = _primaryProgramChannelIds();
+
       final parseResult = await compute(parseEpgInIsolate, {
         'filePath': file.path,
         'allowedChannels': const <String>[],
+        'excludeChannels': excludeChannels.toList(),
         'nowMs': windowStart.millisecondsSinceEpoch,
         'futureEndMs': windowEnd.millisecondsSinceEpoch,
         'catchupHoursByChannel': _deps.catchupHoursByNormalizedId(),
@@ -143,10 +151,12 @@ class EpgSecondaryLoader {
       if (programFilePath != null &&
           programFilePath.isNotEmpty &&
           parsedProgramCount > 0) {
-        final skipChannels = _primaryProgramChannelIds();
+        // Defensive: also skip at ingest in case the snapshot changed while
+        // parsing. Parse-time exclusion (excludeChannels above) already drops
+        // the bulk, so this is now a cheap safety net.
         await _deps.ingestProgramsFromFile(
           programFilePath,
-          skipChannels: skipChannels,
+          skipChannels: excludeChannels,
           skipDbWrites: parsedProgramCount >= 50000,
         );
         if (!_deps.isDbDisabled()) {
