@@ -33,6 +33,9 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
   bool _initialized = false;
   bool _computeScheduled = false;
   List<Channel> _stableChannels = [];
+  // Fixed per-session seed so retry passes evaluate fallback channels in the
+  // same order — cards fill in as EPG warms up instead of reshuffling.
+  late final int _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
 
   @override
   void initState() {
@@ -144,7 +147,7 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
     final availableChannels = widget.fallbackChannels
         .where((c) => !addedChannelIds.contains(c.epgLookupId))
         .toList();
-    availableChannels.shuffle(math.Random());
+    availableChannels.shuffle(math.Random(_shuffleSeed));
 
     const targetFeaturedCount = 10;
     final remainingSlots = targetFeaturedCount - featuredChannels.length;
@@ -210,5 +213,14 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
       _stableChannels = List<Channel>.from(featuredChannels);
       _initialized = featuredChannels.length >= 5 && epgReady;
     });
+
+    // If EPG programs weren't broadly in memory yet, the row may have latched
+    // onto only the handful of channels that had a current program. Retry
+    // shortly so cards fill in as EPG warms up, instead of freezing on one card.
+    if (!_initialized && mounted) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted && !_initialized) _computeFeaturedChannels();
+      });
+    }
   }
 }
