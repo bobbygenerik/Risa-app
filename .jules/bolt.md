@@ -1,0 +1,3 @@
+## 2024-06-08 - Avoid String Interpolation in Hot Paths
+**Learning:** In Dart, using string interpolation (`'$title $category $description'`) purely to concatenate fields for a combined pattern matching check (`RegExp.hasMatch()`) creates significant overhead due to intermediate string allocations. This is particularly punishing inside loops processing large datasets (like EPG or Channel lists).
+**Action:** When applying a single check across multiple fields, iterate over a `List<String>` of those fields independently rather than concatenating them. This eliminates unnecessary string allocations, prevents cross-boundary false positives, and enables the check to short-circuit upon the first successful match.
