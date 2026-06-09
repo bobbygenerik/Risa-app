@@ -6,6 +6,7 @@ import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/logo_image_cache.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/utils/image_cache_config.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/services/image_validation_service.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
@@ -175,6 +176,11 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     final tvWidth = context.tvSpacing(widget.width);
     final tvHeight = context.tvSpacing(widget.height);
     final effectiveUrl = _normalizeLogoUrl(_effectiveLogoUrl);
+    final cacheDims = ImageCacheConfig.getLogoCacheDimensions(
+      tvWidth,
+      tvHeight,
+      devicePixelRatio: MediaQuery.of(context).devicePixelRatio,
+    );
 
     // If we have a URL, check if it's known bad or should be skipped
     final shouldSkip = effectiveUrl != null &&
@@ -210,6 +216,8 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                       image: LogoImageCache.providerFor(
                         effectiveUrl,
                         headers: HttpClientService().imageHeaders,
+                        cacheWidth: cacheDims.width,
+                        cacheHeight: cacheDims.height,
                       ),
                       fit: widget.fit,
                       alignment: widget.alignment,

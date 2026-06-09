@@ -18,7 +18,11 @@ class ProgramClassifier {
 
   /// Check if a program is news-related.
   static bool isNewsProgram(Program? program, Channel channel) {
-    final title = (program?.title ?? '').toLowerCase();
+    final rawTitle = (program?.title ?? '').trim();
+    if (rawTitle.isNotEmpty && EPGMatchingUtils.isLikelyNewsTitle(rawTitle)) {
+      return true;
+    }
+    final title = rawTitle.toLowerCase();
     final category = (program?.category ?? '').toLowerCase();
     final description = (program?.description ?? '').toLowerCase();
     final channelName = channel.name.toLowerCase();

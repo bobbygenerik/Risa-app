@@ -138,24 +138,14 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     });
   }
 
-  void _refreshHeroCache(IncrementalEpgService epgService) {
-    final heroCandidates = widget.heroCandidateCache.build(
-      widget.allChannels,
-      epgService,
-      widget.artworkResolver,
-      rejectedHeroUrls: _rejectedHeroUrls,
-    );
-    final resolved = LiveTvHeroSelectionResolver.resolve(
-      featuredChannel: widget.featuredChannel,
-      allChannels: widget.allChannels,
-      featuredIndex: widget.featuredIndex,
-      heroCandidates: heroCandidates,
-    );
-    _cachedHeroCandidates = heroCandidates;
-    _cachedChannelsLen = widget.allChannels.length;
-    _cachedFeaturedIndex = widget.featuredIndex;
-    _cachedProgramCount = epgService.loadedProgramChannelCount;
-
+  void _applyResolvedHero({
+    required ({
+      LiveTvHeroSelection selection,
+      List<LiveTvHeroCandidate> selectionPool,
+      LiveTvHeroCandidate? selectedHero,
+    }) resolved,
+    required IncrementalEpgService epgService,
+  }) {
     final selected = resolved.selectedHero;
     final fallbackChannel = resolved.selection.activeChannel;
     final fallbackProgram = selected?.program ??
@@ -183,12 +173,53 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     );
   }
 
+  void _updateHeroSelectionOnly(IncrementalEpgService epgService) {
+    final candidates = _cachedHeroCandidates;
+    if (candidates == null) {
+      _refreshHeroCache(epgService);
+      return;
+    }
+    final resolved = LiveTvHeroSelectionResolver.resolve(
+      featuredChannel: widget.featuredChannel,
+      allChannels: widget.allChannels,
+      featuredIndex: widget.featuredIndex,
+      heroCandidates: candidates,
+    );
+    _cachedFeaturedIndex = widget.featuredIndex;
+    _applyResolvedHero(resolved: resolved, epgService: epgService);
+  }
+
+  void _refreshHeroCache(
+    IncrementalEpgService epgService, {
+    bool forceCandidateRebuild = false,
+  }) {
+    final heroCandidates = widget.heroCandidateCache.build(
+      widget.allChannels,
+      epgService,
+      widget.artworkResolver,
+      forceRefresh: forceCandidateRebuild,
+      rejectedHeroUrls: _rejectedHeroUrls,
+    );
+    final resolved = LiveTvHeroSelectionResolver.resolve(
+      featuredChannel: widget.featuredChannel,
+      allChannels: widget.allChannels,
+      featuredIndex: widget.featuredIndex,
+      heroCandidates: heroCandidates,
+    );
+    _cachedHeroCandidates = heroCandidates;
+    _cachedChannelsLen = widget.allChannels.length;
+    _cachedFeaturedIndex = widget.featuredIndex;
+    _cachedProgramCount = epgService.loadedProgramChannelCount;
+    _applyResolvedHero(resolved: resolved, epgService: epgService);
+  }
+
   // Hero programs are loaded from DB in slices until the pool is full. EPG
   // programs are otherwise loaded lazily per visible card, so without this the
   // hero only ever sees the handful of channels the cards happened to load.
   static const int _heroEpgBatchSize = 40;
   IncrementalEpgService? _epgService;
   int _heroEpgCursor = 0;
+  bool _epgHeroRefreshScheduled = false;
 
   @override
   void initState() {
@@ -237,10 +268,16 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     }
     final epg = _epgService;
     if (epg == null) return;
-    if (epg.loadedProgramChannelCount > _cachedProgramCount) {
-      setState(() => _refreshHeroCache(epg));
-    }
-    _ensureHeroEpgLoaded();
+    if (_epgHeroRefreshScheduled) return;
+    _epgHeroRefreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _epgHeroRefreshScheduled = false;
+      if (!mounted) return;
+      if (epg.loadedProgramChannelCount > _cachedProgramCount) {
+        setState(() => _refreshHeroCache(epg));
+      }
+      _ensureHeroEpgLoaded();
+    });
   }
 
   @override
@@ -252,10 +289,14 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
 
   void _onHeroArtworkBumped() {
     if (!mounted) return;
-    widget.heroCandidateCache.invalidate();
     final epg = _epgService;
     if (epg == null) return;
-    setState(() => _refreshHeroCache(epg));
+    if (widget.heroCandidateCache.isPoolComplete) {
+      setState(() => _updateHeroSelectionOnly(epg));
+      return;
+    }
+    widget.heroCandidateCache.invalidate();
+    setState(() => _refreshHeroCache(epg, forceCandidateRebuild: true));
   }
 
   @override
@@ -266,10 +307,11 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
     }
     if (_cachedSelection == null ||
         _cachedChannelsLen != widget.allChannels.length ||
-        _cachedFeaturedIndex != widget.featuredIndex ||
         (epgService.loadedProgramChannelCount > _cachedProgramCount &&
             !widget.heroCandidateCache.isPoolComplete)) {
       _refreshHeroCache(epgService);
+    } else if (_cachedFeaturedIndex != widget.featuredIndex) {
+      _updateHeroSelectionOnly(epgService);
     }
     final heroCandidates = _cachedHeroCandidates!;
     final selection = _cachedSelection!;

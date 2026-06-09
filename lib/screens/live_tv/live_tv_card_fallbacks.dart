@@ -1,72 +1,37 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/program_classifier.dart';
+import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/widgets/brand_fallback_background.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
+
+enum _CardFallbackTone { news, sports, general }
 
 /// Channel row card artwork fallbacks when program images are unavailable.
 class LiveTvCardFallbacks {
   LiveTvCardFallbacks._();
 
   static Widget channelCard(Program? program, Channel channel) {
+    final tone = _toneFor(program, channel);
     final logoUrl = channel.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
-      return logoAsFallback(logoUrl, channel.name);
+      return _logoFallback(logoUrl, channel.name, tone);
     }
-    return BrandFallbackBackground(
-      child: missingArtwork(channel.name),
-    );
+    return _tintedBrandFallback(channel.name, tone);
   }
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
-    final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    return _logoFallback(logoUrl, channelName, _CardFallbackTone.general);
+  }
 
-    return BrandFallbackBackground(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: isSvg
-              ? SvgPicture.network(
-                  normalizedUrl,
-                  fit: BoxFit.contain,
-                  headers: HttpClientService().imageHeaders,
-                  placeholderBuilder: (_) => missingArtwork(channelName),
-                )
-              : (ImageFailureCache.shouldSkip(normalizedUrl)
-                  ? missingArtwork(channelName)
-                  : CachedNetworkImage(
-                      imageUrl: normalizedUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.contain,
-                      imageBuilder: (context, imageProvider) {
-                        ImageFailureCache.recordSuccess(normalizedUrl);
-                        return Image(
-                          image: imageProvider,
-                          fit: BoxFit.contain,
-                          gaplessPlayback: true,
-                        );
-                      },
-                      placeholder: (_, __) => missingArtwork(channelName),
-                      errorWidget: (_, url, error) {
-                        final host = Uri.tryParse(url)?.host ?? 'unknown';
-                        debugLog(
-                            'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error');
-                        ImageFailureCache.recordFailure(url, error);
-                        return missingArtwork(channelName);
-                      },
-                      useOldImageOnUrlChange: true,
-                    )),
-        ),
-      ),
-    );
+  static Widget gradientPlaceholder({Widget? child}) {
+    return BrandFallbackBackground(child: child);
   }
 
   static Widget missingArtwork([String? channelName]) {
@@ -98,7 +63,88 @@ class LiveTvCardFallbacks {
     );
   }
 
-  static Widget gradientPlaceholder({Widget? child}) {
-    return BrandFallbackBackground(child: child);
+  static _CardFallbackTone _toneFor(Program? program, Channel channel) {
+    if (program != null && SportsClassifier.isSportsProgram(program, channel)) {
+      return _CardFallbackTone.sports;
+    }
+    if (program != null && ProgramClassifier.isNewsProgram(program, channel)) {
+      return _CardFallbackTone.news;
+    }
+    final group = (channel.groupTitle ?? '').toLowerCase();
+    if (group.contains('sport')) return _CardFallbackTone.sports;
+    if (group.contains('news')) return _CardFallbackTone.news;
+    return _CardFallbackTone.general;
+  }
+
+  static Color _tintColor(_CardFallbackTone tone) {
+    switch (tone) {
+      case _CardFallbackTone.sports:
+        return const Color(0xFF0D3B2E);
+      case _CardFallbackTone.news:
+        return const Color(0xFF14254A);
+      case _CardFallbackTone.general:
+        return const Color(0xFF070A1F);
+    }
+  }
+
+  static Widget _tintedBrandFallback(String channelName, _CardFallbackTone tone) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const BrandFallbackBackground(),
+        Container(color: _tintColor(tone).withValues(alpha: 0.55)),
+        missingArtwork(channelName),
+      ],
+    );
+  }
+
+  static Widget _logoFallback(
+    String logoUrl,
+    String channelName,
+    _CardFallbackTone tone,
+  ) {
+    final normalizedUrl = normalizeImageUrl(logoUrl);
+    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
+        normalizedUrl.toLowerCase().contains('.svg?');
+
+    if (isSvg || ImageFailureCache.shouldSkip(normalizedUrl)) {
+      return _tintedBrandFallback(channelName, tone);
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const BrandFallbackBackground(),
+        Container(color: _tintColor(tone).withValues(alpha: 0.42)),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: CachedNetworkImage(
+              imageUrl: normalizedUrl,
+              httpHeaders: HttpClientService().imageHeaders,
+              fit: BoxFit.contain,
+              imageBuilder: (context, imageProvider) {
+                ImageFailureCache.recordSuccess(normalizedUrl);
+                return Image(
+                  image: imageProvider,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                );
+              },
+              placeholder: (_, __) => missingArtwork(channelName),
+              errorWidget: (_, url, error) {
+                final host = Uri.tryParse(url)?.host ?? 'unknown';
+                debugLog(
+                  'LiveTV logo fallback: error channel="$channelName" '
+                  'host="$host" url="$url" err=$error',
+                );
+                ImageFailureCache.recordFailure(url, error);
+                return missingArtwork(channelName);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

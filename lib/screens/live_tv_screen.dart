@@ -9,6 +9,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/jank_monitor.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_bindings_builder.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_bootstrap.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_epg_batch.dart';
@@ -89,7 +90,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 15}) {
+  void _prefetchRowArtworkForChannels(List<Channel> channels, {int limit = 6}) {
     _deps.artworkPrefetcher.prefetchRowArtworkForChannels(
       channels,
       context.read<IncrementalEpgService>(),
@@ -203,9 +204,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       requestRebuild: () => setState(() {}),
     );
     final routePath = GoRouterState.of(context).uri.path;
-    if (_deps.lastRoutePath == routePath) return;
+    final previousRoute = _deps.lastRoutePath;
+    if (previousRoute == routePath) return;
     _deps.lastRoutePath = routePath;
     if (routePath == '/home') {
+      final returningFromPlayer = previousRoute == '/player';
+      if (returningFromPlayer) {
+        _deps.suspendHeroBackground = false;
+        _deps.artworkService.restoreAfterPlayback();
+        JankMonitor.instance.mark('returned from player');
+        if (mounted) setState(() {});
+      }
       LiveTvRouteHooks.handleHomeRouteReturn(
         provider: provider,
         categoryState: _deps.categoryState,
@@ -218,6 +227,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _requestInitialFocus();
         },
         requestCategoryPrefetch: _requestCategoryPrefetch,
+        returningFromPlayer: returningFromPlayer,
       );
     }
   }

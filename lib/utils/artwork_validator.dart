@@ -82,6 +82,17 @@ class ArtworkValidator {
     return false;
   }
 
+  /// Gracenote/TMS horizontal EPG thumb (e.g. `p263250_b_h8_aa.jpg`).
+  static bool isLikelyTmsLandscapeEpg(String url) {
+    if (url.isEmpty) return false;
+    final lower = url.toLowerCase();
+    if (!lower.contains('tmsimg.com') && !lower.contains('tvpassport.com')) {
+      return false;
+    }
+    if (_gracenoteVerticalPattern.hasMatch(lower)) return false;
+    return lower.contains('_b_h');
+  }
+
   /// Returns true if the URL explicitly points to a backdrop/background image.
   static bool isExplicitBackdropUrl(String url) {
     final lower = url.toLowerCase();

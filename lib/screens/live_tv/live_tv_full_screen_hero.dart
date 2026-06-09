@@ -384,8 +384,8 @@ class LiveTvFullScreenHero extends StatelessWidget {
                 return Opacity(
                   opacity: 1.0 - fadeProgress,
                   child: SizedBox(
-                    width: context.tvSpacing(72),
-                    height: context.tvSpacing(48),
+                    width: context.tvSpacing(112),
+                    height: context.tvSpacing(72),
                     child: channelLogo(activeChannel),
                   ),
                 );

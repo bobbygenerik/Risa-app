@@ -3,6 +3,9 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/artwork/artwork_slot.dart';
 import 'package:iptv_player/screens/live_tv/artwork_url_guard.dart';
 import 'package:iptv_player/services/live_tv_artwork_service.dart';
+import 'package:iptv_player/utils/artwork_query_expander.dart';
+import 'package:iptv_player/utils/program_classifier.dart';
+import 'package:iptv_player/utils/sports_classifier.dart';
 
 /// A candidate artwork URL from cache or EPG, in priority order.
 class ArtworkSourceCandidate {
@@ -28,7 +31,28 @@ class ArtworkSourceResolver {
     Channel channel, {
     required ArtworkSlot slot,
   }) sync* {
+    // News slots use channel-branded fallbacks — EPG/TMDB art is often wrong.
+    if (ProgramClassifier.isNewsProgram(program, channel)) {
+      return;
+    }
+
     final heroSizing = slot == ArtworkSlot.hero;
+    final preferEpgFirst = _preferEpgImageFirst(program, channel);
+
+    if (preferEpgFirst) {
+      final epgEarly = LiveTvArtworkUrlGuard.normalizeArtworkUrl(
+        program.imageUrl,
+        isHero: heroSizing,
+      );
+      if (epgEarly != null && epgEarly.isNotEmpty) {
+        yield ArtworkSourceCandidate(
+          url: epgEarly,
+          source: '${slot.name}_epg',
+          isEpgFallback: true,
+        );
+      }
+    }
+
     final cached = LiveTvArtworkUrlGuard.normalizeArtworkUrl(
       _service.getArtwork(program.id),
       isHero: heroSizing,
@@ -53,16 +77,26 @@ class ArtworkSourceResolver {
       );
     }
 
-    final epg = LiveTvArtworkUrlGuard.normalizeArtworkUrl(
-      program.imageUrl,
-      isHero: heroSizing,
-    );
-    if (epg != null && epg.isNotEmpty) {
-      yield ArtworkSourceCandidate(
-        url: epg,
-        source: '${slot.name}_epg',
-        isEpgFallback: true,
+    if (!preferEpgFirst) {
+      final epg = LiveTvArtworkUrlGuard.normalizeArtworkUrl(
+        program.imageUrl,
+        isHero: heroSizing,
       );
+      if (epg != null && epg.isNotEmpty) {
+        yield ArtworkSourceCandidate(
+          url: epg,
+          source: '${slot.name}_epg',
+          isEpgFallback: true,
+        );
+      }
     }
+  }
+
+  bool _preferEpgImageFirst(Program program, Channel channel) {
+    if (program.imageUrl == null || program.imageUrl!.isEmpty) return false;
+    if (ArtworkQueryExpander.isLiveBroadcastTitle(program.title)) return true;
+    if (SportsClassifier.isSportsProgram(program, channel)) return true;
+    if (ProgramClassifier.isNewsProgram(program, channel)) return true;
+    return false;
   }
 }

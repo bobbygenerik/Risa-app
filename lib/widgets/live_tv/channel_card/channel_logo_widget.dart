@@ -51,6 +51,8 @@ class ChannelLogoWidget extends StatelessWidget {
     final provider = LogoImageCache.providerFor(
       url,
       headers: HttpClientService().imageHeaders,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
     );
 
     return Padding(

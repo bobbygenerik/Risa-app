@@ -20,6 +20,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
   String? _selectedCategory;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  Future<List<Channel>>? _channelsFuture;
 
   @override
   void initState() {
@@ -38,6 +39,18 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
     super.dispose();
   }
 
+  Future<List<Channel>> _loadChannels(ChannelProvider provider) {
+    final query = _searchQuery.trim();
+    if (query.isNotEmpty) {
+      return provider.searchChannelsAsync(query, limit: 200);
+    }
+    final category = _selectedCategory;
+    if (category != null && category.isNotEmpty) {
+      return provider.getChannelsForCategoryAsync(category, limit: 200);
+    }
+    return provider.getChannelsPage(limit: 200);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -49,28 +62,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
         child: Consumer<ChannelProvider>(
           builder: (context, channelProvider, child) {
             final categories = channelProvider.getAllCategoryNames();
-            final allChannels = channelProvider.channels;
-
-            List<Channel> filteredChannels = [];
-            final hasCategoryFilter = _selectedCategory != null && _selectedCategory!.isNotEmpty;
-            final hasSearchQuery = _searchQuery.isNotEmpty;
-            final lowerSearchQuery = hasSearchQuery ? _searchQuery.toLowerCase() : '';
-
-            // Single pass filtering to avoid chained iterable allocations
-            if (!hasCategoryFilter && !hasSearchQuery) {
-              filteredChannels = allChannels;
-            } else {
-              for (int i = 0; i < allChannels.length; i++) {
-                final c = allChannels[i];
-                if (hasCategoryFilter && c.groupTitle != _selectedCategory) {
-                  continue;
-                }
-                if (hasSearchQuery && !c.name.toLowerCase().contains(lowerSearchQuery)) {
-                  continue;
-                }
-                filteredChannels.add(c);
-              }
-            }
+            _channelsFuture ??= _loadChannels(channelProvider);
 
             return Column(
               children: [
@@ -168,6 +160,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                     onChanged: (value) {
                       setState(() {
                         _searchQuery = value;
+                        _channelsFuture = _loadChannels(channelProvider);
                       });
                     },
                     onTap: () {
@@ -186,9 +179,9 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
-                        _buildCategoryChip('All', null),
-                        ...categories.map((category) =>
-                            _buildCategoryChip(category, category)),
+                        _buildCategoryChip('All', null, channelProvider),
+                        ...categories.map((category) => _buildCategoryChip(
+                            category, category, channelProvider)),
                       ],
                     ),
                   ),
@@ -196,80 +189,89 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
 
                 // Channel list
                 Expanded(
-                  child: filteredChannels.isEmpty
-                      ? Center(
+                  child: FutureBuilder<List<Channel>>(
+                    future: _channelsFuture,
+                    builder: (context, snapshot) {
+                      final filteredChannels = snapshot.data ?? const [];
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (filteredChannels.isEmpty) {
+                        return Center(
                           child: Text(
                             'No channels found',
                             style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.5)),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: filteredChannels.length,
-                          itemBuilder: (context, index) {
-                            final channel = filteredChannels[index];
-                            return FocusableActionDetector(
-                              actions: <Type, Action<Intent>>{
-                                ActivateIntent: CallbackAction<ActivateIntent>(
-                                  onInvoke: (intent) {
-                                    Navigator.pop(context, channel);
-                                    return null;
-                                  },
-                                ),
-                              },
-                              child: Builder(
-                                builder: (context) {
-                                  final isFocused = Focus.of(context).hasFocus;
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        Navigator.pop(context, channel),
-                                    child: Container(
-                                      color: isFocused
-                                          ? AppTheme.primaryBlue
-                                              .withValues(alpha: 0.2)
-                                          : Colors.transparent,
-                                      child: ListTile(
-                                        leading: SizedBox(
-                                          width: 48,
-                                          height: 48,
-                                          child: ChannelLogoWidget(
-                                            channelName: channel.name,
-                                            logoUrl: channel.logoUrl,
-                                            tvgId: channel.tvgId,
-                                            width: 48,
-                                            height: 48,
-                                            fit: BoxFit.contain,
-                                            placeholder: const Icon(
-                                              Icons.tv,
-                                              color: Colors.white54,
-                                            ),
-                                            errorWidget: const Icon(
-                                              Icons.tv,
-                                              color: Colors.white54,
-                                            ),
-                                          ),
-                                        ),
-                                        title: Text(
-                                          channel.name,
-                                          style: const TextStyle(
-                                              color: Colors.white),
-                                        ),
-                                        subtitle: Text(
-                                          channel.groupTitle ?? '',
-                                          style: TextStyle(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.5)),
-                                        ),
-                                        onTap: () =>
-                                            Navigator.pop(context, channel),
-                                      ),
-                                    ),
-                                  );
+                        );
+                      }
+                      return ListView.builder(
+                        itemCount: filteredChannels.length,
+                        itemBuilder: (context, index) {
+                          final channel = filteredChannels[index];
+                          return FocusableActionDetector(
+                            actions: <Type, Action<Intent>>{
+                              ActivateIntent: CallbackAction<ActivateIntent>(
+                                onInvoke: (intent) {
+                                  Navigator.pop(context, channel);
+                                  return null;
                                 },
                               ),
-                            );
-                          },
-                        ),
+                            },
+                            child: Builder(
+                              builder: (context) {
+                                final isFocused = Focus.of(context).hasFocus;
+                                return GestureDetector(
+                                  onTap: () => Navigator.pop(context, channel),
+                                  child: Container(
+                                    color: isFocused
+                                        ? AppTheme.primaryBlue
+                                            .withValues(alpha: 0.2)
+                                        : Colors.transparent,
+                                    child: ListTile(
+                                      leading: SizedBox(
+                                        width: 48,
+                                        height: 48,
+                                        child: ChannelLogoWidget(
+                                          channelName: channel.name,
+                                          logoUrl: channel.logoUrl,
+                                          tvgId: channel.tvgId,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.contain,
+                                          placeholder: const Icon(
+                                            Icons.tv,
+                                            color: Colors.white54,
+                                          ),
+                                          errorWidget: const Icon(
+                                            Icons.tv,
+                                            color: Colors.white54,
+                                          ),
+                                        ),
+                                      ),
+                                      title: Text(
+                                        channel.name,
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                      ),
+                                      subtitle: Text(
+                                        channel.groupTitle ?? '',
+                                        style: TextStyle(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.5)),
+                                      ),
+                                      onTap: () =>
+                                          Navigator.pop(context, channel),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             );
@@ -279,7 +281,8 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
     );
   }
 
-  Widget _buildCategoryChip(String label, String? category) {
+  Widget _buildCategoryChip(
+      String label, String? category, ChannelProvider provider) {
     final isSelected = _selectedCategory == category;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -289,6 +292,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
             onInvoke: (intent) {
               setState(() {
                 _selectedCategory = isSelected ? null : category;
+                _channelsFuture = _loadChannels(provider);
               });
               return null;
             },
@@ -301,6 +305,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
               onTap: () {
                 setState(() {
                   _selectedCategory = isSelected ? null : category;
+                  _channelsFuture = _loadChannels(provider);
                 });
               },
               child: FilterChip(
@@ -309,6 +314,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 onSelected: (selected) {
                   setState(() {
                     _selectedCategory = selected ? category : null;
+                    _channelsFuture = _loadChannels(provider);
                   });
                 },
                 backgroundColor: isFocused

@@ -13,7 +13,8 @@ bool shouldRejectArtworkAspect({
       : ArtworkSlot.card;
   return switch (effective) {
     ArtworkSlot.hero => aspectRatio < 1.55,
-    ArtworkSlot.card => aspectRatio < 1.0,
+    // Reject square-ish art — BoxFit.cover crops them into a "zoomed" look.
+    ArtworkSlot.card => aspectRatio < 1.25,
   };
 }
 

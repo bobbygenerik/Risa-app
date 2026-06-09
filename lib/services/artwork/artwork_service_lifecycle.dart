@@ -44,15 +44,10 @@ extension LiveTvArtworkServiceLifecycle on LiveTvArtworkService {
     _artworkRequests.clear();
     _pendingArtworkRequests.clear();
     _pendingArtworkByTitle.clear();
+    // Keep title/negative caches — bounded; wiping them made cards bare until
+    // async prefs reload after player return.
     _programArtwork.clear();
-    _programArtworkByTitle.clear();
-    _programArtworkByTitleTimestamps.clear();
-    _programArtworkNegativeByTitle.clear();
-    _programTitleLogos.clear();
     _programArtworkOrder.clear();
-    _programArtworkTitleOrder.clear();
-    _programArtworkNegativeTitleOrder.clear();
-    _programTitleLogoOrder.clear();
     _artworkRetryAfter.clear();
     _artworkFailureCounts.clear();
     debugLog('LiveTV artwork: released in-memory caches for playback');

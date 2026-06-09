@@ -30,8 +30,21 @@ extension LiveTvArtworkServiceNegative on LiveTvArtworkService {
     final key = _titleCacheKey(program, channel);
     _registerProgramArtworkNegativeTitle(
       key,
-      DateTime.now().add(LiveTvArtworkService._artworkNegativeTtl),
+      DateTime.now().add(_artworkNegativeTtlFor(program, channel)),
     );
+  }
+
+  Duration _artworkNegativeTtlFor(Program program, Channel? channel) {
+    if (ArtworkQueryExpander.isLiveBroadcastTitle(program.title)) {
+      return const Duration(seconds: 90);
+    }
+    if (SportsClassifier.isSportsProgram(program, channel)) {
+      return const Duration(seconds: 90);
+    }
+    if (channel != null && ProgramClassifier.isNewsProgram(program, channel)) {
+      return const Duration(seconds: 90);
+    }
+    return LiveTvArtworkService._artworkNegativeTtl;
   }
 
   void _clearArtworkNoMatch(Program program, [Channel? channel]) {

@@ -53,8 +53,7 @@ extension ChannelProviderApi on ChannelProvider {
   Channel getChannelAt(int index) => _getChannelAt(index);
 
   /// Async paged channels for UI (DB-backed when available)
-  Future<List<Channel>> getChannelsPage(
-          {int offset = 0, int limit = 50}) =>
+  Future<List<Channel>> getChannelsPage({int offset = 0, int limit = 50}) =>
       _channelQueryService.getChannelsPage(offset: offset, limit: limit);
 
   Future<Map<String, List<Channel>>> getGroupedChannelsAsync(
@@ -222,6 +221,9 @@ extension ChannelProviderApi on ChannelProvider {
   /// Get count of channels in a category (no conversion needed)
   int getChannelCountForCategory(String category) =>
       _channelAccess.getChannelCountForCategory(category);
+
+  Future<int> getChannelCountForCategoryAsync(String category) =>
+      _channelQueryService.getChannelCountForCategoryAsync(category);
 
   /// Get a channel at a specific index within a category (for lazy loading)
   Channel? getChannelInCategoryAtIndex(String category, int index) =>

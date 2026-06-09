@@ -211,6 +211,19 @@ class ChannelPlaylistLoader {
         deps.setLoadingProgress(0.95);
         deps.notifyListeners();
       } else {
+        if (deps.getDbReady() && loadingTarget.isNotEmpty) {
+          try {
+            await deps.clearDbChannels();
+            await deps.insertDbChannels(loadingTarget);
+            debugLog(
+              'ChannelProvider: Persisted ${loadingTarget.length} channels to DB (background sync)',
+            );
+          } catch (e) {
+            debugLog(
+              'ChannelProvider: Background DB persist failed: $e',
+            );
+          }
+        }
         deps.finalizeBackgroundLoad(loadingTarget);
       }
 
@@ -239,7 +252,9 @@ class ChannelPlaylistLoader {
 
       deps.notifyListeners();
 
-      unawaited(deps.deferredDbInsert());
+      if (!isBackground) {
+        unawaited(deps.deferredDbInsert());
+      }
       deps.updateEpgAllowedChannels();
       deps.refreshSmartChannelCache();
 

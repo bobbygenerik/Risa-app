@@ -70,6 +70,7 @@ class EpgChannelBatchLoader {
       await _deps.loadProgramsFromDbBatch(epgIdsToLoad);
     } finally {
       _pendingBatch.removeWhere((id) => epgIdsToLoad.contains(id));
+      _releaseAttemptedLoadsWithoutPrograms(epgIdsToLoad);
     }
   }
 
@@ -133,14 +134,33 @@ class EpgChannelBatchLoader {
     _deps.log('EPG: queueing ${epgIdsToLoad.length} channels for batch load');
     _pendingBatch.addAll(epgIdsToLoad);
 
+    // Visible rows (~10–30 cards): load immediately instead of waiting on debounce.
+    if (epgIdsToLoad.length <= 30) {
+      _batchTimer?.cancel();
+      _batchTimer = null;
+      final batch = List<String>.from(_pendingBatch);
+      _pendingBatch.clear();
+      _deps.log('EPG: priority batch loading ${batch.length} visible channels');
+      try {
+        await _deps.loadProgramsFromDbBatch(batch);
+      } finally {
+        _releaseAttemptedLoadsWithoutPrograms(batch);
+      }
+      return;
+    }
+
     _batchTimer?.cancel();
     _batchTimer = Timer(batchDebounce, () async {
       final batch = List<String>.from(_pendingBatch);
       if (batch.isEmpty) return;
 
       _deps.log('EPG: Batch timer fired, loading ${batch.length} channels');
-      await _deps.loadProgramsFromDbBatch(batch);
-      _pendingBatch.clear();
+      try {
+        await _deps.loadProgramsFromDbBatch(batch);
+      } finally {
+        _pendingBatch.clear();
+        _releaseAttemptedLoadsWithoutPrograms(batch);
+      }
     });
   }
 
@@ -189,6 +209,14 @@ class EpgChannelBatchLoader {
     }
 
     return epgIdsToLoad;
+  }
+
+  void _releaseAttemptedLoadsWithoutPrograms(List<String> epgIds) {
+    for (final epgId in epgIds) {
+      if (!_deps.channelHasPrograms(epgId)) {
+        _attemptedLoads.remove(epgId);
+      }
+    }
   }
 }
 

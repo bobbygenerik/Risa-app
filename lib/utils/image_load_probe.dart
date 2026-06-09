@@ -22,8 +22,6 @@ class ImageLoadProbe {
     final message = 'ImageLoadProbe: attempt kind=$kind url=$url';
     debugLog(message);
     logToSystem(message, name: 'RisaImage');
-    // ignore: avoid_print
-    print(message);
   }
 
   static void recordSuccess(String url, String kind) {
@@ -63,9 +61,6 @@ class ImageLoadProbe {
           'ImageLoadProbe: fail kind=$kind host=$host url=$url error=${error.runtimeType}';
       debugLog(message);
       logToSystem(message, name: 'RisaImage');
-      // Ensure visibility in profile builds via standard flutter logcat tag.
-      // ignore: avoid_print
-      print(message);
     }
   }
 

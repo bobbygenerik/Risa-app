@@ -21,11 +21,11 @@ extension ChannelProviderBindings on ChannelProvider {
         required int channelCount,
       }) =>
           _setCurrentEpgMapSignature(
-            prefs: prefs,
-            playlistUrl: playlistUrl,
-            epgUrl: epgUrl,
-            channelCount: channelCount,
-          ),
+        prefs: prefs,
+        playlistUrl: playlistUrl,
+        epgUrl: epgUrl,
+        channelCount: channelCount,
+      ),
       invalidateCategoryCaches: _invalidateCategoryCaches,
       computeCategoriesAsync: _computeCategoriesAsync,
       updateEpgAllowedChannels: _updateEpgAllowedChannels,
@@ -107,6 +107,7 @@ extension ChannelProviderBindings on ChannelProvider {
       backgroundSync: _backgroundSync,
       restoreChannelsFromPrefsCache: _restoreChannelsFromPrefsCache,
       loadPlaylistFromUrl: loadPlaylistFromUrl,
+      loadXtreamLiveStreamsNative: _xtreamService.loadLiveStreamsNative,
       httpPrefixRe: ChannelProvider._httpPrefixRe,
       leadingSlashRe: ChannelProvider._leadingSlashRe,
     );
@@ -160,8 +161,7 @@ extension ChannelProviderBindings on ChannelProvider {
       getLastDbRecoveryTime: () => _lastDbRecoveryTime,
       setLastDbRecoveryTime: (value) => _lastDbRecoveryTime = value,
       getDbClosedRecoveryInFlight: () => _dbClosedRecoveryInFlight,
-      setDbClosedRecoveryInFlight: (value) =>
-          _dbClosedRecoveryInFlight = value,
+      setDbClosedRecoveryInFlight: (value) => _dbClosedRecoveryInFlight = value,
       getChannelCountDb: () => _channelCountDb,
       setChannelCountDb: (value) => _channelCountDb = value,
       channelMapsNotEmpty: () => _channelMaps.isNotEmpty,
@@ -180,6 +180,8 @@ extension ChannelProviderBindings on ChannelProvider {
       setChannelCountDb: (value) => _channelCountDb = value,
       clearChannelCache: _channelCache.clear,
       rebuildChannelCachesAsync: _rebuildChannelCachesAsync,
+      clearDbChannels: () => _db.clearChannels(),
+      insertDbChannels: _db.insertChannels,
       clearCachedCategories: () => _cachedCategories = null,
       updateEpgAllowedChannels: _updateEpgAllowedChannels,
       notifyListeners: notifyListeners,

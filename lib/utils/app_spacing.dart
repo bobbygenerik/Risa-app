@@ -111,8 +111,17 @@ extension AppSpacingExtension on BuildContext {
   double rowHeight() => cardWidth() * AppSpacing.cardRowHeightMultiplier;
 
   // Hero section dimensions
-  double heroHeight() =>
-      MediaQuery.of(this).size.height * AppSpacing.heroHeightRatio;
+  double heroHeight() {
+    final size = MediaQuery.of(this).size;
+    var ratio = AppSpacing.heroHeightRatio;
+    // Full-viewport hero on ultrawide desktop makes chrome look tiny.
+    if (!TVFocusHelper.isAndroidTV &&
+        size.width > size.height * 1.55 &&
+        size.width >= 2000) {
+      ratio = 0.72;
+    }
+    return size.height * ratio;
+  }
   double heroInfoWidth() =>
       MediaQuery.of(this).size.width * AppSpacing.heroInfoWidth;
 

@@ -6,6 +6,7 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_featured_info.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
 import 'package:iptv_player/widgets/hero_panel.dart';
 
@@ -21,10 +22,9 @@ class LiveTvHeroInfoWidgets {
     final desiredInfoWidth = screenSize.width < 800
         ? availableWidth
         : screenSize.width * AppSpacing.heroInfoWidth;
-    return math.min(
-      desiredInfoWidth,
-      screenSize.width >= 1920 ? 480.0 : 420.0,
-    );
+    final layoutScale = TVFocusHelper.desktopLayoutScale(screenSize);
+    final maxCap = (480.0 * layoutScale).clamp(420.0, 720.0);
+    return math.min(desiredInfoWidth, maxCap);
   }
 
   static Widget heroInfoPanel({
@@ -40,8 +40,8 @@ class LiveTvHeroInfoWidgets {
       logoUrl: channel.logoUrl?.isNotEmpty == true ? channel.logoUrl : null,
       tvgId: channel.tvgId,
       allowEnrichment: true,
-      width: 72,
-      height: 48,
+      width: 112,
+      height: 72,
       fit: BoxFit.contain,
       backgroundColor: Colors.transparent,
       borderRadius: BorderRadius.circular(6),

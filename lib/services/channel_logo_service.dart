@@ -9,6 +9,7 @@ import 'dart:io';
 class ChannelLogoService {
   static final Map<String, String?> _logoCache = {};
   static bool _initialized = false;
+  static Future<void>? _initFuture;
   static Timer? _saveDebounceTimer;
   static const String _cacheFileName = 'channel_logos_cache.json';
 
@@ -229,7 +230,17 @@ class ChannelLogoService {
   /// Initialize the service and load cache
   static Future<void> init() async {
     if (_initialized) return;
+    final inFlight = _initFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
 
+    _initFuture = _doInit();
+    await _initFuture;
+  }
+
+  static Future<void> _doInit() async {
     // Pre-sort known logos by key length descending to prioritize specific matches
     // (e.g. "fox sports" before "fox")
     if (_sortedKnownLogos == null) {
@@ -240,6 +251,7 @@ class ChannelLogoService {
 
     await _loadCache();
     _initialized = true;
+    _initFuture = null;
   }
 
   static Future<void> _loadCache() async {
@@ -281,7 +293,9 @@ class ChannelLogoService {
     }
   }
 
-  static final RegExp _qualityRegex = RegExp(r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*', caseSensitive: false);
+  static final RegExp _qualityRegex = RegExp(
+      r'\s*(hd|sd|fhd|uhd|4k|hevc|h\.?264|720p|1080p|1080i)\s*',
+      caseSensitive: false);
   static final RegExp _bracketsRegex = RegExp(r'[\(\)\[\]\{\}]');
   static final RegExp _whitespaceRegex = RegExp(r'\s+');
 

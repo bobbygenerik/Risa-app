@@ -80,6 +80,18 @@ class ChannelEpgIntegration {
     }
 
     try {
+      if (deps.getDbReady()) {
+        final dbCount = await deps.getDb().channelCount();
+        if (dbCount > deps.channelMaps.length) {
+          debugLog(
+            'ChannelProvider: Loading EPG allowed set from DB '
+            '($dbCount rows, ${deps.channelMaps.length} in memory)',
+          );
+          unawaited(loadAllowedChannelsFromDb());
+          return;
+        }
+      }
+
       final allowed = <String>{};
       const batchSize = 20000;
       for (var start = 0; start < deps.channelMaps.length; start += batchSize) {

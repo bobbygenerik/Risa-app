@@ -31,6 +31,8 @@ class EpgChannelListLoader {
     bool fromBackgroundRefresh = false,
     bool skipDbLoad = false,
     bool currentDayOnly = false,
+    bool forceXmlParse = false,
+    bool fullDbHydrateOnly = false,
   }) async {
     await _deps.restoreDbIfClosed();
     if (!_deps.hasEpgUrl()) return;
@@ -81,7 +83,56 @@ class EpgChannelListLoader {
               'EPG: Download phase took ${DateTime.now().difference(downloadStart).inMilliseconds}ms');
         }
 
+        if (!_deps.isDbDisabled() &&
+            _deps.isDbReady() &&
+            !fromBackgroundRefresh &&
+            !forceRefresh &&
+            !skipDbLoad &&
+            !fullDbHydrateOnly) {
+          try {
+            final nowNextLoaded = await hydrateNowNextFromDb(
+              dbDisabled: _deps.isDbDisabled(),
+              dbReady: _deps.isDbReady(),
+              getNowNextProgramsByChannel: _deps.getNowNextProgramsByChannel,
+              getNormalizedChannels: _deps.getNormalizedChannels,
+              loadNormalizedMappingFromPrefs:
+                  _deps.loadNormalizedMappingFromPrefs,
+              invalidateProgramIndexCache: _deps.invalidateProgramIndexCache,
+              setChannelPrograms: _deps.setChannelPrograms,
+              addAvailableChannels: _deps.addAvailableChannels,
+              rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
+              hydrateFuzzyMatchIndexFromDisk:
+                  _deps.hydrateFuzzyMatchIndexFromDisk,
+              notifyListeners: _deps.notifyListeners,
+            );
+            if (nowNextLoaded &&
+                shouldDeferFullXmlParse(
+                  hasLoadedPrograms: _deps.hasLoadedPrograms(),
+                  loadedProgramChannelCount: _deps.loadedProgramChannelCount(),
+                  allowedChannelCount: _deps.allowedChannelCount(),
+                )) {
+              debugLog(
+                'EPG: Startup fast path — now/next only '
+                '(${_deps.loadedProgramChannelCount()} channels)',
+              );
+              _deps.setHasParsed(true);
+              _deps.setLoading(false);
+              _deps.setParsing(false);
+              _deps.setError(null);
+              _deps.notifyListeners();
+              _deps.scheduleDeferredFullEpgHydrate();
+              _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
+              return;
+            }
+          } catch (e) {
+            _deps.handleDbError(e);
+          }
+        }
+
         if (!_deps.isDbDisabled() && _deps.isDbReady()) {
+          if (fullDbHydrateOnly) {
+            skipDbLoad = false;
+          }
           try {
             final dbOutcome = await tryLoadProgramsFromDb(
               forceRefresh: forceRefresh,
@@ -106,7 +157,8 @@ class EpgChannelListLoader {
               addAvailableChannels: _deps.addAvailableChannels,
               clearInternalMapping: _deps.clearInternalMapping,
               rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
-              hydrateFuzzyMatchIndexFromDisk: _deps.hydrateFuzzyMatchIndexFromDisk,
+              hydrateFuzzyMatchIndexFromDisk:
+                  _deps.hydrateFuzzyMatchIndexFromDisk,
               epgIdsRawCount: _deps.epgIdsRawCount,
             );
 
@@ -126,6 +178,13 @@ class EpgChannelListLoader {
                 overwriteDb: false,
               ));
 
+              if (fullDbHydrateOnly) {
+                _deps.scheduleEpgWindowExtension(
+                  fromBackgroundRefresh: true,
+                );
+                return;
+              }
+
               _deps.scheduleEpgWindowExtension(
                 fromBackgroundRefresh: fromBackgroundRefresh,
               );
@@ -134,6 +193,15 @@ class EpgChannelListLoader {
                 unawaited(_deps.refreshFromNetwork());
               }
               _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
+              return;
+            }
+
+            if (fullDbHydrateOnly) {
+              debugLog('EPG: Deferred full DB hydrate produced no data');
+              return;
+            }
+
+            if (fullDbHydrateOnly) {
               return;
             }
 
@@ -164,6 +232,7 @@ class EpgChannelListLoader {
           addAvailableChannels: _deps.addAvailableChannels,
           rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
           hydrateFuzzyMatchIndexFromDisk: _deps.hydrateFuzzyMatchIndexFromDisk,
+          allowMappingShortcut: !forceXmlParse,
         );
         if (skippedParse) {
           _deps.setHasParsed(true);
@@ -177,6 +246,49 @@ class EpgChannelListLoader {
           return;
         }
 
+        if (!_deps.isDbDisabled() && _deps.isDbReady()) {
+          try {
+            await hydrateNowNextFromDb(
+              dbDisabled: _deps.isDbDisabled(),
+              dbReady: _deps.isDbReady(),
+              getNowNextProgramsByChannel: _deps.getNowNextProgramsByChannel,
+              getNormalizedChannels: _deps.getNormalizedChannels,
+              loadNormalizedMappingFromPrefs:
+                  _deps.loadNormalizedMappingFromPrefs,
+              invalidateProgramIndexCache: _deps.invalidateProgramIndexCache,
+              setChannelPrograms: _deps.setChannelPrograms,
+              addAvailableChannels: _deps.addAvailableChannels,
+              rebuildEpgIdIndex: _deps.rebuildEpgIdIndex,
+              hydrateFuzzyMatchIndexFromDisk:
+                  _deps.hydrateFuzzyMatchIndexFromDisk,
+              notifyListeners: _deps.notifyListeners,
+            );
+          } catch (e) {
+            _deps.handleDbError(e);
+          }
+        }
+
+        if (!forceXmlParse &&
+            !fromBackgroundRefresh &&
+            shouldDeferFullXmlParse(
+              hasLoadedPrograms: _deps.hasLoadedPrograms(),
+              loadedProgramChannelCount: _deps.loadedProgramChannelCount(),
+              allowedChannelCount: _deps.allowedChannelCount(),
+            )) {
+          debugLog(
+            'EPG: Deferring full XML parse '
+            '(${_deps.loadedProgramChannelCount()} channels hydrated from DB)',
+          );
+          _deps.setHasParsed(true);
+          _deps.setLoading(false);
+          _deps.setParsing(false);
+          _deps.setError(null);
+          _deps.notifyListeners();
+          _deps.scheduleDeferredFullXmlParse();
+          _deps.scheduleSecondaryMerge(forceRefresh: forceRefresh);
+          return;
+        }
+
         final file = await _deps.getCacheFile();
         if (!await file.exists()) {
           debugLog(
@@ -184,6 +296,10 @@ class EpgChannelListLoader {
           _deps.resetLoadingState();
           _deps.notifyListeners();
           return;
+        }
+
+        if (!_deps.hasLoadedPrograms()) {
+          await _primeNowNextFromXmlCache(file.path);
         }
 
         var existingHashes = <String, String>{};
@@ -413,8 +529,8 @@ class EpgChannelListLoader {
           await _deps.loadNormalizedMappingFromPrefs();
           final normalized = _deps.getNormalizedChannels();
           if (normalized != null && normalized.isNotEmpty) {
-            _deps.addAvailableChannels(
-                normalized.values.expand((list) => list));
+            _deps
+                .addAvailableChannels(normalized.values.expand((list) => list));
             _deps.rebuildEpgIdIndex();
           }
           break;
@@ -431,5 +547,54 @@ class EpgChannelListLoader {
     _deps.clearAttemptedLoads();
     _deps.flushDeferredChannelRequests();
     _deps.notifyListeners();
+  }
+
+  Future<void> _primeNowNextFromXmlCache(String filePath) async {
+    try {
+      final now = DateTime.now();
+      final windowStart =
+          now.subtract(const Duration(minutes: 30)).millisecondsSinceEpoch;
+      final windowEnd =
+          now.add(const Duration(hours: 4)).millisecondsSinceEpoch;
+      final start = DateTime.now();
+      debugLog('EPG: Priming now/next from XML cache before full parse');
+      final parseResult = await compute(parseEpgInIsolate, {
+        'filePath': filePath,
+        'allowedChannels': const <String>[],
+        'nowMs': windowStart,
+        'futureEndMs': windowEnd,
+        'catchupHoursByChannel': _deps.catchupHoursByNormalizedId(),
+        'currentDayOnly': false,
+      });
+
+      final parsedProgramCount = parseResult['programCount'] as int? ?? 0;
+      final programFilePath = parseResult['programFilePath'] as String?;
+      if (programFilePath == null ||
+          programFilePath.isEmpty ||
+          parsedProgramCount == 0) {
+        return;
+      }
+
+      final channelIds =
+          (parseResult['channelIds'] as List<dynamic>).cast<String>();
+      _deps.replaceAvailableChannels(channelIds);
+      _deps.setNormalizedChannels(normalizedChannelsFromParse(parseResult));
+      _deps.setDisplayNames(displayNamesFromParse(parseResult));
+      _deps.rebuildFuzzyCandidates();
+      _deps.rebuildEpgIdIndex();
+      await _deps.ingestProgramsFromFile(
+        programFilePath,
+        totalPrograms: parsedProgramCount,
+        skipDbWrites: false,
+      );
+      _deps.setError(null);
+      _deps.notifyListeners();
+      debugLog(
+        'EPG: XML now/next prime loaded ~$parsedProgramCount programs '
+        'in ${DateTime.now().difference(start).inMilliseconds}ms',
+      );
+    } catch (e) {
+      debugLog('EPG: XML now/next prime failed: $e');
+    }
   }
 }

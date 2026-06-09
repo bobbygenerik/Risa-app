@@ -15,6 +15,87 @@ bool epgCacheTooSmall({
 
 enum EpgDbLoadOutcome { loaded, cacheTooSmall, notAvailable }
 
+/// True when now/next hydration loaded enough programs to unblock the UI;
+/// full XMLTV parse can run later without blocking first paint.
+bool shouldDeferFullXmlParse({
+  required bool hasLoadedPrograms,
+  required int loadedProgramChannelCount,
+  required int allowedChannelCount,
+}) {
+  if (!hasLoadedPrograms) return false;
+  if (loadedProgramChannelCount >= 300) return true;
+  if (allowedChannelCount > 0) {
+    final minFromAllowed = (allowedChannelCount * 0.04).round().clamp(100, 2000);
+    if (loadedProgramChannelCount >= minFromAllowed) return true;
+  }
+  return loadedProgramChannelCount >= 150;
+}
+
+Future<bool> hydrateNowNextFromDb({
+  required bool dbDisabled,
+  required bool dbReady,
+  required Future<Map<String, List<Map<String, dynamic>>>> Function({
+    required int futureHours,
+  }) getNowNextProgramsByChannel,
+  required Map<String, List<String>>? Function() getNormalizedChannels,
+  required Future<void> Function() loadNormalizedMappingFromPrefs,
+  required void Function() invalidateProgramIndexCache,
+  required void Function(String epgId, List<Program> programs)
+      setChannelPrograms,
+  required void Function(Iterable<String> ids) addAvailableChannels,
+  required void Function() rebuildEpgIdIndex,
+  required Future<void> Function() hydrateFuzzyMatchIndexFromDisk,
+  required void Function() notifyListeners,
+}) async {
+  if (dbDisabled || !dbReady) return false;
+
+  try {
+    final start = DateTime.now();
+    final dbPrograms = await getNowNextProgramsByChannel(futureHours: 12);
+    if (dbPrograms.isEmpty) return false;
+
+    invalidateProgramIndexCache();
+    for (final entry in dbPrograms.entries) {
+      final epgId = entry.key;
+      final programs = entry.value
+          .map((row) => Program(
+                id: '${epgId}_${row['startTs']}',
+                channelId: epgId,
+                title: row['title'] as String? ?? '',
+                description: row['description'] as String?,
+                startTime:
+                    DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int),
+                endTime:
+                    DateTime.fromMillisecondsSinceEpoch(row['endTs'] as int),
+                imageUrl: row['imageUrl'] as String?,
+              ))
+          .toList();
+      setChannelPrograms(epgId, programs);
+    }
+
+    addAvailableChannels(dbPrograms.keys);
+    var normalized = getNormalizedChannels();
+    if (normalized == null || normalized.isEmpty) {
+      await loadNormalizedMappingFromPrefs();
+      normalized = getNormalizedChannels();
+    }
+    if (normalized != null && normalized.isNotEmpty) {
+      addAvailableChannels(normalized.values.expand((list) => list));
+    }
+    rebuildEpgIdIndex();
+    await hydrateFuzzyMatchIndexFromDisk();
+    notifyListeners();
+    debugLog(
+      'EPG: Now/next DB fast path loaded ${dbPrograms.length} channels '
+      'in ${DateTime.now().difference(start).inMilliseconds}ms',
+    );
+    return true;
+  } catch (e) {
+    debugLog('EPG: Now/next DB fast path failed: $e');
+    rethrow;
+  }
+}
+
 /// Attempt to hydrate in-memory programs from the DB fast path.
 Future<EpgDbLoadOutcome> tryLoadProgramsFromDb({
   required bool forceRefresh,
@@ -31,12 +112,14 @@ Future<EpgDbLoadOutcome> tryLoadProgramsFromDb({
     required int futureHours,
   }) getAllProgramsByChannel,
   required Map<String, List<String>>? Function() getNormalizedChannels,
-  required void Function(Map<String, List<String>>? value) setNormalizedChannels,
+  required void Function(Map<String, List<String>>? value)
+      setNormalizedChannels,
   required Future<void> Function() loadNormalizedMappingFromPrefs,
   required String Function(String text) normalize,
   required void Function() clearProgramsByChannel,
   required void Function() invalidateProgramIndexCache,
-  required void Function(String epgId, List<Program> programs) setChannelPrograms,
+  required void Function(String epgId, List<Program> programs)
+      setChannelPrograms,
   required void Function() clearAvailableChannels,
   required void Function(Iterable<String> ids) addAvailableChannels,
   required void Function() clearInternalMapping,
@@ -75,8 +158,8 @@ Future<EpgDbLoadOutcome> tryLoadProgramsFromDb({
                 channelId: epgId,
                 title: row['title'] as String? ?? '',
                 description: row['description'] as String?,
-                startTime: DateTime.fromMillisecondsSinceEpoch(
-                    row['startTs'] as int),
+                startTime:
+                    DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int),
                 endTime:
                     DateTime.fromMillisecondsSinceEpoch(row['endTs'] as int),
                 imageUrl: row['imageUrl'] as String?,
@@ -163,8 +246,10 @@ Future<bool> trySkipXmlParseWithMappings({
   required void Function(Iterable<String> ids) addAvailableChannels,
   required void Function() rebuildEpgIdIndex,
   required Future<void> Function() hydrateFuzzyMatchIndexFromDisk,
+  bool allowMappingShortcut = true,
 }) async {
-  if (forceRefresh ||
+  if (!allowMappingShortcut ||
+      forceRefresh ||
       normalizedChannels == null ||
       normalizedChannels.isEmpty ||
       dbDisabled ||

@@ -200,6 +200,27 @@ class SmartCacheService {
     }
   }
   
+  /// True when the channel DB was recently synced and still matches [expectedCount].
+  Future<bool> isChannelCacheFresh({int? expectedCount}) async {
+    if (expectedCount != null && expectedCount <= 0) return false;
+    try {
+      final prefs = await _requirePrefs();
+      final channelTs = prefs.getInt(_channelsCacheAtKey);
+      if (channelTs == null) return false;
+      final fresh = DateTime.now()
+              .difference(DateTime.fromMillisecondsSinceEpoch(channelTs)) <
+          _channelCacheTtl;
+      if (!fresh) return false;
+      if (expectedCount == null) return true;
+      final cached = prefs.getInt(_channelsCountKey) ?? 0;
+      final minExpected = (expectedCount * 0.9).round();
+      return cached >= minExpected;
+    } catch (e) {
+      debugLog('SmartCache: isChannelCacheFresh failed: $e');
+      return false;
+    }
+  }
+
   /// Check if cache is fresh
   Future<bool> isCacheFresh({bool forceRefresh = false}) async {
     if (forceRefresh) return false;

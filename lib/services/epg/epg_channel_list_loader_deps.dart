@@ -25,6 +25,7 @@ class EpgChannelListLoaderDeps {
     required this.handleDbError,
     required this.dbProgramCount,
     required this.getAllProgramsByChannel,
+    required this.getNowNextProgramsByChannel,
     required this.getNormalizedChannels,
     required this.setNormalizedChannels,
     required this.loadNormalizedMappingFromPrefs,
@@ -74,6 +75,8 @@ class EpgChannelListLoaderDeps {
     required this.refreshFromNetwork,
     required this.scheduleEpgWindowExtension,
     required this.scheduleSecondaryMerge,
+    required this.scheduleDeferredFullXmlParse,
+    required this.scheduleDeferredFullEpgHydrate,
   });
 
   final bool Function() hasEpgUrl;
@@ -99,6 +102,9 @@ class EpgChannelListLoaderDeps {
     required int pastHours,
     required int futureHours,
   }) getAllProgramsByChannel;
+  final Future<Map<String, List<Map<String, dynamic>>>> Function({
+    required int futureHours,
+  }) getNowNextProgramsByChannel;
   final Map<String, List<String>>? Function() getNormalizedChannels;
   final void Function(Map<String, List<String>>? value) setNormalizedChannels;
   final Future<void> Function() loadNormalizedMappingFromPrefs;
@@ -160,4 +166,6 @@ class EpgChannelListLoaderDeps {
   final void Function({required bool fromBackgroundRefresh})
       scheduleEpgWindowExtension;
   final void Function({bool forceRefresh}) scheduleSecondaryMerge;
+  final void Function() scheduleDeferredFullXmlParse;
+  final void Function() scheduleDeferredFullEpgHydrate;
 }

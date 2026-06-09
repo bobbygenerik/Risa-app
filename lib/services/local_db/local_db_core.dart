@@ -52,7 +52,7 @@ extension LocalDbCore on LocalDbService {
       debugLog('LocalDbService: Opening database at $dbPath');
       _db = await openDatabase(
         dbPath,
-        version: 4,
+        version: 5,
         onConfigure: (db) async {
           try {
             // PRAGMA journal_mode returns rows; use rawQuery to capture result.
@@ -74,7 +74,7 @@ extension LocalDbCore on LocalDbService {
         onCreate: (db, _) async {
           await db.execute('''
           CREATE TABLE channels(
-            id TEXT PRIMARY KEY,
+            id TEXT,
             name TEXT,
             url TEXT,
             logoUrl TEXT,
@@ -88,7 +88,8 @@ extension LocalDbCore on LocalDbService {
             country TEXT,
             isHidden INTEGER,
             sortOrder INTEGER,
-            idx INTEGER
+            idx INTEGER,
+            PRIMARY KEY (id, url)
           )
         ''');
           // Composite index for efficient category paging (WHERE groupTitle = ? ORDER BY idx)
@@ -144,6 +145,35 @@ extension LocalDbCore on LocalDbService {
             await db.execute(
                 'CREATE INDEX IF NOT EXISTS idx_channels_group_idx ON channels(groupTitle, idx)');
             await db.execute('DROP INDEX IF EXISTS idx_channels_group');
+          }
+          if (oldVersion < 5) {
+            await db.execute('DROP TABLE IF EXISTS channels');
+            await db.execute('''
+            CREATE TABLE channels(
+              id TEXT,
+              name TEXT,
+              url TEXT,
+              logoUrl TEXT,
+              groupTitle TEXT,
+              tvgId TEXT,
+              channelNumber INTEGER,
+              attrs TEXT,
+              isHD INTEGER,
+              isFavorite INTEGER,
+              language TEXT,
+              country TEXT,
+              isHidden INTEGER,
+              sortOrder INTEGER,
+              idx INTEGER,
+              PRIMARY KEY (id, url)
+            )
+            ''');
+            await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_channels_group_idx ON channels(groupTitle, idx)');
+            await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)');
+            await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_channels_idx ON channels(idx)');
           }
         },
       );

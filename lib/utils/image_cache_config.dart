@@ -28,10 +28,10 @@ class ImageCacheConfig {
   static const int defaultHeroHeight = 720;
 
   /// Default cache width for channel logos
-  static const int defaultLogoWidth = 200;
+  static const int defaultLogoWidth = 400;
 
   /// Default cache height for channel logos
-  static const int defaultLogoHeight = 150;
+  static const int defaultLogoHeight = 280;
 
   /// Initialize the image cache with optimized settings
   static void initialize() {

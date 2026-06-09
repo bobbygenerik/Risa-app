@@ -122,6 +122,7 @@ class LiveTvHeroContent extends StatelessWidget {
             // BlendMode.dstIn forces a per-frame saveLayer that made the
             // rotation crossfade janky on a 2500px-wide backdrop.
             return SizedBox.expand(
+              key: ValueKey<String>('hero_${channel.epgLookupId}_$normalizedHeroUrl'),
               child: Align(
                 alignment: Alignment.topRight,
                 child: FractionallySizedBox(
@@ -133,8 +134,8 @@ class LiveTvHeroContent extends StatelessWidget {
                     child: CachedNetworkImage(
                     imageUrl: normalizedHeroUrl,
                     httpHeaders: HttpClientService().imageHeaders,
-                    fit: BoxFit.fitWidth,
-                    alignment: Alignment.center,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topRight,
                     filterQuality: FilterQuality.medium,
                     memCacheWidth: cacheWidth,
                     memCacheHeight: cacheHeight,
@@ -143,8 +144,8 @@ class LiveTvHeroContent extends StatelessWidget {
                         url: normalizedHeroUrl,
                         imageProvider: imageProvider,
                         slot: ArtworkSlot.hero,
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment.center,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topRight,
                         fallback: LiveTvCardFallbacks.gradientPlaceholder(),
                         probeTag: 'hero_backdrop',
                         onRejected: () =>
@@ -161,7 +162,7 @@ class LiveTvHeroContent extends StatelessWidget {
                       onBackdropRejected?.call(url);
                       return LiveTvCardFallbacks.gradientPlaceholder();
                     },
-                    fadeInDuration: const Duration(milliseconds: 300),
+                    fadeInDuration: const Duration(milliseconds: 150),
                     useOldImageOnUrlChange: true,
                     ),
                   ),

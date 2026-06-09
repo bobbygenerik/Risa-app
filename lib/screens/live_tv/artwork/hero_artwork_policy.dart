@@ -20,7 +20,6 @@ class HeroArtworkPolicy {
       channel,
       source: source,
       programTitle: programTitle,
-      allowBlockedHostForEpg: isEpgFallback,
       onDecision: onDecision,
     )) {
       return false;
@@ -72,9 +71,7 @@ class HeroArtworkPolicy {
           lower.contains('landscape') ||
           lower.contains('fanart');
     }
-    if (lower.contains('tmsimg.com') || lower.contains('tvpassport.com')) {
-      return lower.contains('_b_h');
-    }
+    if (ArtworkValidator.isLikelyTmsLandscapeEpg(url)) return true;
     if (lower.contains('image.tmdb.org')) {
       return !ArtworkValidator.isLikelyPosterUrl(url);
     }

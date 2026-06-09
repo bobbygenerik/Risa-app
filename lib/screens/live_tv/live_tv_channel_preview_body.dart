@@ -57,10 +57,9 @@ class LiveTvChannelPreviewBody extends StatelessWidget {
     return FutureBuilder<List<Channel>>(
       future: previewFuture,
       builder: (context, snapshot) {
-        final previewList =
-            (snapshot.data != null && snapshot.data!.isNotEmpty)
-                ? snapshot.data!
-                : channelProvider.channels;
+        final previewList = (snapshot.data != null && snapshot.data!.isNotEmpty)
+            ? snapshot.data!
+            : const <Channel>[];
         if (previewList.isEmpty) {
           return buildSkeleton();
         }
@@ -141,7 +140,8 @@ class LiveTvChannelPreviewBody extends StatelessWidget {
 
             return Stack(
               children: [
-                buildHero(context, featuredChannel, displayChannels, epgService),
+                buildHero(
+                    context, featuredChannel, displayChannels, epgService),
                 const LiveTvBackgroundSyncIndicator(),
                 LiveTvArtworkDebugOverlay(
                   artworkService: artworkService,

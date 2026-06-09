@@ -439,6 +439,91 @@ class ChannelXtreamService {
     }
   }
 
+  Future<bool> loadLiveStreamsNative({
+    required String serverUrl,
+    required String username,
+    required String password,
+  }) async {
+    final cleanServer = serverUrl.replaceAll(_trailingSlashRe, '');
+    final xtreamService = XtreamCodesService(
+      serverUrl: cleanServer,
+      username: username,
+      password: password,
+    );
+
+    try {
+      final categories = await xtreamService.getLiveCategories();
+      final categoryNameById = <String, String>{};
+      for (final c in categories) {
+        final id = (c['category_id'] ?? c['id'] ?? '').toString();
+        final name = (c['category_name'] ?? c['name'] ?? '').toString();
+        if (id.isNotEmpty) categoryNameById[id] = name;
+      }
+
+      final liveStreams = await xtreamService.getAllLiveStreams();
+      if (liveStreams.isEmpty) return false;
+
+      final channels = <Map<String, dynamic>>[];
+      for (var i = 0; i < liveStreams.length; i++) {
+        final s = liveStreams[i];
+        final streamId = (s['stream_id'] ?? '').toString();
+        if (streamId.isEmpty) continue;
+        final name = (s['name'] ?? '').toString();
+        final categoryId = (s['category_id'] ?? '').toString();
+        final groupTitle = categoryNameById[categoryId] ?? 'Live';
+        final logoUrl =
+            resolveXtreamLogoUrl(s['stream_icon']?.toString(), cleanServer);
+        final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
+        final url = '$cleanServer/live/$username/$password/$streamId.ts';
+
+        channels.add({
+          'id': streamId,
+          'name': name.isNotEmpty ? name : streamId,
+          'url': url,
+          'logoUrl': logoUrl,
+          'groupTitle': groupTitle,
+          'tvgId': epgId,
+          'idx': i,
+          'attributes': {
+            'tvg-id': epgId,
+            'tvg-name': name,
+            'tvg-logo': logoUrl,
+            'group-title': groupTitle,
+          },
+        });
+      }
+
+      if (channels.isEmpty) return false;
+
+      deps.channelMaps
+        ..clear()
+        ..addAll(channels);
+      deps.clearChannelCache();
+      await deps.rebuildChannelCachesAsync();
+      deps.setChannelCountDb(channels.length);
+      deps.clearCachedCategories();
+      deps.updateEpgAllowedChannels();
+      deps.notifyListeners();
+
+      try {
+        await deps.clearDbChannels();
+        await deps.insertDbChannels(channels);
+      } catch (e) {
+        debugLog('ChannelProvider: Native Xtream DB persist failed: $e');
+      }
+
+      unawaited(primeLiveMetadata(
+        '$cleanServer/get.php?username=$username&password=$password&type=m3u_plus',
+      ));
+      debugLog(
+          'ChannelProvider: Loaded ${channels.length} live streams via native Xtream API');
+      return true;
+    } catch (e) {
+      debugLog('ChannelProvider: Native Xtream load failed: $e');
+      return false;
+    }
+  }
+
   static const Map<String, String> _probeHeaders = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
     'Accept': '*/*',

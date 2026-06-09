@@ -7,9 +7,12 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
     ChannelAutoLoadContext ctx,
   ) async {
     if (!deps.getDbReady()) {
-      logToSystem('DB not ready, falling through to M3U cache',
-          name: 'ChannelProvider');
-      return false;
+      debugLog('ChannelProvider: DB not ready, retrying ensureDb...');
+      await deps.ensureDb();
+      if (!deps.getDbReady()) {
+        debugLog('ChannelProvider: DB still not ready, falling through to M3U cache');
+        return false;
+      }
     }
 
     var skipDbLoad = false;
@@ -18,10 +21,8 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
       deps.setLoadingStatus('Loading from database...');
       deps.setLoadingProgress(0.15);
       deps.notifyListeners();
-      count = await deps
-          .getDb()
-          .channelCount()
-          .timeout(const Duration(seconds: 4));
+      count =
+          await deps.getDb().channelCount().timeout(const Duration(seconds: 4));
       final expectedChannels = ctx.expectedChannels;
       if (expectedChannels != null && expectedChannels > 0) {
         final minExpected = (expectedChannels * 0.9).round();
@@ -92,8 +93,7 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
       if (cachedCategories == null || cachedCategories.isEmpty) {
         logToSystem('Computing categories...', name: 'ChannelProvider');
         await deps.computeCategoriesAsync();
-        logToSystem(
-            'Categories: ${deps.getCachedCategories()?.length ?? 0}',
+        logToSystem('Categories: ${deps.getCachedCategories()?.length ?? 0}',
             name: 'ChannelProvider');
       }
     } catch (e) {
@@ -120,21 +120,22 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
     }());
 
     if (count > initialLimit) {
-      unawaited(() async {
-        await Future.delayed(const Duration(milliseconds: 500));
-        final more = await deps.getDb().getChannelsPage(
-            offset: initialLimit, limit: count - initialLimit);
-        deps.channelMaps.addAll(more);
-        await deps.rebuildChannelCachesAsync();
-        deps.invalidateCategoryCaches();
-        unawaited(deps.computeCategoriesAsync());
-        deps.updateEpgAllowedChannels();
-        deps.refreshSmartChannelCache();
-        deps.notifyListeners();
-      }());
+      debugLog(
+        'ChannelProvider: Keeping startup DB-first '
+        '($initialLimit/$count channels in memory; remaining rows stay paged)',
+      );
     }
 
-    unawaited(deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
+    final skipBgSync = await SmartCacheService.instance
+        .isChannelCacheFresh(expectedCount: count);
+    if (skipBgSync) {
+      debugLog(
+        'ChannelProvider: Skipping background sync — channel cache fresh '
+        '($count channels)',
+      );
+    } else {
+      unawaited(deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
+    }
     return true;
   }
 
@@ -142,6 +143,27 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
     SharedPreferences prefs,
     ChannelAutoLoadContext ctx,
   ) async {
+    if (deps.getDbReady()) {
+      try {
+        final dbCount = await deps
+            .getDb()
+            .channelCount()
+            .timeout(const Duration(seconds: 4));
+        final expected = ctx.expectedChannels;
+        final minExpected =
+            expected != null && expected > 0 ? (expected * 0.9).round() : 500;
+        if (dbCount >= minExpected) {
+          debugLog(
+            'ChannelProvider: DB has $dbCount channels — preferring DB-first '
+            'over file cache re-parse',
+          );
+          return tryLoadFromDatabase(prefs, ctx);
+        }
+      } catch (e) {
+        debugLog('ChannelProvider: DB count pre-check failed: $e');
+      }
+    }
+
     final cacheFilePath = ctx.cacheFilePath;
     final cacheAge = ctx.cacheAge;
     if (cacheFilePath == null || cacheAge == null) {
@@ -180,8 +202,7 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
           final jsonString = await file.readAsString();
           final List<dynamic> decoded =
               await compute(jsonDecode, jsonString) as List<dynamic>;
-          allChannels
-              .addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
+          allChannels.addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
         } else {
           debugLog(
               'ChannelProvider: Cache file is M3U, parsing via Streaming Parser...');
@@ -237,14 +258,23 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
         channelsFile: null,
       );
       if (deps.getDbReady()) {
-        deps.setLoadingStatus('Saving to database... don\'t close the app.');
-        deps.setLoadingProgress(0.6);
-        deps.notifyListeners();
         try {
-          await deps.getDb().clearChannels();
-          await deps.getDb().insertChannels(deps.channelMaps);
-          debugLog(
-              'ChannelProvider: Persisted ${deps.channelMaps.length} channels to DB (cache load)');
+          final existingCount = await deps.getDb().channelCount();
+          if (existingCount >= (allChannels.length * 0.95).round()) {
+            debugLog(
+              'ChannelProvider: Skipping DB re-insert '
+              '($existingCount channels already persisted)',
+            );
+          } else {
+            deps.setLoadingStatus('Saving to database... don\'t close the app.');
+            deps.setLoadingProgress(0.6);
+            deps.notifyListeners();
+            await deps.getDb().clearChannels();
+            await deps.getDb().insertChannels(deps.channelMaps);
+            debugLog(
+              'ChannelProvider: Persisted ${deps.channelMaps.length} channels to DB (cache load)',
+            );
+          }
         } catch (e) {
           debugLog('ChannelProvider: Failed to persist channels to DB: $e');
         }
@@ -269,7 +299,16 @@ extension ChannelAutoLoadCachePhases on ChannelAutoLoad {
           'ChannelProvider.autoLoadPlaylist: file cache load finished');
       deps.scheduleEpgRefresh(forceRefresh: false);
 
-      unawaited(deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
+      final skipBgSync = await SmartCacheService.instance
+          .isChannelCacheFresh(expectedCount: deps.channelMaps.length);
+      if (skipBgSync) {
+        debugLog(
+          'ChannelProvider: Skipping background sync after file cache — '
+          'channel cache fresh (${deps.channelMaps.length} channels)',
+        );
+      } else {
+        unawaited(deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
+      }
       return true;
     } catch (e) {
       debugLog(

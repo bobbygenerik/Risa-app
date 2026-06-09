@@ -4,23 +4,13 @@ import 'package:iptv_player/providers/channel_provider.dart';
 class LiveTvFallbackCategories {
   LiveTvFallbackCategories._();
 
-  static List<String> fromProvider(ChannelProvider provider) {
+  static Future<List<String>> fromProvider(ChannelProvider provider) =>
+      provider.getAllCategoryNamesAsync();
+
+  static List<String> fromProviderSync(ChannelProvider provider) {
     if (!provider.hasChannels) return [];
-    final channels = provider.channels;
-    final seen = <String>{};
-    final categories = <String>[];
-    for (final channel in channels) {
-      final trimmed = (channel.groupTitle ?? '').trim();
-      final name = trimmed.isEmpty ? 'Uncategorized' : trimmed;
-      if (seen.add(name)) {
-        if (name != 'Uncategorized') {
-          categories.add(name);
-        }
-      }
-    }
-    if (seen.contains('Uncategorized')) {
-      categories.add('Uncategorized');
-    }
-    return categories;
+    final categories = provider.getAllCategoryNames();
+    if (categories.isNotEmpty) return categories;
+    return [];
   }
 }

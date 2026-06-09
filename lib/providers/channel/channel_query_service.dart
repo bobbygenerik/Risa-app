@@ -98,8 +98,7 @@ class ChannelQueryService {
   }) async {
     if (_deps.getDbReady()) {
       try {
-        final categories =
-            await _deps.db.getCategories(limit: categoryLimit);
+        final categories = await _deps.db.getCategories(limit: categoryLimit);
         final result = <String, List<Channel>>{};
         if (categories.isNotEmpty) {
           final rowsByCategory = await _deps.db.getChannelsForCategoriesPage(
@@ -202,8 +201,7 @@ class ChannelQueryService {
     }
 
     try {
-      final rows =
-          await _deps.db.getChannelsPage(offset: offset, limit: limit);
+      final rows = await _deps.db.getChannelsPage(offset: offset, limit: limit);
       final result = <Channel>[];
       for (final m in rows) {
         if (excludeHidden && m['isHidden'] == true) continue;
@@ -233,6 +231,18 @@ class ChannelQueryService {
         offset: offset,
         limit: limit,
       );
+
+  Future<int> getChannelCountForCategoryAsync(String category) async {
+    if (_deps.getDbReady()) {
+      try {
+        return await _deps.db.channelCountForCategory(category);
+      } catch (e) {
+        debugLog('ChannelProvider: DB category count failed: $e');
+        _deps.handleDbError(e);
+      }
+    }
+    return _categories.countForCategory(category);
+  }
 
   Future<Map<String, List<Channel>>> getCategoryPreviewBatch(
     List<String> categories, {
@@ -326,18 +336,18 @@ class ChannelQueryService {
       final id = (map['id'] as String?)?.trim() ?? '';
       final url = (map['url'] as String?)?.trim() ?? '';
       final channelId = tvgId.isNotEmpty ? tvgId : (id.isNotEmpty ? id : url);
-      final channelNameForLookup = (ChannelEpgIntegration
-                  .extractTvgNameFromAttributes(map['attributes']) ??
-              (map['name'] as String?) ??
-              '')
-          .trim();
+      final channelNameForLookup =
+          (ChannelEpgIntegration.extractTvgNameFromAttributes(
+                      map['attributes']) ??
+                  (map['name'] as String?) ??
+                  '')
+              .trim();
 
       if (channelId.isNotEmpty &&
           epgService.hasEpgMatch(
             channelId,
-            channelName: channelNameForLookup.isNotEmpty
-                ? channelNameForLookup
-                : null,
+            channelName:
+                channelNameForLookup.isNotEmpty ? channelNameForLookup : null,
           )) {
         matched++;
       }

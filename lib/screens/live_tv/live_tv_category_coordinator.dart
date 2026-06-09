@@ -10,8 +10,10 @@ import 'package:iptv_player/utils/debug_helper.dart';
 
 typedef LiveTvCategoryMounted = bool Function();
 typedef LiveTvCategoryVoidCallback = void Function();
-typedef LiveTvCategoryEpgPrefetch = void Function(String category, List<Channel> channels);
-typedef LiveTvCategoryArtworkPrefetch = void Function(List<Channel> channels, {int limit});
+typedef LiveTvCategoryEpgPrefetch = void Function(
+    String category, List<Channel> channels);
+typedef LiveTvCategoryArtworkPrefetch = void Function(List<Channel> channels,
+    {int limit});
 
 /// Queues and loads category channel rows for the Live TV screen.
 class LiveTvCategoryCoordinator {
@@ -49,7 +51,7 @@ class LiveTvCategoryCoordinator {
   final List<String> _categoryCacheOrder = [];
 
   List<String> buildFallbackCategories(ChannelProvider provider) =>
-      LiveTvFallbackCategories.fromProvider(provider);
+      LiveTvFallbackCategories.fromProviderSync(provider);
 
   Future<void> prefetchInitialRows({bool force = false}) async {
     if (categoryState.loading) return;
@@ -89,7 +91,8 @@ class LiveTvCategoryCoordinator {
 
   Future<void> prefetchInitialCategoryRows() async {
     if (categoryState.names.isEmpty) return;
-    final end = math.min(initialCategoryPrefetchCount, categoryState.names.length);
+    final end =
+        math.min(initialCategoryPrefetchCount, categoryState.names.length);
     final categories = categoryState.names.take(end).toList();
     final channelProvider = getChannelProvider();
     try {
@@ -108,7 +111,7 @@ class LiveTvCategoryCoordinator {
         categoryState.offsets[category] = channels.length;
         categoryState.hasMore[category] = channels.length >= rowInitialFetch;
         prefetchEpgForRow(category, channels);
-        prefetchRowArtwork(channels, limit: 15);
+        prefetchRowArtwork(channels, limit: 12);
         notifyCategoryRow(category);
       }
       scheduleSnapshotSave();
@@ -147,7 +150,8 @@ class LiveTvCategoryCoordinator {
     }
   }
 
-  Future<void> loadCategoryRowInternal(String category, {bool append = false}) async {
+  Future<void> loadCategoryRowInternal(String category,
+      {bool append = false}) async {
     var timedOut = false;
     var retryLoad = false;
     var removeCategory = false;
@@ -158,10 +162,10 @@ class LiveTvCategoryCoordinator {
 
       final channels = await channelProvider
           .getChannelsForCategoryAsync(
-            category,
-            offset: offset,
-            limit: limit,
-          )
+        category,
+        offset: offset,
+        limit: limit,
+      )
           .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
@@ -186,14 +190,16 @@ class LiveTvCategoryCoordinator {
         }
         if (!append) {
           final categoryIndex = categoryState.names.indexOf(category);
-          if (categoryIndex >= 0 && categoryIndex < initialCategoryPrefetchCount) {
+          if (categoryIndex >= 0 &&
+              categoryIndex < initialCategoryPrefetchCount) {
             prefetchEpgForRow(category, channels);
           }
         }
-        prefetchRowArtwork(channels, limit: 15);
+        prefetchRowArtwork(channels, limit: 12);
         categoryState.offsets[category] = offset + channels.length;
       } else if (!append) {
-        final channelCount = channelProvider.getChannelCountForCategory(category);
+        final channelCount =
+            channelProvider.getChannelCountForCategory(category);
         if (channelCount == 0) {
           removeCategory = true;
         } else {
@@ -220,7 +226,8 @@ class LiveTvCategoryCoordinator {
         if (removeCategory) {
           removeCategoryRow(category);
         } else {
-          if (retryLoad && categoryState.channelCache[category]?.isEmpty == true) {
+          if (retryLoad &&
+              categoryState.channelCache[category]?.isEmpty == true) {
             categoryState.channelCache.remove(category);
           }
           notifyCategoryRow(category);

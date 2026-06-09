@@ -4,6 +4,7 @@ import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/shared_image_cache_manager.dart';
 import 'package:iptv_player/widgets/brand_fallback_background.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
@@ -74,6 +75,7 @@ class CachedImage extends StatelessWidget {
     ImageLoadProbe.recordAttempt(normalizedImageUrl, 'cached_image');
     Widget image = CachedNetworkImage(
       imageUrl: normalizedImageUrl,
+      cacheManager: SharedImageCacheManager.instance,
       httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
@@ -81,6 +83,8 @@ class CachedImage extends StatelessWidget {
       alignment: alignment,
       memCacheWidth: finalMemCacheWidth,
       memCacheHeight: finalMemCacheHeight,
+      maxWidthDiskCache: finalMemCacheWidth,
+      maxHeightDiskCache: finalMemCacheHeight,
       imageBuilder: (context, imageProvider) {
         ImageFailureCache.recordSuccess(normalizedImageUrl);
         ImageLoadProbe.recordSuccess(normalizedImageUrl, 'cached_image');

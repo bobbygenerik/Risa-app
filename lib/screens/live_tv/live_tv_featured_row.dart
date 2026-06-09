@@ -83,6 +83,7 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
           bindings: widget.bindings,
           isFirstRow: true,
           allowCategoryPaging: false,
+          hideUnmatchedChannels: true,
         ),
       );
     }
@@ -232,23 +233,39 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
       });
     }
 
+    _padFeaturedFromFallback(
+      featuredChannels,
+      addedChannelIds,
+      remainingOnly: true,
+      epgService: epgService,
+    );
+
     if (!mounted) return;
 
     _retries++;
     final reachedTarget = featuredChannels.length >= _targetFeaturedCount;
     final budgetExhausted = _retries >= _maxRetries;
+    final stable = List<Channel>.from(featuredChannels);
     setState(() {
-      _stableChannels = List<Channel>.from(featuredChannels);
-      // Latch once we have a full row, or once the retry budget runs out (so
-      // we settle on the best-so-far rather than recomputing forever, since
-      // EPG may never report "ready"). Require at least one card to latch.
-      _initialized =
-          (reachedTarget || budgetExhausted) && featuredChannels.isNotEmpty;
+      _stableChannels = stable;
+      // Latch only when the row is full or the retry budget is exhausted.
+      _initialized = reachedTarget || budgetExhausted;
     });
-    debugLog(
-        'LiveTV Featured: compute -> cards=${featuredChannels.length} '
-        'retries=$_retries initialized=$_initialized '
-        'missing=${missingChannelIds.length}');
+    _warmFeaturedRow(stable, epgService);
+    if (_retries == 1 || _initialized) {
+      final withPrograms = stable
+          .where((c) =>
+              epgService.getCurrentProgram(
+                c.epgLookupId,
+                channelName: c.epgLookupNameFallback,
+                groupTitle: c.groupTitle,
+              ) !=
+              null)
+          .length;
+      debugLog('LiveTV Featured: compute -> cards=${stable.length} '
+          'withPrograms=$withPrograms retries=$_retries '
+          'initialized=$_initialized missing=${missingChannelIds.length}');
+    }
 
     // Not full yet and still within budget: retry shortly so cards accumulate
     // as EPG programs land in memory, instead of freezing on a partial row.
@@ -256,6 +273,69 @@ class _LiveTvFeaturedRowState extends State<LiveTvFeaturedRow> {
       Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted && !_initialized) _computeFeaturedChannels();
       });
+    }
+  }
+
+  /// Fill remaining featured slots, preferring channels that already have EPG.
+  void _padFeaturedFromFallback(
+    List<Channel> featuredChannels,
+    Set<String> addedChannelIds, {
+    required bool remainingOnly,
+    required IncrementalEpgService epgService,
+  }) {
+    if (widget.fallbackChannels.isEmpty) return;
+    if (remainingOnly && featuredChannels.length >= _targetFeaturedCount) {
+      return;
+    }
+    final pool = widget.fallbackChannels
+        .where((c) =>
+            c.epgLookupId.isNotEmpty && !addedChannelIds.contains(c.epgLookupId))
+        .toList();
+    pool.sort((a, b) {
+      final aHas = epgService.getCurrentProgram(
+            a.epgLookupId,
+            channelName: a.epgLookupNameFallback,
+            groupTitle: a.groupTitle,
+          ) !=
+          null;
+      final bHas = epgService.getCurrentProgram(
+            b.epgLookupId,
+            channelName: b.epgLookupNameFallback,
+            groupTitle: b.groupTitle,
+          ) !=
+          null;
+      if (aHas == bHas) return 0;
+      return aHas ? -1 : 1;
+    });
+    final rng = math.Random(_shuffleSeed + _retries);
+    final withPrograms = pool
+        .where((c) => epgService.getCurrentProgram(c.epgLookupId) != null)
+        .toList();
+    withPrograms.shuffle(rng);
+    for (final channel in withPrograms) {
+      if (featuredChannels.length >= _targetFeaturedCount) break;
+      featuredChannels.add(channel);
+      addedChannelIds.add(channel.epgLookupId);
+    }
+  }
+
+  void _warmFeaturedRow(
+    List<Channel> channels,
+    IncrementalEpgService epgService,
+  ) {
+    if (channels.isEmpty) return;
+    final ids = channels.map((c) => c.epgLookupId).toList();
+    final names = channels.map((c) => c.epgLookupNameFallback).toList();
+    unawaited(epgService.priorityLoadVisibleChannels(ids, channelNames: names));
+    for (final channel in channels) {
+      final program = epgService.getCurrentProgram(
+        channel.epgLookupId,
+        channelName: channel.epgLookupNameFallback,
+        groupTitle: channel.groupTitle,
+      );
+      if (program != null) {
+        widget.artworkResolver.prefetchCardArtwork(program, channel);
+      }
     }
   }
 }

@@ -73,17 +73,9 @@ class ChannelAutoLoad {
       final prefs = await SharedPreferences.getInstance();
       await _migrateFlutterPrefFile(prefs);
       await _migrateFlutterPrefKeys(prefs);
-      try {
-        final keys = prefs.getKeys().toList();
-        debugLog('ChannelProvider: PREF KEYS: $keys');
-        for (final k in keys) {
-          debugLog('ChannelProvider: PREF: $k -> ${prefs.get(k)}');
-        }
-      } catch (e) {
-        debugLog('ChannelProvider: PREF DUMP FAILED: $e');
-      }
       final playlistType = await _resolvePlaylistType(prefs);
-      debugLog('ChannelProvider: PREFS snapshot: playlist_type=${prefs.getString('playlist_type')}, m3u_url=${prefs.getString('m3u_url')}, active_playlist=${prefs.getString('active_playlist_id')}');
+      debugLog(
+          'ChannelProvider: PREFS snapshot: playlist_type=${prefs.getString('playlist_type')}, m3u_url=${prefs.getString('m3u_url')}, active_playlist=${prefs.getString('active_playlist_id')}');
       if (playlistType == null) {
         await _handleNoPlaylistConfigured(prefs);
         return;
@@ -106,7 +98,8 @@ class ChannelAutoLoad {
         reason: 'startup fallback',
       );
       if (restoredFromPrefs) {
-        unawaited(deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
+        unawaited(
+            deps.backgroundSync(prefs: prefs, url: ctx.cachedPlaylistUrl));
         return;
       }
 
@@ -164,7 +157,8 @@ class ChannelAutoLoad {
       final file = File(path);
       if (!await file.exists()) return;
       final content = await file.readAsString();
-      final Map<String, dynamic> disk = jsonDecode(content) as Map<String, dynamic>;
+      final Map<String, dynamic> disk =
+          jsonDecode(content) as Map<String, dynamic>;
 
       final mappings = <String, String>{
         'flutter.playlist_type': 'playlist_type',
@@ -190,7 +184,8 @@ class ChannelAutoLoad {
           } else if (val is int) {
             if (prefs.getInt(e.value) == null) {
               await prefs.setInt(e.value, val);
-              debugLog('ChannelProvider: FILE MIGRATE ${e.key} -> ${e.value} (int)');
+              debugLog(
+                  'ChannelProvider: FILE MIGRATE ${e.key} -> ${e.value} (int)');
               migratedAny = true;
             }
           }
@@ -368,6 +363,20 @@ class ChannelAutoLoad {
               baseUri = Uri.parse(
                   'https://${cleaned.replaceAll(deps.httpPrefixRe, '')}');
             }
+            final nativeLoaded = await deps.loadXtreamLiveStreamsNative(
+              serverUrl: baseUri.toString(),
+              username: username.replaceAll(' ', ''),
+              password: password.replaceAll(' ', ''),
+            );
+            if (nativeLoaded) {
+              deps.setIsLoading(false);
+              deps.setHasLoadedPlaylist(true);
+              deps.setIsColdStartLoad(false);
+              deps.notifyListeners();
+              StartupProbe.mark(
+                  'ChannelProvider.autoLoadPlaylist: native Xtream load finished');
+              return;
+            }
 
             final playlistUri = baseUri.replace(
               path: (baseUri.path.trim().isEmpty)
@@ -409,7 +418,8 @@ class ChannelAutoLoad {
 
       if (playlistUrl == null || playlistUrl.isEmpty) {
         debugLog('ChannelProvider: Playlist URL is empty');
-        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: playlist url empty');
+        StartupProbe.mark(
+            'ChannelProvider.autoLoadPlaylist: playlist url empty');
         return;
       }
 
@@ -419,7 +429,8 @@ class ChannelAutoLoad {
       }
       debugLog(
           'ChannelProvider: Loading playlist URL: ${redactUrl(playlistUrl)}');
-      StartupProbe.mark('ChannelProvider.autoLoadPlaylist: downloading playlist');
+      StartupProbe.mark(
+          'ChannelProvider.autoLoadPlaylist: downloading playlist');
       await deps.loadPlaylistFromUrl(playlistUrl);
       if (deps.channelMaps.isNotEmpty) {
         deps.setHasLoadedPlaylist(true);
@@ -431,7 +442,8 @@ class ChannelAutoLoad {
         deps.setHasLoadedPlaylist(false);
         debugLog(
             'ChannelProvider: Auto-load finished without channels (error: ${deps.getErrorMessage()})');
-        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no channels loaded');
+        StartupProbe.mark(
+            'ChannelProvider.autoLoadPlaylist: no channels loaded');
       }
     } catch (e) {
       debugLog('ChannelProvider: Auto-load playlist failed: $e');

@@ -37,6 +37,7 @@ class LiveTvRowBuilders {
       isFirstRow: isFirstRow,
       isFirstCategoryRow: isFirstCategoryRow,
       allowCategoryPaging: allowCategoryPaging,
+      hideUnmatchedChannels: true,
     );
   }
 

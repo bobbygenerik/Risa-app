@@ -4,6 +4,7 @@ import 'package:iptv_player/screens/live_tv/artwork_url_guard.dart';
 import 'package:iptv_player/utils/artwork_validator.dart';
 
 /// URL acceptance rules for channel row card thumbnails.
+/// Cards never show posters, portraits, or channel logos as cover art.
 class CardArtworkPolicy {
   const CardArtworkPolicy();
 
@@ -21,7 +22,6 @@ class CardArtworkPolicy {
       channel,
       source: source,
       programTitle: programTitle,
-      allowBlockedHostForEpg: isEpgFallback,
       onDecision: onDecision,
     )) {
       return false;
@@ -34,11 +34,11 @@ class CardArtworkPolicy {
       );
     }
 
-    if (!ArtworkValidator.isLikelyLandscapeUrl(url, strict: false)) {
+    if (!_isLandscapeCardArt(url)) {
       reject('reject_not_landscape');
       return false;
     }
-    if (!isEpgFallback && ArtworkValidator.isLikelySmallImage(url)) {
+    if (ArtworkValidator.isLikelySmallImage(url)) {
       reject('reject_small');
       return false;
     }
@@ -46,16 +46,26 @@ class CardArtworkPolicy {
   }
 
   /// Program art suitable for a cover layer (not a logo — use fallback instead).
-  bool acceptsCoverLayer(String? url, Channel channel) {
+  bool acceptsCoverLayer(
+    String? url,
+    Channel channel, {
+    bool isEpgFallback = false,
+  }) {
     if (url == null || url.isEmpty) return false;
-    if (LiveTvArtworkUrlGuard.blockedProgramArtworkHost(url) != null) {
+    if (LiveTvArtworkUrlGuard.blockedProgramArtworkHost(url) != null &&
+        !ArtworkValidator.isLikelyTmsLandscapeEpg(url)) {
       return false;
     }
     if (ArtworkValidator.isLikelyPosterUrl(url)) return false;
     if (LiveTvArtworkUrlGuard.matchesChannelLogo(url, channel)) return false;
     if (LiveTvArtworkUrlGuard.isLogoOnlyHost(url)) return false;
-    if (LiveTvArtworkUrlGuard.isLikelyChannelLogoUrl(url)) return false;
-    if (LiveTvArtworkUrlGuard.isLikelyTitleLogoUrl(url)) return false;
-    return true;
+    if (ArtworkValidator.isLikelyChannelLogoUrl(url)) return false;
+    if (ArtworkValidator.isLikelyTitleLogoUrl(url)) return false;
+    return _isLandscapeCardArt(url);
+  }
+
+  bool _isLandscapeCardArt(String url) {
+    if (ArtworkValidator.isLikelyTmsLandscapeEpg(url)) return true;
+    return ArtworkValidator.isLikelyLandscapeUrl(url, strict: true);
   }
 }

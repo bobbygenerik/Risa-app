@@ -62,8 +62,8 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
   void _scheduleChewieInit() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final delay = Platform.isAndroid
-          ? const Duration(milliseconds: 500)
-          : const Duration(milliseconds: 250);
+          ? const Duration(milliseconds: 200)
+          : const Duration(milliseconds: 150);
       Future.delayed(delay, () {
         if (mounted) _initializePlayer();
       });

@@ -35,6 +35,18 @@ extension IncrementalEpgServiceApi on IncrementalEpgService {
     return _programQuery.failureTracker.shouldHide(channelId);
   }
 
+  /// Whether a channel should appear in guide-style browse rows (Featured, categories).
+  /// Unmatched channels are hidden once EPG is ready; still shown during bootstrap
+  /// and while a matched channel's programs are loading from DB.
+  bool shouldShowInGuideRow(String channelId, {String? channelName}) {
+    if (shouldHideChannel(channelId, channelName: channelName)) return false;
+    if (isGuideBootstrapBusy || !hasUsableData) return true;
+    if (shouldShowGuideRowLoading(channelId, channelName: channelName)) {
+      return true;
+    }
+    return hasEpgMatch(channelId, channelName: channelName);
+  }
+
   bool _isUnknownChannelName(String? channelName) {
     if (channelName == null || channelName.trim().isEmpty) return false;
     return channelName.toLowerCase().contains('unknown');
@@ -98,9 +110,16 @@ extension IncrementalEpgServiceApi on IncrementalEpgService {
   }
 
   Program? getCurrentProgram(String channelId,
-          {String? channelName, String? groupTitle}) =>
-      _programQuery.getCurrentProgram(channelId,
-          channelName: channelName, groupTitle: groupTitle);
+      {String? channelName, String? groupTitle}) {
+    final program = _programQuery.getCurrentProgram(channelId,
+        channelName: channelName, groupTitle: groupTitle);
+    if (program == null &&
+        hasEpgMatch(channelId, channelName: channelName) &&
+        !hasProgramsForChannel(channelId, channelName: channelName)) {
+      unawaited(ensureChannelLoaded(channelId, channelName: channelName));
+    }
+    return program;
+  }
 
   Program? getProgramForChannel(String channelId,
           {String? channelName, String? groupTitle}) =>

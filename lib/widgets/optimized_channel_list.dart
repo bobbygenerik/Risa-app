@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../providers/channel_provider.dart';
 import '../models/channel.dart';
 import 'cached_image.dart';
+import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/shared_image_cache_manager.dart';
 
 /// Optimized channel list widget using virtual scrolling
 /// Prevents memory bloat by only creating Channel objects for visible items
@@ -22,23 +27,34 @@ class OptimizedChannelList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ChannelProvider>(
       builder: (context, provider, child) {
-        // Get channel maps instead of Channel objects (memory efficient)
-        final channelMaps = category != null
-            ? provider.getChannelMapsForCategory(category!, limit: itemsPerPage)
-            : provider.getChannelMapsForUI(limit: itemsPerPage);
+        final future = category != null
+            ? provider.getChannelsForCategoryAsync(
+                category!,
+                limit: itemsPerPage,
+              )
+            : provider.getChannelsPage(limit: itemsPerPage);
 
-        if (channelMaps.isEmpty) {
-          return const Center(
-            child: Text('No channels available'),
-          );
-        }
+        return FutureBuilder<List<Channel>>(
+          future: future,
+          builder: (context, snapshot) {
+            final channels = snapshot.data ?? const <Channel>[];
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (channels.isEmpty) {
+              return const Center(
+                child: Text('No channels available'),
+              );
+            }
 
-        return ListView.builder(
-          itemCount: channelMaps.length,
-          itemBuilder: (context, index) {
-            return OptimizedChannelTile(
-              channelMap: channelMaps[index],
-              onTap: onChannelTap,
+            return ListView.builder(
+              itemCount: channels.length,
+              itemBuilder: (context, index) {
+                return OptimizedChannelTile(
+                  channel: channels[index],
+                  onTap: onChannelTap,
+                );
+              },
             );
           },
         );
@@ -49,20 +65,20 @@ class OptimizedChannelList extends StatelessWidget {
 
 /// Optimized channel tile that creates Channel object only when needed
 class OptimizedChannelTile extends StatelessWidget {
-  final Map<String, dynamic> channelMap;
+  final Channel channel;
   final Function(Channel)? onTap;
 
   const OptimizedChannelTile({
     super.key,
-    required this.channelMap,
+    required this.channel,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final name = channelMap['name'] as String? ?? 'Unknown Channel';
-    final logoUrl = channelMap['logoUrl'] as String?;
-    final groupTitle = channelMap['groupTitle'] as String? ?? 'Uncategorized';
+    final name = channel.name;
+    final logoUrl = channel.logoUrl;
+    final groupTitle = channel.groupTitle ?? 'Uncategorized';
 
     return ListTile(
       leading: logoUrl != null
@@ -85,13 +101,7 @@ class OptimizedChannelTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
-      onTap: onTap != null
-          ? () {
-              // Only create Channel object when actually needed
-              final channel = Channel.fromMap(channelMap);
-              onTap!(channel);
-            }
-          : null,
+      onTap: onTap != null ? () => onTap!(channel) : null,
     );
   }
 }
@@ -115,8 +125,9 @@ class PaginatedChannelList extends StatefulWidget {
 
 class _PaginatedChannelListState extends State<PaginatedChannelList> {
   final ScrollController _scrollController = ScrollController();
-  List<Map<String, dynamic>> _loadedChannels = [];
+  List<Channel> _loadedChannels = [];
   bool _isLoadingMore = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -138,34 +149,68 @@ class _PaginatedChannelListState extends State<PaginatedChannelList> {
     }
   }
 
-  void _loadInitialChannels() {
+  Future<void> _loadInitialChannels() async {
     final provider = context.read<ChannelProvider>();
-    final channelMaps = widget.category != null
-        ? provider.getChannelMapsForCategory(widget.category!,
-            limit: widget.pageSize)
-        : provider.getChannelMapsForUI(limit: widget.pageSize);
+    final channels = widget.category != null
+        ? await provider.getChannelsForCategoryAsync(
+            widget.category!,
+            limit: widget.pageSize,
+          )
+        : await provider.getChannelsPage(limit: widget.pageSize);
+    if (!mounted) return;
 
     setState(() {
-      _loadedChannels = channelMaps;
+      _loadedChannels = channels;
+      _hasMore = channels.length == widget.pageSize;
     });
+    _prefetchLogos(channels.take(12));
   }
 
-  void _loadMoreChannels() {
-    if (_isLoadingMore) return;
+  Future<void> _loadMoreChannels() async {
+    if (_isLoadingMore || !_hasMore) return;
 
     setState(() {
       _isLoadingMore = true;
     });
 
-    // Simulate loading more channels (in real implementation,
-    // you'd extend the provider to support offset/limit)
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _isLoadingMore = false;
-        });
-      }
+    final provider = context.read<ChannelProvider>();
+    final next = widget.category != null
+        ? await provider.getChannelsForCategoryAsync(
+            widget.category!,
+            offset: _loadedChannels.length,
+            limit: widget.pageSize,
+          )
+        : await provider.getChannelsPage(
+            offset: _loadedChannels.length,
+            limit: widget.pageSize,
+          );
+    if (!mounted) return;
+    setState(() {
+      _loadedChannels.addAll(next);
+      _hasMore = next.length == widget.pageSize;
+      _isLoadingMore = false;
     });
+    _prefetchLogos(next.take(12));
+  }
+
+  void _prefetchLogos(Iterable<Channel> channels) {
+    for (final channel in channels) {
+      final raw = channel.logoUrl?.trim();
+      if (raw == null || raw.isEmpty) continue;
+      final url = normalizeImageUrl(raw);
+      if (ImageFailureCache.shouldSkipLogo(url)) continue;
+      precacheImage(
+        CachedNetworkImageProvider(
+          url,
+          headers: HttpClientService().imageHeaders,
+          cacheManager: SharedImageCacheManager.instance,
+        ),
+        context,
+        onError: (error, stackTrace) {
+          ImageFailureCache.recordFailure(url, error);
+        },
+      );
+    }
   }
 
   @override
@@ -184,7 +229,7 @@ class _PaginatedChannelListState extends State<PaginatedChannelList> {
         }
 
         return OptimizedChannelTile(
-          channelMap: _loadedChannels[index],
+          channel: _loadedChannels[index],
           onTap: widget.onChannelTap,
         );
       },

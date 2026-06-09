@@ -12,7 +12,6 @@ class ArtworkSharedUrlChecks {
     Channel channel, {
     required String source,
     String? programTitle,
-    required bool allowBlockedHostForEpg,
     void Function(String message)? onDecision,
   }) {
     void reject(String result) {
@@ -22,8 +21,14 @@ class ArtworkSharedUrlChecks {
       );
     }
 
+    if (LiveTvArtworkUrlGuard.isLogoOnlyHost(url)) {
+      reject('reject_logo_only_host');
+      return false;
+    }
+
     final blockedHost = LiveTvArtworkUrlGuard.blockedProgramArtworkHost(url);
-    if (blockedHost != null && !allowBlockedHostForEpg) {
+    if (blockedHost != null &&
+        !ArtworkValidator.isLikelyTmsLandscapeEpg(url)) {
       reject('reject_blocked_host host=$blockedHost');
       return false;
     }

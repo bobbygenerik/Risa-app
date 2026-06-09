@@ -35,6 +35,7 @@ extension LiveTvArtworkServiceTitles on LiveTvArtworkService {
     if (_isGenericTitle(canonical)) return false;
     if (_isSportsProgram(program, channel)) return false;
     if (channel != null && _isNewsProgram(program, channel)) return false;
+    if (EpgTitleDisambiguation.isUnderSpecified(program.title)) return false;
     return true;
   }
 
@@ -53,7 +54,13 @@ extension LiveTvArtworkServiceTitles on LiveTvArtworkService {
     final isSports = _isSportsProgram(program, channel);
     final isMovie = channel != null && _isMovieProgram(program, channel);
     if (isNews || isSports || isMovie) return title;
-    return EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
+    if (EpgTitleDisambiguation.isUnderSpecified(title)) return title;
+    final stripped = EPGMatchingUtils.stripEpisodeSubtitleLoose(title);
+    if (EpgTitleDisambiguation.isUnderSpecified(stripped) &&
+        !EpgTitleDisambiguation.isUnderSpecified(title)) {
+      return title;
+    }
+    return stripped;
   }
 
   static final RegExp _nonWordWhitespaceRe = RegExp(r'[^\w\s]');
@@ -125,23 +132,38 @@ extension LiveTvArtworkServiceTitles on LiveTvArtworkService {
       }
     }
 
+    final underSpecified = EpgTitleDisambiguation.isUnderSpecified(rawTitle);
     final channelName =
         channel == null ? '' : _cleanChannelNameForQuery(channel.name);
     final groupTitle = channel == null
         ? ''
         : _cleanChannelNameForQuery(channel.groupTitle ?? '');
-    if ((_isGenericTitle(canonical) || isNews) && channelName.isNotEmpty) {
+
+    if (underSpecified) {
+      for (final hint in EpgTitleDisambiguation.artworkQueryHints(
+        program,
+        channel,
+      )) {
+        addVariant(hint);
+      }
+    }
+
+    if ((_isGenericTitle(canonical) || isNews || underSpecified) &&
+        channelName.isNotEmpty) {
       add('$canonical $channelName');
     }
-    if ((_isGenericTitle(canonical) || isNews) && groupTitle.isNotEmpty) {
+    if ((_isGenericTitle(canonical) || isNews || underSpecified) &&
+        groupTitle.isNotEmpty) {
       add('$canonical $groupTitle');
     }
-    if ((_isGenericTitle(canonical) || isNews) &&
+    if ((_isGenericTitle(canonical) || isNews || underSpecified) &&
         channelName.isNotEmpty &&
         groupTitle.isNotEmpty) {
       add('$canonical $channelName $groupTitle');
     }
-    addVariant(canonical);
+    if (!underSpecified) {
+      addVariant(canonical);
+    }
     if (normalizedLookup != canonical) {
       addVariant(normalizedLookup);
     }
@@ -174,6 +196,15 @@ extension LiveTvArtworkServiceTitles on LiveTvArtworkService {
         addVariant('$canonical kids');
       }
     }
+
+    for (final extra in ArtworkQueryExpander.expand(program, channel)) {
+      addVariant(extra);
+    }
+
+    if (underSpecified) {
+      addVariant(canonical);
+    }
+
     if (cacheKey.isNotEmpty) {
       _artworkQueryTitleCache[cacheKey] = List<String>.from(titles);
     }

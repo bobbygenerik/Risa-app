@@ -42,18 +42,28 @@ class LiveTvRouteHooks {
     required void Function() resetRowScrolls,
     required void Function() resetInitialFocus,
     required void Function() requestCategoryPrefetch,
+    bool returningFromPlayer = false,
   }) {
     SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!isMounted()) return;
       if (scrollController.hasClients) {
         scrollController.jumpTo(0);
       }
       resetRowScrolls();
       resetInitialFocus();
-      if (provider.hasChannels &&
-          !categoryState.loading &&
-          categoryState.names.isEmpty) {
-        categoryState.prefetchRequested = false;
+      if (!provider.hasChannels || categoryState.loading) return;
+      if (categoryState.names.isNotEmpty) return;
+      categoryState.prefetchRequested = false;
+      final delay = returningFromPlayer
+          ? const Duration(seconds: 3)
+          : Duration.zero;
+      if (delay == Duration.zero) {
         requestCategoryPrefetch();
+      } else {
+        Future.delayed(delay, () {
+          if (!isMounted()) return;
+          requestCategoryPrefetch();
+        });
       }
     });
   }

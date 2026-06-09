@@ -33,13 +33,12 @@ class LiveTvArtworkPrefetcher {
 
       final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
       if (normalized.isEmpty) continue;
-      final key = '${candidate.channel.epgLookupId}|$normalized';
-      if (_prefetchedTitleLogoKeys.contains(key)) continue;
+      if (_prefetchedTitleLogoKeys.contains(normalized)) continue;
 
       final cached =
           _artworkService.getTitleLogoForProgram(program, candidate.channel);
       if (cached != null && cached.isNotEmpty) {
-        _trackTitleLogoKey(key);
+        _trackTitleLogoKey(normalized);
         continue;
       }
 
@@ -50,7 +49,7 @@ class LiveTvArtworkPrefetcher {
         continue;
       }
 
-      _trackTitleLogoKey(key);
+      _trackTitleLogoKey(normalized);
       unawaited(_artworkService.fetchTitleLogo(program, candidate.channel));
       queued++;
     }
@@ -59,7 +58,7 @@ class LiveTvArtworkPrefetcher {
   void prefetchRowArtworkForChannels(
     List<Channel> channels,
     IncrementalEpgService epgService, {
-    int limit = 15,
+    int limit = 6,
     Duration lookAhead = defaultLookAhead,
     int programsPerChannel = defaultProgramsPerChannel,
   }) {
@@ -94,14 +93,13 @@ class LiveTvArtworkPrefetcher {
         final normalized = EPGMatchingUtils.normalizeForArtwork(program.title);
         if (normalized.isEmpty) continue;
 
-        final key = '${channel.epgLookupId}|$normalized';
-        if (_prefetchedArtworkKeys.contains(key)) continue;
+        if (_prefetchedArtworkKeys.contains(normalized)) continue;
         if (_artworkService.hasArtworkReady(program, channel)) {
-          _trackArtworkKey(key);
+          _trackArtworkKey(normalized);
           continue;
         }
 
-        _trackArtworkKey(key);
+        _trackArtworkKey(normalized);
         _artworkService.ensureFreshProgramArtwork(
           program,
           channel,

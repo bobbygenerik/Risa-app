@@ -16,9 +16,12 @@ import 'package:iptv_player/services/thesportsdb_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/tvdb_service.dart';
 import 'package:iptv_player/utils/artwork_diagnostics.dart';
+import 'package:iptv_player/utils/artwork_query_expander.dart';
+import 'package:iptv_player/utils/program_classifier.dart';
 import 'package:iptv_player/utils/artwork_validator.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
+import 'package:iptv_player/utils/epg_title_disambiguation.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 import 'package:iptv_player/utils/memory_manager.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
@@ -151,4 +154,19 @@ class LiveTvArtworkService {
       'live_tv_program_artwork_negative_cache_v6';
 
   static const bool _logArtworkMatches = true;
+
+  /// Reload title/negative caches from disk after returning from the player.
+  void restoreAfterPlayback() {
+    _pauseArtworkFetching = false;
+    _suspendArtworkCaches = false;
+    unawaited(Future.wait([
+      _loadProgramArtworkTitleCache(),
+      _loadProgramArtworkNegativeCache(),
+    ]).then((_) {
+      if (_isDisposed) return;
+      _scheduleArtworkDrain();
+      onArtworkUpdate();
+      debugLog('LiveTV artwork: restored caches after playback');
+    }));
+  }
 }

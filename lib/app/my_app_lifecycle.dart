@@ -22,17 +22,7 @@ extension MyAppLifecycle on _MyAppState {
   }
 
   void _enableJankLogging() {
-    SchedulerBinding.instance.addTimingsCallback((timings) {
-      for (final timing in timings) {
-        final buildMs = timing.buildDuration.inMilliseconds;
-        final rasterMs = timing.rasterDuration.inMilliseconds;
-        final totalMs = buildMs + rasterMs;
-        if (totalMs >= 50) {
-          debugLog(
-              'JANK: frame total=${totalMs}ms build=${buildMs}ms raster=${rasterMs}ms vsync=${timing.vsyncOverhead.inMilliseconds}ms');
-        }
-      }
-    });
+    JankMonitor.instance.attach();
   }
 
   void _setupAndroidAutoListener() {

@@ -28,7 +28,7 @@ class LiveTvRowTimerCallbacks {
       const Duration(milliseconds: 16),
       () {
         if (!isMounted()) return;
-        unawaited(epgService.ensureChannelsLoadedBatch(
+        unawaited(epgService.priorityLoadVisibleChannels(
           idsSnapshot,
           channelNames: namesSnapshot,
         ));

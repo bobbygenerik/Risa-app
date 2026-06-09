@@ -38,7 +38,7 @@ class LiveTvFocusActions {
     required FocusNode firstChannelFocus,
     required FocusNode watchButtonFocus,
   }) {
-    if (channelProvider.channels.isEmpty) {
+    if (!channelProvider.hasChannels) {
       settingsButtonFocus.requestFocus();
       return true;
     }

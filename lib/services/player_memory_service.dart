@@ -30,7 +30,7 @@ class PlayerMemoryService {
       }
       MemoryManager.forceGarbageCollection();
       // Let Live TV dispose and the GC reclaim image cache before ExoPlayer alloc.
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
     } finally {
       _preparing = false;
     }

@@ -100,9 +100,15 @@ class TMDBService {
     return output;
   }
 
-  static String _cacheKey(String prefix, String query, {int? year}) {
+  static String _cacheKey(
+    String prefix,
+    String query, {
+    int? year,
+    String? variant,
+  }) {
     final normalized = _normalizeTitle(query);
-    return '$prefix:${normalized.toLowerCase().trim()}:${year ?? ''}';
+    final variantSuffix = variant == null || variant.isEmpty ? '' : ':$variant';
+    return '$prefix:${normalized.toLowerCase().trim()}:${year ?? ''}$variantSuffix';
   }
 
   static Map<String, dynamic>? _getFromCache(String key) {
@@ -451,8 +457,12 @@ class TMDBService {
   }
 
 
-  static Future<String?> getBestBackdrop(String title, {int? year}) =>
-      tmdbGetBestBackdrop(title, year: year);
+  static Future<String?> getBestBackdrop(
+    String title, {
+    int? year,
+    bool preferMovieFirst = false,
+  }) =>
+      tmdbGetBestBackdrop(title, year: year, preferMovieFirst: preferMovieFirst);
   static Future<Map<String, dynamic>?> getBestBackdropDetails(
     String title, {
     int? year,

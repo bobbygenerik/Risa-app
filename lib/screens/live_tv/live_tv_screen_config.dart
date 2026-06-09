@@ -10,7 +10,7 @@ class LiveTvScreenConfig {
   static const int maxCategoryLoads = 2;
   static const int prefetchWindowRows = 3;
   static const int heroPrefetchWindow = 5;
-  static const int rowPrefetchWindow = 2;
+  static const int rowPrefetchWindow = 8;
   static const bool forceRowsVisible = false;
   static const bool debugRowProbe = false;
 }

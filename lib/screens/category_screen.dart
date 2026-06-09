@@ -22,10 +22,32 @@ class CategoryScreen extends StatefulWidget {
 }
 
 class _CategoryScreenState extends State<CategoryScreen> {
+  Future<int>? _countFuture;
+  final Map<int, Future<List<Channel>>> _channelFutures = {};
+
   @override
   void initState() {
     super.initState();
     MemoryManager.checkMemoryPressure();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _countFuture ??= context
+        .read<ChannelProvider>()
+        .getChannelCountForCategoryAsync(widget.category);
+  }
+
+  @override
+  void didUpdateWidget(CategoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.category != widget.category) {
+      _countFuture = context
+          .read<ChannelProvider>()
+          .getChannelCountForCategoryAsync(widget.category);
+      _channelFutures.clear();
+    }
   }
 
   @override
@@ -34,59 +56,81 @@ class _CategoryScreenState extends State<CategoryScreen> {
       backgroundColor: AppColors.background,
       body: Consumer<ChannelProvider>(
         builder: (context, channelProvider, child) {
-          final totalCount =
-              channelProvider.getChannelCountForCategory(widget.category);
-
-          return Padding(
-            padding: context.screenPaddingInsets,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          return FutureBuilder<int>(
+            future: _countFuture,
+            builder: (context, snapshot) {
+              final totalCount = snapshot.data ?? 0;
+              return Padding(
+                padding: context.screenPaddingInsets,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      tooltip: 'Back',
-                      icon: context.backIcon(),
-                      onPressed: () => context.go('/home'),
+                    Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Back',
+                          icon: context.backIcon(),
+                          onPressed: () => context.go('/home'),
+                        ),
+                        context.spacingSmBox,
+                        Text(
+                          widget.category,
+                          style: AppTypography.screenTitle(context),
+                        ),
+                        const Spacer(),
+                        Text(
+                          snapshot.connectionState == ConnectionState.waiting
+                              ? 'Loading...'
+                              : '$totalCount channels',
+                          style: AppTypography.countText(context),
+                        ),
+                      ],
                     ),
-                    context.spacingSmBox,
-                    Text(
-                      widget.category,
-                      style: AppTypography.screenTitle(context),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$totalCount channels',
-                      style: AppTypography.countText(context),
+                    context.spacingXlBox,
+                    Expanded(
+                      child: totalCount == 0
+                          ? _buildEmptyState()
+                          : GridView.builder(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                crossAxisSpacing: AppSpacing.gridSpacing,
+                                mainAxisSpacing: AppSpacing.gridSpacing,
+                                childAspectRatio: 0.8,
+                              ),
+                              cacheExtent: 0,
+                              itemCount: totalCount,
+                              itemBuilder: (context, index) {
+                                return FutureBuilder<List<Channel>>(
+                                  future: _channelFutures.putIfAbsent(
+                                    index,
+                                    () => channelProvider
+                                        .getChannelsForCategoryAsync(
+                                      widget.category,
+                                      offset: index,
+                                      limit: 1,
+                                    ),
+                                  ),
+                                  builder: (context, channelSnapshot) {
+                                    final channels =
+                                        channelSnapshot.data ?? const [];
+                                    if (channels.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return _buildChannelCard(
+                                      context,
+                                      channels.first,
+                                      channelProvider,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                     ),
                   ],
                 ),
-                context.spacingXlBox,
-                Expanded(
-                  child: totalCount == 0
-                      ? _buildEmptyState()
-                      : GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: AppSpacing.gridSpacing,
-                            mainAxisSpacing: AppSpacing.gridSpacing,
-                            childAspectRatio: 0.8, // Taller cards to prevent horizontal stretching
-                          ),
-                          cacheExtent: 0,
-                          itemCount: totalCount,
-                          itemBuilder: (context, index) {
-                            final channel = channelProvider
-                                .getChannelInCategoryAtIndex(widget.category, index);
-                            if (channel == null) {
-                              return const SizedBox.shrink();
-                            }
-                            return _buildChannelCard(context, channel, channelProvider);
-                          },
-                        ),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -147,11 +191,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       top: context.vScale(4),
                       right: context.scale(4),
                       child: IconButton(
-                        tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                        tooltip: isFavorite
+                            ? 'Remove from favorites'
+                            : 'Add to favorites',
                         icon: Icon(
-                          isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
+                          isFavorite
+                              ? AppIcons.favorite
+                              : AppIcons.favoriteOutline,
                           size: context.tvIconSize(16),
-                          color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
+                          color: isFavorite
+                              ? AppTheme.accentRed
+                              : AppColors.textPrimary,
                         ),
                         onPressed: () {
                           if (isFavorite) {
@@ -210,7 +260,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              channelName.length > 10 
+              channelName.length > 10
                   ? '${channelName.substring(0, 10)}...'
                   : channelName,
               style: const TextStyle(

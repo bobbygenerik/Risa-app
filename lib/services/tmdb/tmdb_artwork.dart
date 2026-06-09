@@ -2,10 +2,19 @@ part of '../tmdb_service.dart';
 
 /// Returns the best available backdrop/poster URL for a given title.
 /// Prefers TV results first, falling back to movie matches and heuristics.
-Future<String?> tmdbGetBestBackdrop(String title, {int? year}) async {
+Future<String?> tmdbGetBestBackdrop(
+  String title, {
+  int? year,
+  bool preferMovieFirst = false,
+}) async {
   await TMDBService.init();
   final normalizedTitle = TMDBService._normalizeTitle(title);
-  final cacheKey = TMDBService._cacheKey('art:best', normalizedTitle, year: year);
+  final cacheKey = TMDBService._cacheKey(
+    'art:best',
+    normalizedTitle,
+    year: year,
+    variant: preferMovieFirst ? 'movie' : null,
+  );
   final cached = TMDBService._getFromCache(cacheKey);
   if (cached != null && cached.containsKey('image')) {
     final cachedImage = (cached['image'] as String?)?.trim();
@@ -23,7 +32,11 @@ Future<String?> tmdbGetBestBackdrop(String title, {int? year}) async {
 
   TMDBService._processingRequests.add(cacheKey);
   try {
-    var details = await _tmdbResolveBackdrop(normalizedTitle, year);
+    var details = await _tmdbResolveBackdrop(
+      normalizedTitle,
+      year,
+      preferMovieFirst: preferMovieFirst,
+    );
 
     if (!_tmdbHasArtwork(details)) {
       debugLog('TMDB miss for "$normalizedTitle", trying sports heuristics.');
@@ -91,14 +104,22 @@ Future<Map<String, dynamic>?> tmdbGetBestBackdropDetails(
 }
 
 Future<Map<String, dynamic>?> _tmdbResolveBackdrop(
-    String normalizedTitle, int? year) async {
+  String normalizedTitle,
+  int? year, {
+  bool preferMovieFirst = false,
+}) async {
   Map<String, dynamic>? details;
 
   // For short titles (≤4 chars like ESPN, CNN, BBC), try the raw title
   // first without appending " channel" which can cause false matches.
   // Only append " channel" as a last-resort fallback.
-  details = await TMDBService.getTVDetails(normalizedTitle, year: year);
-  details ??= await TMDBService.getMovieDetails(normalizedTitle, year: year);
+  if (preferMovieFirst) {
+    details = await TMDBService.getMovieDetails(normalizedTitle, year: year);
+    details ??= await TMDBService.getTVDetails(normalizedTitle, year: year);
+  } else {
+    details = await TMDBService.getTVDetails(normalizedTitle, year: year);
+    details ??= await TMDBService.getMovieDetails(normalizedTitle, year: year);
+  }
 
   // Fallback for short titles: try with " channel" suffix
   if (details == null && normalizedTitle.length <= 4) {

@@ -12,6 +12,7 @@ import 'package:iptv_player/utils/artwork_diagnostics.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
+import 'package:iptv_player/utils/epg_title_disambiguation.dart';
 import 'package:iptv_player/utils/program_classifier.dart';
 
 /// Facade: shared artwork sources, separate hero/card policies.
@@ -96,6 +97,14 @@ class LiveTvArtworkResolver {
     return null;
   }
 
+  void prefetchCardArtwork(Program program, Channel channel) {
+    _artworkService.ensureFreshProgramArtwork(
+      program,
+      channel,
+      highPriority: true,
+    );
+  }
+
   String? resolveHeroImage(
     Program? program,
     Channel channel, {
@@ -145,6 +154,7 @@ class LiveTvArtworkResolver {
 
   String? resolveProgramTitleLogo(Program? program, Channel channel) {
     if (program == null) return null;
+    if (ProgramClassifier.isNewsProgram(program, channel)) return null;
 
     final cachedUrl = _artworkService.getTitleLogoForProgram(program, channel);
     if (_isValidTitleLogo(cachedUrl, channel)) return cachedUrl;
@@ -166,17 +176,7 @@ class LiveTvArtworkResolver {
   }
 
   String displayProgramTitle(Program program, Channel? channel) {
-    final trimmed = program.title.trim();
-    if (trimmed.isEmpty) return program.title;
-    final isNews =
-        channel != null && ProgramClassifier.isNewsProgram(program, channel);
-    final isSports = ProgramClassifier.isSportsProgram(program, channel);
-    final isMovie =
-        channel != null && ProgramClassifier.isMovieProgram(program, channel);
-    return EPGMatchingUtils.normalizeForDisplayTitle(
-      trimmed,
-      stripEpisodeSubtitle: !(isNews || isSports || isMovie),
-    );
+    return EpgTitleDisambiguation.resolveDisplayTitle(program, channel);
   }
 
   String? normalizeArtworkUrl(

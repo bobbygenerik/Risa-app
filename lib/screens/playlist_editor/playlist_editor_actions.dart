@@ -112,7 +112,7 @@ Future<void> _updatePlaylist() async {
           context,
           SnackBar(
             content: Text(
-                'Playlist updated! ${provider.channels.length} channels found.'),
+                'Playlist updated! ${provider.channelCount} channels found.'),
             backgroundColor: AppTheme.accentGreen,
           ),
         );

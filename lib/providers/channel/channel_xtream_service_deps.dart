@@ -12,6 +12,8 @@ class ChannelXtreamServiceDeps {
     required this.setChannelCountDb,
     required this.clearChannelCache,
     required this.rebuildChannelCachesAsync,
+    required this.clearDbChannels,
+    required this.insertDbChannels,
     required this.clearCachedCategories,
     required this.updateEpgAllowedChannels,
     required this.notifyListeners,
@@ -25,6 +27,8 @@ class ChannelXtreamServiceDeps {
   final void Function(int value) setChannelCountDb;
   final void Function() clearChannelCache;
   final Future<void> Function() rebuildChannelCachesAsync;
+  final Future<void> Function() clearDbChannels;
+  final Future<void> Function(List<Map<String, dynamic>> maps) insertDbChannels;
   final void Function() clearCachedCategories;
   final void Function() updateEpgAllowedChannels;
   final void Function() notifyListeners;

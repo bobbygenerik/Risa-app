@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/http_client_service.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
 import 'package:iptv_player/utils/image_failure_cache.dart';
+import 'package:iptv_player/utils/shared_image_cache_manager.dart';
 import 'package:iptv_player/widgets/brand_fallback_background.dart';
 
 /// Optimized image widget with progressive loading and memory management
@@ -65,12 +66,15 @@ class OptimizedImage extends StatelessWidget {
     ImageLoadProbe.recordAttempt(imageUrl, 'optimized_image');
     return CachedNetworkImage(
       imageUrl: imageUrl,
+      cacheManager: SharedImageCacheManager.instance,
       httpHeaders: HttpClientService().imageHeaders,
       width: width,
       height: height,
       fit: fit,
       memCacheWidth: enableMemoryCache ? optimalWidth : null,
       memCacheHeight: enableMemoryCache ? optimalHeight : null,
+      maxWidthDiskCache: enableMemoryCache ? optimalWidth : null,
+      maxHeightDiskCache: enableMemoryCache ? optimalHeight : null,
       imageBuilder: (context, imageProvider) {
         ImageFailureCache.recordSuccess(imageUrl);
         ImageLoadProbe.recordSuccess(imageUrl, 'optimized_image');

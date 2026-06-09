@@ -52,6 +52,7 @@ class ChannelAutoLoadDeps {
     required this.backgroundSync,
     required this.restoreChannelsFromPrefsCache,
     required this.loadPlaylistFromUrl,
+    required this.loadXtreamLiveStreamsNative,
     required this.httpPrefixRe,
     required this.leadingSlashRe,
   });
@@ -125,6 +126,11 @@ class ChannelAutoLoadDeps {
     String? reason,
   }) restoreChannelsFromPrefsCache;
   final Future<void> Function(String url) loadPlaylistFromUrl;
+  final Future<bool> Function({
+    required String serverUrl,
+    required String username,
+    required String password,
+  }) loadXtreamLiveStreamsNative;
 
   final RegExp httpPrefixRe;
   final RegExp leadingSlashRe;

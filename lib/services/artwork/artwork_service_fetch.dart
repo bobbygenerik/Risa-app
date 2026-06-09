@@ -9,6 +9,18 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
   }) {
     debugLog(
         'LiveTV artwork: ensureFreshProgramArtwork called for "${program.title}" (tmdb=$_tmdbEnabled fanart=${LiveTvArtworkService._fanartEnabled} sports=${LiveTvArtworkService._sportsDbEnabled} tvdb=$_tvdbEnabled)');
+    if (ProgramClassifier.isNewsProgram(program, channel)) {
+      diagSkipTitleIneligible++;
+      return;
+    }
+    if (EpgTitleDisambiguation.shouldSkipRemoteArtwork(program, channel)) {
+      diagSkipTitleIneligible++;
+      debugLog(
+        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
+        'reason=under_specified_title',
+      );
+      return;
+    }
     if (!(_tmdbEnabled ||
         LiveTvArtworkService._fanartEnabled ||
         LiveTvArtworkService._sportsDbEnabled ||
@@ -22,10 +34,6 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
     }
     if (_artworkRequests.contains(program.id)) {
       diagSkipAlreadyInFlight++;
-      debugLog(
-        'LiveTV artwork SKIP: program="${program.title}" channel="${channel.name}" '
-        'reason=request_already_in_flight',
-      );
       return;
     }
     // Register channel lookup FIRST before any checks that depend on it
@@ -294,8 +302,14 @@ extension LiveTvArtworkServiceFetch on LiveTvArtworkService {
         }
 
         diagTmdbCalls++;
+        final preferMovie =
+            EpgTitleDisambiguation.mediaKind(program) ==
+                EpgSlotMediaKind.movie;
         futures.add(
-          TMDBService.getBestBackdrop(queryTitle)
+          TMDBService.getBestBackdrop(
+            queryTitle,
+            preferMovieFirst: preferMovie,
+          )
               .timeout(timeout)
               .catchError((_) => null as String?),
         );

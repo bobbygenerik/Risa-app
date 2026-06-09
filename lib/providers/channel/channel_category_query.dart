@@ -150,6 +150,24 @@ class ChannelCategoryQuery {
     return result;
   }
 
+  int countForCategory(String category) {
+    final lowerCategory = category.toLowerCase();
+    final cached = _deps.channelIndicesByGroup[lowerCategory];
+    if (cached != null) return cached.length;
+    if (_deps.channelMaps.isEmpty) return 0;
+
+    final target = category.trim().isEmpty ? 'uncategorized' : category.trim();
+    final targetLower = target.toLowerCase();
+    var count = 0;
+    for (final map in _deps.channelMaps) {
+      if (map['isHidden'] == true) continue;
+      final rawGroup = (map['groupTitle'] ?? '').toString().trim();
+      final group = rawGroup.isEmpty ? 'uncategorized' : rawGroup;
+      if (group.toLowerCase() == targetLower) count++;
+    }
+    return count;
+  }
+
   Future<void> computeCategoriesAsync() async {
     if (_deps.getCachedCategories() != null || _deps.getIsGroupingChannels()) {
       return;
@@ -292,8 +310,7 @@ class ChannelCategoryQuery {
     int limit = 20,
   }) {
     if (limit <= 0 || _deps.channelMaps.isEmpty) return const [];
-    final target =
-        category.trim().isEmpty ? 'uncategorized' : category.trim();
+    final target = category.trim().isEmpty ? 'uncategorized' : category.trim();
     final targetLower = target.toLowerCase();
     final result = <Channel>[];
     int matched = 0;
@@ -344,8 +361,7 @@ class ChannelCategoryQuery {
   List<String?> categoryTitleCache() {
     var cache = _deps.getCategoryTitleCache();
     if (cache == null || cache.length != _deps.channelMaps.length) {
-      cache =
-          _deps.channelMaps.map((m) => m['groupTitle'] as String?).toList();
+      cache = _deps.channelMaps.map((m) => m['groupTitle'] as String?).toList();
       _deps.setCategoryTitleCache(cache);
     }
     return cache;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg/epg_channel_list_loader.dart';
 import 'package:iptv_player/services/epg/epg_file_cache.dart';
@@ -32,6 +34,7 @@ class EpgRefreshCoordinatorDeps {
     required this.setExtendedWindowScheduled,
     required this.extendingWindow,
     required this.setExtendingWindow,
+    required this.isParsing,
   });
 
   final String? Function() epgUrl;
@@ -59,6 +62,7 @@ class EpgRefreshCoordinatorDeps {
   final void Function(bool value) setExtendedWindowScheduled;
   final bool Function() extendingWindow;
   final void Function(bool value) setExtendingWindow;
+  final bool Function() isParsing;
 }
 
 /// Coordinates EPG download, background refresh, window extension, and DB persist.
@@ -143,6 +147,51 @@ class EpgRefreshCoordinator {
     } finally {
       _deps.setRefreshInFlight(false);
     }
+  }
+
+  void scheduleDeferredFullEpgHydrate({
+    Duration delay = const Duration(seconds: 45),
+  }) {
+    Future<void>.delayed(delay, () async {
+      if (_deps.isParsing() || _deps.isDownloading()) {
+        debugLog('EPG: Deferred full DB hydrate skipped — EPG already busy');
+        return;
+      }
+      try {
+        debugLog('EPG: Starting deferred full DB hydrate');
+        await _deps.channelListLoader.loadChannelList(
+          fromBackgroundRefresh: true,
+          skipDbLoad: false,
+          forceRefresh: false,
+          fullDbHydrateOnly: true,
+        );
+      } catch (e) {
+        debugLog('EPG: Deferred full DB hydrate failed: $e');
+      }
+    });
+  }
+
+  void scheduleDeferredFullXmlParse({
+    Duration delay = const Duration(seconds: 45),
+  }) {
+    Future<void>.delayed(delay, () async {
+      if (_deps.isParsing() || _deps.isDownloading()) {
+        debugLog('EPG: Deferred full parse skipped — EPG already busy');
+        return;
+      }
+      try {
+        debugLog('EPG: Starting deferred full XML parse');
+        await _deps.channelListLoader.loadChannelList(
+          forceRefresh: false,
+          allowStaleCache: true,
+          fromBackgroundRefresh: true,
+          skipDbLoad: true,
+          forceXmlParse: true,
+        );
+      } catch (e) {
+        debugLog('EPG: Deferred full parse failed: $e');
+      }
+    });
   }
 
   void scheduleEpgWindowExtension({required bool fromBackgroundRefresh}) {

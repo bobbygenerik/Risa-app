@@ -59,8 +59,7 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       internalToEpgIdMapping: s._internalToEpgIdMapping,
       programsByChannel: s._programsByChannel,
       allowedChannelIdsNormalized: () => s._allowedChannelIdsNormalized,
-      normalizedChannelCount: () =>
-          s._normalizedAvailableChannels?.length ?? 0,
+      normalizedChannelCount: () => s._normalizedAvailableChannels?.length ?? 0,
       isParsing: () => s._isParsing,
       isLoading: () => s._isLoading,
       availableChannelCount: () => s._availableChannels.length,
@@ -122,9 +121,11 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       dbProgramCount: () => s._db.programCount(),
       getAllProgramsByChannel: ({required pastHours, required futureHours}) =>
           s._db.getAllProgramsByChannel(
-            pastHours: pastHours,
-            futureHours: futureHours,
-          ),
+        pastHours: pastHours,
+        futureHours: futureHours,
+      ),
+      getNowNextProgramsByChannel: ({required futureHours}) =>
+          s._db.getNowNextProgramsByChannel(futureHours: futureHours),
       getNormalizedChannels: () => s._normalizedAvailableChannels,
       setNormalizedChannels: (v) => s._normalizedAvailableChannels = v,
       loadNormalizedMappingFromPrefs: s._loadNormalizedMappingFromPrefs,
@@ -189,10 +190,14 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       refreshFromNetwork: () => s._refreshCoordinator.refreshFromNetwork(),
       scheduleEpgWindowExtension: ({required bool fromBackgroundRefresh}) =>
           s._refreshCoordinator.scheduleEpgWindowExtension(
-            fromBackgroundRefresh: fromBackgroundRefresh,
-          ),
+        fromBackgroundRefresh: fromBackgroundRefresh,
+      ),
       scheduleSecondaryMerge: ({bool forceRefresh = false}) =>
           s._secondaryLoader.scheduleMerge(forceRefresh: forceRefresh),
+      scheduleDeferredFullXmlParse: () =>
+          s._refreshCoordinator.scheduleDeferredFullXmlParse(),
+      scheduleDeferredFullEpgHydrate: () =>
+          s._refreshCoordinator.scheduleDeferredFullEpgHydrate(),
     ),
     maxRetries: IncrementalEpgService._maxRetries,
     epgPastWindowHours: IncrementalEpgService._epgPastWindowHours,
@@ -228,6 +233,7 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       setExtendedWindowScheduled: (v) => s._extendedWindowScheduled = v,
       extendingWindow: () => s._extendingWindow,
       setExtendingWindow: (v) => s._extendingWindow = v,
+      isParsing: () => s._isParsing,
     ),
   );
   s._secondaryLoader = EpgSecondaryLoader(
@@ -256,10 +262,10 @@ void wireEpgServiceModules(IncrementalEpgService s) {
           Map<String, List<String>>.from(s._channelMatcher.epgDisplayNamesById),
       ingestProgramsFromFile: (path, {skipChannels, skipDbWrites = false}) =>
           s._programIngest.ingestFromFile(
-            path,
-            skipChannels: skipChannels,
-            skipDbWrites: skipDbWrites,
-          ),
+        path,
+        skipChannels: skipChannels,
+        skipDbWrites: skipDbWrites,
+      ),
       persistProgramsToDb: () => s._refreshCoordinator.persistProgramsToDb(),
       isDbDisabled: () => s._dbDisabled,
       notifyListeners: s.notifyListeners,
@@ -288,18 +294,17 @@ void wireEpgServiceModules(IncrementalEpgService s) {
       setError: (v) => s._error = v,
       resetLoadingState: s._resetLoadingState,
       notifyListeners: s.notifyListeners,
-      handleCacheUrlChange: (prefs, url, {required onUrlChanged}) =>
-          s._fileCache.handleCacheUrlChange(prefs, url,
-              onUrlChanged: onUrlChanged),
+      handleCacheUrlChange: (prefs, url, {required onUrlChanged}) => s
+          ._fileCache
+          .handleCacheUrlChange(prefs, url, onUrlChanged: onUrlChanged),
       syncManualMappingsIdentity: () =>
           s._manualMappingsStore.setPlaylistIdentity(s._playlistIdentity),
       loadManualMappingsFromPrefs: (prefs) =>
           s._manualMappingsStore.loadFromPrefs(prefs),
-      applyManualMappingsToService: () =>
-          s._manualMappingsStore.applyToService(
-            internalToEpgIdMapping: s._internalToEpgIdMapping,
-            registerAvailableChannel: s._publicApi.registerAvailableChannel,
-          ),
+      applyManualMappingsToService: () => s._manualMappingsStore.applyToService(
+        internalToEpgIdMapping: s._internalToEpgIdMapping,
+        registerAvailableChannel: s._publicApi.registerAvailableChannel,
+      ),
       setEpgFutureHours: (h) => s._epgFutureHours = h,
       initialFutureHours: IncrementalEpgService._initialFutureHours,
       setExtendedWindowScheduled: (v) => s._extendedWindowScheduled = v,

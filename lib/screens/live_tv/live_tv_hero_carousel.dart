@@ -36,7 +36,13 @@ class LiveTvHeroCarousel {
   }
 
   void registerCarousel(void Function() onTick) {
-    timerService.registerCustomCallback('live_tv_carousel', 8, onTick);
+    // Match [rotationInterval] — 8s was rotating the hero constantly and
+    // reloading backdrop art, which felt janky on every transition.
+    timerService.registerCustomCallback(
+      'live_tv_carousel',
+      rotationInterval.inSeconds,
+      onTick,
+    );
   }
 
   void unregisterCarousel() {

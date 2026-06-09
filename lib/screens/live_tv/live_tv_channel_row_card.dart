@@ -178,7 +178,7 @@ class LiveTvChannelRowCard extends StatelessWidget {
               final epgService =
                   Provider.of<IncrementalEpgService>(context, listen: false);
 
-              if (isFocused &&
+              if (allowPrefetch &&
                   epgData.program == null &&
                   epgData.hasUsableData) {
                 unawaited(epgService.ensureChannelLoaded(
@@ -352,6 +352,7 @@ class _LiveTvChannelCardContentState extends State<LiveTvChannelCardContent> {
                     child: LiveTvAdaptiveCardImage(
                       url: normalizedImageUrl,
                       fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
                       cacheWidth: cacheWidth,
                       cacheHeight: cacheHeight,
                       fallback: const SizedBox.shrink(),
@@ -498,6 +499,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
     super.key,
     required this.url,
     required this.fit,
+    this.alignment = Alignment.center,
     required this.cacheWidth,
     required this.cacheHeight,
     required this.fallback,
@@ -506,6 +508,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
 
   final String url;
   final BoxFit fit;
+  final Alignment alignment;
   final int cacheWidth;
   final int cacheHeight;
   final Widget fallback;
@@ -532,6 +535,7 @@ class LiveTvAdaptiveCardImage extends StatelessWidget {
           imageProvider: imageProvider,
           slot: ArtworkSlot.card,
           fit: fit,
+          alignment: alignment,
           fallback: fallback,
           probeTag: 'live_tv_card',
           onRejected: onArtRejected,

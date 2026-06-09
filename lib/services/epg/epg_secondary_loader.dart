@@ -78,7 +78,15 @@ class EpgSecondaryLoader {
   void scheduleMerge({bool forceRefresh = false}) {
     final url = _deps.secondaryEpgUrl()?.trim();
     if (url == null || url.isEmpty) return;
-    unawaited(mergeIfConfigured(forceRefresh: forceRefresh));
+    if (forceRefresh) {
+      unawaited(mergeIfConfigured(forceRefresh: forceRefresh));
+    } else {
+      // Defer background secondary merge to avoid CPU/disk contention during
+      // first paint and primary EPG hydration.
+      Future.delayed(const Duration(seconds: 90), () {
+        unawaited(mergeIfConfigured(forceRefresh: false));
+      });
+    }
   }
 
   Future<void> mergeIfConfigured({bool forceRefresh = false}) async {

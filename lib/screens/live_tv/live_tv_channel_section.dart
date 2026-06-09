@@ -108,14 +108,14 @@ class LiveTvChannelSectionBindings {
     )) {
       return false;
     }
-    final window = MemoryManager.isLowMemory
-        ? 1
-        : (isFirstRow ? heroPrefetchWindow : rowPrefetchWindow);
-    final focusedIndex = focusedIndexBySection[sectionKey];
-    if (focusedIndex == null) {
-      return index < window;
+    if (MemoryManager.isLowMemory) {
+      final window = isFirstRow ? 2 : 1;
+      final focusedIndex = focusedIndexBySection[sectionKey];
+      if (focusedIndex == null) return index < window;
+      return (index - focusedIndex).abs() <= window;
     }
-    return (index - focusedIndex).abs() <= window;
+    // Every viewport-visible card should queue artwork — not just the first 2.
+    return true;
   }
 
   bool _isIndexVisibleInRow(
@@ -165,6 +165,7 @@ class LiveTvChannelSection extends StatelessWidget {
     this.isFirstRow = false,
     this.isFirstCategoryRow = false,
     this.allowCategoryPaging = true,
+    this.hideUnmatchedChannels = false,
   });
 
   final String title;
@@ -173,6 +174,7 @@ class LiveTvChannelSection extends StatelessWidget {
   final bool isFirstRow;
   final bool isFirstCategoryRow;
   final bool allowCategoryPaging;
+  final bool hideUnmatchedChannels;
 
   @override
   Widget build(BuildContext context) {
@@ -186,6 +188,13 @@ class LiveTvChannelSection extends StatelessWidget {
 
     for (final channel in channels) {
       final channelId = channel.epgLookupId;
+      if (hideUnmatchedChannels &&
+          !epgService.shouldShowInGuideRow(
+            channelId,
+            channelName: channel.epgLookupNameFallback,
+          )) {
+        continue;
+      }
       final program = epgService.getCurrentProgram(
         channelId,
         channelName: channel.epgLookupNameFallback,

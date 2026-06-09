@@ -2,7 +2,8 @@ part of '../channel_provider.dart';
 
 /// Thin delegates and load lifecycle helpers for [ChannelProvider].
 extension ChannelProviderGlue on ChannelProvider {
-  void _buildIndicesForChunk(List<Map<String, dynamic>> chunk, int startIndex) =>
+  void _buildIndicesForChunk(
+          List<Map<String, dynamic>> chunk, int startIndex) =>
       _channelIndexCache.buildIndicesForChunk(chunk, startIndex);
 
   Future<void> _rebuildChannelCachesAsync() =>
@@ -94,6 +95,19 @@ extension ChannelProviderGlue on ChannelProvider {
   }
 
   void _finalizeBackgroundPlaylistLoad(List<Map<String, dynamic>> buffer) {
+    if (_dbReady &&
+        _channelMaps.isNotEmpty &&
+        buffer.length > _channelMaps.length) {
+      _channelCountDb = buffer.length;
+      _invalidateCategoryCaches();
+      notifyListeners();
+      debugLog(
+        'ChannelProvider: Background sync kept DB-first memory preview '
+        '(${_channelMaps.length}/${buffer.length} channels loaded)',
+      );
+      return;
+    }
+
     _channelMaps.clear();
     _channelMaps.addAll(buffer);
     _channelCountDb = _channelMaps.length;

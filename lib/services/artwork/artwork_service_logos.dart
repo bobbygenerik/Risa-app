@@ -3,6 +3,7 @@ part of '../live_tv_artwork_service.dart';
 extension LiveTvArtworkServiceLogos on LiveTvArtworkService {
   /// Request a title logo for a program.
   Future<void> fetchTitleLogo(Program program, Channel channel) async {
+    if (ProgramClassifier.isNewsProgram(program, channel)) return;
     final cacheKey = _titleLogoCacheKey(program, channel);
     if (_titleLogoRequests.contains(cacheKey)) return;
     _titleLogoRequests.add(cacheKey);

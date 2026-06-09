@@ -11,13 +11,19 @@ Widget _buildSidebarContent() {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  padding: EdgeInsets.only(
+                    top: context.tvSpacing(8),
+                    bottom: context.tvSpacing(8),
+                  ),
                   child: Center(
                     child: Image(
                       image: const AssetImage('assets/images/newrisalogo.png'),
-                      height: _isExpanded ? 28 : 20,
-                      filterQuality: FilterQuality.medium,
+                      height: _isExpanded
+                          ? context.tvSpacing(52)
+                          : context.tvSpacing(40),
+                      filterQuality: FilterQuality.high,
                       gaplessPlayback: true,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
