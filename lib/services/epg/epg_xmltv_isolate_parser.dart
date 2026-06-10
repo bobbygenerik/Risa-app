@@ -348,6 +348,9 @@ Future<Map<String, dynamic>> parseEpgInIsolate(
           normalizedChannels.clear();
           channelHashes.clear();
           programCount = 0;
+          try {
+            await tempFile.delete();
+          } catch (_) {}
           tempFile = File(
               '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
           usedLenient = true;
@@ -381,6 +384,9 @@ Future<Map<String, dynamic>> parseEpgInIsolate(
       normalizedChannels.clear();
       channelHashes.clear();
       programCount = 0;
+      try {
+        await tempFile.delete();
+      } catch (_) {}
       tempFile = File(
           '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}_lenient.jsonl');
       final attemptTimer = Stopwatch()..start();

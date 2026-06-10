@@ -52,7 +52,7 @@ extension LocalDbCore on LocalDbService {
       debugLog('LocalDbService: Opening database at $dbPath');
       _db = await openDatabase(
         dbPath,
-        version: 5,
+        version: 6,
         onConfigure: (db) async {
           try {
             // PRAGMA journal_mode returns rows; use rawQuery to capture result.
@@ -108,6 +108,7 @@ extension LocalDbCore on LocalDbService {
             title TEXT,
             description TEXT,
             imageUrl TEXT,
+            category TEXT,
             PRIMARY KEY (epgId, startTs)
           )
         ''');
@@ -147,6 +148,7 @@ extension LocalDbCore on LocalDbService {
             await db.execute('DROP INDEX IF EXISTS idx_channels_group');
           }
           if (oldVersion < 5) {
+            // Drop old channels table and recreate with composite primary key (id, url)
             await db.execute('DROP TABLE IF EXISTS channels');
             await db.execute('''
             CREATE TABLE channels(
@@ -167,13 +169,19 @@ extension LocalDbCore on LocalDbService {
               idx INTEGER,
               PRIMARY KEY (id, url)
             )
-            ''');
+          ''');
             await db.execute(
                 'CREATE INDEX IF NOT EXISTS idx_channels_group_idx ON channels(groupTitle, idx)');
             await db.execute(
                 'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)');
             await db.execute(
                 'CREATE INDEX IF NOT EXISTS idx_channels_idx ON channels(idx)');
+          }
+          if (oldVersion < 6) {
+            // Persist programme category (parser already extracted it but it
+            // was dropped on write, so it vanished after restart).
+            await db.execute(
+                'ALTER TABLE epg_programs ADD COLUMN category TEXT');
           }
         },
       );

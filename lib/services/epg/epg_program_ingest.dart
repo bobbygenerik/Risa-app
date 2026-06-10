@@ -28,10 +28,15 @@ class EpgProgramIngest {
       return;
     }
 
-    const int batchSize = 500;
+    // Flush on *total* pending rows, not per-channel counts. Typical EPGs
+    // spread programs across thousands of channels with well under 500 each,
+    // so a per-channel threshold buffered nearly the whole dataset in memory
+    // before the final flush.
+    const int flushThreshold = 2000;
     final Map<String, List<Map<String, dynamic>>> buffer =
         skipDbWrites ? {} : <String, List<Map<String, dynamic>>>{};
     final Map<String, bool> cleared = {};
+    int pendingRows = 0;
     final ingestTimer = Stopwatch()..start();
     int totalLines = 0;
     int decodedLines = 0;
@@ -44,6 +49,29 @@ class EpgProgramIngest {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
 
     final programsByChannel = target ?? _deps.programsByChannel;
+
+    Future<void> flushBuffer() async {
+      if (buffer.isEmpty || _deps.isDbDisabled()) return;
+      try {
+        final dbTimer = Stopwatch()..start();
+        final keysToClear =
+            buffer.keys.where((k) => cleared[k] != false).toList();
+        if (keysToClear.isNotEmpty) {
+          await _deps.deleteProgramsForEpgIds(keysToClear);
+        }
+        await _deps.insertAllPrograms(buffer);
+        dbBatchMs += dbTimer.elapsedMilliseconds;
+        dbBatchCount++;
+        for (final key in buffer.keys) {
+          cleared[key] = false;
+        }
+      } catch (e) {
+        _deps.handleDbError(e);
+      }
+      buffer.clear();
+      pendingRows = 0;
+    }
+
     try {
       int processed = 0;
       final yieldClock = Stopwatch()..start();
@@ -111,29 +139,17 @@ class EpgProgramIngest {
         }
 
         if (!skipDbWrites) {
-          final payload = buffer.putIfAbsent(epgId, () => []);
-          payload.add({
+          buffer.putIfAbsent(epgId, () => []).add({
             'startTs': startTs,
             'endTs': endTs,
             'title': title,
             'description': data['description'],
             'imageUrl': data['imageUrl'],
+            'category': data['category'],
           });
-          if (payload.length >= batchSize && !_deps.isDbDisabled()) {
-            try {
-              final dbTimer = Stopwatch()..start();
-              await _deps.insertPrograms(
-                epgId,
-                payload,
-                clearExisting: cleared[epgId] != false,
-              );
-              dbBatchMs += dbTimer.elapsedMilliseconds;
-              dbBatchCount++;
-            } catch (e) {
-              _deps.handleDbError(e);
-            }
-            payload.clear();
-            cleared[epgId] = false;
+          pendingRows++;
+          if (pendingRows >= flushThreshold) {
+            await flushBuffer();
           }
         }
 
@@ -158,20 +174,8 @@ class EpgProgramIngest {
         }
       }
 
-      if (!skipDbWrites && buffer.isNotEmpty && !_deps.isDbDisabled()) {
-        try {
-          final dbTimer = Stopwatch()..start();
-          final keysToClear =
-              buffer.keys.where((k) => cleared[k] != false).toList();
-          if (keysToClear.isNotEmpty) {
-            await _deps.deleteProgramsForEpgIds(keysToClear);
-          }
-          await _deps.insertAllPrograms(buffer);
-          dbBatchMs += dbTimer.elapsedMilliseconds;
-          dbBatchCount++;
-        } catch (e) {
-          _deps.handleDbError(e);
-        }
+      if (!skipDbWrites) {
+        await flushBuffer();
       }
       if (onProgress != null && totalPrograms != null && totalPrograms > 0) {
         onProgress(processed, totalPrograms);

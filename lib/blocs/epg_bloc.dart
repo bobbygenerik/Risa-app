@@ -149,7 +149,11 @@ class EpgReady extends EpgState {
   final Map<String, List<Program>> programsByChannel;
   final Set<String> availableChannels;
   final bool isPlaybackActive;
-  
+
+  /// Bumped whenever underlying EPG data changes without the cheap props
+  /// (counts/lengths) changing, so listeners still rebuild.
+  final int revision;
+
   const EpgReady({
     this.hasData = false,
     this.channelCount = 0,
@@ -158,28 +162,33 @@ class EpgReady extends EpgState {
     this.programsByChannel = const {},
     this.availableChannels = const {},
     this.isPlaybackActive = false,
+    this.revision = 0,
   });
-  
+
+  static const Object _unset = Object();
+
   EpgReady copyWith({
     bool? hasData,
     int? channelCount,
     int? programCount,
-    String? error,
+    Object? error = _unset,
     Map<String, List<Program>>? programsByChannel,
     Set<String>? availableChannels,
     bool? isPlaybackActive,
+    int? revision,
   }) {
     return EpgReady(
       hasData: hasData ?? this.hasData,
       channelCount: channelCount ?? this.channelCount,
       programCount: programCount ?? this.programCount,
-      error: error ?? this.error,
+      error: identical(error, _unset) ? this.error : error as String?,
       programsByChannel: programsByChannel ?? this.programsByChannel,
       availableChannels: availableChannels ?? this.availableChannels,
       isPlaybackActive: isPlaybackActive ?? this.isPlaybackActive,
+      revision: revision ?? this.revision,
     );
   }
-  
+
   @override
   List<Object?> get props => [
     hasData,
@@ -189,6 +198,7 @@ class EpgReady extends EpgState {
     programsByChannel.length,
     availableChannels.length,
     isPlaybackActive,
+    revision,
   ];
 }
 
@@ -236,22 +246,29 @@ class EpgBloc extends Bloc<EpgEvent, EpgState> {
   }
   
   void _onEpgServiceUpdate(_EpgServiceUpdate event, Emitter<EpgState> emit) {
-    // Only emit new state if not in playback mode
-    if (_epgService.isLoading || _epgService.isDownloading) return;
-    
     final currentState = state;
-    if (currentState is EpgReady) {
-      emit(currentState.copyWith(
-        hasData: _epgService.hasLoadedPrograms,
-        channelCount: _epgService.loadedChannelCount,
-        availableChannels: _epgService.availableChannels,
-      ));
-    } else if (_epgService.isLoading || _epgService.isDownloading || _epgService.isParsing) {
+
+    // Surface download/parse progress; once a ready state exists, keep it and
+    // let its data refresh below instead of regressing the UI to a spinner.
+    if (currentState is! EpgReady &&
+        (_epgService.isLoading ||
+            _epgService.isDownloading ||
+            _epgService.isParsing)) {
       emit(EpgLoading(
         progress: _epgService.epgProgress,
         label: _epgService.epgProgressLabel,
         isDownloading: _epgService.isDownloading,
         isParsing: _epgService.isParsing,
+      ));
+      return;
+    }
+
+    if (currentState is EpgReady) {
+      emit(currentState.copyWith(
+        hasData: _epgService.hasLoadedPrograms,
+        channelCount: _epgService.loadedChannelCount,
+        availableChannels: _epgService.availableChannels,
+        revision: currentState.revision + 1,
       ));
     } else if (_epgService.hasLoadedPrograms) {
       emit(EpgReady(
@@ -299,6 +316,7 @@ class EpgBloc extends Bloc<EpgEvent, EpgState> {
         emit(currentState.copyWith(
           hasData: _epgService.hasLoadedPrograms,
           channelCount: _epgService.loadedChannelCount,
+          error: null,
         ));
       } else {
         emit(EpgReady(
@@ -375,19 +393,19 @@ class EpgBloc extends Bloc<EpgEvent, EpgState> {
   
   Future<void> _onSetManualMapping(EpgSetManualMapping event, Emitter<EpgState> emit) async {
     await _epgService.setManualMapping(event.channelId, event.epgChannelId);
-    
+
     final currentState = state;
     if (currentState is EpgReady) {
-      emit(currentState);
+      emit(currentState.copyWith(revision: currentState.revision + 1));
     }
   }
   
   Future<void> _onRemoveManualMapping(EpgRemoveManualMapping event, Emitter<EpgState> emit) async {
     await _epgService.removeManualMapping(event.channelId);
-    
+
     final currentState = state;
     if (currentState is EpgReady) {
-      emit(currentState);
+      emit(currentState.copyWith(revision: currentState.revision + 1));
     }
   }
   

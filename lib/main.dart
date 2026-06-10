@@ -85,6 +85,7 @@ void main() {
       // the guarded zone can cause a "bindings initialized in a
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
+      initializeSqliteForPlatform();
       installLinuxKeyboardWorkarounds();
       StartupProbe.mark('Flutter bindings initialized');
 

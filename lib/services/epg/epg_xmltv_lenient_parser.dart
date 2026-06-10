@@ -19,6 +19,7 @@ final RegExp kEpgChannelEndRe =
     RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
 
 String decodeXmltvEntities(String input) {
+  if (!input.contains('&')) return input;
   return input
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
@@ -85,43 +86,79 @@ List<String> extractXmltvTagTexts(String block, String tag,
   return results;
 }
 
-String drainXmltvBlocks(
+/// Cap on how much of an unterminated block we keep buffered. A legitimate
+/// `<channel>` or `<programme>` block is a few KB; anything past this is a corrupt
+/// or never-closing tag, and retaining it would grow the buffer for the rest
+/// of a multi-gigabyte file (OOM) while re-scanning it every chunk (quadratic
+/// CPU).
+const int kEpgMaxPartialBlock = 4 * 1024 * 1024;
+
+/// Tail kept after draining so a start tag split across chunk boundaries
+/// still matches on the next chunk.
+const int kEpgDrainTailKeep = 65536;
+
+/// Drains complete `<channel>` and `<programme>` blocks from [buffer] in
+/// document order, so programme blocks interleaved between channel blocks are
+/// never skipped. Returns the unconsumed tail to prepend to the next chunk.
+String drainXmltvChannelAndProgrammeBlocks(
   String buffer,
-  RegExp startRe,
-  RegExp endRe,
-  void Function(String block) onBlock,
+  void Function(String block) onChannel,
+  void Function(String block) onProgramme,
 ) {
   int cursor = 0;
   while (true) {
-    final startMatches = startRe.allMatches(buffer, cursor);
-    if (startMatches.isEmpty) break;
-    final startMatch = startMatches.first;
-    final absoluteStart = startMatch.start;
+    final channelStart =
+        kEpgChannelStartRe.allMatches(buffer, cursor).firstOrNull;
+    final programmeStart =
+        kEpgProgrammeStartRe.allMatches(buffer, cursor).firstOrNull;
+    if (channelStart == null && programmeStart == null) break;
 
-    final endMatches = endRe.allMatches(buffer, absoluteStart);
-    if (endMatches.isEmpty) {
-      return buffer.substring(absoluteStart);
+    final bool isChannel;
+    if (channelStart == null) {
+      isChannel = false;
+    } else if (programmeStart == null) {
+      isChannel = true;
+    } else {
+      isChannel = channelStart.start < programmeStart.start;
     }
-    final endMatch = endMatches.first;
+    final absoluteStart = isChannel ? channelStart!.start : programmeStart!.start;
+    final endRe = isChannel ? kEpgChannelEndRe : kEpgProgrammeEndRe;
+
+    final endMatch = endRe.allMatches(buffer, absoluteStart).firstOrNull;
+    if (endMatch == null) {
+      var partial = buffer.substring(absoluteStart);
+      if (partial.length > kEpgMaxPartialBlock) {
+        // Abandon the oversized unterminated block; keep a tail so blocks
+        // later in the stream still parse.
+        partial = partial.substring(partial.length - kEpgDrainTailKeep);
+      }
+      return partial;
+    }
     final absoluteEnd = endMatch.end;
 
     final block = buffer.substring(absoluteStart, absoluteEnd);
-    onBlock(block);
+    if (isChannel) {
+      onChannel(block);
+    } else {
+      onProgramme(block);
+    }
     cursor = absoluteEnd;
   }
 
   var tail = buffer.substring(cursor);
-  if (tail.length > 65536) {
-    tail = tail.substring(tail.length - 65536);
+  if (tail.length > kEpgDrainTailKeep) {
+    tail = tail.substring(tail.length - kEpgDrainTailKeep);
   }
   return tail;
 }
 
-DateTime parseXmltvTime(String timeStr) {
+/// Returns null when the timestamp is unparseable, so corrupt entries can be
+/// skipped instead of masquerading as currently-airing programmes.
+DateTime? parseXmltvTime(String timeStr) {
   try {
     final trimmed = timeStr.trim();
     final m = EPGMatchingUtils.timeParseRe.firstMatch(trimmed);
-    if (m == null) return DateTime.now();
+    if (m == null) return null;
 
     final g1 = m.group(1);
     final g2 = m.group(2);
@@ -136,7 +173,7 @@ DateTime parseXmltvTime(String timeStr) {
         g4 == null ||
         g5 == null ||
         g6 == null) {
-      return DateTime.now();
+      return null;
     }
 
     final year = int.parse(g1);
@@ -159,7 +196,7 @@ DateTime parseXmltvTime(String timeStr) {
 
     return dt.toLocal();
   } catch (e) {
-    return DateTime.now();
+    return null;
   }
 }
 
@@ -220,8 +257,11 @@ void processXmltvProgrammeEvents(
 
   if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) return;
 
-  final start = parseXmltvTime(startStr).millisecondsSinceEpoch;
-  final end = parseXmltvTime(stopStr).millisecondsSinceEpoch;
+  final startDt = parseXmltvTime(startStr);
+  final endDt = parseXmltvTime(stopStr);
+  if (startDt == null || endDt == null) return;
+  final start = startDt.millisecondsSinceEpoch;
+  final end = endDt.millisecondsSinceEpoch;
   final normalizedChannelId = normalize(channelId);
 
   channelIds.add(channelId);
@@ -307,12 +347,6 @@ void processXmltvProgrammeEvents(
     icon = channelIcons[channelId];
   }
 
-  if ((icon == null || icon.isEmpty) &&
-      channelIcons != null &&
-      channelIcons.containsKey(channelId)) {
-    icon = channelIcons[channelId];
-  }
-
   final payload = {
     'epgId': channelId,
     'startTs': start,
@@ -366,10 +400,8 @@ Future<int> runLenientEpgParse({
   await for (final chunk in stream) {
     buffer += sanitizeXmlChunk(chunk);
 
-    buffer = drainXmltvBlocks(
+    buffer = drainXmltvChannelAndProgrammeBlocks(
       buffer,
-      kEpgChannelStartRe,
-      kEpgChannelEndRe,
       (block) {
         final id = extractXmltvAttribute(block, 'id', attrRegexCache)?.trim() ??
             '';
@@ -397,12 +429,6 @@ Future<int> runLenientEpgParse({
           channelIcons[id] = icon;
         }
       },
-    );
-
-    buffer = drainXmltvBlocks(
-      buffer,
-      kEpgProgrammeStartRe,
-      kEpgProgrammeEndRe,
       (block) {
         final channelId =
             extractXmltvAttribute(block, 'channel', attrRegexCache)?.trim() ??
@@ -415,17 +441,30 @@ Future<int> runLenientEpgParse({
         if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) {
           return;
         }
-        // Skip programmes for channels already covered by the primary EPG.
-        // Channel metadata is still captured by the channel-drain block above,
-        // so the callsign bridge is unaffected; we just avoid building/encoding
-        // the redundant programme body.
+        // Register the channel id before any exclusion so the callsign bridge
+        // sees it even when the programme body is skipped (matches the
+        // event-path behaviour in processXmltvProgrammeEvents).
+        final normalizedChannelId = normalize(channelId);
+        channelIds.add(channelId);
+        if (normalizedChannelId.isNotEmpty) {
+          normalizedChannels
+              .putIfAbsent(normalizedChannelId, () => [])
+              .add(channelId);
+        }
+        // Skip programmes for channels already covered by the primary EPG —
+        // we avoid building/encoding the redundant programme body.
         if (excludeChannels != null && excludeChannels.contains(channelId)) {
           return;
         }
         totalProgrammes++;
-        final start = parseXmltvTime(startStr).millisecondsSinceEpoch;
-        final end = parseXmltvTime(stopStr).millisecondsSinceEpoch;
-        final normalizedChannelId = normalize(channelId);
+        final startDt = parseXmltvTime(startStr);
+        final endDt = parseXmltvTime(stopStr);
+        if (startDt == null || endDt == null) {
+          rejectStats['badTimestamp'] = (rejectStats['badTimestamp'] ?? 0) + 1;
+          return;
+        }
+        final start = startDt.millisecondsSinceEpoch;
+        final end = endDt.millisecondsSinceEpoch;
         if (!shouldIncludeProgramme(
           channelId,
           start,
@@ -438,12 +477,6 @@ Future<int> runLenientEpgParse({
           rejectStats: rejectStats,
         )) {
           return;
-        }
-        channelIds.add(channelId);
-        if (normalizedChannelId.isNotEmpty) {
-          normalizedChannels
-              .putIfAbsent(normalizedChannelId, () => [])
-              .add(channelId);
         }
         final title =
             extractXmltvTagText(block, 'title', tagRegexCache) ?? 'Unknown';
