@@ -63,7 +63,6 @@ class LiveTvBootstrap {
     final heroCarousel = LiveTvHeroCarousel(
       featuredState: featuredState,
       timerManager: timerManager,
-      timerService: timerService,
       getChannelProvider: () =>
           Provider.of<ChannelProvider>(context, listen: false),
       isMounted: isMounted,
@@ -186,7 +185,6 @@ class LiveTvBootstrap {
     deps.idleController.stop();
     deps.skeletonController.dispose();
     deps.artworkRetry.dispose();
-    deps.heroCarousel.unregisterCarousel();
     deps.timerManager.cancelAll();
     deps.scrollController.dispose();
     deps.categoryResources.dispose();
@@ -204,6 +202,5 @@ class LiveTvBootstrap {
     if (deps.scrollController.hasClients) {
       deps.scrollController.jumpTo(0);
     }
-    deps.heroCarousel.registerCarousel(deps.heroCarousel.advance);
   }
 }
