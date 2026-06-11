@@ -347,8 +347,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             if (!_deps.programTypeRowCache.shouldRefreshFor(revision)) return;
             setState(() {
               _deps.heroCandidateCache.invalidate();
+              // No rows.clear() here: ensureFresh diffs row memberships during
+              // the rebuild and evicts only rows that actually changed, so
+              // unchanged rows keep their widget instances and skip rebuild.
               _deps.programTypeRowCache.invalidate();
-              _deps.programTypeRowCache.rows.clear();
             });
           },
           buildHero: (ctx, featured, channels, _) =>

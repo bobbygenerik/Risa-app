@@ -36,7 +36,7 @@ class LiveTvFullScreenHeroHost extends StatefulWidget {
     required this.onCandidateCount,
     required this.onAdvanceFeaturedHero,
     required this.onPrefetchRowArtwork,
-    required this.buildProgramTypeRow,
+    required this.buildProgramTypeSlivers,
     required this.onWatchChannel,
     required this.watchButtonFocus,
     required this.firstChannelFocus,
@@ -61,12 +61,11 @@ class LiveTvFullScreenHeroHost extends StatefulWidget {
   final void Function(int count) onCandidateCount;
   final VoidCallback onAdvanceFeaturedHero;
   final void Function(List<Channel> channels, {int limit}) onPrefetchRowArtwork;
-  final Widget Function(
+  final List<Widget> Function(
     BuildContext context,
-    String title,
-    List<Channel> allChannels,
-    bool Function(Program?, Channel) classifier,
-  ) buildProgramTypeRow;
+    double rightInset,
+    List<Channel> channels,
+  ) buildProgramTypeSlivers;
   final void Function(Channel channel) onWatchChannel;
   final FocusNode watchButtonFocus;
   final FocusNode firstChannelFocus;
@@ -341,7 +340,7 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
         artworkResolver: widget.artworkResolver,
       ),
       continueWatchingRow: LiveTvContinueWatchingRow(bindings: widget.bindings),
-      buildProgramTypeRow: widget.buildProgramTypeRow,
+      buildProgramTypeSlivers: widget.buildProgramTypeSlivers,
       heroInfoOverlay: (channel, program) {
         final heroInfoWidth =
             LiveTvHeroInfoWidgets.heroInfoWidth(context, widget.sidebarInset);

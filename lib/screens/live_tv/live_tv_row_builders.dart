@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_channel_section.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_full_screen_hero_host.dart';
+import 'package:iptv_player/screens/live_tv/program_type_slivers.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_screen_config.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_screen_deps.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_tracked_skeleton.dart';
@@ -41,19 +41,18 @@ class LiveTvRowBuilders {
     );
   }
 
-  Widget programTypeRow(
+  List<Widget> programTypeSlivers(
     BuildContext context,
-    String title,
-    List<Channel> allChannels,
-    bool Function(Program?, Channel) classifier,
+    double rightInset,
+    List<Channel> channels,
   ) {
-    return deps.programTypeRowCache.buildRow(
+    return buildLiveTvProgramTypeSlivers(
       context: context,
-      title: title,
-      allChannels: allChannels,
-      classifier: classifier,
+      rightInset: rightInset,
+      channels: channels,
+      cache: deps.programTypeRowCache,
       buildSection: (ctx, rowTitle, rowChannels) => channelSection(
-        ctx,
+        ctx ?? context,
         rowTitle,
         rowChannels,
         allowCategoryPaging: false,
@@ -88,7 +87,7 @@ class LiveTvRowBuilders {
       },
       onAdvanceFeaturedHero: () => deps.heroCarousel.advance(),
       onPrefetchRowArtwork: onPrefetchRowArtwork,
-      buildProgramTypeRow: programTypeRow,
+      buildProgramTypeSlivers: programTypeSlivers,
       onWatchChannel: onWatchChannel,
       watchButtonFocus: deps.watchButtonFocus,
       firstChannelFocus: deps.firstChannelFocus,

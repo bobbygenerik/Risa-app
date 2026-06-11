@@ -28,7 +28,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
     required this.artworkResolver,
     required this.featuredRow,
     required this.continueWatchingRow,
-    required this.buildProgramTypeRow,
+    required this.buildProgramTypeSlivers,
     required this.heroInfoOverlay,
     required this.channelLogo,
     this.heroImageUrl,
@@ -48,12 +48,11 @@ class LiveTvFullScreenHero extends StatelessWidget {
   final LiveTvArtworkResolver artworkResolver;
   final Widget featuredRow;
   final Widget continueWatchingRow;
-  final Widget Function(
+  final List<Widget> Function(
     BuildContext context,
-    String title,
+    double rightInset,
     List<Channel> channels,
-    bool Function(Program?, Channel) classifier,
-  ) buildProgramTypeRow;
+  ) buildProgramTypeSlivers;
   final Widget Function(Channel channel, Program? program) heroInfoOverlay;
   final Widget Function(Channel channel) channelLogo;
 
@@ -285,12 +284,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
                     ),
                   ),
                 ),
-                ...buildLiveTvProgramTypeSlivers(
-                  context: context,
-                  rightInset: rightInset,
-                  channels: allChannels,
-                  buildRow: buildProgramTypeRow,
-                ),
+                ...buildProgramTypeSlivers(context, rightInset, allChannels),
                 SliverToBoxAdapter(
                   child: SizedBox(height: context.spacing(12)),
                 ),
