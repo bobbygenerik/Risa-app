@@ -73,27 +73,28 @@ class CallsignIndex {
 
   static const String _any = '';
 
+  /// callsign -> network -> EPG id. Only *real* (network, id) entries are
+  /// stored; a genuinely network-less id lives under the [_any] key. The
+  /// unambiguous network-less fallback is NOT materialized here — it is derived
+  /// in [lookup]. Keeping the map free of that derived value is what lets a
+  /// single id be ingested via [addId] in O(1) without rebuilding the whole
+  /// index (the rebuild-per-ingest was a per-frame UI-thread stall).
   final Map<String, Map<String, String>> _byCallsign;
 
   factory CallsignIndex.build(Iterable<String> epgIds) {
-    final byCallsign = <String, Map<String, String>>{};
+    final index = CallsignIndex._(<String, Map<String, String>>{});
     for (final id in epgIds) {
-      final cs = extractCallsignFromEpgId(id);
-      if (cs == null) continue;
-      final network = extractNetworkFromEpgId(id) ?? _any;
-      final trimmed = id.trim();
-      final networks = byCallsign.putIfAbsent(cs, () => {});
-      networks[network] = trimmed;
+      index.addId(id);
     }
+    return index;
+  }
 
-    // Promote unambiguous callsigns to the network-less slot.
-    for (final entry in byCallsign.entries) {
-      final ids = entry.value.values.toSet();
-      if (ids.length == 1) {
-        entry.value[_any] = ids.first;
-      }
-    }
-    return CallsignIndex._(byCallsign);
+  /// Ingest a single EPG id incrementally. O(1) — no full-index rebuild.
+  void addId(String epgId) {
+    final cs = extractCallsignFromEpgId(epgId);
+    if (cs == null) return;
+    final network = extractNetworkFromEpgId(epgId) ?? _any;
+    _byCallsign.putIfAbsent(cs, () => {})[network] = epgId.trim();
   }
 
   bool get isEmpty => _byCallsign.isEmpty;
@@ -108,6 +109,12 @@ class CallsignIndex {
       final byNet = networks[network];
       if (byNet != null) return byNet;
     }
-    return networks[_any];
+    // Network-less fallback: a genuine no-prefix id always wins; otherwise
+    // resolve only when every stored entry points at the same id, mirroring the
+    // old "promote unambiguous callsigns" rule without storing the result.
+    final genuine = networks[_any];
+    if (genuine != null) return genuine;
+    final ids = networks.values.toSet();
+    return ids.length == 1 ? ids.first : null;
   }
 }

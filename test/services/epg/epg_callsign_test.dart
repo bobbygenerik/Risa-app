@@ -80,4 +80,48 @@ void main() {
       expect(idx.lookup('WCCO'), 'wcco.us');
     });
   });
+
+  group('CallsignIndex.addId (incremental)', () {
+    test('adds a new resolvable callsign without a rebuild', () {
+      final idx = CallsignIndex.build(['CBSWBZ.us']);
+      idx.addId('FOXWFXT.us');
+      expect(idx.lookup('WBZ'), 'CBSWBZ.us');
+      expect(idx.lookup('WFXT'), 'FOXWFXT.us');
+    });
+
+    test('a second id under the same callsign becomes ambiguous', () {
+      final idx = CallsignIndex.build(['NBCWJAR.us']);
+      // Before the second add, the callsign is unambiguous.
+      expect(idx.lookup('WJAR'), 'NBCWJAR.us');
+      idx.addId('ABCWJAR.us');
+      // After it, a network-less lookup must no longer resolve.
+      expect(idx.lookup('WJAR', network: 'NBC'), 'NBCWJAR.us');
+      expect(idx.lookup('WJAR', network: 'ABC'), 'ABCWJAR.us');
+      expect(idx.lookup('WJAR'), isNull,
+          reason: 'ambiguous once a second station shares the callsign');
+    });
+
+    test('incremental adds match a from-scratch build of the same ids', () {
+      final ids = [
+        'CBSWBZ.us',
+        'NBCWJAR.us',
+        'ABCWJAR.us',
+        'wcco.us',
+        'CINEVAULTWesterns.us',
+      ];
+      final built = CallsignIndex.build(ids);
+      final incremental = CallsignIndex.build(const <String>[]);
+      for (final id in ids) {
+        incremental.addId(id);
+      }
+      for (final cs in ['WBZ', 'WJAR', 'WCCO', 'WEST']) {
+        expect(incremental.lookup(cs), built.lookup(cs), reason: 'no-net $cs');
+        for (final net in ['NBC', 'ABC', 'CBS']) {
+          expect(incremental.lookup(cs, network: net),
+              built.lookup(cs, network: net),
+              reason: '$cs/$net');
+        }
+      }
+    });
+  });
 }

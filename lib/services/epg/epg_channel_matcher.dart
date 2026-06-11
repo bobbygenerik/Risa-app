@@ -101,7 +101,15 @@ class EpgChannelMatcher {
     // the _noFuzzyMatch check in findBestEpgId, so a now-resolvable channel is
     // still found. The fuzzy negative cache is correctly invalidated where its
     // input actually changes: rebuildFuzzyCandidates() and mergeDisplayNames().
-    _callsignIndex = null;
+    //
+    // Fold the new id into the callsign bridge incrementally. Nulling the index
+    // here (as before) made the next _callsigns access rebuild CallsignIndex
+    // over ALL epg ids — and because that access happens inside the Live TV
+    // row build() via getCurrentProgram/findBestEpgId, every ingest during EPG
+    // hydration triggered an O(N) rebuild on the UI thread, stalling frames.
+    // addId is O(1); a still-null index is built lazily from epgIdsRaw, which
+    // already contains this id.
+    _callsignIndex?.addId(trimmed);
   }
 
   CallsignIndex get _callsigns =>

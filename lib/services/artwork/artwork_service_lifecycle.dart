@@ -7,6 +7,10 @@ extension LiveTvArtworkServiceLifecycle on LiveTvArtworkService {
       _loadProgramArtworkTitleCache(),
       _loadProgramArtworkNegativeCache(),
       _cleanupOldCacheKeys(),
+      // Warm the persisted URL-validation cache so the synchronous
+      // isKnownInvalid pre-filter and the first isValid calls don't trigger
+      // network HEADs for URLs already classified in a prior session.
+      ImageValidationService.ensureLoaded(),
     ]);
   }
 

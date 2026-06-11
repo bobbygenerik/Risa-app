@@ -1,25 +1,70 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/image_url_helper.dart';
 
 /// Validates image URLs with HEAD requests and maintains a known-bad set.
 /// Prevents broken URLs, 404s, and non-image content from being used.
 class ImageValidationService {
-  // LRU sets of known-good and known-bad URLs
+  // LRU sets of known-good and known-bad URLs. Persisted across launches so a
+  // cold start does not re-run a blocking HEAD for every non-trusted URL that
+  // was already classified in a prior session.
   static final Set<String> _knownGood = {};
   static final Set<String> _knownBad = {};
   static final Queue<String> _knownGoodOrder = Queue<String>();
   static final Queue<String> _knownBadOrder = Queue<String>();
-  static const int _maxGoodEntries = 500;
-  static const int _maxBadEntries = 300;
+  static const int _maxGoodEntries = 4000;
+  static const int _maxBadEntries = 1000;
+
+  // Persistence: lazily loaded once, saved on a short debounce after changes.
+  static const String _prefsGoodKey = 'image_validation_known_good';
+  static const String _prefsBadKey = 'image_validation_known_bad';
+  static Future<void>? _loadFuture;
+  static Timer? _saveDebounce;
 
   // Shared HTTP client to reuse connections (keep-alive)
   static final http.Client _client = http.Client();
 
   // In-flight validation to avoid duplicate HEAD requests
   static final Map<String, Future<bool>> _pendingValidations = {};
+
+  /// Loads the persisted known-good/known-bad sets. Idempotent and safe to call
+  /// concurrently — the work runs at most once. Awaited before the first
+  /// validation; can also be called eagerly during app init to warm the cache.
+  static Future<void> ensureLoaded() => _loadFuture ??= _loadFromPrefs();
+
+  static Future<void> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final url in prefs.getStringList(_prefsGoodKey) ?? const <String>[]) {
+        if (_knownGood.add(url)) _knownGoodOrder.addLast(url);
+      }
+      for (final url in prefs.getStringList(_prefsBadKey) ?? const <String>[]) {
+        if (_knownBad.add(url)) _knownBadOrder.addLast(url);
+      }
+      debugLog(
+          'ImageValidation: loaded ${_knownGood.length} good, ${_knownBad.length} bad from prefs');
+    } catch (e) {
+      debugLog('ImageValidation: failed to load persisted cache: $e');
+    }
+  }
+
+  static void _scheduleSave() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(seconds: 3), _saveToPrefs);
+  }
+
+  static Future<void> _saveToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_prefsGoodKey, _knownGoodOrder.toList());
+      await prefs.setStringList(_prefsBadKey, _knownBadOrder.toList());
+    } catch (e) {
+      debugLog('ImageValidation: failed to persist cache: $e');
+    }
+  }
 
   /// Returns true if the URL is known to be invalid (404, non-image, etc.).
   static bool isKnownInvalid(String? url) {
@@ -46,6 +91,7 @@ class ImageValidationService {
         final old = _knownGoodOrder.removeFirst();
         _knownGood.remove(old);
       }
+      _scheduleSave();
     }
   }
 
@@ -60,6 +106,7 @@ class ImageValidationService {
         final old = _knownBadOrder.removeFirst();
         _knownBad.remove(old);
       }
+      _scheduleSave();
     }
   }
 
@@ -67,6 +114,8 @@ class ImageValidationService {
   /// Returns true if the URL points to a valid image resource.
   static Future<bool> isValid(String? url) async {
     if (url == null || url.isEmpty) return false;
+    // Honor the persisted classification before deciding to hit the network.
+    await ensureLoaded();
     final normalized = normalizeImageUrl(url);
 
     // Fast path: already classified
@@ -100,6 +149,12 @@ class ImageValidationService {
         lowerUrl.contains('artworks.thetvdb.com') ||
         lowerUrl.contains('assets.fanart.tv') ||
         lowerUrl.contains('thesportsdb.com/images') ||
+        // Gracenote/Tribune EPG card art (e.g. cltv.tmsimg.com). Served by every
+        // major EPG provider and reliably returns images, but does not support
+        // HEAD consistently — checking it forced a blocking round-trip (up to the
+        // 5s timeout) on every EPG-driven card on each cold launch.
+        lowerUrl.contains('tmsimg.com') ||
+        lowerUrl.contains('gracenote') ||
         lowerUrl.contains('m3u-logos') ||
         lowerUrl.contains('logo.m3uassets.com');
   }

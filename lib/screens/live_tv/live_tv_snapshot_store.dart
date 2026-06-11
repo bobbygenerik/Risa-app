@@ -6,6 +6,7 @@ import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/category_state.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/json_offload.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LiveTvSnapshotData {
@@ -247,7 +248,10 @@ class LiveTvSnapshotStore {
         'channelCount': channelCount,
         'categories': categories,
       };
-      await prefs.setString(prefsKey, jsonEncode(snapshot));
+      // Encode off-main: this snapshot (categories x channels x programs) is
+      // large enough that a synchronous jsonEncode here showed up as ~12% of
+      // main-isolate CPU and a periodic frame spike every debounced save.
+      await prefs.setString(prefsKey, await jsonEncodeOffMain(snapshot));
     } catch (e) {
       debugLog('LiveTvSnapshotStore: save failed: $e');
     }
