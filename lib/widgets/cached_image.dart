@@ -44,25 +44,26 @@ class CachedImage extends StatelessWidget {
       return errorWidget ??
           _buildGradientFallback(width, height, Icons.broken_image);
     }
-    // Conservative default mem cache sizing to avoid large synchronous decodes
+    // Conservative default mem cache sizing to avoid large synchronous
+    // decodes. ResizeImage decodes to EXACTLY the dimensions it is given, so
+    // never pair a real dimension with a guessed one — a logo rendered at
+    // height 48 but decoded at screenWidth x 48 comes out aspect-distorted
+    // and blurry. With a single dimension the decoder preserves aspect.
     int? finalMemCacheWidth = memCacheWidth;
     int? finalMemCacheHeight = memCacheHeight;
-    if (finalMemCacheWidth == null && width != null && width!.isFinite) {
-      finalMemCacheWidth =
-          (width! * MediaQuery.of(context).devicePixelRatio).round();
+    if (finalMemCacheWidth == null && finalMemCacheHeight == null) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
+      final hasWidth = width != null && width!.isFinite;
+      final hasHeight = height != null && height!.isFinite;
+      if (hasWidth) finalMemCacheWidth = (width! * dpr).round();
+      if (hasHeight) finalMemCacheHeight = (height! * dpr).round();
+      // No usable layout size (e.g. full-screen backdrop): cap by screen
+      // width only, leaving height free so aspect is preserved.
+      if (!hasWidth && !hasHeight) {
+        finalMemCacheWidth =
+            (MediaQuery.of(context).size.width * dpr).round();
+      }
     }
-    if (finalMemCacheHeight == null && height != null && height!.isFinite) {
-      finalMemCacheHeight =
-          (height! * MediaQuery.of(context).devicePixelRatio).round();
-    }
-    // If still null (e.g. full-screen hero), limit to screen size to avoid huge decodes
-    final screen = MediaQuery.of(context).size;
-    final screenWidthPx =
-        (screen.width * MediaQuery.of(context).devicePixelRatio).round();
-    final screenHeightPx =
-        (screen.height * MediaQuery.of(context).devicePixelRatio).round();
-    finalMemCacheWidth ??= screenWidthPx;
-    finalMemCacheHeight ??= screenHeightPx;
 
     // Validate URL before attempting to load
     if (!_isValidImageUrl(normalizedImageUrl)) {

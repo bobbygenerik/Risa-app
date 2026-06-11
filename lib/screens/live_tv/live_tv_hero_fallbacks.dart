@@ -156,10 +156,13 @@ class LiveTvHeroFallbacks {
                     final dpr = MediaQuery.of(context).devicePixelRatio;
                     final maxLogoWidth = constraints.maxWidth * 0.65;
                     final maxLogoHeight = constraints.maxHeight * 0.34;
+                    // Decode at the displayed size (was capped at 480px, a
+                    // ~2.5x upscale on desktop hero widths). Width-only so the
+                    // decoder preserves the logo's aspect ratio — giving
+                    // ResizeImage both dimensions decodes to exactly that box
+                    // and distorts logos that don't match it.
                     final logoCacheWidth =
-                        math.min(480, (maxLogoWidth * dpr).round());
-                    final logoCacheHeight =
-                        math.min(270, (maxLogoHeight * dpr).round());
+                        math.min(1600, (maxLogoWidth * dpr).round());
 
                     const fallbackContent = SizedBox.shrink();
 
@@ -202,7 +205,6 @@ class LiveTvHeroFallbacks {
                       width: maxLogoWidth,
                       height: maxLogoHeight,
                       memCacheWidth: logoCacheWidth,
-                      memCacheHeight: logoCacheHeight,
                       imageBuilder: (context, imageProvider) {
                         ImageFailureCache.recordSuccess(normalizedLogoUrl);
                         final logo = Image(

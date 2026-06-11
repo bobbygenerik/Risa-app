@@ -6,11 +6,18 @@ import 'package:flutter/foundation.dart';
 class LiveTvArtworkUpdateThrottle {
   LiveTvArtworkUpdateThrottle({
     required this.heroArtworkVersion,
+    required this.cardArtworkVersion,
     required this.isMounted,
     required this.requestRebuild,
   });
 
   final ValueNotifier<int> heroArtworkVersion;
+
+  /// Listened to by each visible channel card; bumping it makes cards
+  /// re-resolve their artwork without a whole-screen rebuild (the cached
+  /// program-type rows reuse widget instances, so a screen setState alone
+  /// never reaches them).
+  final ValueNotifier<int> cardArtworkVersion;
   final bool Function() isMounted;
   final void Function() requestRebuild;
 
@@ -25,7 +32,9 @@ class LiveTvArtworkUpdateThrottle {
     }
     if (_cardRebuildDebounce?.isActive == true) return;
     _cardRebuildDebounce = Timer(const Duration(milliseconds: 500), () {
-      if (isMounted()) requestRebuild();
+      if (!isMounted()) return;
+      cardArtworkVersion.value++;
+      requestRebuild();
     });
   }
 

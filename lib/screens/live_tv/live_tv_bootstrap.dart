@@ -41,8 +41,10 @@ class LiveTvBootstrap {
   }) {
     final openingPlayer = LiveTvOpeningPlayerFlag();
     final heroArtworkVersion = ValueNotifier<int>(0);
+    final cardArtworkVersion = ValueNotifier<int>(0);
     final artworkThrottle = LiveTvArtworkUpdateThrottle(
       heroArtworkVersion: heroArtworkVersion,
+      cardArtworkVersion: cardArtworkVersion,
       isMounted: isMounted,
       requestRebuild: () {
         if (isMounted()) setState(() {});
@@ -119,6 +121,7 @@ class LiveTvBootstrap {
       artworkResolver: LiveTvArtworkResolver(artworkService: artworkService),
       artworkThrottle: artworkThrottle,
       heroArtworkVersion: heroArtworkVersion,
+      cardArtworkVersion: cardArtworkVersion,
       heroCandidateCache: LiveTvHeroCandidateCache(),
       programTypeRowCache: LiveTvProgramTypeRowCache(),
       watchButtonFocus: focusPool.getFocusNode(
@@ -181,6 +184,7 @@ class LiveTvBootstrap {
   static void dispose(LiveTvScreenDeps deps) {
     deps.artworkThrottle.dispose();
     deps.heroArtworkVersion.dispose();
+    deps.cardArtworkVersion.dispose();
     deps.artworkService.dispose();
     deps.idleController.stop();
     deps.skeletonController.dispose();

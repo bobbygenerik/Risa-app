@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -59,6 +60,7 @@ class LiveTvChannelRowCard extends StatelessWidget {
     required this.requestNavigationFocus,
     required this.displayTitle,
     required this.getCardImage,
+    this.artworkVersion,
   });
 
   final Channel channel;
@@ -81,6 +83,7 @@ class LiveTvChannelRowCard extends StatelessWidget {
   final VoidCallback onScrollToHeroPeek;
   final bool Function() requestNavigationFocus;
   final LiveTvDisplayTitleFn displayTitle;
+  final ValueListenable<int>? artworkVersion;
   final LiveTvCardImageFn getCardImage;
 
   @override
@@ -205,6 +208,7 @@ class LiveTvChannelRowCard extends StatelessWidget {
                     isFirstRow: isFirstRow,
                     displayTitle: displayTitle,
                     getCardImage: getCardImage,
+                    artworkVersion: artworkVersion,
                   ),
                 ),
               );
@@ -229,6 +233,7 @@ class LiveTvChannelCardContent extends StatefulWidget {
     required this.isFirstRow,
     required this.displayTitle,
     required this.getCardImage,
+    this.artworkVersion,
   });
 
   final Channel channel;
@@ -241,6 +246,13 @@ class LiveTvChannelCardContent extends StatefulWidget {
   final LiveTvDisplayTitleFn displayTitle;
   final LiveTvCardImageFn getCardImage;
 
+  /// Bumped (debounced) when the artwork service caches a new image. Cards
+  /// resolve artwork synchronously in build, so without this a card built
+  /// before its artwork arrived would show the channel logo until something
+  /// else happened to rebuild it — the cached program-type rows deliberately
+  /// reuse widget instances, so no parent rebuild reaches it.
+  final ValueListenable<int>? artworkVersion;
+
   @override
   State<LiveTvChannelCardContent> createState() =>
       _LiveTvChannelCardContentState();
@@ -252,6 +264,31 @@ class _LiveTvChannelCardContentState extends State<LiveTvChannelCardContent> {
   // logo in that case to avoid the logo-on-logo artifact.
   bool _artRejected = false;
   String? _lastImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.artworkVersion?.addListener(_onArtworkVersion);
+  }
+
+  @override
+  void didUpdateWidget(LiveTvChannelCardContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.artworkVersion, widget.artworkVersion)) {
+      oldWidget.artworkVersion?.removeListener(_onArtworkVersion);
+      widget.artworkVersion?.addListener(_onArtworkVersion);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.artworkVersion?.removeListener(_onArtworkVersion);
+    super.dispose();
+  }
+
+  void _onArtworkVersion() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {

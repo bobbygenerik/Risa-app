@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/screens/live_tv/category_resource_store.dart';
@@ -23,6 +24,7 @@ class LiveTvBindingsFactory {
     required FocusNode firstFeaturedFocus,
     required Map<String, int> focusedIndexBySection,
     required LiveTvArtworkResolver artworkResolver,
+    required ValueListenable<int> cardArtworkVersion,
     required LiveTvTimerManager timerManager,
     required int heroPrefetchWindow,
     required int rowPrefetchWindow,
@@ -52,6 +54,7 @@ class LiveTvBindingsFactory {
       firstFeaturedFocus: firstFeaturedFocus,
       focusedIndexBySection: focusedIndexBySection,
       artworkResolver: artworkResolver,
+      cardArtworkVersion: cardArtworkVersion,
       sidebarInset: () => AppSpacing.sidebarCollapsedWidth,
       heroPrefetchWindow: heroPrefetchWindow,
       rowPrefetchWindow: rowPrefetchWindow,

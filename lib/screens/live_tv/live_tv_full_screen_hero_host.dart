@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/live_tv/artwork_prefetcher.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_channel_section.dart';

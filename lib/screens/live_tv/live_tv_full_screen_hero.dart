@@ -6,7 +6,6 @@ import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_candidate_cache.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_content.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_layout.dart';
-import 'package:iptv_player/screens/live_tv/program_type_slivers.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';

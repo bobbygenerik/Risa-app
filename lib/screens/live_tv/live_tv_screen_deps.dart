@@ -33,6 +33,7 @@ class LiveTvScreenDeps {
     required this.artworkResolver,
     required this.artworkThrottle,
     required this.heroArtworkVersion,
+    required this.cardArtworkVersion,
     required this.heroCandidateCache,
     required this.programTypeRowCache,
     required this.watchButtonFocus,
@@ -68,6 +69,7 @@ class LiveTvScreenDeps {
   final LiveTvArtworkResolver artworkResolver;
   final LiveTvArtworkUpdateThrottle artworkThrottle;
   final ValueNotifier<int> heroArtworkVersion;
+  final ValueNotifier<int> cardArtworkVersion;
   final LiveTvHeroCandidateCache heroCandidateCache;
   final LiveTvProgramTypeRowCache programTypeRowCache;
   final FocusNode watchButtonFocus;

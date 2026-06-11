@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ class LiveTvChannelSectionBindings {
     required this.firstFeaturedFocus,
     required this.focusedIndexBySection,
     required this.artworkResolver,
+    required this.cardArtworkVersion,
     required this.sidebarInset,
     required this.heroPrefetchWindow,
     required this.rowPrefetchWindow,
@@ -52,6 +54,7 @@ class LiveTvChannelSectionBindings {
   final FocusNode firstFeaturedFocus;
   final Map<String, int> focusedIndexBySection;
   final LiveTvArtworkResolver artworkResolver;
+  final ValueListenable<int> cardArtworkVersion;
   final double Function() sidebarInset;
   final int heroPrefetchWindow;
   final int rowPrefetchWindow;
@@ -350,6 +353,7 @@ class LiveTvChannelSection extends StatelessWidget {
                 requestNavigationFocus: bindings.requestNavigationFocus,
                 displayTitle: bindings.artworkResolver.displayProgramTitle,
                 getCardImage: bindings.artworkResolver.getChannelCardImage,
+                artworkVersion: bindings.cardArtworkVersion,
               );
             },
           ),

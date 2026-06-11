@@ -36,6 +36,7 @@ class LiveTvBindingsBuilder {
       firstFeaturedFocus: deps.firstFeaturedFocus,
       focusedIndexBySection: deps.focusedIndexBySection,
       artworkResolver: deps.artworkResolver,
+      cardArtworkVersion: deps.cardArtworkVersion,
       timerManager: deps.timerManager,
       heroPrefetchWindow: LiveTvScreenConfig.heroPrefetchWindow,
       rowPrefetchWindow: LiveTvScreenConfig.rowPrefetchWindow,
