@@ -41,4 +41,39 @@ void main() {
       expect(await jsonEncodeOffMain(const <String, dynamic>{}), '{}');
     });
   });
+
+  group('decodeJsonlBatchOffMain', () {
+    test('decodes each line to a map, preserving order', () async {
+      final lines = [
+        '{"epgId":"cnn.us","startTs":1,"endTs":2,"title":"News"}',
+        '{"epgId":"amc.us","startTs":3,"endTs":4,"title":"Gladiator"}',
+      ];
+      final maps = await decodeJsonlBatchOffMain(lines);
+      expect(maps, hasLength(2));
+      expect(maps[0]!['epgId'], 'cnn.us');
+      expect(maps[1]!['title'], 'Gladiator');
+    });
+
+    test('returns null at the index of a malformed line', () async {
+      final lines = [
+        '{"epgId":"cnn.us"}',
+        'not json at all',
+        '{"epgId":"amc.us"}',
+      ];
+      final maps = await decodeJsonlBatchOffMain(lines);
+      expect(maps, hasLength(3));
+      expect(maps[0], isNotNull);
+      expect(maps[1], isNull);
+      expect(maps[2], isNotNull);
+    });
+
+    test('returns null for valid JSON that is not an object', () async {
+      final maps = await decodeJsonlBatchOffMain(['[1,2,3]']);
+      expect(maps.single, isNull);
+    });
+
+    test('handles empty input', () async {
+      expect(await decodeJsonlBatchOffMain(const []), isEmpty);
+    });
+  });
 }

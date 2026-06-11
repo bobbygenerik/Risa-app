@@ -338,6 +338,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           onEnsureEpgForChannels: LiveTvEpgBatch.ensureChannelsForPreview,
           onInvalidateCaches: () {
             if (!mounted) return;
+            // Gate on the EPG data revision: this callback is re-armed by the
+            // preview body on every build, including builds caused by the
+            // setState below, so without the gate it cleared and rescanned all
+            // program-type rows (~7k getCurrentProgram calls x 11 rows) every
+            // 600ms forever.
+            final revision = context.read<IncrementalEpgService>().dataRevision;
+            if (!_deps.programTypeRowCache.shouldRefreshFor(revision)) return;
             setState(() {
               _deps.heroCandidateCache.invalidate();
               _deps.programTypeRowCache.invalidate();

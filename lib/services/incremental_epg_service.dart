@@ -133,6 +133,14 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
         ),
       );
 
+  /// Monotonic counter bumped each time a notification is actually delivered.
+  /// Lets listeners that clear derived caches (program-type rows, hero
+  /// candidates) distinguish "EPG data may have changed" from their own
+  /// rebuild echoes — without it the Live TV invalidate->setState->rebuild
+  /// cycle re-armed itself every 600ms forever.
+  int _dataRevision = 0;
+  int get dataRevision => _dataRevision;
+
   /// Override notifyListeners to prevent "setState after dispose" crashes
   /// and throttle notifications for performance
   @override
@@ -152,6 +160,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
           _notifyPending = false;
           if (!_disposed) {
             _lastNotifyTime = DateTime.now();
+            _dataRevision++;
             super.notifyListeners();
           }
         });
@@ -160,6 +169,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     _lastNotifyTime = now;
+    _dataRevision++;
     super.notifyListeners();
   }
 
@@ -355,6 +365,7 @@ class IncrementalEpgService extends ChangeNotifier with WidgetsBindingObserver {
     _disposed = true;
     _freshnessTimer?.cancel();
     _freshnessTimer = null;
+    _publicApi.flushPendingMappingPersists();
     _mappingFacade.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

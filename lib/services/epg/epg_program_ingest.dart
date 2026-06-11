@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/json_offload.dart';
 
 /// Streams JSONL program temp files into memory and optionally the DB.
 class EpgProgramIngest {
@@ -74,15 +75,99 @@ class EpgProgramIngest {
 
     try {
       int processed = 0;
-      final yieldClock = Stopwatch()..start();
       // Coalesce listener notifications during ingest. Each notifyListeners
       // rebuilds the entire Live TV tree (every Selector card + per-section
       // getCurrentProgram scans); firing it on every yield produced 100-575ms
-      // builds and GC churn on the UI isolate (measured via VM timeline). We
-      // still yield often so the isolate breathes, but notify at most ~once
-      // per notifyIntervalMs.
+      // builds and GC churn on the UI isolate (measured via VM timeline). The
+      // batched off-main decode below yields the event loop at every batch
+      // boundary, but we still notify at most ~once per notifyIntervalMs.
       const notifyIntervalMs = 400;
       final notifyClock = Stopwatch()..start();
+      // Decode JSONL off the UI isolate in bounded batches. Per-line
+      // jsonDecode here was ~20% of main-isolate CPU during hydration; the
+      // batch size bounds peak memory (this pipeline has OOM'd on multi-MB
+      // guides before), and each compute() await doubles as a yield point.
+      const decodeBatchSize = 1000;
+      final pendingLines = <String>[];
+
+      Future<void> processBatch() async {
+        if (pendingLines.isEmpty) return;
+        final batch = List<String>.of(pendingLines);
+        pendingLines.clear();
+        final decoded = await decodeJsonlBatchOffMain(batch);
+        for (final data in decoded) {
+          if (data == null) {
+            decodeErrors++;
+            debugLog('EPG: JSONL decode error (~line $totalLines)');
+            continue;
+          }
+          decodedLines++;
+
+          final epgId =
+              (data['epgId'] ?? data['channelId'] ?? '')?.toString() ?? '';
+          if (epgId.isEmpty) {
+            skippedMissingId++;
+            continue;
+          }
+          if (skipChannels != null && skipChannels.contains(epgId)) {
+            skippedChannels++;
+            continue;
+          }
+
+          final startTs = data['startTs'] as int? ?? 0;
+          final endTs = data['endTs'] as int? ?? 0;
+          final title = (data['title'] as String?) ?? 'Unknown';
+
+          final catchupUrl =
+              _deps.buildCatchupUrl(epgId, startTs, endTs, nowMs: nowMs);
+          final program = Program(
+            id: '${epgId}_$startTs',
+            channelId: epgId,
+            title: title,
+            description: data['description'] as String?,
+            startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+            endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+            imageUrl: data['imageUrl'] as String?,
+            category: data['category'] as String?,
+            isLive: false,
+            canRecord: true,
+            catchupUrl: catchupUrl,
+          );
+
+          final list = programsByChannel.putIfAbsent(epgId, () => []);
+          if (list.length < 80) {
+            list.add(program);
+          }
+
+          if (!skipDbWrites) {
+            buffer.putIfAbsent(epgId, () => []).add({
+              'startTs': startTs,
+              'endTs': endTs,
+              'title': title,
+              'description': data['description'],
+              'imageUrl': data['imageUrl'],
+              'category': data['category'],
+            });
+            pendingRows++;
+            if (pendingRows >= flushThreshold) {
+              await flushBuffer();
+            }
+          }
+
+          processed++;
+          if (onProgress != null &&
+              totalPrograms != null &&
+              totalPrograms > 0 &&
+              (processed == 500 || processed % 5000 == 0)) {
+            onProgress(processed, totalPrograms);
+          }
+        }
+        if (notifyClock.elapsedMilliseconds >= notifyIntervalMs) {
+          _deps.notifyListeners();
+          notifyClock.reset();
+        }
+      }
+
       await for (final line in file
           .openRead()
           .transform(utf8.decoder)
@@ -92,87 +177,12 @@ class EpgProgramIngest {
           skippedEmpty++;
           continue;
         }
-        Map<String, dynamic> data;
-        try {
-          data = jsonDecode(line) as Map<String, dynamic>;
-        } catch (e) {
-          decodeErrors++;
-          debugLog('EPG: JSONL decode error on line $totalLines: $e');
-          continue;
-        }
-        decodedLines++;
-
-        final epgId =
-            (data['epgId'] ?? data['channelId'] ?? '')?.toString() ?? '';
-        if (epgId.isEmpty) {
-          skippedMissingId++;
-          continue;
-        }
-        if (skipChannels != null && skipChannels.contains(epgId)) {
-          skippedChannels++;
-          continue;
-        }
-
-        final startTs = data['startTs'] as int? ?? 0;
-        final endTs = data['endTs'] as int? ?? 0;
-        final title = (data['title'] as String?) ?? 'Unknown';
-
-        final catchupUrl =
-            _deps.buildCatchupUrl(epgId, startTs, endTs, nowMs: nowMs);
-        final program = Program(
-          id: '${epgId}_$startTs',
-          channelId: epgId,
-          title: title,
-          description: data['description'] as String?,
-          startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
-          endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
-          imageUrl: data['imageUrl'] as String?,
-          category: data['category'] as String?,
-          isLive: false,
-          canRecord: true,
-          catchupUrl: catchupUrl,
-        );
-
-        final list = programsByChannel.putIfAbsent(epgId, () => []);
-        if (list.length < 80) {
-          list.add(program);
-        }
-
-        if (!skipDbWrites) {
-          buffer.putIfAbsent(epgId, () => []).add({
-            'startTs': startTs,
-            'endTs': endTs,
-            'title': title,
-            'description': data['description'],
-            'imageUrl': data['imageUrl'],
-            'category': data['category'],
-          });
-          pendingRows++;
-          if (pendingRows >= flushThreshold) {
-            await flushBuffer();
-          }
-        }
-
-        processed++;
-        if (onProgress != null &&
-            totalPrograms != null &&
-            totalPrograms > 0 &&
-            (processed == 500 || processed % 5000 == 0)) {
-          onProgress(processed, totalPrograms);
-        }
-        if (processed == 500 ||
-            (processed > 500 &&
-                processed % 1000 == 0 &&
-                yieldClock.elapsedMilliseconds >= 100)) {
-          await Future.delayed(const Duration(milliseconds: 0));
-          if (processed == 500 ||
-              notifyClock.elapsedMilliseconds >= notifyIntervalMs) {
-            _deps.notifyListeners();
-            notifyClock.reset();
-          }
-          yieldClock.reset();
+        pendingLines.add(line);
+        if (pendingLines.length >= decodeBatchSize) {
+          await processBatch();
         }
       }
+      await processBatch();
 
       if (!skipDbWrites) {
         await flushBuffer();

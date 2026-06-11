@@ -1,4 +1,5 @@
 import 'package:iptv_player/services/epg/epg_channel_matcher.dart';
+import 'package:iptv_player/services/epg/mapping_persist_buffer.dart';
 import 'package:iptv_player/services/local_db_service.dart';
 
 /// Channel resolution, mapping cache, and registration helpers for EPG.
@@ -36,11 +37,22 @@ class EpgPublicApi {
     }
   }
 
+  /// Batches mapping upserts: during hydration thousands of channels resolve
+  /// in bursts and persisting each individually meant one DB transaction per
+  /// channel on the UI isolate (~12% of main-isolate CPU in that window).
+  late final MappingPersistBuffer _mappingPersistBuffer = MappingPersistBuffer(
+    onFlush: (batch) => _db.upsertEpgMapping(batch),
+    onError: _handleDbError,
+  );
+
   void queueMappingPersist(String channelId, String epgId) {
     if (channelId.isEmpty || epgId.isEmpty) return;
     if (_isDbDisabled() || !_db.isReady) return;
-    _db.upsertEpgMapping({channelId: epgId}).catchError(_handleDbError);
+    _mappingPersistBuffer.add(channelId, epgId);
   }
+
+  /// Flush any buffered mapping writes immediately (e.g. on dispose).
+  void flushPendingMappingPersists() => _mappingPersistBuffer.flushNow();
 
   String? cacheResolvedMapping(String channelId, String? epgId) {
     _internalToEpgIdMapping[channelId] = epgId;

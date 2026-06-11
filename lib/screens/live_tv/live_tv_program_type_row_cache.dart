@@ -8,9 +8,20 @@ import 'package:provider/provider.dart';
 class LiveTvProgramTypeRowCache {
   final Map<String, Widget> rows = {};
   bool valid = false;
+  int? _lastRefreshRevision;
 
   void invalidate() {
     valid = false;
+  }
+
+  /// True when [epgRevision] differs from the revision this cache was last
+  /// refreshed for. Marks the revision as consumed, so callers can gate an
+  /// expensive invalidate+rebuild on actual EPG changes instead of re-firing
+  /// on their own rebuild echoes.
+  bool shouldRefreshFor(int epgRevision) {
+    if (_lastRefreshRevision == epgRevision) return false;
+    _lastRefreshRevision = epgRevision;
+    return true;
   }
 
   Widget buildRow({
