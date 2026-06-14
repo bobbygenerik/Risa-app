@@ -1,0 +1,3 @@
+## 2026-06-14 - Optimize EPG String Allocations with Fast-Path Checks
+**Learning:** In Dart, executing chained `.replaceAll()` operations (e.g., `str.replaceAll("<![CDATA[", "").replaceAll("]]>", "")`) on large datasets (like EPG XMLTV parsing) forces the runtime to allocate new string objects and perform full scans even if the target substrings don't exist. This generates severe overhead and garbage collection pressure on hot paths.
+**Action:** When performing multiple string replacements on cold-path data features (like XML entities or CDATA blocks that appear infrequently), always add a fast-path pre-flight check (e.g., `if (!str.contains("&")) return str;`) to immediately return the original string, dramatically improving throughput and reducing allocations.
