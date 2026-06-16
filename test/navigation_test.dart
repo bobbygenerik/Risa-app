@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Router configuration contains primary navigation routes', () {
-    final mainFile = File('lib/main.dart').readAsStringSync();
+    final mainFile = File('lib/app/app_router.dart').readAsStringSync();
 
     expect(mainFile.contains("path: '/home'"), isTrue);
     expect(mainFile.contains("path: '/search'"), isTrue);

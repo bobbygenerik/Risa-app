@@ -10,6 +10,9 @@ class ChannelLogoWidget extends StatelessWidget {
     this.cacheHeight = 80,
   });
 
+  // Pre-compiled RegExp for faster SVG URL detection, replacing chained toLowerCase() methods
+  static final _svgRegExp = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   final Channel channel;
   final double width;
   final double height;
@@ -27,8 +30,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = _svgRegExp.hasMatch(url);
 
     if (isSvg) {
       return Padding(
