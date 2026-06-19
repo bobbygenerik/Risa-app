@@ -5,7 +5,8 @@ part of '../tmdb_service.dart';
 Future<String?> tmdbGetBestBackdrop(String title, {int? year}) async {
   await TMDBService.init();
   final normalizedTitle = TMDBService._normalizeTitle(title);
-  final cacheKey = TMDBService._cacheKey('art:best', normalizedTitle, year: year);
+  final cacheKey =
+      TMDBService._cacheKey('art:best', normalizedTitle, year: year);
   final cached = TMDBService._getFromCache(cacheKey);
   if (cached != null && cached.containsKey('image')) {
     final cachedImage = (cached['image'] as String?)?.trim();
@@ -17,7 +18,9 @@ Future<String?> tmdbGetBestBackdrop(String title, {int? year}) async {
 
   if (TMDBService._processingRequests.contains(cacheKey)) {
     final completer = Completer<String?>();
-    TMDBService._pendingRequests.putIfAbsent(cacheKey, () => []).add(completer.complete);
+    TMDBService._pendingRequests
+        .putIfAbsent(cacheKey, () => [])
+        .add(completer.complete);
     return completer.future;
   }
 
@@ -64,7 +67,8 @@ Future<Map<String, dynamic>?> tmdbGetBestBackdropDetails(
 }) async {
   await TMDBService.init();
   final normalizedTitle = TMDBService._normalizeTitle(title);
-  final cacheKey = TMDBService._cacheKey('art:bestmeta', normalizedTitle, year: year);
+  final cacheKey =
+      TMDBService._cacheKey('art:bestmeta', normalizedTitle, year: year);
   final cached = TMDBService._getFromCache(cacheKey);
   if (cached != null && cached.containsKey('image')) {
     return cached;
@@ -102,7 +106,8 @@ Future<Map<String, dynamic>?> _tmdbResolveBackdrop(
 
   // Fallback for short titles: try with " channel" suffix
   if (details == null && normalizedTitle.length <= 4) {
-    details = await TMDBService.getTVDetails('$normalizedTitle channel', year: year);
+    details =
+        await TMDBService.getTVDetails('$normalizedTitle channel', year: year);
   }
 
   if (details != null) {
@@ -141,7 +146,8 @@ Future<Map<String, dynamic>?> _tmdbResolveBackdrop(
       final anyBackdrop = await _tmdbGetAnyBackdrop(tmdbId, mediaType);
       if (anyBackdrop != null && anyBackdrop.isNotEmpty) {
         details['backdrop'] = anyBackdrop;
-        debugLog('TMDB: Found lower-res backdrop for "$normalizedTitle": $anyBackdrop');
+        debugLog(
+            'TMDB: Found lower-res backdrop for "$normalizedTitle": $anyBackdrop');
       }
     }
   }
@@ -203,8 +209,7 @@ double _tmdbTitleSimilarity(String s1, String s2) {
 /// Fetches high-res backdrop from TMDB /images endpoint.
 /// Filters by include_image_language=null,en; enforces min 1920x1080;
 /// prefers aspect ratio > 1.7; sorts by vote_average desc then vote_count desc.
-Future<String?> _tmdbGetHighResBackdrop(
-    int tmdbId, String mediaType) async {
+Future<String?> _tmdbGetHighResBackdrop(int tmdbId, String mediaType) async {
   final typePath = mediaType == 'tv' ? 'tv' : 'movie';
   final url =
       '${TMDBService._baseUrl}/$typePath/$tmdbId/images?api_key=${TMDBService._apiKey}&include_image_language=null,en';
@@ -250,7 +255,8 @@ Future<String?> _tmdbGetHighResBackdrop(
     final best = filtered.first;
     final filePath = (best['file_path'] as String?)?.trim();
     if (filePath != null && filePath.isNotEmpty) {
-      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath', isBackdrop: true);
+      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath',
+          isBackdrop: true);
     }
   } catch (e, st) {
     debugLog('TMDB image lookup failed for $mediaType/$tmdbId: $e\n$st');
@@ -294,7 +300,8 @@ Future<String?> _tmdbGetAnyBackdrop(int tmdbId, String mediaType) async {
     final best = filtered.first;
     final filePath = (best['file_path'] as String?)?.trim();
     if (filePath != null && filePath.isNotEmpty) {
-      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath', isBackdrop: true);
+      return _tmdbResizeTmdbImageUrl('${TMDBService._imageBaseUrl}$filePath',
+          isBackdrop: true);
     }
   } catch (e) {
     debugLog('TMDB any-backdrop lookup failed for $mediaType/$tmdbId: $e');
@@ -328,7 +335,8 @@ Future<Map<String, dynamic>?> _tmdbTryTeamHeuristic(
     final normalizedTeam = TMDBService._normalizeTitle(team);
     final tvMatch = await TMDBService.getTVDetails(normalizedTeam, year: year);
     if (_tmdbHasArtwork(tvMatch)) return tvMatch;
-    final movieMatch = await TMDBService.getMovieDetails(normalizedTeam, year: year);
+    final movieMatch =
+        await TMDBService.getMovieDetails(normalizedTeam, year: year);
     if (_tmdbHasArtwork(movieMatch)) return movieMatch;
   }
   return null;
@@ -339,7 +347,8 @@ Future<Map<String, dynamic>?> _tmdbTryTeamHeuristic(
 Future<String?> tmdbGetTitleLogo(String title, {int? year}) async {
   await TMDBService.init();
   final normalizedTitle = TMDBService._normalizeTitle(title);
-  final cacheKey = TMDBService._cacheKey('logo:title', normalizedTitle, year: year);
+  final cacheKey =
+      TMDBService._cacheKey('logo:title', normalizedTitle, year: year);
   final cached = TMDBService._getFromCache(cacheKey);
   if (cached != null && cached.containsKey('logo')) {
     return (cached['logo'] as String?)?.isNotEmpty == true
@@ -450,7 +459,11 @@ Future<Map<String, String?>> tmdbGetBestBackdropBatch(
   if (uncached.isNotEmpty) {
     const chunkSize = 3; // Reduced from 5 for better Live TV performance
     for (var i = 0; i < uncached.length; i += chunkSize) {
-      final chunk = uncached.skip(i).take(chunkSize).toList();
+      // Performance Optimization: Use List.sublist instead of chaining .skip().take().toList()
+      // to avoid allocating lazy intermediate iterables.
+      final end =
+          i + chunkSize > uncached.length ? uncached.length : i + chunkSize;
+      final chunk = uncached.sublist(i, end);
       final futures =
           chunk.map((title) => TMDBService.getBestBackdrop(title, year: year));
       final chunkResults = await Future.wait(futures);
