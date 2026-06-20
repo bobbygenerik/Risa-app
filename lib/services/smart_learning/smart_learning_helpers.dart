@@ -239,18 +239,18 @@ double _calculateStringSimilarity(String a, String b) {
   if (a.isEmpty || b.isEmpty) return 0.0;
   if (a == b) return 1.0;
 
-  final aChars = a.split('');
-  final bChars = b.split('');
-  final maxLength = math.max(aChars.length, bChars.length);
+  final aLen = a.length;
+  final bLen = b.length;
+  final maxLength = math.max(aLen, bLen);
 
   int matches = 0;
-  final aUsed = List<bool>.filled(aChars.length, false);
-  final bUsed = List<bool>.filled(bChars.length, false);
+  final aUsed = List<bool>.filled(aLen, false);
+  final bUsed = List<bool>.filled(bLen, false);
 
   // Find character matches
-  for (int i = 0; i < aChars.length; i++) {
-    for (int j = 0; j < bChars.length; j++) {
-      if (!aUsed[i] && !bUsed[j] && aChars[i] == bChars[j]) {
+  for (int i = 0; i < aLen; i++) {
+    for (int j = 0; j < bLen; j++) {
+      if (!aUsed[i] && !bUsed[j] && a.codeUnitAt(i) == b.codeUnitAt(j)) {
         matches++;
         aUsed[i] = true;
         bUsed[j] = true;
