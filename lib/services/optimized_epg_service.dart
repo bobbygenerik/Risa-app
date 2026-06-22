@@ -260,8 +260,10 @@ class OptimizedEpgService extends ChangeNotifier {
     return File('${dir.path}/optimized_epg_cache.xml');
   }
 
+  static final RegExp _nonAlphaNumRe = RegExp(r'[^a-z0-9]');
+
   static String _normalize(String input) {
-    return input.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return input.toLowerCase().replaceAll(_nonAlphaNumRe, '');
   }
 
   // ---- Static Isolate Methods ----
