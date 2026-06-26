@@ -23,7 +23,7 @@ class ProgramClassifier {
     final description = (program?.description ?? '').toLowerCase();
     final channelName = channel.name.toLowerCase();
     final groupTitle = (channel.groupTitle ?? '').toLowerCase();
-    
+
     const keywords = [
       'news',
       'newscast',
@@ -52,14 +52,15 @@ class ProgramClassifier {
       'haber',
     ];
 
-    final titleCategoryDescription = '$title $category $description';
-    if (_containsKeywords(titleCategoryDescription, keywords)) {
+    if (_containsKeywords(title, keywords) ||
+        _containsKeywords(category, keywords) ||
+        _containsKeywords(description, keywords)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
     if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _containsKeywords(channelInfo, keywords)) {
+        (_containsKeywords(channelName, keywords) ||
+            _containsKeywords(groupTitle, keywords))) {
       return true;
     }
 
@@ -165,12 +166,7 @@ class ProgramClassifier {
 
   /// Check if a program is a movie.
   static bool isMovieProgram(Program? program, Channel channel) {
-    const keywords = [
-      'movie',
-      'film',
-      'cinema',
-      'feature',
-    ];
+    const keywords = ['movie', 'film', 'cinema', 'feature'];
     return _matchesProgramOrChannel(program, channel, keywords);
   }
 
@@ -286,10 +282,11 @@ class ProgramClassifier {
     final channelName = channel.name.toLowerCase();
     final groupTitle = (channel.groupTitle ?? '').toLowerCase();
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
+    return _containsKeywords(title, keywords) ||
+        _containsKeywords(category, keywords) ||
+        _containsKeywords(description, keywords) ||
+        _containsKeywords(channelName, keywords) ||
+        _containsKeywords(groupTitle, keywords);
   }
 
   static bool _containsKeywords(String value, List<String> keywords) {
