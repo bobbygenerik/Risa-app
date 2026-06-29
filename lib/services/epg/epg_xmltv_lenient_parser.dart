@@ -19,6 +19,9 @@ final RegExp kEpgChannelEndRe =
     RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
 
 String decodeXmltvEntities(String input) {
+  // Fast-path pre-flight check: avoids costly chained allocations for strings without entities
+  if (!input.contains('&')) return input;
+
   return input
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
