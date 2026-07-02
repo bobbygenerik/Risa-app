@@ -117,11 +117,6 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     return normalized;
   }
 
-  bool _isSvgUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.svg') || lower.contains('.svg?');
-  }
-
   String _hostFromUrl(String url) {
     try {
       return Uri.parse(url).host;
@@ -193,7 +188,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
         height: tvHeight,
         color: widget.backgroundColor ?? Colors.transparent,
         child: effectiveUrl != null && effectiveUrl.isNotEmpty && !shouldSkip
-            ? (_isSvgUrl(effectiveUrl)
+            ? (isSvgUrl(effectiveUrl)
                 ? SvgPicture.network(
                     effectiveUrl,
                     fit: widget.fit,
