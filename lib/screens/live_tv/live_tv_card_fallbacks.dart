@@ -14,20 +14,22 @@ import 'package:iptv_player/widgets/channel_logo_widget.dart';
 class LiveTvCardFallbacks {
   LiveTvCardFallbacks._();
 
+  // ⚡ Bolt: Performance Optimization
+  // Replaced multiple String allocation operations (.toLowerCase, .endsWith, .contains)
+  // with a single pre-compiled regex check to minimize garbage collection pressure during list scrolling.
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   static Widget channelCard(Program? program, Channel channel) {
     final logoUrl = channel.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return logoAsFallback(logoUrl, channel.name);
     }
-    return BrandFallbackBackground(
-      child: missingArtwork(channel.name),
-    );
+    return BrandFallbackBackground(child: missingArtwork(channel.name));
   }
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    final isSvg = _svgRegex.hasMatch(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(
@@ -41,29 +43,30 @@ class LiveTvCardFallbacks {
                   placeholderBuilder: (_) => missingArtwork(channelName),
                 )
               : (ImageFailureCache.shouldSkip(normalizedUrl)
-                  ? missingArtwork(channelName)
-                  : CachedNetworkImage(
-                      imageUrl: normalizedUrl,
-                      httpHeaders: HttpClientService().imageHeaders,
-                      fit: BoxFit.contain,
-                      imageBuilder: (context, imageProvider) {
-                        ImageFailureCache.recordSuccess(normalizedUrl);
-                        return Image(
-                          image: imageProvider,
-                          fit: BoxFit.contain,
-                          gaplessPlayback: true,
-                        );
-                      },
-                      placeholder: (_, __) => missingArtwork(channelName),
-                      errorWidget: (_, url, error) {
-                        final host = Uri.tryParse(url)?.host ?? 'unknown';
-                        debugLog(
-                            'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error');
-                        ImageFailureCache.recordFailure(url, error);
-                        return missingArtwork(channelName);
-                      },
-                      useOldImageOnUrlChange: true,
-                    )),
+                    ? missingArtwork(channelName)
+                    : CachedNetworkImage(
+                        imageUrl: normalizedUrl,
+                        httpHeaders: HttpClientService().imageHeaders,
+                        fit: BoxFit.contain,
+                        imageBuilder: (context, imageProvider) {
+                          ImageFailureCache.recordSuccess(normalizedUrl);
+                          return Image(
+                            image: imageProvider,
+                            fit: BoxFit.contain,
+                            gaplessPlayback: true,
+                          );
+                        },
+                        placeholder: (_, __) => missingArtwork(channelName),
+                        errorWidget: (_, url, error) {
+                          final host = Uri.tryParse(url)?.host ?? 'unknown';
+                          debugLog(
+                            'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error',
+                          );
+                          ImageFailureCache.recordFailure(url, error);
+                          return missingArtwork(channelName);
+                        },
+                        useOldImageOnUrlChange: true,
+                      )),
         ),
       ),
     );
