@@ -10,6 +10,11 @@ class ChannelLogoWidget extends StatelessWidget {
     this.cacheHeight = 80,
   });
 
+  // ⚡ Bolt: Performance Optimization
+  // Replaced multiple String allocation operations (.toLowerCase, .endsWith, .contains)
+  // with a single pre-compiled regex check to minimize garbage collection pressure during list scrolling.
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   final Channel channel;
   final double width;
   final double height;
@@ -27,8 +32,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = _svgRegex.hasMatch(url);
 
     if (isSvg) {
       return Padding(
