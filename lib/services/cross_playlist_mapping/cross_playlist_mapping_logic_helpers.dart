@@ -124,20 +124,25 @@ extension CrossPlaylistMappingHelpers on CrossPlaylistMappingService {
     if (a.isEmpty || b.isEmpty) return 0.0;
     if (a == b) return 1.0;
 
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .split('') with .codeUnitAt(index) for character iteration.
+    // This avoids allocating multiple intermediate string lists during similarity
+    // calculations, drastically reducing memory allocation overhead.
+    // Also removed the redundant `aUsed` list, since the inner loop immediately
+    // breaks upon finding a match, making `aUsed[i]` implicitly true for that pass.
     // Simple similarity calculation - can be improved
-    final aChars = a.split('');
-    final bChars = b.split('');
-    final maxLength = math.max(aChars.length, bChars.length);
+    final aLen = a.length;
+    final bLen = b.length;
+    final maxLength = math.max(aLen, bLen);
 
     int matches = 0;
-    final aUsed = List<bool>.filled(aChars.length, false);
-    final bUsed = List<bool>.filled(bChars.length, false);
+    final bUsed = List<bool>.filled(bLen, false);
 
-    for (int i = 0; i < aChars.length; i++) {
-      for (int j = 0; j < bChars.length; j++) {
-        if (!aUsed[i] && !bUsed[j] && aChars[i] == bChars[j]) {
+    for (int i = 0; i < aLen; i++) {
+      final aChar = a.codeUnitAt(i);
+      for (int j = 0; j < bLen; j++) {
+        if (!bUsed[j] && aChar == b.codeUnitAt(j)) {
           matches++;
-          aUsed[i] = true;
           bUsed[j] = true;
           break;
         }
