@@ -1,0 +1,3 @@
+## 2026-07-13 - [Optimize String Similarity Algorithm]
+**Learning:** In string comparison or processing algorithms, converting strings to character lists via `.split('')` causes significant memory allocation and execution overhead. Iterating directly over string characters using `.codeUnitAt(index)` and avoiding unnecessary array tracking for the outer loop when breaking early can more than double execution speed for string comparisons.
+**Action:** When implementing custom string matching algorithms, avoid `.split('')` to iterate over characters and use zero-allocation `.codeUnitAt()` comparisons instead.
