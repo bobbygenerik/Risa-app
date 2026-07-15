@@ -305,8 +305,7 @@ extension M3UParserChannelList on M3UParserService {
 
       int urlEnd = k;
       if (urlEnd > afterSchemeIdx) {
-        return _SimpleMatch(
-            schemeStart, urlEnd, line, line.substring(schemeStart, urlEnd));
+        return _SimpleMatch(schemeStart, urlEnd, line);
       } else {
         searchEnd = idx;
         continue;
