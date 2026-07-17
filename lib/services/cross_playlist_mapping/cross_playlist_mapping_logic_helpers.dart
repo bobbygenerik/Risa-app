@@ -125,19 +125,20 @@ extension CrossPlaylistMappingHelpers on CrossPlaylistMappingService {
     if (a == b) return 1.0;
 
     // Simple similarity calculation - can be improved
-    final aChars = a.split('');
-    final bChars = b.split('');
-    final maxLength = math.max(aChars.length, bChars.length);
+    // Bolt: Replaced .split('') with .codeUnitAt() to avoid list allocation
+    // and removed redundant aUsed tracking array (since the inner loop breaks).
+    final aLen = a.length;
+    final bLen = b.length;
+    final maxLength = math.max(aLen, bLen);
 
     int matches = 0;
-    final aUsed = List<bool>.filled(aChars.length, false);
-    final bUsed = List<bool>.filled(bChars.length, false);
+    final bUsed = List<bool>.filled(bLen, false);
 
-    for (int i = 0; i < aChars.length; i++) {
-      for (int j = 0; j < bChars.length; j++) {
-        if (!aUsed[i] && !bUsed[j] && aChars[i] == bChars[j]) {
+    for (int i = 0; i < aLen; i++) {
+      final aChar = a.codeUnitAt(i);
+      for (int j = 0; j < bLen; j++) {
+        if (!bUsed[j] && aChar == b.codeUnitAt(j)) {
           matches++;
-          aUsed[i] = true;
           bUsed[j] = true;
           break;
         }
@@ -199,7 +200,9 @@ extension CrossPlaylistMappingHelpers on CrossPlaylistMappingService {
 
   Future<void> _loadSharedMappings() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(CrossPlaylistMappingService._sharedMappingsKey);
+    final data = prefs.getString(
+      CrossPlaylistMappingService._sharedMappingsKey,
+    );
     if (data != null) {
       final Map<String, dynamic> decoded =
           await compute(jsonDecode, data) as Map<String, dynamic>;
