@@ -1,3 +1,10 @@
+/// Performance optimization: use pre-compiled regex to avoid redundant
+/// string allocations compared to chained `.toLowerCase().endsWith()` operations.
+final RegExp _svgUrlRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
+/// Checks if a URL ends with .svg or contains .svg? queries in a case-insensitive manner.
+bool isSvgUrl(String url) => _svgUrlRegex.hasMatch(url);
+
 String normalizeImageUrl(String url) {
   final trimmed = url.trim();
   if (trimmed.isEmpty) return trimmed;

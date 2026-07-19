@@ -1,5 +1,6 @@
 import 'package:iptv_player/services/image_validation_service.dart';
 import 'package:iptv_player/models/channel.dart';
+import 'package:iptv_player/utils/image_url_helper.dart';
 
 /// Extracted from _LiveTVScreenState — pure utility methods for classifying
 /// artwork URLs by type (poster, landscape, logo, small, title-logo, backdrop).
@@ -162,6 +163,9 @@ class ArtworkValidator {
 
   /// Returns true if the URL looks like a title logo / clearart.
   static bool isLikelyTitleLogoUrl(String url) {
+    // Performance optimization: use pre-compiled regex for fast exit
+    if (isSvgUrl(url)) return true;
+
     final lower = url.toLowerCase();
 
     if (lower.contains('/clearlogo/') ||
@@ -171,7 +175,7 @@ class ArtworkValidator {
       return true;
     }
 
-    return lower.endsWith('.svg');
+    return false;
   }
 
   /// Returns true if the URL points to a small/thumbnail image that would

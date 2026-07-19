@@ -26,8 +26,8 @@ class LiveTvCardFallbacks {
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    // Performance optimization: use pre-compiled regex to avoid string allocations
+    final isSvg = isSvgUrl(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(
