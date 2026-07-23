@@ -52,14 +52,12 @@ class ProgramClassifier {
       'haber',
     ];
 
-    final titleCategoryDescription = '$title $category $description';
-    if (_containsKeywords(titleCategoryDescription, keywords)) {
+    if (_containsKeywords([title, category, description], keywords)) {
       return true;
     }
 
-    final channelInfo = '$channelName $groupTitle';
     if ((title.isEmpty || EPGMatchingUtils.isGenericTitle(title)) &&
-        _containsKeywords(channelInfo, keywords)) {
+        _containsKeywords([channelName, groupTitle], keywords)) {
       return true;
     }
 
@@ -286,31 +284,35 @@ class ProgramClassifier {
     final channelName = channel.name.toLowerCase();
     final groupTitle = (channel.groupTitle ?? '').toLowerCase();
 
-    final info = '$title $category $description';
-    final channelInfo = '$channelName $groupTitle';
-    return _containsKeywords(info, keywords) ||
-        _containsKeywords(channelInfo, keywords);
+    return _containsKeywords([title, category, description], keywords) ||
+        _containsKeywords([channelName, groupTitle], keywords);
   }
 
-  static bool _containsKeywords(String value, List<String> keywords) {
+  // Pass array of strings to avoid expensive string concatenation
+  // and allow early returns to improve performance in hot paths.
+  static bool _containsKeywords(List<String> values, List<String> keywords) {
     // Use word boundary matching to avoid false positives like
     // 'cook' matching 'cookbook' or 'family' matching 'Family Guy'
     for (final keyword in keywords) {
-      // For multi-word keywords, just use contains
-      if (keyword.contains(' ') || keyword.contains('-')) {
-        if (value.contains(keyword)) {
-          return true;
-        }
-      } else {
-        // For single words, use word boundary regex
-        // \b matches word boundaries (space, punctuation, start/end of string)
-        var pattern = _regexCache[keyword];
-        if (pattern == null) {
-          pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
-          _regexCache[keyword] = pattern;
-        }
-        if (pattern.hasMatch(value)) {
-          return true;
+      final isMultiWord = keyword.contains(' ') || keyword.contains('-');
+      var pattern = isMultiWord ? null : _regexCache[keyword];
+
+      if (!isMultiWord && pattern == null) {
+        pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
+        _regexCache[keyword] = pattern;
+      }
+
+      for (final value in values) {
+        if (value.isEmpty) continue;
+
+        if (isMultiWord) {
+          if (value.contains(keyword)) {
+            return true;
+          }
+        } else {
+          if (pattern!.hasMatch(value)) {
+            return true;
+          }
         }
       }
     }
