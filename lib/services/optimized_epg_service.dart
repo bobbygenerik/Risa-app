@@ -260,8 +260,15 @@ class OptimizedEpgService extends ChangeNotifier {
     return File('${dir.path}/optimized_epg_cache.xml');
   }
 
+  static final RegExp _nonAlphanumericRegex = RegExp(r'[^a-z0-9]');
+
   static String _normalize(String input) {
-    return input.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    var lower = input.toLowerCase();
+    // Optimization: avoid expensive replaceAll allocation if string is already clean
+    if (_nonAlphanumericRegex.hasMatch(lower)) {
+      return lower.replaceAll(_nonAlphanumericRegex, '');
+    }
+    return lower;
   }
 
   // ---- Static Isolate Methods ----
