@@ -88,7 +88,6 @@ class _ChewiePlayerWidgetState extends State<ChewiePlayerWidget> {
       return MediaKitPlayerWidget(
         url: widget.url,
         isLive: widget.isLive,
-        onSurfaceReady: widget.onSurfaceReady,
       );
     }
 
