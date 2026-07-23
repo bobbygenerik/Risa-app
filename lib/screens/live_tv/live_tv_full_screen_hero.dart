@@ -111,10 +111,6 @@ class LiveTvFullScreenHero extends StatelessWidget {
                 ),
               ),
             ),
-            SliverPadding(
-              padding: EdgeInsets.only(right: rightInset),
-              sliver: SliverToBoxAdapter(child: featuredRow),
-            ),
             SliverToBoxAdapter(child: SizedBox(height: context.spacingXl())),
           ],
         ),
@@ -265,15 +261,7 @@ class LiveTvFullScreenHero extends StatelessWidget {
                       ),
                     ),
                   ),
-                SliverPadding(
-                  padding: EdgeInsets.only(right: rightInset),
-                  sliver: SliverToBoxAdapter(
-                    child: KeyedSubtree(
-                      key: const ValueKey<String>('live_tv_featured_row'),
-                      child: featuredRow,
-                    ),
-                  ),
-                ),
+
                 SliverPadding(
                   padding: EdgeInsets.only(right: rightInset),
                   sliver: SliverToBoxAdapter(
