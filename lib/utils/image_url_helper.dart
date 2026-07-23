@@ -38,6 +38,13 @@ bool _shouldDowngradeToHttp(Uri uri) {
   return _httpOnlyHosts.contains(uri.host.toLowerCase());
 }
 
+final _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
+/// Checks if a URL points to an SVG image.
+bool isSvgUrl(String url) {
+  return _svgRegex.hasMatch(url);
+}
+
 /// Build a fallback logo URL when the primary URL fails.
 ///
 /// For `logo.m3uassets.com` URLs that fail even over HTTP, there's no reliable
