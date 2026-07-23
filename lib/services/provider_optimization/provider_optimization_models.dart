@@ -82,7 +82,8 @@ class ProviderPattern {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
+        'type': type
+            .name, // Bolt: Optimized enum serialization by avoiding .split('.').last
         'pattern': pattern,
         'weight': weight,
       };
@@ -90,7 +91,10 @@ class ProviderPattern {
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
         type: PatternType.values.firstWhere(
-          (e) => e.toString().split('.').last == json['type'],
+          (e) =>
+              e.name ==
+              json[
+                  'type'], // Bolt: Optimized enum deserialization by avoiding .split('.').last
           orElse: () => PatternType.channelId,
         ),
         pattern: json['pattern'],
