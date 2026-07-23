@@ -17,12 +17,13 @@ class _SimpleMatch {
   final int start;
   final int end;
   final String input;
-  final String _match;
 
-  _SimpleMatch(this.start, this.end, this.input, this._match);
+  // Bolt Optimization: Removed eager `_match` string allocation.
+  // Store start/end indices and lazily slice the string only when accessed.
+  _SimpleMatch(this.start, this.end, this.input);
 
   String? group(int group) {
-    if (group == 0) return _match;
+    if (group == 0) return input.substring(start, end);
     return null;
   }
 
