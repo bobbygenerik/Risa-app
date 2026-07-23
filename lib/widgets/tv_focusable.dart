@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+
 
 /// Modern Netflix-style focus effect constants
 class TVFocusStyle {
@@ -79,6 +81,19 @@ class _TVFocusableState extends State<TVFocusable> {
     return Focus(
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
+      onKeyEvent: (FocusNode node, KeyEvent event) {
+        if (event is KeyDownEvent && widget.onPressed != null) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
+            widget.onPressed!();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;

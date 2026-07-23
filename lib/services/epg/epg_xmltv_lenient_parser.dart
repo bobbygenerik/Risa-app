@@ -19,6 +19,7 @@ final RegExp kEpgChannelEndRe =
     RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
 
 String decodeXmltvEntities(String input) {
+  if (!input.contains('&')) return input;
   return input
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
@@ -56,7 +57,11 @@ String? extractXmltvTagText(String block, String tag,
   final match = regex.firstMatch(block);
   if (match == null) return null;
   final raw = match.group(1) ?? '';
-  final cleaned = raw.replaceAll('<![CDATA[', '').replaceAll(']]>', '').trim();
+  var cleaned = raw;
+  if (cleaned.contains('<![CDATA[')) {
+    cleaned = cleaned.replaceAll('<![CDATA[', '').replaceAll(']]>', '');
+  }
+  cleaned = cleaned.trim();
   return decodeXmltvEntities(cleaned);
 }
 
@@ -76,7 +81,11 @@ List<String> extractXmltvTagTexts(String block, String tag,
   final results = <String>[];
   for (final match in matches) {
     final raw = match.group(1) ?? '';
-    final cleaned = raw.replaceAll('<![CDATA[', '').replaceAll(']]>', '').trim();
+    var cleaned = raw;
+    if (cleaned.contains('<![CDATA[')) {
+      cleaned = cleaned.replaceAll('<![CDATA[', '').replaceAll(']]>', '');
+    }
+    cleaned = cleaned.trim();
     final decoded = decodeXmltvEntities(cleaned);
     if (decoded.isNotEmpty) {
       results.add(decoded);
