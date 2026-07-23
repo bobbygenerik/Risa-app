@@ -1,0 +1,3 @@
+## 2026-06-20 - Zero-allocation string comparisons
+**Learning:** In string comparison or processing algorithms (like similarity checks), converting strings to character lists via `.split('')` introduces significant overhead from allocating intermediate arrays and string objects. In Dart, using `.codeUnitAt(index)` allows zero-allocation integer comparisons of Unicode values.
+**Action:** Avoid `.split('')` when iterating over characters. Instead, use string length properties and `.codeUnitAt(index)` within loops to perform integer comparisons, significantly reducing execution time and garbage collection overhead.
