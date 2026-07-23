@@ -1,0 +1,3 @@
+## 2026-07-09 - Zero-Allocation String Similarity
+**Learning:** Using `.split('')` on strings to perform character frequency comparisons creates an implicit `List<String>` where every character is individually heap-allocated. In nested similarity algorithms (O(N*M)), this causes massive garbage collection pressure and dramatically slows execution.
+**Action:** When performing character-level comparisons, always use `.length` to pre-allocate boolean tracking arrays and iterate using `.codeUnitAt(i)` to perform direct integer comparisons of UTF-16 code units instead of creating transient string objects.
