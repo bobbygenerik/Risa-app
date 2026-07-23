@@ -7,7 +7,6 @@ import 'package:iptv_player/screens/live_tv/live_tv_artwork_resolver.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_channel_section.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_continue_watching_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_epg_batch.dart';
-import 'package:iptv_player/screens/live_tv/live_tv_featured_row.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_full_screen_hero.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_hero_candidate_cache.dart';
 import 'package:iptv_player/screens/live_tv/live_tv_models.dart';
@@ -291,11 +290,7 @@ class _LiveTvFullScreenHeroHostState extends State<LiveTvFullScreenHeroHost> {
       debugRowProbe: widget.debugRowProbe,
       sidebarInset: widget.sidebarInset,
       artworkResolver: widget.artworkResolver,
-      featuredRow: LiveTvFeaturedRow(
-        fallbackChannels: widget.allChannels,
-        bindings: widget.bindings,
-        artworkResolver: widget.artworkResolver,
-      ),
+      featuredRow: const SizedBox.shrink(),
       continueWatchingRow: LiveTvContinueWatchingRow(bindings: widget.bindings),
       buildProgramTypeRow: widget.buildProgramTypeRow,
       heroInfoOverlay: (channel, program) {

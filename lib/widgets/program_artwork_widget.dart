@@ -10,6 +10,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/utils/epg_matching_utils.dart';
+import 'package:iptv_player/utils/artwork_validator.dart';
 import 'package:iptv_player/utils/sports_classifier.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/image_load_probe.dart';
@@ -188,19 +189,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (currentProgram?.imageUrl != null &&
           currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
-        final lower = url.toLowerCase();
-        // Reject obvious poster/portrait URLs from EPG
-        final isPoster = lower.contains('/poster') ||
-            lower.contains('/portrait') ||
-            lower.contains('/cover') ||
-            lower.contains('type=poster') ||
-            (lower.contains('tmdb.org') &&
-                (lower.contains('/w92/') ||
-                    lower.contains('/w154/') ||
-                    lower.contains('/w185/') ||
-                    lower.contains('/w342/') ||
-                    lower.contains('/w500/')));
-        if (!isPoster) {
+        if (ArtworkValidator.isValidProgramArtwork(url, widget.channel)) {
           _addToCache(cacheKey, url);
           if (mounted) {
             setState(() {
@@ -209,15 +198,16 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
           }
           return;
         }
-        // EPG image was poster — fall through to try API sources
+        // EPG image was invalid/poster — fall through to try API sources
         debugLog(
-            'ProgramArtwork: EPG image is poster, trying APIs for "$searchTitle"');
+            'ProgramArtwork: EPG image is invalid/poster, trying APIs for "$searchTitle"');
       }
 
       if (isSports) {
         debugLog('ProgramArtwork: Attempting TheSportsDB for "$searchTitle"');
         final sportsDbUrl = await TheSportsDbService.getHeroImage(searchTitle);
-        if (sportsDbUrl != null) {
+        if (sportsDbUrl != null &&
+            ArtworkValidator.isValidProgramArtwork(sportsDbUrl, widget.channel)) {
           _addToCache(cacheKey, sportsDbUrl);
           if (mounted) {
             setState(() {
@@ -237,16 +227,21 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
 
-      _addToCache(cacheKey, url);
+      final validUrl = url != null &&
+              ArtworkValidator.isValidProgramArtwork(url, widget.channel)
+          ? url
+          : null;
+
+      _addToCache(cacheKey, validUrl);
 
       if (mounted) {
-        if (url != null) {
-          debugLog('ProgramArtwork: Found art for "$searchTitle": $url');
+        if (validUrl != null) {
+          debugLog('ProgramArtwork: Found art for "$searchTitle": $validUrl');
         } else {
-          debugLog('ProgramArtwork: No art found for "$searchTitle"');
+          debugLog('ProgramArtwork: No valid art found for "$searchTitle"');
         }
         setState(() {
-          _artworkUrl = url;
+          _artworkUrl = validUrl;
         });
       }
     } catch (e) {
