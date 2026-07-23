@@ -120,7 +120,7 @@ class MappingHistoryEntry {
   });
 
   Map<String, dynamic> toJson() => {
-        'action': action.toString().split('.').last,
+        'action': action.name,
         'timestamp': timestamp.toIso8601String(),
         'sourceChannelId': sourceChannelId,
         'sourcePlaylistId': sourcePlaylistId,
@@ -130,10 +130,7 @@ class MappingHistoryEntry {
 
   factory MappingHistoryEntry.fromJson(Map<String, dynamic> json) =>
       MappingHistoryEntry(
-        action: MappingAction.values.firstWhere(
-          (e) => e.toString().split('.').last == json['action'],
-          orElse: () => MappingAction.shared,
-        ),
+        action: MappingAction.values.asNameMap()[json['action']] ?? MappingAction.shared,
         timestamp: DateTime.parse(json['timestamp']),
         sourceChannelId: json['sourceChannelId'],
         sourcePlaylistId: json['sourcePlaylistId'],

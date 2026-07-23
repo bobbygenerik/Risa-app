@@ -82,17 +82,14 @@ class ProviderPattern {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
+        'type': type.name,
         'pattern': pattern,
         'weight': weight,
       };
 
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
-        type: PatternType.values.firstWhere(
-          (e) => e.toString().split('.').last == json['type'],
-          orElse: () => PatternType.channelId,
-        ),
+        type: PatternType.values.asNameMap()[json['type']] ?? PatternType.channelId,
         pattern: json['pattern'],
         weight: json['weight'],
       );
