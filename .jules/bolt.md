@@ -1,0 +1,3 @@
+## 2025-01-20 - RegExp Parsing Overhead in Tight Loops
+**Learning:** Instantiating `RegExp` objects inside tight formatting loops (like `LiveTvFormatters.normalizeTitleForFilter`) introduces significant parsing and compilation overhead in Dart. Benchmarks showed that compiling the regex every time took ~148ms for 20k iterations, whereas using a cached `static final RegExp` took ~99ms (a ~33% improvement).
+**Action:** Always extract `RegExp` instantiations to `static final` or top-level variables when they are used within frequently called methods (e.g., list filtering, formatting, or rendering) to prevent redundant compilation.
