@@ -54,7 +54,13 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
             List<Channel> filteredChannels = [];
             final hasCategoryFilter = _selectedCategory != null && _selectedCategory!.isNotEmpty;
             final hasSearchQuery = _searchQuery.isNotEmpty;
-            final lowerSearchQuery = hasSearchQuery ? _searchQuery.toLowerCase() : '';
+
+            // ⚡ Bolt Optimization: Use a pre-compiled RegExp for search to avoid
+            // calling .toLowerCase() on every channel name inside the loop,
+            // which creates O(N) unnecessary string allocations.
+            final searchRegex = hasSearchQuery
+                ? RegExp(RegExp.escape(_searchQuery), caseSensitive: false)
+                : null;
 
             // Single pass filtering to avoid chained iterable allocations
             if (!hasCategoryFilter && !hasSearchQuery) {
@@ -65,7 +71,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 if (hasCategoryFilter && c.groupTitle != _selectedCategory) {
                   continue;
                 }
-                if (hasSearchQuery && !c.name.toLowerCase().contains(lowerSearchQuery)) {
+                if (hasSearchQuery && !searchRegex!.hasMatch(c.name)) {
                   continue;
                 }
                 filteredChannels.add(c);
