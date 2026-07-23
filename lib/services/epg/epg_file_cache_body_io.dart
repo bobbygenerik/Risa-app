@@ -2,7 +2,8 @@ part of 'epg_file_cache.dart';
 
 enum _EpgBodyCheck { xml, empty, notXml, html, rawGzip }
 
-_EpgBodyCheck _classifyEpgBody(  List<int> buffer, {
+_EpgBodyCheck _classifyEpgBody(
+  List<int> buffer, {
   required bool isGzipHeader,
   required bool isGzipExt,
   required bool isDeflateHeader,
@@ -42,7 +43,11 @@ Future<String?> _writeEpgResponseToFile({
   final isGzipHeader = encHeader.contains('gzip');
   final isDeflateHeader =
       encHeader.contains('deflate') || encHeader.contains('zlib');
-  final isGzipExt = epgUrl.toLowerCase().split('?').first.endsWith('.gz');
+
+  // Strip query parameters without allocating a list of strings
+  final qIdx = epgUrl.indexOf('?');
+  final baseEpgUrl = qIdx != -1 ? epgUrl.substring(0, qIdx) : epgUrl;
+  final isGzipExt = baseEpgUrl.toLowerCase().endsWith('.gz');
 
   final sink = file.openWrite();
   ByteConversionSink? gzipSink;

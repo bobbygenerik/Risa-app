@@ -208,9 +208,17 @@ class ArtworkValidator {
     final channelLogo = channel.logoUrl;
     if (channelLogo == null || channelLogo.isEmpty) return false;
     if (channelLogo == url) return true;
-    // Normalize both URLs for comparison
-    final normalizedUrl = url.split('?').first.toLowerCase();
-    final normalizedLogo = channelLogo.split('?').first.toLowerCase();
+
+    // Normalize both URLs for comparison (strip query parameters efficiently)
+    final urlQIdx = url.indexOf('?');
+    final baseUrl = urlQIdx != -1 ? url.substring(0, urlQIdx) : url;
+    final normalizedUrl = baseUrl.toLowerCase();
+
+    final logoQIdx = channelLogo.indexOf('?');
+    final baseLogo =
+        logoQIdx != -1 ? channelLogo.substring(0, logoQIdx) : channelLogo;
+    final normalizedLogo = baseLogo.toLowerCase();
+
     return normalizedUrl == normalizedLogo;
   }
 
