@@ -1,3 +1,12 @@
+/// Pre-compiled RegExp for efficient SVG extension checking.
+final _svgRegExp = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
+/// Checks if the given URL points to an SVG image.
+/// Uses a pre-compiled RegExp to avoid chained string allocations.
+bool isSvgUrl(String url) {
+  return _svgRegExp.hasMatch(url);
+}
+
 String normalizeImageUrl(String url) {
   final trimmed = url.trim();
   if (trimmed.isEmpty) return trimmed;
