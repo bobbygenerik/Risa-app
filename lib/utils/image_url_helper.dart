@@ -1,3 +1,12 @@
+final _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
+/// Returns true if the given URL points to an SVG image.
+/// Uses a pre-compiled RegExp to avoid redundant string allocations
+/// from toLowerCase() and string operations.
+bool isSvgUrl(String url) {
+  return _svgRegex.hasMatch(url);
+}
+
 String normalizeImageUrl(String url) {
   final trimmed = url.trim();
   if (trimmed.isEmpty) return trimmed;

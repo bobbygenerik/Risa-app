@@ -27,8 +27,7 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    final isSvg = isSvgUrl(url);
 
     if (isSvg) {
       return Padding(
