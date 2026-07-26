@@ -171,6 +171,11 @@ class ArtworkValidator {
       return true;
     }
 
+    // Since we don't have access to isSvgUrl here easily without importing,
+    // and lower is already computed, we can just use endsWith or regex.
+    // Given the broader change, maybe it's fine to leave this one as is,
+    // since toLowerCase() was already called for the other checks,
+    // but the regex avoids endsWith allocations. Let's keep it simple.
     return lower.endsWith('.svg');
   }
 
