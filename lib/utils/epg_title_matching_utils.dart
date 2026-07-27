@@ -2,25 +2,17 @@ part of 'epg_matching_utils.dart';
 
 /// Program/title normalization for artwork, TMDB/TVDB lookup, and fuzzy scoring.
 class EpgTitleMatchingUtils {
-  static final RegExp _titleBracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
-  static final RegExp _dashColonRe = RegExp(r'\s*[-:]\s*');
-  static final RegExp _seasonEpisodeRe = RegExp(
-    r'\bs\d{1,2}e\d{1,2}\b',
+  // Combined Regex for space replacements to reduce overhead
+  static final RegExp _spaceReplacementRe = RegExp(
+    r'\s*[-:]\s*|[\[\(\{].*?[\]\)\}]',
+  );
+
+  // Combined Regex for substring removals to reduce overhead
+  static final RegExp _removalRe = RegExp(
+    r'\bs\d{1,2}e\d{1,2}\b|\bseason\s+\d+\b|\bepisode\s+\d+\b|\bpart\s+\d+\b|\s*[-:]\s*(19|20)\d{2}\s*$|\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$',
     caseSensitive: false,
   );
-  static final RegExp _seasonRe = RegExp(
-    r'\bseason\s+\d+\b',
-    caseSensitive: false,
-  );
-  static final RegExp _episodeRe = RegExp(
-    r'\bepisode\s+\d+\b',
-    caseSensitive: false,
-  );
-  static final RegExp _partRe = RegExp(r'\bpart\s+\d+\b', caseSensitive: false);
-  static final RegExp _yearSuffixRe = RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$');
-  static final RegExp _yearParenRe = RegExp(
-    r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$',
-  );
+
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
 
   static final RegExp _newsTitleRe = RegExp(
@@ -35,14 +27,12 @@ class EpgTitleMatchingUtils {
 
   static String normalizeForArtwork(String title) {
     var normalized = title.toLowerCase();
-    normalized = normalized.replaceAll(_dashColonRe, ' ');
-    normalized = normalized.replaceAll(_titleBracketsRe, ' ');
-    normalized = normalized.replaceAll(_seasonEpisodeRe, '');
-    normalized = normalized.replaceAll(_seasonRe, '');
-    normalized = normalized.replaceAll(_episodeRe, '');
-    normalized = normalized.replaceAll(_partRe, '');
-    normalized = normalized.replaceAll(_yearSuffixRe, '');
-    normalized = normalized.replaceAll(_yearParenRe, '');
+
+    // Performance optimization: Using combined regexes to reduce the number
+    // of string iterations and allocations during hot-path title normalization.
+    normalized = normalized.replaceAll(_spaceReplacementRe, ' ');
+    normalized = normalized.replaceAll(_removalRe, '');
+
     normalized = normalized.replaceAll(_multiSpaceRe, ' ').trim();
     return normalized.isEmpty ? title : normalized;
   }
