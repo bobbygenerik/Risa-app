@@ -14,6 +14,9 @@ class ArtworkValidator {
   // (e.g. `_b_v12_`, `_p_v10_`), while `_h<digit>` marks wide landscape art.
   static final RegExp _gracenoteVerticalPattern = RegExp(r'_v\d');
 
+  // Pre-compiled regex to avoid unnecessary string allocations when checking for SVG extensions
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   /// Returns true if the URL points to a poster/portrait image.
   static bool isLikelyPosterUrl(String url) {
     if (url.isEmpty) return false;
@@ -162,6 +165,9 @@ class ArtworkValidator {
 
   /// Returns true if the URL looks like a title logo / clearart.
   static bool isLikelyTitleLogoUrl(String url) {
+    // Fast path: avoid lowering string if it matches our pre-compiled regex for .svg
+    if (_svgRegex.hasMatch(url)) return true;
+
     final lower = url.toLowerCase();
 
     if (lower.contains('/clearlogo/') ||
@@ -171,7 +177,7 @@ class ArtworkValidator {
       return true;
     }
 
-    return lower.endsWith('.svg');
+    return false;
   }
 
   /// Returns true if the URL points to a small/thumbnail image that would
