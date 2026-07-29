@@ -1,0 +1,3 @@
+## 2026-06-25 - Zero-allocation string character iteration
+**Learning:** In string comparison or processing algorithms (like similarity checks), converting strings to character lists via `.split('')` splits by UTF-16 code units (breaking surrogate pairs like emojis) and allocates an unnecessary array of single-character strings. This creates significant garbage collection overhead during frequent execution.
+**Action:** Use `.codeUnitAt(index)` within a loop to perform zero-allocation integer comparisons of Unicode values instead. This maintains exact functional equivalence to `.split('')` while drastically reducing memory allocation overhead.
