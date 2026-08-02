@@ -38,6 +38,15 @@ bool _shouldDowngradeToHttp(Uri uri) {
   return _httpOnlyHosts.contains(uri.host.toLowerCase());
 }
 
+// Pre-compiled regex for fast SVG extension checking without string allocations
+// Matches .svg at the end of the string or before query parameters (.svg?)
+final RegExp _svgExtensionPattern = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
+/// Checks if a URL points to an SVG image, optimized for hot paths.
+bool isSvgUrl(String url) {
+  return _svgExtensionPattern.hasMatch(url);
+}
+
 /// Build a fallback logo URL when the primary URL fails.
 ///
 /// For `logo.m3uassets.com` URLs that fail even over HTTP, there's no reliable
