@@ -12,6 +12,9 @@ import 'package:iptv_player/widgets/channel_logo_widget.dart';
 
 /// Channel row card artwork fallbacks when program images are unavailable.
 class LiveTvCardFallbacks {
+  // Pre-compiled RegExp to avoid redundant .toLowerCase() string allocations
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   LiveTvCardFallbacks._();
 
   static Widget channelCard(Program? program, Channel channel) {
@@ -19,15 +22,12 @@ class LiveTvCardFallbacks {
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return logoAsFallback(logoUrl, channel.name);
     }
-    return BrandFallbackBackground(
-      child: missingArtwork(channel.name),
-    );
+    return BrandFallbackBackground(child: missingArtwork(channel.name));
   }
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    final isSvg = _svgRegex.hasMatch(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(
@@ -58,7 +58,8 @@ class LiveTvCardFallbacks {
                       errorWidget: (_, url, error) {
                         final host = Uri.tryParse(url)?.host ?? 'unknown';
                         debugLog(
-                            'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error');
+                          'LiveTV logo fallback: error channel="$channelName" host="$host" url="$url" err=$error',
+                        );
                         ImageFailureCache.recordFailure(url, error);
                         return missingArtwork(channelName);
                       },
