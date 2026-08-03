@@ -47,6 +47,10 @@ class ChannelLogoWidget extends StatefulWidget {
 }
 
 class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
+  // Pre-compiled RegExp to avoid redundant .toLowerCase() string allocations
+  // during frequent URL validation checks in the build method.
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   String? _effectiveLogoUrl;
   bool _isEnriching = false;
   bool _triedEnrichment = false;
@@ -120,8 +124,7 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   }
 
   bool _isSvgUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.svg') || lower.contains('.svg?');
+    return _svgRegex.hasMatch(url);
   }
 
   String _hostFromUrl(String url) {
@@ -140,7 +143,8 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
       final fallback = buildLogoFallbackUrl(failedUrl, tvgId: widget.tvgId);
       if (fallback != null && fallback != failedUrl) {
         debugLog(
-            'ChannelLogoWidget: trying iptvboss fallback for "${widget.channelName}": $fallback');
+          'ChannelLogoWidget: trying iptvboss fallback for "${widget.channelName}": $fallback',
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           setState(() {
@@ -205,41 +209,57 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
                         widget.placeholder ??
                         _buildGradientFallback(context, tvWidth, tvHeight),
                   )
-                : Builder(builder: (context) {
-                    return Image(
-                      image: LogoImageCache.providerFor(
-                        effectiveUrl,
-                        headers: HttpClientService().imageHeaders,
-                      ),
-                      fit: widget.fit,
-                      alignment: widget.alignment,
-                      filterQuality: FilterQuality.high,
-                      gaplessPlayback: true,
-                      frameBuilder: (context, child, frame, wasSync) {
-                        if (widget.channelName == "CWWLVI" ||
-                            widget.channelName == "PBSWGBH") {
-                          // debugLog('ChannelLogoWidget: frameBuilder for ${widget.channelName}: wasSync=$wasSync, frame=$frame');
-                        }
-                        ImageLoadProbe.recordAttempt(
-                            effectiveUrl, 'channel_logo_widget');
-                        if (wasSync || frame != null) {
-                          ImageFailureCache.recordSuccess(effectiveUrl);
-                          return child;
-                        }
-                        return widget.placeholder ??
-                            _buildGradientFallback(context, tvWidth, tvHeight);
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        debugLog(
-                            'ChannelLogoWidget: error channel="${widget.channelName}" host="${_hostFromUrl(effectiveUrl)}" url="$effectiveUrl" err=$error');
-                        ImageFailureCache.recordFailure(effectiveUrl, error);
-                        ImageValidationService.markInvalid(effectiveUrl);
-                        _tryFallbackOrEnrich(effectiveUrl);
-                        return widget.errorWidget ??
-                            _buildGradientFallback(context, tvWidth, tvHeight);
-                      },
-                    );
-                  }))
+                : Builder(
+                    builder: (context) {
+                      return Image(
+                        image: LogoImageCache.providerFor(
+                          effectiveUrl,
+                          headers: HttpClientService().imageHeaders,
+                        ),
+                        fit: widget.fit,
+                        alignment: widget.alignment,
+                        filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
+                        frameBuilder: (context, child, frame, wasSync) {
+                          if (widget.channelName == "CWWLVI" ||
+                              widget.channelName == "PBSWGBH") {
+                            // debugLog('ChannelLogoWidget: frameBuilder for ${widget.channelName}: wasSync=$wasSync, frame=$frame');
+                          }
+                          ImageLoadProbe.recordAttempt(
+                            effectiveUrl,
+                            'channel_logo_widget',
+                          );
+                          if (wasSync || frame != null) {
+                            ImageFailureCache.recordSuccess(effectiveUrl);
+                            return child;
+                          }
+                          return widget.placeholder ??
+                              _buildGradientFallback(
+                                context,
+                                tvWidth,
+                                tvHeight,
+                              );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          debugLog(
+                            'ChannelLogoWidget: error channel="${widget.channelName}" host="${_hostFromUrl(effectiveUrl)}" url="$effectiveUrl" err=$error',
+                          );
+                          ImageFailureCache.recordFailure(
+                            effectiveUrl,
+                            error,
+                          );
+                          ImageValidationService.markInvalid(effectiveUrl);
+                          _tryFallbackOrEnrich(effectiveUrl);
+                          return widget.errorWidget ??
+                              _buildGradientFallback(
+                                context,
+                                tvWidth,
+                                tvHeight,
+                              );
+                        },
+                      );
+                    },
+                  ))
             : (widget.placeholder ??
                 _buildGradientFallback(context, tvWidth, tvHeight)),
       ),
@@ -247,11 +267,11 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
   }
 
   Widget _buildGradientFallback(
-      BuildContext context, double width, double height) {
+    BuildContext context,
+    double width,
+    double height,
+  ) {
     // No generic TV icon — show nothing when logo is unavailable.
-    return SizedBox(
-      width: width,
-      height: height,
-    );
+    return SizedBox(width: width, height: height);
   }
 }

@@ -1,0 +1,3 @@
+## 2026-08-03 - [Regex vs toLowerCase in Hot Paths]
+**Learning:** In Dart, calling `.toLowerCase()` inside frequent operations like widget builders creates unnecessary string allocations that increase GC pressure. For pattern matching like checking file extensions (e.g., SVG), a pre-compiled case-insensitive `RegExp` eliminates the need to normalize the source string, saving memory and improving framerates.
+**Action:** Use pre-compiled case-insensitive regular expressions for extension checking instead of chained string manipulation methods when validating assets inside UI or data processing hot paths.

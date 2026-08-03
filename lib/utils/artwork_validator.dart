@@ -10,6 +10,9 @@ class ArtworkValidator {
   // Pre-compiled regex constants — compiled once, reused on every call
   static final RegExp _dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
 
+  // Pre-compiled RegExp to avoid redundant .toLowerCase() string allocations for SVG checks.
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   // Gracenote/TMS aspect token: `_v<digit>` marks a vertical/portrait asset
   // (e.g. `_b_v12_`, `_p_v10_`), while `_h<digit>` marks wide landscape art.
   static final RegExp _gracenoteVerticalPattern = RegExp(r'_v\d');
@@ -162,8 +165,11 @@ class ArtworkValidator {
 
   /// Returns true if the URL looks like a title logo / clearart.
   static bool isLikelyTitleLogoUrl(String url) {
-    final lower = url.toLowerCase();
+    if (_svgRegex.hasMatch(url)) {
+      return true;
+    }
 
+    final lower = url.toLowerCase();
     if (lower.contains('/clearlogo/') ||
         lower.contains('/logo/') ||
         lower.contains('/logotype/') ||
@@ -171,7 +177,7 @@ class ArtworkValidator {
       return true;
     }
 
-    return lower.endsWith('.svg');
+    return false;
   }
 
   /// Returns true if the URL points to a small/thumbnail image that would
