@@ -1,0 +1,3 @@
+## 2026-08-05 - Zero-allocation String Similarity
+**Learning:** In nested-loop string comparison algorithms (like calculating similarity), converting strings to character lists via `.split('')` introduces massive garbage collection overhead. Furthermore, maintaining a 'used' tracking array for the outer loop's index (e.g., `aUsed[i] = true`) is entirely redundant if the inner loop immediately `break`s upon a match, as the outer index inherently advances.
+**Action:** Always use `.codeUnitAt(index)` for zero-allocation integer comparisons, and eliminate outer-loop tracking arrays in nested matching algorithms.
