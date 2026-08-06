@@ -10,6 +10,9 @@ class ChannelLogoWidget extends StatelessWidget {
     this.cacheHeight = 80,
   });
 
+  // Pre-compiled regex to match .svg and .svg? extensions without redundant .toLowerCase() allocations
+  static final _svgRe = RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   final Channel channel;
   final double width;
   final double height;
@@ -27,8 +30,8 @@ class ChannelLogoWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final isSvg = url.toLowerCase().endsWith('.svg') ||
-        url.toLowerCase().contains('.svg?');
+    // Use fast RegExp check instead of chained .toLowerCase() which causes unnecessary string allocations in hot build paths
+    final isSvg = _svgRe.hasMatch(url);
 
     if (isSvg) {
       return Padding(
