@@ -82,7 +82,8 @@ class ProviderPattern {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString().split('.').last,
+        // OPTIMIZATION: Using .name instead of .toString().split('.').last avoids string allocation overhead
+        'type': type.name,
         'pattern': pattern,
         'weight': weight,
       };
@@ -90,7 +91,8 @@ class ProviderPattern {
   factory ProviderPattern.fromJson(Map<String, dynamic> json) =>
       ProviderPattern(
         type: PatternType.values.firstWhere(
-          (e) => e.toString().split('.').last == json['type'],
+          // OPTIMIZATION: Using .name instead of .toString().split('.').last avoids string allocation overhead
+          (e) => e.name == json['type'],
           orElse: () => PatternType.channelId,
         ),
         pattern: json['pattern'],
