@@ -119,9 +119,11 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     return normalized;
   }
 
+  // Optimization: Pre-compiled regex avoids chained .toLowerCase() string allocations
+  static final RegExp _svgExtensionRe =
+      RegExp(r'\.svg(\?|$)', caseSensitive: false);
   bool _isSvgUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.svg') || lower.contains('.svg?');
+    return _svgExtensionRe.hasMatch(url);
   }
 
   String _hostFromUrl(String url) {

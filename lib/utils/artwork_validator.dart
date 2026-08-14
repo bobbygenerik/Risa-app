@@ -7,6 +7,9 @@ import 'package:iptv_player/models/channel.dart';
 class ArtworkValidator {
   ArtworkValidator._();
 
+  static final RegExp _svgExtensionRe =
+      RegExp(r'\.svg(\?|$)', caseSensitive: false);
+
   // Pre-compiled regex constants — compiled once, reused on every call
   static final RegExp _dimensionPattern = RegExp(r'[_/](\d+)x(\d+)[_/.]');
 
@@ -171,7 +174,8 @@ class ArtworkValidator {
       return true;
     }
 
-    return lower.endsWith('.svg');
+    // Optimization: Use pre-compiled regex instead of .endsWith('.svg') to avoid string allocations
+    return _svgExtensionRe.hasMatch(url);
   }
 
   /// Returns true if the URL points to a small/thumbnail image that would
