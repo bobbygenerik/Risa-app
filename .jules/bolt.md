@@ -1,0 +1,3 @@
+## 2026-08-15 - String Similarity codeUnitAt Optimization
+**Learning:** Using .split('') on strings for character-by-character comparison creates massive garbage collection overhead by allocating a List of Strings. Additionally, in a nested loop string comparison where the inner loop breaks on match, tracking 'used' states for the outer loop's index (aUsed[i] = true) is completely redundant because the outer index inherently advances and cannot be reused.
+**Action:** Replace .split('') with zero-allocation .codeUnitAt(index) loops for string analysis, and eliminate unnecessary state tracking arrays when loop mechanics naturally prevent reuse.
