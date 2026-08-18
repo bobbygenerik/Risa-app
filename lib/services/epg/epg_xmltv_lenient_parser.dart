@@ -18,13 +18,23 @@ final RegExp kEpgChannelStartRe =
 final RegExp kEpgChannelEndRe =
     RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
 
+final RegExp _entityRegex = RegExp(r'&(?:amp|lt|gt|quot|apos);');
+
 String decodeXmltvEntities(String input) {
-  return input
-      .replaceAll('&amp;', '&')
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&apos;', "'");
+  // Optimization: Early return for strings without entities (the vast majority of strings)
+  // to avoid any unnecessary processing overhead. Combine remaining checks into
+  // a single RegExp to avoid creating multiple intermediate strings from chained replaceAlls.
+  if (!input.contains('&')) return input;
+
+  return input.replaceAllMapped(_entityRegex, (match) {
+    final m = match.group(0);
+    if (m == '&amp;') return '&';
+    if (m == '&lt;') return '<';
+    if (m == '&gt;') return '>';
+    if (m == '&quot;') return '"';
+    if (m == '&apos;') return "'";
+    return m!;
+  });
 }
 
 String? extractXmltvAttribute(String block, String name,
