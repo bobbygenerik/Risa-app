@@ -33,6 +33,13 @@ class M3UParserService {
   static final RegExp _seriesEpisodeRegex =
       RegExp(r'S\d+E\d+', caseSensitive: false);
 
+  static final RegExp _liveUrlRegex = RegExp(r'/live/|\.m3u8$|\.ts$');
+  static final RegExp _vodPathAndExtRegex = RegExp(
+      r'/(movie|movies|vod|film|series|episodes|tvshows)/|\.(mp4|mkv|avi|mov|wmv|flv|mpg|mpeg|m4v)$');
+  static final RegExp _seriesMovieGroupRegex = RegExp(
+      r'series|tv shows|episodes|shows|vod|video on demand|movies?|film|cinema');
+  static final RegExp _movieTitleRegex = RegExp(r'^(movie|film)$');
+
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
 
