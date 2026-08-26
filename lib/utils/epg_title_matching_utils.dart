@@ -85,8 +85,18 @@ class EpgTitleMatchingUtils {
     Set<String> tokensA,
     Set<String> tokensB,
   ) {
-    final intersection = tokensA.intersection(tokensB).length;
-    final union = tokensA.union(tokensB).length;
+    // Performance Optimization: Manually count intersection overlap without new Set allocations to reduce GC pressure in hot paths, and compute union mathematically.
+    var intersection = 0;
+    final smaller = tokensA.length < tokensB.length ? tokensA : tokensB;
+    final larger = tokensA.length < tokensB.length ? tokensB : tokensA;
+
+    for (final token in smaller) {
+      if (larger.contains(token)) {
+        intersection++;
+      }
+    }
+
+    final union = tokensA.length + tokensB.length - intersection;
     if (union == 0) return 0.0;
     return (intersection / union) * 100.0;
   }
