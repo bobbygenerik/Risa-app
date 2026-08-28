@@ -14,6 +14,10 @@ import 'package:iptv_player/widgets/channel_logo_widget.dart';
 class LiveTvCardFallbacks {
   LiveTvCardFallbacks._();
 
+  static final RegExp _svgRegex = RegExp(r'\.svg(\?|$)',
+      caseSensitive:
+          false); // ⚡ Bolt: Pre-compiled regex to prevent repeated string allocation
+
   static Widget channelCard(Program? program, Channel channel) {
     final logoUrl = channel.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
@@ -26,8 +30,7 @@ class LiveTvCardFallbacks {
 
   static Widget logoAsFallback(String logoUrl, String channelName) {
     final normalizedUrl = normalizeImageUrl(logoUrl);
-    final isSvg = normalizedUrl.toLowerCase().endsWith('.svg') ||
-        normalizedUrl.toLowerCase().contains('.svg?');
+    final isSvg = _svgRegex.hasMatch(normalizedUrl);
 
     return BrandFallbackBackground(
       child: Center(
