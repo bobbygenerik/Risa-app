@@ -1,0 +1,3 @@
+## 2026-08-30 - [Deferred String Allocation Optimization]
+**Learning:** In hot paths (like large M3U playlist parsers), eagerly allocating substrings into memory during object instantiation (e.g., `input.substring(...)` inside a `_SimpleMatch` constructor) generates massive GC overhead, especially if the allocated string isn't immediately or always used.
+**Action:** When creating custom pattern matching classes, store the input string and start/end bounds instead of the eagerly allocated substring. Lazily evaluate and cache the substring (using `??=`) only when explicitly requested (e.g., via `group(0)`).
