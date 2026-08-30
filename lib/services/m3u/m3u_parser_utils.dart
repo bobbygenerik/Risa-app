@@ -17,12 +17,16 @@ class _SimpleMatch {
   final int start;
   final int end;
   final String input;
-  final String _match;
+  String? _match;
 
-  _SimpleMatch(this.start, this.end, this.input, this._match);
+  _SimpleMatch(this.start, this.end, this.input);
 
   String? group(int group) {
-    if (group == 0) return _match;
+    // Optimization: Lazily evaluate substring to reduce memory allocations and GC pressure
+    if (group == 0) {
+      _match ??= input.substring(start, end);
+      return _match;
+    }
     return null;
   }
 
