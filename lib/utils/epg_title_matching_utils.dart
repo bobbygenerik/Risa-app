@@ -2,25 +2,6 @@ part of 'epg_matching_utils.dart';
 
 /// Program/title normalization for artwork, TMDB/TVDB lookup, and fuzzy scoring.
 class EpgTitleMatchingUtils {
-  static final RegExp _titleBracketsRe = RegExp(r'[\[\(\{].*?[\]\)\}]');
-  static final RegExp _dashColonRe = RegExp(r'\s*[-:]\s*');
-  static final RegExp _seasonEpisodeRe = RegExp(
-    r'\bs\d{1,2}e\d{1,2}\b',
-    caseSensitive: false,
-  );
-  static final RegExp _seasonRe = RegExp(
-    r'\bseason\s+\d+\b',
-    caseSensitive: false,
-  );
-  static final RegExp _episodeRe = RegExp(
-    r'\bepisode\s+\d+\b',
-    caseSensitive: false,
-  );
-  static final RegExp _partRe = RegExp(r'\bpart\s+\d+\b', caseSensitive: false);
-  static final RegExp _yearSuffixRe = RegExp(r'\s*[-:]\s*(19|20)\d{2}\s*$');
-  static final RegExp _yearParenRe = RegExp(
-    r'\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$',
-  );
   static final RegExp _multiSpaceRe = RegExp(r'\s+');
 
   static final RegExp _newsTitleRe = RegExp(
@@ -33,16 +14,40 @@ class EpgTitleMatchingUtils {
     caseSensitive: false,
   );
 
+  // Bolt Performance: Combined 8 RegExp .replaceAll() operations into 2 OR-based patterns and added a fast-path preflight check using .codeUnitAt loop to skip regex processing entirely for strings without numbers or punctuation, drastically reducing allocations and execution time.
+  static final RegExp _artworkSpaceRe = RegExp(
+    r'\s*[-:]\s*|\[.*?\]|\(.*?\)|<.*?>|\{.*?\}'
+  );
+  static final RegExp _artworkEmptyRe = RegExp(
+    r'\bs\d{1,2}e\d{1,2}\b|\bseason\s+\d+\b|\bepisode\s+\d+\b|\bpart\s+\d+\b|\s*[-:]\s*(19|20)\d{2}\s*$|\s*[\(\[]?(19|20)\d{2}[\)\]]?\s*$',
+    caseSensitive: false
+  );
+
   static String normalizeForArtwork(String title) {
     var normalized = title.toLowerCase();
-    normalized = normalized.replaceAll(_dashColonRe, ' ');
-    normalized = normalized.replaceAll(_titleBracketsRe, ' ');
-    normalized = normalized.replaceAll(_seasonEpisodeRe, '');
-    normalized = normalized.replaceAll(_seasonRe, '');
-    normalized = normalized.replaceAll(_episodeRe, '');
-    normalized = normalized.replaceAll(_partRe, '');
-    normalized = normalized.replaceAll(_yearSuffixRe, '');
-    normalized = normalized.replaceAll(_yearParenRe, '');
+
+    bool hasPunctuation = false;
+    bool hasNumbers = false;
+
+    for (int i = 0; i < normalized.length; i++) {
+      final code = normalized.codeUnitAt(i);
+      if (code >= 48 && code <= 57) {
+        hasNumbers = true;
+      } else if (code == 45 || code == 58 || code == 91 || code == 93 ||
+                 code == 40 || code == 41 || code == 60 || code == 62 ||
+                 code == 123 || code == 125) {
+        hasPunctuation = true;
+      }
+      if (hasNumbers && hasPunctuation) break;
+    }
+
+    if (hasPunctuation) {
+      normalized = normalized.replaceAll(_artworkSpaceRe, ' ');
+    }
+    if (hasNumbers) {
+      normalized = normalized.replaceAll(_artworkEmptyRe, '');
+    }
+
     normalized = normalized.replaceAll(_multiSpaceRe, ' ').trim();
     return normalized.isEmpty ? title : normalized;
   }
